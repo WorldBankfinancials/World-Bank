@@ -1,0 +1,22 @@
+# Execute these commands in Replit Shell to fix the large file issue
+
+# Option 1: Reset git history (RECOMMENDED - Clean slate)
+rm -rf .git
+git init
+git remote add origin https://github.com/WorldBankfinancials/World-Bank.git
+git add .
+git commit -m "Deploy World Bank application - complete banking platform"
+git push -u origin main --force
+
+# Option 2: If Option 1 doesn't work, use BFG Repo-Cleaner
+# Download BFG (if available)
+wget https://repo1.maven.org/maven2/com/madgag/bfg/1.14.0/bfg-1.14.0.jar -O bfg.jar
+java -jar bfg.jar --delete-files "*.tar.gz" .git
+git reflog expire --expire=now --all && git gc --prune=now --aggressive
+git push origin main --force
+
+# Option 3: Manual git filter-branch (if BFG unavailable)
+git filter-branch --force --index-filter \
+'git rm --cached --ignore-unmatch world-bank-complete.tar.gz world-bank-fixed.tar.gz WORLD-BANK.tar.gz WORLD-BANK.zip' \
+--prune-empty --tag-name-filter cat -- --all
+git push origin main --force
