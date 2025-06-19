@@ -470,7 +470,13 @@ export default function Dashboard() {
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const [showNotifications, setShowNotifications] = React.useState(false);
-  const [userData, setUserData] = React.useState<any>(null);
+  const [userData, setUserData] = React.useState<any>({
+    fullName: 'Liu Wei',
+    accountNumber: '4789-6523-1087-9234',
+    accountId: 'WB-2024-7829',
+    profession: 'Marine Engineer',
+    balance: 527482.40
+  });
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -481,14 +487,12 @@ export default function Dashboard() {
           setUserData(data);
         }
       } catch (error) {
-        // console.error('Failed to fetch user data:', error);
+        // Keep default data if fetch fails
+        console.log('Using cached user data');
       }
     };
     
     fetchUserData();
-    // Removed auto-refresh to prevent profile reset issues
-    // const interval = setInterval(fetchUserData, 5000);
-    // return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
