@@ -1,4 +1,5 @@
 
+
 // Vercel serverless function for World Bank API
 module.exports = async function handler(req, res) {
   // Enable CORS
@@ -46,40 +47,41 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  // Handle user endpoint
+  // Handle user endpoint - EXACT DATA FROM YOUR REPLIT
   if (apiPath === '/user' && req.method === 'GET') {
     return res.status(200).json({
       id: 1,
       username: 'liu.wei',
+      password: 'password123',
       fullName: 'Liu Wei',
       email: 'bankmanagerworld5@gmail.com',
       phone: '+86 138 0013 8000',
       accountNumber: '4789-6523-1087-9234',
       accountId: 'WB-2024-7829',
-      profession: 'Marine Engineer - Oil Rig Operations',
-      dateOfBirth: '1985-03-15',
-      address: '123 Marine Drive, Offshore Operations Center',
-      city: 'Houston',
-      state: 'Texas',
-      country: 'United States',
-      postalCode: '77001',
+      profession: 'Marine Engineer',
+      dateOfBirth: '1963-10-17',
+      address: 'Beijing Shijingshan',
+      city: 'Beijing',
+      state: 'Beijing',
+      country: 'China',
+      postalCode: '100043',
       nationality: 'Chinese',
-      annualIncome: '100k_250k',
-      idType: 'passport',
-      idNumber: 'US123456789',
+      annualIncome: '$85,000',
+      idType: 'National ID',
+      idNumber: '310115198503150123',
       transferPin: '0192',
       role: 'customer',
       isVerified: true,
       isOnline: true,
       isActive: true,
       balance: 2001382.65,
-      avatarUrl: '/world-bank-logo.jpeg',
+      avatarUrl: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAASABIAAD/4QBMRXhpZgAATU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAyKADAAQAAAABAAAAqQAAAAD/7QA4UGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAAA4QklNBCUAAAAAABDUHYzZjwCyBOmACZjs+EJ+/8AAEQgAqQDIAwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/aAAwDAQACEQMRAD8A/fyiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/2Q==',
       createdAt: new Date('2024-01-15').toISOString(),
       updatedAt: new Date().toISOString()
     });
   }
 
-  // Handle accounts endpoint
+  // Handle accounts endpoint - EXACT DATA FROM YOUR REPLIT
   if (apiPath === '/accounts' && req.method === 'GET') {
     return res.status(200).json([
       {
@@ -118,7 +120,7 @@ module.exports = async function handler(req, res) {
     ]);
   }
 
-  // Handle PIN verification endpoint
+  // Handle PIN verification endpoint - CORRECT PIN
   if (apiPath === '/verify-pin' && req.method === 'POST') {
     const { username, pin } = req.body;
     
@@ -185,7 +187,7 @@ module.exports = async function handler(req, res) {
         accountId: 1,
         type: 'credit',
         amount: '125000.00',
-        description: 'Wire Transfer Received - Oil Rig Contract Payment',
+        description: 'Wire Transfer Received - Marine Engineering Contract Payment',
         category: 'salary',
         date: new Date('2024-12-15T10:30:00').toISOString(),
         status: 'completed',
@@ -260,3 +262,4 @@ module.exports = async function handler(req, res) {
   // Default response
   res.status(404).json({ error: 'API endpoint not found' });
 }
+
