@@ -1,5 +1,6 @@
 
 
+
 // Vercel serverless function for World Bank API
 module.exports = async function handler(req, res) {
   // Enable CORS
@@ -38,7 +39,7 @@ module.exports = async function handler(req, res) {
           id: 1,
           username: 'liu.wei',
           fullName: 'Liu Wei',
-          accountNumber: 'WB-2024-001',
+          accountNumber: '4789-6523-1087-9234',
           isVerified: true
         }
       });
@@ -47,7 +48,7 @@ module.exports = async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  // Handle user endpoint - EXACT DATA FROM YOUR REPLIT
+  // Handle user endpoint - EXACT DATA FROM YOUR REPLIT CONSOLE LOGS
   if (apiPath === '/user' && req.method === 'GET') {
     return res.status(200).json({
       id: 1,
@@ -81,7 +82,7 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  // Handle accounts endpoint - EXACT DATA FROM YOUR REPLIT
+  // Handle accounts endpoint
   if (apiPath === '/accounts' && req.method === 'GET') {
     return res.status(200).json([
       {
@@ -120,11 +121,11 @@ module.exports = async function handler(req, res) {
     ]);
   }
 
-  // Handle PIN verification endpoint - CORRECT PIN
+  // Handle PIN verification endpoint
   if (apiPath === '/verify-pin' && req.method === 'POST') {
     const { username, pin } = req.body;
     
-    // For your specific account (Liu Wei) - using correct PIN from user data
+    // For Liu Wei account - using correct PIN from console logs
     if ((username === 'bankmanagerworld5@gmail.com' || username === 'liu.wei') && pin === '0192') {
       return res.status(200).json({
         success: true,
@@ -148,7 +149,7 @@ module.exports = async function handler(req, res) {
         accountId: 1,
         type: 'credit',
         amount: '125000.00',
-        description: 'Wire Transfer Received',
+        description: 'Wire Transfer Received - Marine Engineering Contract',
         category: 'transfer',
         date: new Date('2024-12-15T10:30:00').toISOString(),
         status: 'completed',
@@ -170,7 +171,7 @@ module.exports = async function handler(req, res) {
         accountId: 1,
         type: 'credit',
         amount: '5250.00',
-        description: 'Salary Payment',
+        description: 'Monthly Salary Payment',
         category: 'salary',
         date: new Date('2024-12-15T08:00:00').toISOString(),
         status: 'completed',
@@ -262,4 +263,3 @@ module.exports = async function handler(req, res) {
   // Default response
   res.status(404).json({ error: 'API endpoint not found' });
 }
-
