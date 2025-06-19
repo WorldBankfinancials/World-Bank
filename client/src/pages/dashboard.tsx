@@ -474,8 +474,8 @@ export default function Dashboard() {
     fullName: 'Liu Wei',
     accountNumber: '4789-6523-1087-9234',
     accountId: 'WB-2024-7829',
-    profession: 'Marine Engineer',
-    balance: 527482.40
+    profession: 'Marine Engineer - Oil Rig Operations',
+    balance: 2001382.65
   });
 
   useEffect(() => {
@@ -742,7 +742,7 @@ export default function Dashboard() {
                 <p className="text-blue-100 text-sm">{t('total_balance')}</p>
                 <div className="flex items-center space-x-2">
                   <h2 className="text-2xl font-bold">
-                    {showBalance ? `$${userProfile?.balance?.toLocaleString() || "47,832.15"}` : "****"}
+                    {showBalance ? `$${userData?.balance?.toLocaleString() || userProfile?.balance?.toLocaleString() || "2,001,382.65"}` : "****"}
                   </h2>
                   <button onClick={toggleBalance}>
                     {showBalance ? (
