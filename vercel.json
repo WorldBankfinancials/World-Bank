@@ -3,11 +3,11 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
+      "src": "client/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "buildCommand": "cd client && npm install && npm run build",
-        "distDir": "client/dist"
+        "buildCommand": "npm run build",
+        "distDir": "dist"
       }
     }
   ],
@@ -18,7 +18,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/client/dist/index.html"
+      "dest": "/dist/index.html"
     }
   ]
 }
