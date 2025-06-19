@@ -1,4 +1,3 @@
-
 // Client-side schema types for the World Bank app
 export interface User {
   id: number;

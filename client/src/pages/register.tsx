@@ -15,15 +15,15 @@ import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client only when needed
 const getSupabaseClient = () => {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  
-  if (!supabaseUrl || !supabaseAnonKey) {
+  const supabaseUrl = 'https://sgxmfpirkjlomzfaqqzr.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNneG1mcGlya2psb216ZmFxcXpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5NzM0MzIsImV4cCI6MjA2NDU0OTQzMn0.y7YhuW22z-p2JiGLHGEGJligvqnnJS8JfF856O-z8IY';
+
+  if (!supabaseUrl || !supabaseKey) {
     // console.warn('Supabase environment variables not configured');
     return null;
   }
-  
-  return createClient(supabaseUrl, supabaseAnonKey);
+
+  return createClient(supabaseUrl, supabaseKey);
 };
 
 const registrationSchema = z.object({
@@ -81,7 +81,7 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegistrationFormData) => {
     setIsLoading(true);
-    
+
     try {
       const supabase = getSupabaseClient();
       let supabaseUserId = null;
@@ -144,7 +144,7 @@ export default function RegisterPage() {
       }
 
       setRegistrationStep('pending');
-      
+
       toast({
         title: t('registration_submitted'),
         description: t('admin_review_pending'),
@@ -230,7 +230,7 @@ export default function RegisterPage() {
                   )}
                 </div>
               </div>
-              
+
               <div>
                 <Label htmlFor="dateOfBirth">{t('date_of_birth')}</Label>
                 <Input
@@ -259,7 +259,7 @@ export default function RegisterPage() {
                   <p className="text-sm text-red-600">{form.formState.errors.email.message}</p>
                 )}
               </div>
-              
+
               <div>
                 <Label htmlFor="phone">{t('phone_number')}</Label>
                 <Input
@@ -287,7 +287,7 @@ export default function RegisterPage() {
                   <p className="text-sm text-red-600">{form.formState.errors.address.message}</p>
                 )}
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="city">{t('city')}</Label>
@@ -323,7 +323,7 @@ export default function RegisterPage() {
                   )}
                 </div>
               </div>
-              
+
               <div>
                 <Label htmlFor="country">{t('country')}</Label>
                 <Select onValueChange={(value) => form.setValue('country', value)}>
@@ -362,7 +362,7 @@ export default function RegisterPage() {
                   <p className="text-sm text-red-600">{form.formState.errors.profession.message}</p>
                 )}
               </div>
-              
+
               <div>
                 <Label htmlFor="annualIncome">{t('annual_income')}</Label>
                 <Select onValueChange={(value) => form.setValue('annualIncome', value)}>
@@ -404,7 +404,7 @@ export default function RegisterPage() {
                   <p className="text-sm text-red-600">{form.formState.errors.idType.message}</p>
                 )}
               </div>
-              
+
               <div>
                 <Label htmlFor="idNumber">{t('id_number')}</Label>
                 <Input
@@ -433,7 +433,7 @@ export default function RegisterPage() {
                   <p className="text-sm text-red-600">{form.formState.errors.password.message}</p>
                 )}
               </div>
-              
+
               <div>
                 <Label htmlFor="confirmPassword">{t('confirm_password')}</Label>
                 <Input
@@ -456,7 +456,7 @@ export default function RegisterPage() {
               >
                 {isLoading ? t('creating_account') : t('create_account')}
               </Button>
-              
+
               <div className="text-center">
                 <span className="text-sm text-gray-600">
                   {t('already_have_account')} 

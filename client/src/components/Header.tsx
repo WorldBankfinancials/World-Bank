@@ -1,4 +1,4 @@
-import { Settings, User, LogOut, Search, ChevronDown, Menu, X, Globe, Home, CreditCard, ArrowUpRight, ArrowDownLeft, Plus, Shield, Check, Download, Building2, RotateCcw, TrendingUp, HelpCircle } from 'lucide-react';
+import { Settings, User, LogOut, Shield, Check, Download, Building2, RotateCcw, TrendingUp, HelpCircle, CreditCard, ArrowUpRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link } from "wouter";
 import type { User as UserType } from "../../../shared/schema";
@@ -11,7 +11,7 @@ interface HeaderProps {
   user?: UserType | any;
 }
 
-export default function Header({ user }: HeaderProps) {
+export default function Header({}: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { userProfile } = useAuth();
