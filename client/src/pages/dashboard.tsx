@@ -472,10 +472,16 @@ export default function Dashboard() {
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [userData, setUserData] = React.useState<any>({
     fullName: 'Liu Wei',
+    email: 'bankmanagerworld5@gmail.com',
+    phone: '+86 138 0013 8000',
     accountNumber: '4789-6523-1087-9234',
     accountId: 'WB-2024-7829',
     profession: 'Marine Engineer - Oil Rig Operations',
-    balance: 2001382.65
+    balance: 2001382.65,
+    transferPin: '0192',
+    isVerified: true,
+    isOnline: true,
+    isActive: true
   });
 
   useEffect(() => {
@@ -484,11 +490,27 @@ export default function Dashboard() {
         const response = await fetch(`/api/user?t=${Date.now()}`);
         if (response.ok) {
           const data = await response.json();
-          setUserData(data);
+          console.log('✅ Dashboard - Loaded user data:', data);
+          setUserData({
+            ...data,
+            // Ensure all fields are populated
+            fullName: data.fullName || 'Liu Wei',
+            email: data.email || 'bankmanagerworld5@gmail.com',
+            phone: data.phone || '+86 138 0013 8000',
+            accountNumber: data.accountNumber || '4789-6523-1087-9234',
+            accountId: data.accountId || 'WB-2024-7829',
+            profession: data.profession || 'Marine Engineer - Oil Rig Operations',
+            balance: data.balance || 2001382.65,
+            transferPin: data.transferPin || '0192',
+            isVerified: data.isVerified !== undefined ? data.isVerified : true,
+            isOnline: data.isOnline !== undefined ? data.isOnline : true,
+            isActive: data.isActive !== undefined ? data.isActive : true
+          });
+        } else {
+          console.log('⚠️ API response not OK, using default data');
         }
       } catch (error) {
-        // Keep default data if fetch fails
-        console.log('Using cached user data');
+        console.log('⚠️ API fetch failed, using default data:', error);
       }
     };
     

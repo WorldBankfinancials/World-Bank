@@ -27,7 +27,7 @@ export default function ProfileSettings() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header user={user} />
-      
+
       <div className="px-4 py-6 pb-20">
         {/* Header */}
         <div className="mb-6">
@@ -121,7 +121,7 @@ export default function ProfileSettings() {
                   <p className="text-gray-900">{user?.annualIncome || 'Not provided'}</p>
                 </div>
               </div>
-              
+
               <div className="pt-4 border-t">
                 <div className="flex items-center space-x-2">
                   <Badge className="bg-blue-100 text-blue-800">
@@ -207,7 +207,7 @@ export default function ProfileSettings() {
                 </div>
                 <Badge className="bg-gray-100 text-gray-600">Admin Only</Badge>
               </div>
-              
+
               <div className="pt-4 border-t">
                 <div className="flex items-center justify-between">
                   <div>
@@ -217,7 +217,7 @@ export default function ProfileSettings() {
                   <Badge className="bg-green-100 text-green-800">Enabled</Badge>
                 </div>
               </div>
-              
+
               <div className="border-t pt-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -246,7 +246,7 @@ export default function ProfileSettings() {
                 <Eye className="w-4 h-4 mr-2" />
                 Verification Center
               </Button>
-              
+
               <div className="pt-4 border-t">
                 <p className="text-sm text-gray-500 mb-2">
                   Need to update your profile information? Contact our customer support team for assistance.
@@ -259,7 +259,7 @@ export default function ProfileSettings() {
           </CardContent>
         </Card>
       </div>
-      
+
       <BottomNavigation />
     </div>
   );
