@@ -1,5 +1,5 @@
-import { Shield, Circle } from "lucide-react";
-import type { User } from "@shared/schema";
+import { Shield } from "lucide-react";
+import type { User } from '@/lib/schema';
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -12,7 +12,7 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
   const { userProfile } = useAuth();
   const { t } = useLanguage();
   const [freshUserData, setFreshUserData] = useState<any>(null);
-  
+
   // Fetch fresh user data once only
   useEffect(() => {
     const fetchFreshUserData = async () => {
@@ -38,8 +38,10 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
   const displayName = freshUserData?.fullName || userProfile?.fullName || 'Loading...';
   const displayProfession = freshUserData?.profession || userProfile?.profession || 'Loading...';
   const displayEmail = freshUserData?.email || userProfile?.email || 'Loading...';
-  
+
   // console.log('UserWelcome displaying:', { displayName, displayProfession, displayEmail });
+
+  const displayBalance = user?.balance || 0;
 
   return (
     <div
@@ -92,7 +94,7 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
               <span className="text-blue-600 font-medium">{displayProfession}</span>
             </div>
           </div>
-          
+
           <div className="relative" style={{
             width: '120px',
             height: '120px',
@@ -128,7 +130,7 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
             }}></div>
           </div>
         </div>
-        
+
         <div className="flex flex-col items-end space-y-3">
           {user.isVerified && (
             <div className="flex items-center space-x-2 px-4 py-2 rounded-full" style={{
@@ -140,7 +142,7 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
               <span className="text-green-700 text-sm font-semibold">{t('verified_account')}</span>
             </div>
           )}
-          
+
           <div className="flex items-center space-x-4">
             {user.isOnline && (
               <div className="flex items-center space-x-2 px-3 py-2 rounded-full" style={{
@@ -152,7 +154,7 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
                 <span className="text-blue-700 text-sm font-medium">{t('online')}</span>
               </div>
             )}
-            
+
             <div className="flex items-center space-x-2 px-3 py-2 rounded-full" style={{
               background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(234, 88, 12, 0.1) 100%)',
               border: '1px solid rgba(249, 115, 22, 0.2)',

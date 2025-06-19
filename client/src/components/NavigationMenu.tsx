@@ -1,30 +1,23 @@
 import { 
   X, 
   User, 
-  Settings, 
   CreditCard, 
   FileText, 
   Shield, 
   LifeBuoy, 
   TrendingUp, 
   PiggyBank,
-  Building2,
-  Wallet,
-  Smartphone,
-  MapPin,
   Phone,
   LogOut
 } from "lucide-react";
 import { Link } from "wouter";
-import type { User as UserType } from "../../../shared/schema";
 
 interface NavigationMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  user?: UserType;
 }
 
-export default function NavigationMenu({ isOpen, onClose, user }: NavigationMenuProps) {
+export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps) {
   if (!isOpen) return null;
 
   const menuSections = [

@@ -1,5 +1,5 @@
-import { Bell, RotateCcw, Check, Settings, LogOut, CreditCard, Shield, HelpCircle, UserCircle, ArrowUpRight, Download, TrendingUp, Building2, MessageSquare } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { Settings, User, LogOut, Search, ChevronDown, Menu, X, Globe, Home, CreditCard, ArrowUpRight, ArrowDownLeft, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Link } from "wouter";
 import type { User } from "../../../shared/schema";
 import NavigationMenu from "./NavigationMenu";
@@ -43,7 +43,7 @@ export default function Header({ user }: HeaderProps) {
     { 
       category: "ACCOUNT MANAGEMENT",
       items: [
-        { icon: UserCircle, label: "Profile Settings", href: "/profile-settings" },
+        { icon: User, label: "Profile Settings", href: "/profile-settings" },
         { icon: Shield, label: "Security Settings", href: "/security-settings" },
         { icon: Settings, label: "Account Preferences", href: "/account-preferences" },
         { icon: Check, label: "Verification Center", href: "/verification" }
@@ -72,7 +72,7 @@ export default function Header({ user }: HeaderProps) {
       category: "DIGITAL SERVICES",
       items: [
         { icon: CreditCard, label: "Digital Wallet", href: "/digital-wallet" },
-        { icon: UserCircle, label: "Mobile Pay", href: "/mobile-pay" },
+        { icon: User, label: "Mobile Pay", href: "/mobile-pay" },
         { icon: ArrowUpRight, label: "International Transfer", href: "/international-transfer" }
       ]
     },
@@ -80,7 +80,7 @@ export default function Header({ user }: HeaderProps) {
       category: "SUPPORT & HELP",
       items: [
         { icon: HelpCircle, label: "Support Center", href: "/support-center" },        
-        { icon: UserCircle, label: "Customer Support", href: "/customer-support" },
+        { icon: User, label: "Customer Support", href: "/customer-support" },
         { icon: Shield, label: "Security Center", href: "/security-center" },
         { icon: Building2, label: "Find Branches", href: "/find-branches" },
         { icon: LogOut, label: "Sign Out", href: "/login" }
@@ -106,7 +106,7 @@ export default function Header({ user }: HeaderProps) {
               <div className="text-gray-900 font-bold text-sm tracking-wide">WORLD BANK</div>
             </div>
           </Link>
-          
+
           {/* Profile Icon with Dropdown */}
           <div className="relative">
             <button
@@ -173,7 +173,7 @@ export default function Header({ user }: HeaderProps) {
           </div>
         </div>
       </header>
-      
+
       <NavigationMenu 
         isOpen={isMenuOpen} 
         onClose={() => setIsMenuOpen(false)} 

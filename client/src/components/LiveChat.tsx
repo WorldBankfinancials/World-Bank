@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { MessageSquare, Send, X, Phone, Video, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ChatMessage {
@@ -59,9 +58,9 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = `${protocol}//${window.location.host}/ws`;
-      
+
       wsRef.current = new WebSocket(wsUrl);
-      
+
       wsRef.current.onopen = () => {
         setIsConnected(true);
         // console.log('Live chat connected');
@@ -202,7 +201,7 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
             </div>
           </div>
         ))}
-        
+
         {isTyping && (
           <div className="flex justify-start">
             <div className="bg-gray-100 text-gray-800 p-3 rounded-lg">
