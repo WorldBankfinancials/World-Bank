@@ -27,3 +27,18 @@ supabase.auth.onAuthStateChange((event, session) => {
     console.log('✅ Successfully signed out');
   }
 });
+
+// Test connectivity
+const testConnection = async () => {
+  try {
+    const { data, error } = await supabase.from('health_check').select('*').limit(1);
+    console.log('✅ Supabase connection healthy');
+    return true;
+  } catch (error) {
+    console.log('❌ Supabase connection issue:', error);
+    return false;
+  }
+};
+
+// Run connection test
+testConnection();
