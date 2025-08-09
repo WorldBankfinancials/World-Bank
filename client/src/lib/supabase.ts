@@ -1,7 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Get Supabase credentials from environment
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://sgxmfpirkjlomzfaqqzr.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNneG1mcGlya2psb216ZmFxcXpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5NzM0MzIsImV4cCI6MjA2NDU0OTQzMn0.y7YhuW22z-p2JiGLHGEGJligvqnnJS8JfF856O-z8IY';
+
+console.log('🔧 Supabase Configuration:');
+console.log('URL:', supabaseUrl);
+console.log('Key prefix:', supabaseAnonKey.substring(0, 20) + '...');
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
