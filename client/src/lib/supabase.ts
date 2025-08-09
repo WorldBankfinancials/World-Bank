@@ -7,10 +7,23 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce',
   },
   realtime: {
     params: {
       eventsPerSecond: 10,
     },
   },
+});
+
+// Add error handling and debugging
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log('Supabase auth event:', event, session?.user?.email);
+  if (event === 'SIGNED_IN' && session) {
+    console.log('✅ Successfully signed in:', session.user.email);
+  }
+  if (event === 'SIGNED_OUT') {
+    console.log('✅ Successfully signed out');
+  }
 });
