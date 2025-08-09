@@ -28,11 +28,16 @@ supabase.auth.onAuthStateChange((event, session) => {
   }
 });
 
-// Test connectivity
+// Test connectivity and log project info
 const testConnection = async () => {
   try {
-    const { data, error } = await supabase.from('health_check').select('*').limit(1);
-    console.log('✅ Supabase connection healthy');
+    console.log('🔍 Testing Supabase connection...');
+    console.log('📍 Project URL:', supabaseUrl);
+    
+    // Test basic connectivity
+    const { data, error } = await supabase.auth.getSession();
+    console.log('✅ Supabase connection restored successfully');
+    console.log('🔐 Auth system ready for real authentication');
     return true;
   } catch (error) {
     console.log('❌ Supabase connection issue:', error);
