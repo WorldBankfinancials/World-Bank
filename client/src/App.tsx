@@ -50,6 +50,7 @@ import AccountPreferences from "@/pages/account-preferences";
 import AdminTransactionDashboard from "@/pages/admin-transaction-dashboard";
 import AdminTransactionCreator from "@/pages/admin-transaction-creator";
 import TransactionRouter from "@/pages/transaction-router";
+import RealtimeDemo from "@/pages/realtime-demo";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -113,6 +114,7 @@ function App() {
                         <Route path="/transaction-router" component={TransactionRouter} />
                         <Route path="/customer-management" component={CustomerManagement} />
                         <Route path="/fund-management" component={FundManagement} />
+                        <Route path="/realtime-demo" component={RealtimeDemo} />
                         <Route component={NotFound} />
                       </Switch>
                     </div>
