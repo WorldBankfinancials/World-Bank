@@ -99,41 +99,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       
-      // Try Supabase first
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      // Use real Supabase authentication only
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-        if (error) {
-          console.log('Supabase auth failed, trying fallback:', error.message);
-          throw error;
-        }
+      if (error) {
+        console.error('Supabase auth error:', error.message);
+        return { error: error.message };
+      }
 
-        if (data.user) {
-          setUser(data.user);
-          await fetchUserData(data.user);
-          return {};
-        }
-      } catch (supabaseError) {
-        console.log('Using fallback authentication due to Supabase connectivity issues');
-        
-        // Use fallback authentication
-        const { data, error } = await fallbackAuth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          return { error: error.message };
-        }
-
-        if (data?.user) {
-          setUser(data.user as User);
-          await fetchUserData(data.user as User);
-          return {};
-        }
+      if (data.user) {
+        setUser(data.user);
+        await fetchUserData(data.user);
+        return {};
       }
 
       return { error: "Authentication failed" };
@@ -168,12 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      // Try both Supabase and fallback signout
-      await Promise.allSettled([
-        supabase.auth.signOut(),
-        fallbackAuth.signOut()
-      ]);
-      
+      await supabase.auth.signOut();
       setUser(null);
       setUserProfile(null);
     } catch (error) {
@@ -182,37 +157,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        // Try Supabase first
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          setUser(session.user);
-          await fetchUserData(session.user);
-          setLoading(false);
-          return;
-        }
-      } catch (error) {
-        console.log('Supabase session check failed, trying fallback');
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserData(session.user);
       }
-
-      // Try fallback session
-      try {
-        const { data } = await fallbackAuth.getSession();
-        if (data.session?.user) {
-          setUser(data.session.user as User);
-          await fetchUserData(data.session.user as User);
-        }
-      } catch (error) {
-        console.log('No fallback session found');
-      }
-
       setLoading(false);
-    };
+    });
 
-    initAuth();
-
-    // Listen for Supabase auth changes
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -223,22 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    // Listen for fallback auth changes
-    const fallbackSub = fallbackAuth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        setUser(session.user as User);
-        await fetchUserData(session.user as User);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setUserProfile(null);
-      }
-      setLoading(false);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-      fallbackSub.data.subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
