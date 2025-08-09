@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
 
 interface UserProfile {
   id: string;
@@ -30,7 +29,7 @@ interface UserProfile {
 interface AuthContextType {
   user: UserProfile | null;
   userProfile: UserProfile | null;
-  signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  signIn: (identifier: string, password: string) => Promise<{ error?: string }>;
   signUp: (email: string, password: string, metadata?: any) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   loading: boolean;
@@ -44,21 +43,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // console.log('🔐 Auth Configuration: supabase (Environment: production)');
-
-  const fetchUserData = async (supabaseEmail?: string) => {
+  const fetchUserData = async () => {
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      };
-      
-      if (supabaseEmail) {
-        headers['X-Supabase-Email'] = supabaseEmail;
-      }
-
       const response = await fetch(`/api/user?t=${Date.now()}`, {
         credentials: 'include',
-        headers,
+        headers: {
+          'Content-Type': 'application/json'
+        },
         cache: 'no-cache'
       });
 
@@ -67,155 +58,102 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const userData = await response.json();
-      // console.log('🔄 FRESH API Response - User data:', userData);
-      // console.log('🔄 Forcing userProfile state update with:', userData);
-      
-      // Force immediate update for admin changes - always sync profile data
       setUserProfile(userData);
-      // console.log('✅ UserProfile state updated - Admin changes synced');
+      setUser(userData);
     } catch (error) {
-      // Silent user data fetching
+      console.error('Failed to fetch user data:', error);
+      setUserProfile(null);
+      setUser(null);
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (identifier: string, password: string): Promise<{ error?: string }> => {
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        // Silent auth error handling
-        return { error: authError.message };
-      }
-
-      if (authData.user) {
-        setUser({
-          id: authData.user.id,
-          email: authData.user.email || '',
-        });
-        
-        // Special handling for your Liu Wei account
-        if (authData.user.email === 'bankmanagerworld5@gmail.com') {
-          await fetchUserData(authData.user.email);
-        } else {
-          // Create new banking account for other Supabase users
-          await createNewSupabaseAccount(authData.user);
-        }
-        
-        return {};
-      }
+      setLoading(true);
       
-      return { error: 'Login failed' };
-    } catch (error) {
-      // Silent login error handling
-      return { error: 'Login failed' };
-    }
-  };
-
-  const createNewSupabaseAccount = async (supabaseUser: any) => {
-    try {
-      const response = await fetch('/api/users/create-supabase', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         credentials: 'include',
         body: JSON.stringify({
-          supabaseUserId: supabaseUser.id,
-          email: supabaseUser.email,
-          fullName: supabaseUser.user_metadata?.full_name || 'Banking Customer'
-        })
+          identifier,
+          password,
+        }),
       });
 
-      if (response.ok) {
-        const newUserData = await response.json();
-        setUserProfile(newUserData);
+      const result = await response.json();
+
+      if (!response.ok) {
+        return { error: result.message || 'Login failed' };
       }
+
+      // Fetch user profile after successful login
+      await fetchUserData();
+      return {};
     } catch (error) {
-      // console.error('Failed to create new banking account:', error);
+      console.error("Sign in error:", error);
+      return { error: "Network error occurred" };
+    } finally {
+      setLoading(false);
     }
   };
 
-  const signUp = async (email: string, password: string, metadata?: any) => {
+  const signUp = async (email: string, password: string, metadata?: any): Promise<{ error?: string }> => {
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: metadata || {}
-        }
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          email,
+          password,
+          ...metadata
+        }),
       });
 
-      if (authError) {
-        // Silent registration error handling
-        return { error: authError.message };
+      const result = await response.json();
+
+      if (!response.ok) {
+        return { error: result.message || 'Registration failed' };
       }
 
-      if (authData.user) {
-        return { error: undefined };
-      }
-
-      return { error: 'Registration failed' };
+      return {};
     } catch (error) {
-      // Silent registration error handling
-      return { error: 'Registration failed' };
+      console.error("Sign up error:", error);
+      return { error: "Network error occurred" };
     }
   };
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
       setUser(null);
       setUserProfile(null);
     } catch (error) {
-      // Silent sign out error handling
+      console.error("Sign out error:", error);
     }
   };
 
   useEffect(() => {
     const checkAuth = async () => {
+      setLoading(true);
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-          });
-          
-          if (session.user.email === 'bankmanagerworld5@gmail.com') {
-            await fetchUserData(session.user.email);
-          }
-        }
+        await fetchUserData();
       } catch (error) {
-        // console.error('Auth check error:', error);
+        // User not authenticated
       } finally {
         setLoading(false);
       }
     };
 
     checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-          });
-          
-          if (session.user.email === 'bankmanagerworld5@gmail.com') {
-            await fetchUserData(session.user.email);
-          }
-        } else {
-          setUser(null);
-          setUserProfile(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
   }, []);
 
   return (
@@ -227,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp,
         signOut,
         loading,
-        fetchUserData,
+        fetchUserData
       }}
     >
       {children}
@@ -235,10 +173,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};

@@ -3,7 +3,7 @@ import { MessageSquare, Send, X, Phone, Video, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { realtimeChat, RealtimeMessage } from "@/lib/supabase-realtime";
+
 
 interface ChatMessage {
   id: string;
@@ -21,21 +21,33 @@ interface LiveChatProps {
 }
 
 export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: '1',
+      senderId: 'admin-1',
+      senderName: 'Customer Support',
+      senderRole: 'admin',
+      message: 'Hello! How can I help you today?',
+      timestamp: new Date(Date.now() - 60000),
+      isRead: true
+    }
+  ]);
   const [newMessage, setNewMessage] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { userProfile } = useAuth();
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      connectSupabaseRealtime();
-      loadChatHistory();
+      connectWebSocket();
     } else {
-      disconnectSupabaseRealtime();
+      disconnectWebSocket();
     }
 
     return () => {
-      disconnectSupabaseRealtime();
+      disconnectWebSocket();
     };
   }, [isOpen]);
 
@@ -43,62 +55,83 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
     scrollToBottom();
   }, [messages]);
 
-  // Load chat history from Supabase
-  const loadChatHistory = async () => {
+  const connectWebSocket = () => {
     try {
-      const chatMessages = await realtimeChat.getMessages();
-      const formattedMessages: ChatMessage[] = chatMessages.map(msg => ({
-        id: msg.id,
-        senderId: msg.senderId,
-        senderName: msg.senderName,
-        senderRole: msg.senderRole,
-        message: msg.message,
-        timestamp: msg.timestamp,
-        isRead: msg.isRead
-      }));
-      setMessages(formattedMessages);
-    } catch (error) {
-      console.error('Failed to load chat history:', error);
-    }
-  };
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      
+      wsRef.current = new WebSocket(wsUrl);
+      
+      wsRef.current.onopen = () => {
+        setIsConnected(true);
+        // console.log('Live chat connected');
+      };
 
-  // Connect to Supabase Realtime for live chat
-  const connectSupabaseRealtime = () => {
-    try {
-      realtimeChat.subscribe((message: RealtimeMessage) => {
-        const newMessage: ChatMessage = {
-          id: message.id,
-          senderId: message.senderId,
-          senderName: message.senderName,
-          senderRole: message.senderRole,
-          message: message.message,
-          timestamp: message.timestamp,
-          isRead: message.isRead
-        };
-        setMessages(prev => [...prev, newMessage]);
-      });
-      setIsConnected(true);
+      wsRef.current.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'chat_message') {
+          const newMessage: ChatMessage = {
+            id: data.id,
+            senderId: data.senderId,
+            senderName: data.senderName,
+            senderRole: data.senderRole,
+            message: data.message,
+            timestamp: new Date(data.timestamp),
+            isRead: false
+          };
+          setMessages(prev => [...prev, newMessage]);
+        } else if (data.type === 'typing') {
+          setIsTyping(data.isTyping && data.senderId !== userProfile?.id);
+        }
+      };
+
+      wsRef.current.onclose = () => {
+        setIsConnected(false);
+        // console.log('Live chat disconnected');
+      };
+
+      wsRef.current.onerror = (error) => {
+        // Silent WebSocket error handling
+        setIsConnected(false);
+      };
     } catch (error) {
-      console.error('Failed to connect to Supabase Realtime:', error);
+      // Silent live chat connection handling
       setIsConnected(false);
     }
   };
 
-  const disconnectSupabaseRealtime = () => {
-    realtimeChat.unsubscribe();
-    setIsConnected(false);
+  const disconnectWebSocket = () => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
   };
 
-  const sendMessage = async () => {
-    if (!newMessage.trim()) return;
+  const sendMessage = () => {
+    if (!newMessage.trim() || !wsRef.current) return;
 
-    try {
-      // Send message via Supabase Realtime
-      await realtimeChat.sendMessage(newMessage.trim(), 'customer');
-      setNewMessage("");
-    } catch (error) {
-      console.error('Failed to send message:', error);
+    const message: ChatMessage = {
+      id: Date.now().toString(),
+      senderId: userProfile?.id?.toString() || 'customer-1',
+      senderName: userProfile?.fullName || 'Customer',
+      senderRole: 'customer',
+      message: newMessage.trim(),
+      timestamp: new Date(),
+      isRead: false
+    };
+
+    // Add to local state immediately
+    setMessages(prev => [...prev, message]);
+
+    // Send via WebSocket
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'chat_message',
+        ...message
+      }));
     }
+
+    setNewMessage("");
   };
 
   const scrollToBottom = () => {

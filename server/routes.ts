@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage-factory";
 import { setupTransferRoutes } from './routes-transfer';
-import { setupRealtimeRoutes } from './routes-realtime';
+
 
 // Utility functions for generating account details
 function generateAccountNumber(): string {
@@ -1711,7 +1711,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup transfer routes
   setupTransferRoutes(app);
-  setupRealtimeRoutes(app);
 
   return httpServer;
 }
