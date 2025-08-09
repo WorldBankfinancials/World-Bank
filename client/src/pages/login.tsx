@@ -26,7 +26,7 @@ export default function Login() {
   const [loginPin, setLoginPin] = useState("");
   const [pinError, setPinError] = useState("");
   const [loginData, setLoginData] = useState({
-    identifier: "",
+    email: "",
     password: "",
   });
 
@@ -41,7 +41,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const result = await signIn(loginData.identifier, loginData.password);
+      const result = await signIn(loginData.email, loginData.password);
       
       if (result.error) {
         toast({
@@ -164,15 +164,15 @@ export default function Login() {
                   <div className="relative">
                     <span className="absolute left-4 top-4 text-gray-500 font-medium text-base">@/</span>
                     <Input
-                      id="identifier"
-                      type="text"
-                      value={loginData.identifier}
+                      id="email"
+                      type="email"
+                      value={loginData.email}
                       onChange={(e) => setLoginData(prev => ({
                         ...prev,
-                        identifier: e.target.value
+                        email: e.target.value
                       }))}
                       className="wb-input pl-12 h-14 text-base"
-                      placeholder={t('id_placeholder')}
+                      placeholder="Enter your email address"
                       required
                     />
                   </div>

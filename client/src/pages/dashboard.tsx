@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";
+import RealtimeAlerts from "@/components/RealtimeAlerts";
 
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -653,6 +654,8 @@ export default function Dashboard() {
           
           {/* Profile Section */}
           <div className="flex items-center space-x-3">
+            {/* Real-time Alerts */}
+            <RealtimeAlerts />
 
 
             {/* Profile Icon with Dropdown */}
