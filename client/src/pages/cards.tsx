@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { CreditCard, Plus, Eye, EyeOff, MoreVertical, Zap, Shield, Smartphone, Lock, Unlock, CreditCard as CreditCardIcon, Settings, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -525,15 +526,6 @@ export default function Cards() {
           </div>
         </DialogContent>
       </Dialog>
-      
-      <BottomNavigation />
     </div>
   );
-}
-import React from 'react';
-import CreditCards from './credit-cards';
-
-// Alias for credit-cards page
-export default function Cards() {
-  return <CreditCards />;
 }

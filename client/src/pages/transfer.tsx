@@ -1,3 +1,4 @@
+
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Button } from "@/components/ui/button";
@@ -657,11 +658,4 @@ export default function Transfer() {
       <BottomNavigation />
     </div>
   );
-}
-import React from 'react';
-import TransferFunds from './transfer-funds';
-
-// Alias for transfer-funds page
-export default function Transfer() {
-  return <TransferFunds />;
 }
