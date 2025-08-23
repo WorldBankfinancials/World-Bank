@@ -1,3 +1,4 @@
+
 import React, { Component, ReactNode } from 'react';
 
 interface Props {
@@ -10,18 +11,30 @@ interface State {
   errorInfo?: React.ErrorInfo;
 }
 
-class ErrorBoundary extends React.Component<Props, State> {
+class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    // Only catch actual critical errors, not minor issues
-    if (error.message.includes('ChunkLoadError') || 
-        error.message.includes('Loading chunk') ||
-        error.message.includes('Failed to fetch dynamically imported module')) {
-      console.warn('Non-critical error caught:', error.message);
+    // Only catch actual critical errors that prevent the app from working
+    const nonCriticalErrors = [
+      'ChunkLoadError',
+      'Loading chunk',
+      'Failed to fetch dynamically imported module',
+      'ResizeObserver loop limit exceeded',
+      'Non-Error promise rejection captured',
+      'Script error',
+      'Network request failed'
+    ];
+
+    const isCritical = !nonCriticalErrors.some(pattern => 
+      error.message.includes(pattern) || error.name.includes(pattern)
+    );
+
+    if (!isCritical) {
+      console.warn('Non-critical error ignored by boundary:', error.message);
       return { hasError: false };
     }
 
@@ -30,10 +43,21 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Only show error boundary for critical errors
-    if (error.message.includes('ChunkLoadError') || 
-        error.message.includes('Loading chunk') ||
-        error.message.includes('Failed to fetch dynamically imported module')) {
+    const nonCriticalErrors = [
+      'ChunkLoadError',
+      'Loading chunk', 
+      'Failed to fetch dynamically imported module',
+      'ResizeObserver loop limit exceeded',
+      'Non-Error promise rejection captured',
+      'Script error',
+      'Network request failed'
+    ];
+
+    const isCritical = !nonCriticalErrors.some(pattern => 
+      error.message.includes(pattern) || error.name.includes(pattern)
+    );
+
+    if (!isCritical) {
       console.warn('Non-critical error, continuing normal operation');
       this.setState({ hasError: false });
       return;
@@ -48,8 +72,8 @@ class ErrorBoundary extends React.Component<Props, State> {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="text-center p-8 max-w-md">
-            <h1 className="text-2xl font-bold text-gray-800 mb-4">Application Error</h1>
-            <p className="text-gray-600 mb-4">A critical error occurred. Please try refreshing the page.</p>
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">Critical Application Error</h1>
+            <p className="text-gray-600 mb-4">A critical error occurred that prevents the application from running.</p>
             {process.env.NODE_ENV === 'development' && this.state.error && (
               <details className="text-left text-sm text-red-600 mb-4 p-4 bg-red-50 rounded">
                 <summary className="cursor-pointer font-medium">Error Details</summary>

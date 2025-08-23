@@ -471,6 +471,7 @@ export default function Dashboard() {
   const [showBalance, setShowBalance] = React.useState(true);
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [isChatOpen, setIsChatOpen] = React.useState(false);
+  const [hasError, setHasError] = React.useState(false);
   
   // Debug chat state
   useEffect(() => {
@@ -519,6 +520,7 @@ export default function Dashboard() {
         }
       } catch (error) {
         console.log('⚠️ API fetch failed, using default data:', error);
+        setHasError(false); // Don't treat API failures as critical errors
       }
     };
 
@@ -548,7 +550,6 @@ export default function Dashboard() {
         const response = await fetch('/api/accounts');
         if (response.ok) {
           const accountsData = await response.json();
-          // console.log('Accounts API Response:', accountsData);
 
           if (Array.isArray(accountsData) && accountsData.length > 0) {
             const formattedAccounts = accountsData.map((account: any) => ({
@@ -561,7 +562,6 @@ export default function Dashboard() {
             }));
             setAccounts(formattedAccounts);
           } else {
-            // console.warn('No accounts data received or invalid format');
             // Set default accounts if API returns empty
             setAccounts([
               { type: 'Checking', number: '****9234', balance: 49332.15, icon: Wallet, id: 1 },
@@ -570,10 +570,15 @@ export default function Dashboard() {
             ]);
           }
         } else {
-          // console.error('Failed to fetch accounts - HTTP status:', response.status);
+          // Use default accounts on API failure
+          setAccounts([
+            { type: 'Checking', number: '****9234', balance: 49332.15, icon: Wallet, id: 1 },
+            { type: 'Savings', number: '****5678', balance: 125000.00, icon: Building2, id: 2 },
+            { type: 'Investment', number: '****9012', balance: 348900.25, icon: TrendingUp, id: 3 }
+          ]);
         }
       } catch (error) {
-        // console.error('Failed to fetch accounts:', error);
+        console.warn('API fetch error, using default accounts:', error);
         // Set default accounts on error
         setAccounts([
           { type: 'Checking', number: '****9234', balance: 49332.15, icon: Wallet, id: 1 },
@@ -584,7 +589,6 @@ export default function Dashboard() {
     };
 
     fetchAccounts();
-    // Removed auto-refresh to prevent profile reset issues
   }, []);
 
   const profileMenuItems = [
