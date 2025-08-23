@@ -658,3 +658,10 @@ export default function Transfer() {
     </div>
   );
 }
+import React from 'react';
+import TransferFunds from './transfer-funds';
+
+// Alias for transfer-funds page
+export default function Transfer() {
+  return <TransferFunds />;
+}

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import { Router, Switch, Route } from "wouter";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -11,7 +11,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 
 // Components
 import ErrorBoundary from '@/components/ErrorBoundary';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 import BottomNavigation from '@/components/BottomNavigation';
 
 // Pages
@@ -47,6 +47,9 @@ import TransferFailed from '@/pages/transfer-failed';
 import TransferProcessing from '@/pages/transfer-processing';
 import Verification from '@/pages/verification';
 import NotFound from '@/pages/not-found';
+import History from '@/pages/history';
+import Cards from '@/pages/cards';
+import Transfer from '@/pages/transfer';
 
 // Admin Pages
 import AdminLogin from '@/pages/admin-login';
@@ -59,6 +62,7 @@ import AdminLiveChat from '@/pages/admin-live-chat';
 import CustomerManagement from '@/pages/customer-management';
 import CustomerServicePortal from '@/pages/customer-service-portal';
 import FundManagement from '@/pages/fund-management';
+import TransactionRouter from '@/pages/transaction-router';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,63 +84,65 @@ function App() {
                 <div className="min-h-screen bg-gray-50">
                   <Switch>
                     {/* Public Routes */}
-                    <Route exact path="/login" component={Login} />
-                    <Route exact path="/register" component={Registration} />
-                    <Route exact path="/registration" component={Registration} />
-                    <Route exact path="/verification" component={Verification} />
-                    <Route exact path="/banking-services" component={BankingServices} />
-                    <Route exact path="/business-banking" component={BusinessBanking} />
-                    <Route exact path="/wealth-management" component={WealthManagement} />
-                    <Route exact path="/find-branches" component={FindBranches} />
+                    <Route path="/login" component={Login} />
+                    <Route path="/register" component={Registration} />
+                    <Route path="/registration" component={Registration} />
+                    <Route path="/verification" component={Verification} />
+                    <Route path="/banking-services" component={BankingServices} />
+                    <Route path="/business-banking" component={BusinessBanking} />
+                    <Route path="/wealth-management" component={WealthManagement} />
+                    <Route path="/find-branches" component={FindBranches} />
                     
                     {/* Admin Routes */}
-                    <Route exact path="/admin" component={AdminLogin} />
-                    <Route exact path="/admin/login" component={AdminLogin} />
-                    <Route exact path="/admin/dashboard" component={AdminDashboard} />
-                    <Route exact path="/admin/enhanced" component={EnhancedAdmin} />
-                    <Route exact path="/admin/accounts" component={AdminAccounts} />
-                    <Route exact path="/admin/transactions" component={AdminTransactionDashboard} />
-                    <Route exact path="/admin/transaction-creator" component={AdminTransactionCreator} />
-                    <Route exact path="/admin/live-chat" component={AdminLiveChat} />
-                    <Route exact path="/admin/customers" component={CustomerManagement} />
-                    <Route exact path="/admin/customer-service" component={CustomerServicePortal} />
-                    <Route exact path="/admin/fund-management" component={FundManagement} />
+                    <Route path="/admin" component={AdminLogin} />
+                    <Route path="/admin/login" component={AdminLogin} />
+                    <Route path="/admin/dashboard" component={AdminDashboard} />
+                    <Route path="/admin/enhanced" component={EnhancedAdmin} />
+                    <Route path="/admin/accounts" component={AdminAccounts} />
+                    <Route path="/admin/transactions" component={AdminTransactionDashboard} />
+                    <Route path="/admin/transaction-creator" component={AdminTransactionCreator} />
+                    <Route path="/admin/live-chat" component={AdminLiveChat} />
+                    <Route path="/admin/customers" component={CustomerManagement} />
+                    <Route path="/admin/customer-service" component={CustomerServicePortal} />
+                    <Route path="/admin/fund-management" component={FundManagement} />
 
                     {/* Protected Routes */}
-                    <Route path="/">
+                    <Route path="/:rest*">
                       <ProtectedRoute>
                         <div className="pb-20">
                           <Switch>
-                            <Route exact path="/" component={Dashboard} />
-                            <Route exact path="/dashboard" component={Dashboard} />
-                            <Route exact path="/credit-cards" component={CreditCards} />
-                            <Route exact path="/cards" component={CreditCards} />
-                            <Route exact path="/transfer-funds" component={TransferFunds} />
-                            <Route exact path="/transfer" component={TransferFunds} />
-                            <Route exact path="/international-transfer" component={InternationalTransfer} />
-                            <Route exact path="/transaction-history" component={TransactionHistory} />
-                            <Route exact path="/history" component={TransactionHistory} />
-                            <Route exact path="/profile-settings" component={ProfileSettings} />
-                            <Route exact path="/profile" component={ProfileSettings} />
-                            <Route exact path="/security-settings" component={SecuritySettings} />
-                            <Route exact path="/pin-settings" component={PinSettings} />
-                            <Route exact path="/account-preferences" component={AccountPreferences} />
-                            <Route exact path="/customer-support" component={CustomerSupport} />
-                            <Route exact path="/support-center" component={SupportCenter} />
-                            <Route exact path="/security-center" component={SecurityCenter} />
-                            <Route exact path="/investment-portfolio" component={InvestmentPortfolio} />
-                            <Route exact path="/investment-trading" component={InvestmentTrading} />
-                            <Route exact path="/digital-wallet" component={DigitalWallet} />
-                            <Route exact path="/mobile-pay" component={MobilePay} />
-                            <Route exact path="/alerts" component={Alerts} />
-                            <Route exact path="/statements-reports" component={StatementsReports} />
-                            <Route exact path="/add-money" component={AddMoney} />
-                            <Route exact path="/receive" component={Receive} />
-                            <Route exact path="/transfer-success" component={TransferSuccess} />
-                            <Route exact path="/transfer-pending" component={TransferPending} />
-                            <Route exact path="/transfer-failed" component={TransferFailed} />
-                            <Route exact path="/transfer-processing" component={TransferProcessing} />
-                            <Route exact path="/not-found" component={NotFound} />
+                            <Route path="/" component={Dashboard} />
+                            <Route path="/dashboard" component={Dashboard} />
+                            <Route path="/credit-cards" component={CreditCards} />
+                            <Route path="/cards" component={Cards} />
+                            <Route path="/transfer-funds" component={TransferFunds} />
+                            <Route path="/transfer" component={Transfer} />
+                            <Route path="/international-transfer" component={InternationalTransfer} />
+                            <Route path="/transaction-history" component={TransactionHistory} />
+                            <Route path="/history" component={History} />
+                            <Route path="/profile-settings" component={ProfileSettings} />
+                            <Route path="/profile" component={ProfileSettings} />
+                            <Route path="/security-settings" component={SecuritySettings} />
+                            <Route path="/pin-settings" component={PinSettings} />
+                            <Route path="/account-preferences" component={AccountPreferences} />
+                            <Route path="/customer-support" component={CustomerSupport} />
+                            <Route path="/support-center" component={SupportCenter} />
+                            <Route path="/security-center" component={SecurityCenter} />
+                            <Route path="/investment-portfolio" component={InvestmentPortfolio} />
+                            <Route path="/investment-trading" component={InvestmentTrading} />
+                            <Route path="/digital-wallet" component={DigitalWallet} />
+                            <Route path="/mobile-pay" component={MobilePay} />
+                            <Route path="/alerts" component={Alerts} />
+                            <Route path="/statements-reports" component={StatementsReports} />
+                            <Route path="/add-money" component={AddMoney} />
+                            <Route path="/receive" component={Receive} />
+                            <Route path="/transfer-success" component={TransferSuccess} />
+                            <Route path="/transfer-pending" component={TransferPending} />
+                            <Route path="/transfer-failed" component={TransferFailed} />
+                            <Route path="/transfer-processing" component={TransferProcessing} />
+                            <Route path="/transaction-router" component={TransactionRouter} />
+                            <Route path="/customer-management" component={CustomerManagement} />
+                            <Route path="/fund-management" component={FundManagement} />
                             <Route component={NotFound} />
                           </Switch>
                         </div>

@@ -530,3 +530,10 @@ export default function Cards() {
     </div>
   );
 }
+import React from 'react';
+import CreditCards from './credit-cards';
+
+// Alias for credit-cards page
+export default function Cards() {
+  return <CreditCards />;
+}
