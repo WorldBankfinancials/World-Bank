@@ -44,41 +44,10 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Mock customer data for Profile Management tab
-  const mockCustomers = [
-    {
-      id: 1,
-      fullName: "Mr. Liu Wei",
-      email: "liu.wei@oilrig.com", 
-      username: "liu.wei",
-      phone: "+86 138 0013 8000",
-      accountNumber: "4789-6523-1087-9234",
-      accountId: "WB-2024-7829",
-      profession: "Marine Engineer",
-      isVerified: true,
-      isOnline: true,
-      avatarUrl: null,
-      role: "customer"
-    },
-    {
-      id: 2,
-      fullName: "Ms. Chen Li", 
-      email: "chen.li@example.com",
-      username: "chen.li",
-      phone: "+86 138 0013 8001",
-      accountNumber: "4789-6523-1087-9235", 
-      accountId: "WB-2024-7830",
-      profession: "Financial Analyst",
-      isVerified: false,
-      isOnline: false,
-      avatarUrl: null,
-      role: "customer"
-    }
-  ];
-
   // Fetch pending transfers
-  const { data: pendingTransfers = [], isLoading: transfersLoading } = useQuery<PendingTransfer[]>({
+  const { data: pendingTransfers = [], isLoading: transfersLoading, refetch: refetchTransfers } = useQuery<PendingTransfer[]>({
     queryKey: ['/api/admin/pending-transfers'],
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
 
   // Fetch support tickets
@@ -91,25 +60,27 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/stats'],
   });
 
-  // Use mock customers data instead of API call
-  const customers = mockCustomers;
-  const customersLoading = false;
+  // Fetch customers dynamically
+  const { data: customers = [], isLoading: customersLoading } = useQuery({
+    queryKey: ['/api/admin/customers'],
+    refetchInterval: 10000, // Refetch every 10 seconds
+  });
 
   // Profile picture upload mutation
   const uploadProfilePicMutation = useMutation({
     mutationFn: async ({ userId, imageFile }: { userId: number; imageFile: File }) => {
       const formData = new FormData();
       formData.append('profilePic', imageFile);
-      
+
       const response = await fetch(`/api/admin/customers/${userId}/profile-picture`, {
         method: 'POST',
         body: formData,
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to upload profile picture');
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -227,7 +198,7 @@ export default function AdminDashboard() {
         isOnline: true,
         avatarUrl: null
       }} />
-      
+
       <div className="px-4 py-6">
         {/* Admin Header */}
         <div className="flex items-center justify-between mb-6">
@@ -260,7 +231,7 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
@@ -272,7 +243,7 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
@@ -284,7 +255,7 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">

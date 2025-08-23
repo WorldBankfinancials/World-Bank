@@ -1,4 +1,3 @@
-
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -80,10 +79,22 @@ export default function InternationalTransfer() {
     { name: "Hiroshi Tanaka", country: "Japan", account: "****2187", lastTransfer: "2 weeks ago" }
   ];
 
+  const handleTransferSubmit = () => {
+    // This is a placeholder for the actual transfer submission logic.
+    // In a real application, you would send the transfer details to your backend API.
+    alert("Transfer submitted! (This is a placeholder)");
+    console.log("Transfer details:", {
+      amount: transferAmount,
+      fromCurrency: fromCurrency,
+      toCurrency: toCurrency,
+      // ... other recipient and transfer details
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header user={user} />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Enhanced Header */}
         <div className="text-center mb-8">
@@ -146,11 +157,11 @@ export default function InternationalTransfer() {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="flex justify-center">
                     <ArrowRightLeft className="w-6 h-6 text-blue-600" />
                   </div>
-                  
+
                   <div>
                     <Label>Recipient Gets</Label>
                     <div className="flex mt-1">
@@ -169,7 +180,7 @@ export default function InternationalTransfer() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="mt-4 p-3 bg-white rounded-lg">
                   <div className="flex justify-between text-sm">
                     <span>Exchange Rate:</span>
@@ -212,7 +223,7 @@ export default function InternationalTransfer() {
 
                 <div className="border-t pt-6">
                   <Label className="text-base font-medium">Add New Recipient</Label>
-                  
+
                   {/* Personal Information */}
                   <div className="mt-4 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -429,9 +440,12 @@ export default function InternationalTransfer() {
                     <span className="font-bold">$1,008.00 USD</span>
                   </div>
                 </div>
-                
+
                 <div className="mt-6 space-y-3">
-                  <Button className="w-full bg-blue-600 text-white hover:bg-blue-700">
+                  <Button 
+                    className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                    onClick={handleTransferSubmit}
+                  >
                     Send Money Now
                   </Button>
                   <Button variant="outline" className="w-full">
@@ -575,7 +589,7 @@ export default function InternationalTransfer() {
           </div>
         </div>
       </div>
-      
+
       <Footer />
     </div>
   );

@@ -6,6 +6,11 @@ import NavigationMenu from "./NavigationMenu";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar } from './Avatar';
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Button } from "@/components/ui/button";
+import LanguageSelector from "./LanguageSelector";
+import RealtimeAlerts from "./RealtimeAlerts";
+import { Bell, MessageSquare, FileText } from "lucide-react";
 
 interface HeaderProps {
   user?: UserType | any;

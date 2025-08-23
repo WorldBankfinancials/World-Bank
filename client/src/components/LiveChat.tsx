@@ -199,30 +199,32 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
       </div>
 
       {/* Message Input - Fixed Layout */}
-      <div className="p-4 border-t border-gray-200 bg-gray-50 rounded-b-lg flex-shrink-0">
-        <div className="flex items-center space-x-2">
-          <Button size="sm" variant="ghost" className="p-2 hover:bg-gray-200">
-            <Paperclip className="w-4 h-4 text-gray-500" />
-          </Button>
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Type your message..."
-            className="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-            disabled={!isConnected}
-          />
+      <div className="p-3 border-t border-gray-200 bg-white rounded-b-lg flex-shrink-0">
+        <div className="flex items-end space-x-2">
+          <div className="flex-1">
+            <Input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Type your message..."
+              className="border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+              disabled={!isConnected}
+            />
+          </div>
           <Button 
             onClick={sendMessage} 
             size="sm"
             disabled={!newMessage.trim() || !isConnected}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 flex-shrink-0"
           >
             <Send className="w-4 h-4" />
           </Button>
         </div>
-        <div className="mt-2 text-xs text-gray-500 text-center">
-          {isConnected ? 'Connected to support' : 'Connecting...'}
+        <div className="mt-1 text-xs text-gray-500 flex items-center justify-between">
+          <span>{isConnected ? '🟢 Online' : '🔴 Connecting...'}</span>
+          <Button size="sm" variant="ghost" className="p-1 h-auto text-gray-500 hover:text-gray-700">
+            <Paperclip className="w-3 h-3" />
+          </Button>
         </div>
       </div>
     </div>

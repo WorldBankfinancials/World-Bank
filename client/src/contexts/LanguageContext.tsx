@@ -972,31 +972,27 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   };
 
   const t = (key: string): string => {
+    if (!key || typeof key !== 'string') {
+      return key || '';
+    }
+    
     try {
-      // Get current language code safely
       const langCode = currentLanguage?.code || 'en';
+      const currentTranslations = translations[langCode];
       
-      // Get translations for current language with fallback to English
-      const currentTranslations = translations[langCode] || translations['en'];
-      
-      if (!currentTranslations) {
-        // console.warn(`No translations found for language: ${langCode}`);
-        return key;
+      if (currentTranslations && currentTranslations[key]) {
+        return currentTranslations[key];
       }
       
-      // Get translation with fallback to English if not found in current language
-      let translation = currentTranslations[key];
-      
-      if (!translation && langCode !== 'en') {
-        translation = translations['en']?.[key];
+      // Fallback to English
+      if (langCode !== 'en' && translations['en'] && translations['en'][key]) {
+        return translations['en'][key];
       }
       
-      if (!translation) {
-        return key;
-      }
-      
-      return translation;
+      // Return formatted key if no translation found
+      return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     } catch (error) {
+      console.warn('Translation error for key:', key, error);
       return key;
     }
   };
