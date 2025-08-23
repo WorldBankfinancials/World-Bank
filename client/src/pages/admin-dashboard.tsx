@@ -44,10 +44,12 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Fetch pending transfers
+  // Fetch pending transfers with real-time updates
   const { data: pendingTransfers = [], isLoading: transfersLoading, refetch: refetchTransfers } = useQuery<PendingTransfer[]>({
     queryKey: ['/api/admin/pending-transfers'],
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchInterval: 2000, // Refetch every 2 seconds for real-time updates
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
 
   // Fetch support tickets

@@ -198,33 +198,43 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input - Fixed Layout */}
-      <div className="p-3 border-t border-gray-200 bg-white rounded-b-lg flex-shrink-0">
-        <div className="flex items-end space-x-2">
+      {/* Message Input - Enhanced Layout */}
+      <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg flex-shrink-0">
+        <div className="flex items-center space-x-3">
           <div className="flex-1">
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              className="border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
-              disabled={!isConnected}
-            />
+            <div className="relative">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message here..."
+                className="border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm pr-10"
+                disabled={!isConnected}
+              />
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 h-auto text-gray-500 hover:text-gray-700"
+              >
+                <Paperclip className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
           <Button 
             onClick={sendMessage} 
             size="sm"
             disabled={!newMessage.trim() || !isConnected}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 flex-shrink-0"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 flex-shrink-0"
           >
             <Send className="w-4 h-4" />
           </Button>
         </div>
-        <div className="mt-1 text-xs text-gray-500 flex items-center justify-between">
-          <span>{isConnected ? '🟢 Online' : '🔴 Connecting...'}</span>
-          <Button size="sm" variant="ghost" className="p-1 h-auto text-gray-500 hover:text-gray-700">
-            <Paperclip className="w-3 h-3" />
-          </Button>
+        <div className="mt-2 text-xs text-gray-500 flex items-center justify-between">
+          <span className="flex items-center space-x-1">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
+            <span>{isConnected ? 'Connected - Type your message above' : 'Connecting...'}</span>
+          </span>
+          <span>Press Enter to send</span>
         </div>
       </div>
     </div>

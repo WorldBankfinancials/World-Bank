@@ -79,16 +79,39 @@ export default function InternationalTransfer() {
     { name: "Hiroshi Tanaka", country: "Japan", account: "****2187", lastTransfer: "2 weeks ago" }
   ];
 
-  const handleTransferSubmit = () => {
-    // This is a placeholder for the actual transfer submission logic.
-    // In a real application, you would send the transfer details to your backend API.
-    alert("Transfer submitted! (This is a placeholder)");
-    console.log("Transfer details:", {
-      amount: transferAmount,
-      fromCurrency: fromCurrency,
-      toCurrency: toCurrency,
-      // ... other recipient and transfer details
-    });
+  const handleTransferSubmit = async () => {
+    try {
+      const transferData = {
+        amount: parseFloat(transferAmount) || 1000,
+        recipientName: "Zhang Wei",
+        recipientAccount: "6234567890123456",
+        recipientCountry: "China",
+        bankName: "Bank of China",
+        swiftCode: "BKCHCNBJ",
+        transferPurpose: "Family Support",
+        notes: "Monthly family support transfer"
+      };
+
+      const response = await fetch('/api/transfers/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transferData)
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`Transfer submitted successfully! Transaction ID: ${result.transactionId}`);
+        setTransferAmount('');
+      } else {
+        alert('Transfer failed: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Transfer error:', error);
+      alert('Transfer failed. Please try again.');
+    }
   };
 
   return (

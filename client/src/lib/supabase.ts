@@ -17,12 +17,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
   realtime: {
     params: {
-      eventsPerSecond: 20,
+      eventsPerSecond: 50,
+      heartbeatIntervalMs: 30000,
     },
   },
   global: {
     headers: {
       'X-Client-Info': 'world-bank-realtime',
+      'X-Real-Time': 'enabled',
     },
   },
 });

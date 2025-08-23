@@ -112,14 +112,29 @@ export default function Header({}: HeaderProps) {
             </div>
           </Link>
 
-          {/* Profile Icon with Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              <Avatar size={40} />
-            </button>
+          {/* Notification and Profile Section */}
+          <div className="flex items-center space-x-4">
+            {/* Consolidated Notifications */}
+            <div className="flex items-center space-x-2">
+              <RealtimeAlerts />
+              <Button size="sm" variant="ghost" className="relative p-2">
+                <Bell className="w-5 h-5 text-gray-600" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">3</span>
+              </Button>
+              <Button size="sm" variant="ghost" className="relative p-2">
+                <MessageSquare className="w-5 h-5 text-gray-600" />
+                <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">2</span>
+              </Button>
+            </div>
+
+            {/* Profile Icon with Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <Avatar size={40} />
+              </button>
 
               {/* Profile Dropdown Menu */}
               {showProfileMenu && (
