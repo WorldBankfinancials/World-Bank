@@ -85,16 +85,32 @@ function ErrorFallback() {
           </svg>
         </div>
         <h1 className="text-2xl font-bold text-gray-800 mb-4">WORLD BANK</h1>
-        <p className="text-gray-600 mb-4">Loading your secure banking session...</p>
+        <p className="text-gray-600 mb-4">Starting your banking session...</p>
         <button 
-          onClick={() => window.location.reload()} 
+          onClick={() => {
+            // Clear any problematic localStorage and reload
+            try {
+              localStorage.removeItem('selectedLanguage');
+            } catch (e) {}
+            window.location.reload();
+          }} 
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
-          Refresh Page
+          Refresh Application
         </button>
       </div>
     </div>
   );
+}
+
+// Safe App Content Component
+function SafeAppContent() {
+  try {
+    return <AppContent />;
+  } catch (error) {
+    console.error('AppContent error:', error);
+    return <ErrorFallback />;
+  }
 }
 
 function AppContent() {
@@ -181,7 +197,7 @@ function App() {
             <AuthProvider>
               <LanguageProvider>
                 <Router>
-                  <AppContent />
+                  <SafeAppContent />
                 </Router>
               </LanguageProvider>
             </AuthProvider>

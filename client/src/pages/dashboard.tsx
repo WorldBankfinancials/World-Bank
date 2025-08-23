@@ -467,12 +467,13 @@ function AlertsSection() {
 
 export default function Dashboard() {
   const { t } = useLanguage();
-  const { userProfile } = useAuth();
+  const { userProfile, isLoading: isLoadingAuth } = useAuth(); // Assuming useAuth provides isLoading
   const [showBalance, setShowBalance] = React.useState(true);
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const [hasError, setHasError] = React.useState(false);
-  
+  const [error, setError] = React.useState<Error | null>(null);
+
   // Debug chat state
   useEffect(() => {
     console.log('Chat state changed:', isChatOpen);
@@ -493,8 +494,12 @@ export default function Dashboard() {
     isActive: true
   });
 
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
+
   useEffect(() => {
     const fetchUserData = async () => {
+      setIsLoadingUserData(true);
+      setError(null); // Reset error before fetch
       try {
         const response = await fetch(`/api/user?t=${Date.now()}`);
         if (response.ok) {
@@ -517,10 +522,15 @@ export default function Dashboard() {
           });
         } else {
           console.log('⚠️ API response not OK, using default data');
+          // Optionally set an error here if non-ok response is critical
+          // setError(new Error(`API Error: ${response.statusText}`));
         }
-      } catch (error) {
-        console.log('⚠️ API fetch failed, using default data:', error);
-        setHasError(false); // Don't treat API failures as critical errors
+      } catch (err) {
+        console.log('⚠️ API fetch failed, using default data:', err);
+        setError(err as Error); // Set the caught error
+        setHasError(true); // Indicate an error occurred
+      } finally {
+        setIsLoadingUserData(false);
       }
     };
 
@@ -543,9 +553,13 @@ export default function Dashboard() {
     icon: any;
     id: number;
   }>>([]);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
+  const [accountsError, setAccountsError] = useState<Error | null>(null);
 
   React.useEffect(() => {
     const fetchAccounts = async () => {
+      setIsLoadingAccounts(true);
+      setAccountsError(null); // Reset error
       try {
         const response = await fetch('/api/accounts');
         if (response.ok) {
@@ -571,6 +585,8 @@ export default function Dashboard() {
           }
         } else {
           // Use default accounts on API failure
+          console.warn('API response not OK, using default accounts:', response.statusText);
+          setAccountsError(new Error(`API Error: ${response.statusText}`));
           setAccounts([
             { type: 'Checking', number: '****9234', balance: 49332.15, icon: Wallet, id: 1 },
             { type: 'Savings', number: '****5678', balance: 125000.00, icon: Building2, id: 2 },
@@ -579,12 +595,15 @@ export default function Dashboard() {
         }
       } catch (error) {
         console.warn('API fetch error, using default accounts:', error);
+        setAccountsError(error as Error); // Set the caught error
         // Set default accounts on error
         setAccounts([
           { type: 'Checking', number: '****9234', balance: 49332.15, icon: Wallet, id: 1 },
           { type: 'Savings', number: '****5678', balance: 125000.00, icon: Building2, id: 2 },
           { type: 'Investment', number: '****9012', balance: 348900.25, icon: TrendingUp, id: 3 }
         ]);
+      } finally {
+        setIsLoadingAccounts(false);
       }
     };
 
@@ -640,6 +659,49 @@ export default function Dashboard() {
     }
   ];
 
+  // Handle loading states for auth and user data
+  if (isLoadingAuth || isLoadingUserData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Dashboard</h2>
+          <p className="text-gray-600">Securing your banking session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle errors after loading
+  if (hasError || accountsError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="w-11/12 md:w-1/3 text-center">
+          <CardHeader>
+            <AlertCircle className="w-16 h-16 text-red-600 mx-auto" />
+          </CardHeader>
+          <CardContent>
+            <CardTitle className="text-xl font-bold mb-3">Oops! Something went wrong.</CardTitle>
+            <p className="text-gray-700 mb-4">
+              We encountered an issue loading your dashboard. Please try again later.
+              {error && <p className="text-xs text-red-500 mt-2">Error: {error.message}</p>}
+              {accountsError && <p className="text-xs text-red-500 mt-2">Accounts Error: {accountsError.message}</p>}
+            </p>
+            <Button onClick={() => window.location.reload()} className="bg-red-600 hover:bg-red-700 text-white">
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
+  // Render the dashboard if no loading or error states
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header with World Bank Logo and Profile */}

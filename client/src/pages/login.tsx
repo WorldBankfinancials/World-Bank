@@ -19,7 +19,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { signIn } = useAuth();
   const { toast } = useToast();
-  const { t, currentLanguage, setLanguage, languages } = useLanguage();
+  const { currentLanguage, t, setLanguage, languages } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPinVerification, setShowPinVerification] = useState(false);
@@ -42,7 +42,7 @@ export default function Login() {
 
     try {
       const result = await signIn(loginData.email, loginData.password);
-      
+
       if (result.error) {
         toast({
           title: t('login_failed'),
@@ -118,7 +118,7 @@ export default function Login() {
           {/* Language Selector */}
           <div className="flex justify-end mb-6">
             <div className="w-32">
-              <Select value={currentLanguage.code} onValueChange={(value) => setLanguage(languages.find(l => l.code === value)!)}>
+              <Select value={currentLanguage?.code} onValueChange={(value) => setLanguage(languages.find(l => l.code === value)!)}>
                 <SelectTrigger className="bg-white/80 backdrop-blur-sm border-white/50">
                   <SelectValue />
                 </SelectTrigger>
@@ -134,7 +134,7 @@ export default function Login() {
           </div>
 
           {/* Centered Bank Logo and Title */}
-          <div className="text-center mb-8">
+          <div className={`text-center mb-8 ${currentLanguage?.code === 'ar' ? 'text-right' : 'text-left'}`}>
             <div className="flex justify-center mb-4">
               <BankLogo className="w-16 h-16" />
             </div>
@@ -154,7 +154,7 @@ export default function Login() {
                 <div className="w-16 h-1 bg-blue-600 rounded-full"></div>
               </div>
             </CardHeader>
-          
+
             <CardContent className="space-y-6 px-8 pb-8">
               <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-3">
@@ -270,7 +270,7 @@ export default function Login() {
             <p className="text-sm text-gray-600">
               {t('enter_pin_complete_login')}
             </p>
-            
+
             <div className="space-y-2">
               <Label htmlFor="pin">{t('security_pin')}</Label>
               <Input
@@ -297,7 +297,7 @@ export default function Login() {
                 </Alert>
               )}
             </div>
-            
+
             <div className="flex space-x-3">
               <Button
                 variant="outline"

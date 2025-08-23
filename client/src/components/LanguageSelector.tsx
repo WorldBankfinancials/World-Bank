@@ -1,67 +1,71 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { useLanguage, languages } from '@/contexts/LanguageContext';
+import React, { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ChevronDown, Globe } from 'lucide-react';
 
-const LanguageSelector: React.FC = () => {
-  const { currentLanguage, setLanguage } = useLanguage();
+export function LanguageSelector() {
+  const { currentLanguage, languages, changeLanguage } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Ensure currentLanguage is always defined
-  const safeCurrentLanguage = currentLanguage || languages[0];
+  // Ensure we have a valid current language
+  if (!currentLanguage || !currentLanguage.flag || !currentLanguage.name) {
+    return (
+      <div className="flex items-center space-x-2">
+        <Globe className="h-4 w-4 text-gray-600" />
+        <span className="text-sm text-gray-600">EN</span>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const handleLanguageSelect = (langCode: string) => {
-    setLanguage(langCode);
-    setIsOpen(false);
+  const handleLanguageSelect = (languageCode: string) => {
+    try {
+      changeLanguage(languageCode);
+      setIsOpen(false);
+    } catch (error) {
+      console.warn('Error selecting language:', error);
+    }
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-3 py-2 text-sm rounded-md hover:bg-gray-100 transition-colors"
-        aria-label="Language selector"
-      >
-        <Globe className="w-4 h-4 text-gray-600" />
-        <span className="text-lg">{safeCurrentLanguage.flag}</span>
-        <span className="hidden sm:inline text-gray-700">{safeCurrentLanguage.name}</span>
-        <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 min-w-[160px]">
-          <div className="py-1 max-h-64 overflow-y-auto">
-            {languages.map((language) => (
-              <button
-                key={language.code}
-                onClick={() => handleLanguageSelect(language.code)}
-                className={`w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center space-x-3 ${
-                  safeCurrentLanguage.code === language.code ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                }`}
-              >
-                <span className="text-lg">{language.flag}</span>
-                <span className="text-sm">{language.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="flex items-center space-x-2 hover:bg-gray-100"
+        >
+          <span className="text-lg">{currentLanguage.flag}</span>
+          <span className="hidden sm:inline text-sm font-medium">
+            {currentLanguage.name}
+          </span>
+          <ChevronDown className="h-3 w-3" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        {languages.map((language) => (
+          <DropdownMenuItem
+            key={language.code}
+            onClick={() => handleLanguageSelect(language.code)}
+            className={`flex items-center space-x-3 cursor-pointer ${
+              currentLanguage.code === language.code 
+                ? 'bg-blue-50 text-blue-700' 
+                : 'hover:bg-gray-50'
+            }`}
+          >
+            <span className="text-lg">{language.flag}</span>
+            <span className="text-sm">{language.name}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
-};
+}
 
 export default LanguageSelector;
