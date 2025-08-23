@@ -17,7 +17,7 @@ import StatementsReports from "@/pages/statements-reports";
 import InvestmentPortfolio from "@/pages/investment-portfolio";
 import WealthManagement from "@/pages/wealth-management";
 import SupportCenter from "@/pages/support-center";
-import CustomerSupport from "@/pages/customer-support";
+import CustomerSupport from "./pages/customer-support";
 import BankingServices from "./pages/banking-services";
 import DigitalWallet from "./pages/digital-wallet";
 import MobilePay from "./pages/mobile-pay";
@@ -40,7 +40,7 @@ import Transfer from "@/pages/transfer";
 import Cards from "@/pages/cards";
 import Receive from "@/pages/receive";
 import AddMoney from "@/pages/add-money";
-import Alerts from "@/pages/alerts";
+import Alerts from "./pages/alerts";
 import CustomerManagement from "@/pages/customer-management";
 import FundManagement from "@/pages/fund-management";
 import AdminLiveChat from "@/pages/admin-live-chat";
@@ -50,6 +50,7 @@ import AccountPreferences from "@/pages/account-preferences";
 import AdminTransactionDashboard from "@/pages/admin-transaction-dashboard";
 import AdminTransactionCreator from "@/pages/admin-transaction-creator";
 import TransactionRouter from "@/pages/transaction-router";
+import About from "./pages/about";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -94,6 +95,8 @@ function App() {
                         <Route path="/wealth-management" component={WealthManagement} />
                         <Route path="/support-center" component={SupportCenter} />
                         <Route path="/customer-support" component={CustomerSupport} />
+                        <Route path="/about" component={About} />
+                        <Route path="/alerts" component={Alerts} />
                         <Route path="/banking-services" component={BankingServices} />
                         <Route path="/digital-wallet" component={DigitalWallet} />
                         <Route path="/mobile-pay" component={MobilePay} />
@@ -106,7 +109,6 @@ function App() {
                         <Route path="/transfer" component={Transfer} />
                         <Route path="/receive" component={Receive} />
                         <Route path="/add-money" component={AddMoney} />
-                        <Route path="/alerts" component={Alerts} />
                         <Route path="/verification" component={VerificationCenter} />
                         <Route path="/account-preferences" component={AccountPreferences} />
                         <Route path="/admin-transaction-dashboard" component={AdminTransactionDashboard} />
@@ -114,7 +116,7 @@ function App() {
                         <Route path="/transaction-router" component={TransactionRouter} />
                         <Route path="/customer-management" component={CustomerManagement} />
                         <Route path="/fund-management" component={FundManagement} />
-
+                        <Route path="/not-found" component={NotFound} />
                         <Route component={NotFound} />
                       </Switch>
                     </div>
