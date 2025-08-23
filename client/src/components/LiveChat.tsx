@@ -261,18 +261,23 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Type your message here..."
-                className="flex-1 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm h-10 px-3 py-2 rounded-md bg-white"
+                className="flex-1 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm h-12 px-4 py-3 rounded-md bg-white text-gray-900 placeholder-gray-500"
                 disabled={!isConnected}
                 autoComplete="off"
                 autoFocus
+                style={{
+                  fontSize: '16px',
+                  lineHeight: '1.5',
+                  minHeight: '48px'
+                }}
               />
               <Button 
                 onClick={sendMessage} 
                 size="sm"
                 disabled={!newMessage.trim() || !isConnected}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 h-10 flex items-center justify-center flex-shrink-0"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 h-12 flex items-center justify-center flex-shrink-0 rounded-md"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-5 h-5" />
               </Button>
             </div>
             <div className="flex items-center justify-between text-xs text-gray-500">
@@ -280,7 +285,7 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
                 <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
                 <span>{isConnected ? 'Connected' : 'Connecting...'}</span>
               </span>
-              <span>Press Enter to send</span>
+              <span className="font-medium">Press Enter to send</span>
             </div>
           </div>
         </>

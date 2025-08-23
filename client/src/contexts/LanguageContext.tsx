@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 type Language = 'en' | 'es' | 'fr' | 'de' | 'zh' | 'ar' | 'ja' | 'pt' | 'ru' | 'hi';
@@ -12,12 +11,12 @@ interface LanguageContextType {
 const translations = {
   en: {
     // Navigation
-    home: 'Home',
-    cards: 'Cards',
-    transfer: 'Transfer',
-    history: 'History',
-    profile: 'Profile',
-    
+    nav_home: 'Home',
+    nav_cards: 'Cards',
+    nav_transfer: 'Transfer',
+    nav_history: 'History',
+    nav: 'Profile',
+
     // Dashboard
     welcome: 'Welcome',
     account_number: 'Account Number',
@@ -29,7 +28,7 @@ const translations = {
     savings_account: 'Savings Account',
     investment_account: 'Investment Account',
     quick_actions: 'Quick Actions',
-    
+
     // Actions
     international_transfer: 'International Transfer',
     send_money_worldwide: 'Send money worldwide',
@@ -48,7 +47,7 @@ const translations = {
     investments: 'Investments',
     portfolio_view: 'Portfolio view',
     recent_transactions: 'Recent Transactions',
-    
+
     // Chat
     world_bank_support: 'World Bank Support',
     online: 'Online',
@@ -56,7 +55,7 @@ const translations = {
     connected: 'Connected',
     press_enter_to_send: 'Press Enter to send',
     type_message: 'Type your message here...',
-    
+
     // Transfer
     amount: 'Amount',
     recipient_name: 'Recipient Name',
@@ -64,7 +63,7 @@ const translations = {
     send_transfer: 'Send Transfer',
     transfer_successful: 'Transfer Successful',
     transfer_pending: 'Transfer Pending',
-    
+
     // Common
     submit: 'Submit',
     cancel: 'Cancel',
@@ -82,16 +81,30 @@ const translations = {
     error: 'Error',
     success: 'Success',
     warning: 'Warning',
-    info: 'Information'
+    info: 'Information',
+    account: 'Account',
+    online: 'Online',
+    authenticated: 'Authenticated',
+    transfer_money: 'Transfer Money',
+    send_to: 'Send To',
+    transfer_type: 'Transfer Type',
+    select_transfer_type: 'Select Transfer Type',
+    quick_send: 'Quick Send',
+    international: 'International',
+    bank_transfer: 'Bank Transfer',
+    mobile_money: 'Mobile Money',
+    processing_transfer: 'Processing Transfer',
+    send_amount: 'Send Amount',
+    account_email_phone_placeholder: 'Account, email, or phone'
   },
   zh: {
     // Navigation
-    home: '首页',
-    cards: '银行卡',
-    transfer: '转账',
-    history: '历史',
-    profile: '个人资料',
-    
+    nav_home: '首页',
+    nav_cards: '银行卡',
+    nav_transfer: '转账',
+    nav_history: '历史',
+    nav: '个人资料',
+
     // Dashboard
     welcome: '欢迎',
     account_number: '账户号码',
@@ -103,7 +116,7 @@ const translations = {
     savings_account: '储蓄账户',
     investment_account: '投资账户',
     quick_actions: '快捷操作',
-    
+
     // Actions
     international_transfer: '国际转账',
     send_money_worldwide: '全球汇款',
@@ -122,7 +135,7 @@ const translations = {
     investments: '投资',
     portfolio_view: '投资组合',
     recent_transactions: '最近交易',
-    
+
     // Chat
     world_bank_support: '世界银行客服',
     online: '在线',
@@ -130,7 +143,7 @@ const translations = {
     connected: '已连接',
     press_enter_to_send: '按回车发送',
     type_message: '在此输入您的消息...',
-    
+
     // Transfer
     amount: '金额',
     recipient_name: '收款人姓名',
@@ -138,7 +151,7 @@ const translations = {
     send_transfer: '发送转账',
     transfer_successful: '转账成功',
     transfer_pending: '转账处理中',
-    
+
     // Common
     submit: '提交',
     cancel: '取消',
@@ -156,14 +169,28 @@ const translations = {
     error: '错误',
     success: '成功',
     warning: '警告',
-    info: '信息'
+    info: '信息',
+    account: '账户',
+    online: '在线',
+    authenticated: '已认证',
+    transfer_money: '转账',
+    send_to: '发送至',
+    transfer_type: '转账类型',
+    select_transfer_type: '选择转账类型',
+    quick_send: '快速发送',
+    international: '国际',
+    bank_transfer: '银行转账',
+    mobile_money: '手机支付',
+    processing_transfer: '处理转账',
+    send_amount: '发送金额',
+    account_email_phone_placeholder: '账户, 邮箱, 或 电话'
   },
   es: {
-    home: 'Inicio',
-    cards: 'Tarjetas',
-    transfer: 'Transferir',
-    history: 'Historial',
-    profile: 'Perfil',
+    nav_home: 'Inicio',
+    nav_cards: 'Tarjetas',
+    nav_transfer: 'Transferir',
+    nav_history: 'Historial',
+    nav: 'Perfil',
     welcome: 'Bienvenido',
     account_number: 'Número de Cuenta',
     total_balance: 'Saldo Total',
@@ -177,14 +204,28 @@ const translations = {
     recipient_name: 'Nombre del Destinatario',
     submit: 'Enviar',
     cancel: 'Cancelar',
-    loading: 'Cargando...'
+    loading: 'Cargando...',
+    account: 'Cuenta',
+    online: 'En línea',
+    authenticated: 'Autenticado',
+    transfer_money: 'Transferir Dinero',
+    send_to: 'Enviar a',
+    transfer_type: 'Tipo de Transferencia',
+    select_transfer_type: 'Seleccionar Tipo de Transferencia',
+    quick_send: 'Envío Rápido',
+    international: 'Internacional',
+    bank_transfer: 'Transferencia Bancaria',
+    mobile_money: 'Dinero Móvil',
+    processing_transfer: 'Procesando Transferencia',
+    send_amount: 'Enviar Monto',
+    account_email_phone_placeholder: 'Cuenta, correo electrónico o teléfono'
   },
   fr: {
-    home: 'Accueil',
-    cards: 'Cartes',
-    transfer: 'Virement',
-    history: 'Historique',
-    profile: 'Profil',
+    nav_home: 'Accueil',
+    nav_cards: 'Cartes',
+    nav_transfer: 'Virement',
+    nav_history: 'Historique',
+    nav: 'Profil',
     welcome: 'Bienvenue',
     account_number: 'Numéro de Compte',
     total_balance: 'Solde Total',
@@ -198,14 +239,28 @@ const translations = {
     recipient_name: 'Nom du Destinataire',
     submit: 'Soumettre',
     cancel: 'Annuler',
-    loading: 'Chargement...'
+    loading: 'Chargement...',
+    account: 'Compte',
+    online: 'En ligne',
+    authenticated: 'Authentifié',
+    transfer_money: 'Transférer de l\'argent',
+    send_to: 'Envoyer à',
+    transfer_type: 'Type de Virement',
+    select_transfer_type: 'Sélectionner le Type de Virement',
+    quick_send: 'Envoi Rapide',
+    international: 'International',
+    bank_transfer: 'Virement Bancaire',
+    mobile_money: 'Mobile Money',
+    processing_transfer: 'Virement en Cours',
+    send_amount: 'Montant à Envoyer',
+    account_email_phone_placeholder: 'Compte, email ou téléphone'
   },
   de: {
-    home: 'Startseite',
-    cards: 'Karten',
-    transfer: 'Überweisung',
-    history: 'Verlauf',
-    profile: 'Profil',
+    nav_home: 'Startseite',
+    nav_cards: 'Karten',
+    nav_transfer: 'Überweisung',
+    nav_history: 'Verlauf',
+    nav: 'Profil',
     welcome: 'Willkommen',
     account_number: 'Kontonummer',
     total_balance: 'Gesamtsaldo',
@@ -219,14 +274,28 @@ const translations = {
     recipient_name: 'Name des Empfängers',
     submit: 'Einreichen',
     cancel: 'Abbrechen',
-    loading: 'Wird geladen...'
+    loading: 'Wird geladen...',
+    account: 'Konto',
+    online: 'Online',
+    authenticated: 'Authentifiziert',
+    transfer_money: 'Geld überweisen',
+    send_to: 'Senden an',
+    transfer_type: 'Überweisungstyp',
+    select_transfer_type: 'Überweisungstyp auswählen',
+    quick_send: 'Schnellüberweisung',
+    international: 'International',
+    bank_transfer: 'Banküberweisung',
+    mobile_money: 'Mobile Money',
+    processing_transfer: 'Überweisung wird bearbeitet',
+    send_amount: 'Zu sendender Betrag',
+    account_email_phone_placeholder: 'Konto, E-Mail oder Telefon'
   },
   ar: {
-    home: 'الرئيسية',
-    cards: 'البطاقات',
-    transfer: 'تحويل',
-    history: 'التاريخ',
-    profile: 'الملف الشخصي',
+    nav_home: 'الرئيسية',
+    nav_cards: 'البطاقات',
+    nav_transfer: 'تحويل',
+    nav_history: 'التاريخ',
+    nav: 'الملف الشخصي',
     welcome: 'مرحباً',
     account_number: 'رقم الحساب',
     total_balance: 'الرصيد الإجمالي',
@@ -240,14 +309,28 @@ const translations = {
     recipient_name: 'اسم المستلم',
     submit: 'إرسال',
     cancel: 'إلغاء',
-    loading: 'جاري التحميل...'
+    loading: 'جاري التحميل...',
+    account: 'حساب',
+    online: 'متصل',
+    authenticated: 'مصادق عليه',
+    transfer_money: 'تحويل الأموال',
+    send_to: 'إرسال إلى',
+    transfer_type: 'نوع التحويل',
+    select_transfer_type: 'اختر نوع التحويل',
+    quick_send: 'إرسال سريع',
+    international: 'دولي',
+    bank_transfer: 'تحويل بنكي',
+    mobile_money: 'أموال الهاتف المحمول',
+    processing_transfer: 'جاري معالجة التحويل',
+    send_amount: 'مبلغ الإرسال',
+    account_email_phone_placeholder: 'الحساب، البريد الإلكتروني، أو الهاتف'
   },
   ja: {
-    home: 'ホーム',
-    cards: 'カード',
-    transfer: '送金',
-    history: '履歴',
-    profile: 'プロフィール',
+    nav_home: 'ホーム',
+    nav_cards: 'カード',
+    nav_transfer: '送金',
+    nav_history: '履歴',
+    nav: 'プロフィール',
     welcome: 'ようこそ',
     account_number: '口座番号',
     total_balance: '総残高',
@@ -261,14 +344,28 @@ const translations = {
     recipient_name: '受取人名',
     submit: '送信',
     cancel: 'キャンセル',
-    loading: '読み込み中...'
+    loading: '読み込み中...',
+    account: '口座',
+    online: 'オンライン',
+    authenticated: '認証済み',
+    transfer_money: '送金',
+    send_to: '送金先',
+    transfer_type: '送金タイプ',
+    select_transfer_type: '送金タイプを選択',
+    quick_send: 'クイック送金',
+    international: '国際',
+    bank_transfer: '銀行送金',
+    mobile_money: 'モバイルマネー',
+    processing_transfer: '送金処理中',
+    send_amount: '送金金額',
+    account_email_phone_placeholder: '口座、メールアドレス、または電話番号'
   },
   pt: {
-    home: 'Início',
-    cards: 'Cartões',
-    transfer: 'Transferir',
-    history: 'Histórico',
-    profile: 'Perfil',
+    nav_home: 'Início',
+    nav_cards: 'Cartões',
+    nav_transfer: 'Transferir',
+    nav_history: 'Histórico',
+    nav: 'Perfil',
     welcome: 'Bem-vindo',
     account_number: 'Número da Conta',
     total_balance: 'Saldo Total',
@@ -282,14 +379,28 @@ const translations = {
     recipient_name: 'Nome do Destinatário',
     submit: 'Enviar',
     cancel: 'Cancelar',
-    loading: 'Carregando...'
+    loading: 'Carregando...',
+    account: 'Conta',
+    online: 'Online',
+    authenticated: 'Autenticado',
+    transfer_money: 'Transferir Dinheiro',
+    send_to: 'Enviar para',
+    transfer_type: 'Tipo de Transferência',
+    select_transfer_type: 'Selecionar Tipo de Transferência',
+    quick_send: 'Envio Rápido',
+    international: 'Internacional',
+    bank_transfer: 'Transferência Bancária',
+    mobile_money: 'Dinheiro Móvel',
+    processing_transfer: 'Transferência em Processamento',
+    send_amount: 'Valor a Enviar',
+    account_email_phone_placeholder: 'Conta, e-mail ou telefone'
   },
   ru: {
-    home: 'Главная',
-    cards: 'Карты',
-    transfer: 'Перевод',
-    history: 'История',
-    profile: 'Профиль',
+    nav_home: 'Главная',
+    nav_cards: 'Карты',
+    nav_transfer: 'Перевод',
+    nav_history: 'История',
+    nav: 'Профиль',
     welcome: 'Добро пожаловать',
     account_number: 'Номер счета',
     total_balance: 'Общий баланс',
@@ -303,14 +414,28 @@ const translations = {
     recipient_name: 'Имя получателя',
     submit: 'Отправить',
     cancel: 'Отменить',
-    loading: 'Загрузка...'
+    loading: 'Загрузка...',
+    account: 'Счет',
+    online: 'Онлайн',
+    authenticated: 'Аутентифицирован',
+    transfer_money: 'Перевести деньги',
+    send_to: 'Отправить кому',
+    transfer_type: 'Тип перевода',
+    select_transfer_type: 'Выберите тип перевода',
+    quick_send: 'Быстрый перевод',
+    international: 'Международный',
+    bank_transfer: 'Банковский перевод',
+    mobile_money: 'Мобильные деньги',
+    processing_transfer: 'Обработка перевода',
+    send_amount: 'Сумма перевода',
+    account_email_phone_placeholder: 'Счет, email или телефон'
   },
   hi: {
-    home: 'होम',
-    cards: 'कार्ड',
-    transfer: 'स्थानांतरण',
-    history: 'इतिहास',
-    profile: 'प्रोफ़ाइल',
+    nav_home: 'होम',
+    nav_cards: 'कार्ड',
+    nav_transfer: 'स्थानांतरण',
+    nav_history: 'इतिहास',
+    nav: 'प्रोफ़ाइल',
     welcome: 'स्वागत है',
     account_number: 'खाता संख्या',
     total_balance: 'कुल शेष',
@@ -324,7 +449,21 @@ const translations = {
     recipient_name: 'प्राप्तकर्ता का नाम',
     submit: 'जमा करें',
     cancel: 'रद्द करें',
-    loading: 'लोड हो रहा है...'
+    loading: 'लोड हो रहा है...',
+    account: 'खाता',
+    online: 'ऑनलाइन',
+    authenticated: 'प्रमाणित',
+    transfer_money: 'धन हस्तांतरण',
+    send_to: 'को भेजें',
+    transfer_type: 'स्थानांतरण प्रकार',
+    select_transfer_type: 'स्थानांतरण प्रकार चुनें',
+    quick_send: 'त्वरित भेजें',
+    international: 'अंतर्राष्ट्रीय',
+    bank_transfer: 'बैंक हस्तांतरण',
+    mobile_money: 'मोबाइल पैसा',
+    processing_transfer: 'स्थानांतरण संसाधित हो रहा है',
+    send_amount: 'राशि भेजें',
+    account_email_phone_placeholder: 'खाता, ईमेल, या फोन'
   }
 };
 

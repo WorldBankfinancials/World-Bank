@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Router, Switch, Route, Redirect } from "wouter";
+import { Router, Switch, Route } from "wouter";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -108,44 +108,41 @@ function App() {
 
                     {/* Protected Routes */}
                     <ProtectedRoute>
-                      <div className="pb-20">
-                        <Switch>
-                          <Route path="/" component={Dashboard} />
-                          <Route path="/dashboard" component={Dashboard} />
-                          <Route path="/credit-cards" component={CreditCards} />
-                          <Route path="/cards" component={Cards} />
-                          <Route path="/transfer-funds" component={TransferFunds} />
-                          <Route path="/transfer" component={Transfer} />
-                          <Route path="/international-transfer" component={InternationalTransfer} />
-                          <Route path="/transaction-history" component={TransactionHistory} />
-                          <Route path="/history" component={History} />
-                          <Route path="/profile-settings" component={ProfileSettings} />
-                          <Route path="/profile" component={ProfileSettings} />
-                          <Route path="/security-settings" component={SecuritySettings} />
-                          <Route path="/pin-settings" component={PinSettings} />
-                          <Route path="/account-preferences" component={AccountPreferences} />
-                          <Route path="/customer-support" component={CustomerSupport} />
-                          <Route path="/support-center" component={SupportCenter} />
-                          <Route path="/security-center" component={SecurityCenter} />
-                          <Route path="/investment-portfolio" component={InvestmentPortfolio} />
-                          <Route path="/investment-trading" component={InvestmentTrading} />
-                          <Route path="/digital-wallet" component={DigitalWallet} />
-                          <Route path="/mobile-pay" component={MobilePay} />
-                          <Route path="/alerts" component={Alerts} />
-                          <Route path="/statements-reports" component={StatementsReports} />
-                          <Route path="/add-money" component={AddMoney} />
-                          <Route path="/receive" component={Receive} />
-                          <Route path="/transfer-success" component={TransferSuccess} />
-                          <Route path="/transfer-pending" component={TransferPending} />
-                          <Route path="/transfer-failed" component={TransferFailed} />
-                          <Route path="/transfer-processing" component={TransferProcessing} />
-                          <Route path="/transaction-router" component={TransactionRouter} />
-                          <Route path="/customer-management" component={CustomerManagement} />
-                          <Route path="/fund-management" component={FundManagement} />
-                          <Route component={NotFound} />
-                        </Switch>
-                      </div>
-                      <BottomNavigation />
+                      <Switch>
+                        <Route path="/" component={Dashboard} />
+                        <Route path="/dashboard" component={Dashboard} />
+                        <Route path="/credit-cards" component={CreditCards} />
+                        <Route path="/cards" component={Cards} />
+                        <Route path="/transfer-funds" component={TransferFunds} />
+                        <Route path="/transfer" component={Transfer} />
+                        <Route path="/international-transfer" component={InternationalTransfer} />
+                        <Route path="/transaction-history" component={TransactionHistory} />
+                        <Route path="/history" component={History} />
+                        <Route path="/profile-settings" component={ProfileSettings} />
+                        <Route path="/profile" component={ProfileSettings} />
+                        <Route path="/security-settings" component={SecuritySettings} />
+                        <Route path="/pin-settings" component={PinSettings} />
+                        <Route path="/account-preferences" component={AccountPreferences} />
+                        <Route path="/customer-support" component={CustomerSupport} />
+                        <Route path="/support-center" component={SupportCenter} />
+                        <Route path="/security-center" component={SecurityCenter} />
+                        <Route path="/investment-portfolio" component={InvestmentPortfolio} />
+                        <Route path="/investment-trading" component={InvestmentTrading} />
+                        <Route path="/digital-wallet" component={DigitalWallet} />
+                        <Route path="/mobile-pay" component={MobilePay} />
+                        <Route path="/alerts" component={Alerts} />
+                        <Route path="/statements-reports" component={StatementsReports} />
+                        <Route path="/add-money" component={AddMoney} />
+                        <Route path="/receive" component={Receive} />
+                        <Route path="/transfer-success" component={TransferSuccess} />
+                        <Route path="/transfer-pending" component={TransferPending} />
+                        <Route path="/transfer-failed" component={TransferFailed} />
+                        <Route path="/transfer-processing" component={TransferProcessing} />
+                        <Route path="/transaction-router" component={TransactionRouter} />
+                        <Route path="/customer-management" component={CustomerManagement} />
+                        <Route path="/fund-management" component={FundManagement} />
+                        <Route component={NotFound} />
+                      </Switch>
                     </ProtectedRoute>
                   </Switch>
                 </div>
