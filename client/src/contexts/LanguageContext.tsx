@@ -18,42 +18,71 @@ const translations = {
     history: 'History',
     profile: 'Profile',
     
-    // Common
+    // Dashboard
     welcome: 'Welcome',
-    dashboard: 'Dashboard',
-    account: 'Account',
-    balance: 'Balance',
-    available: 'Available',
-    pending: 'Pending',
+    account_number: 'Account Number',
+    account_id: 'Account ID',
     total_balance: 'Total Balance',
+    available: 'Available',
     my_accounts: 'My Accounts',
-    
-    // Account types
     checking_account: 'Checking Account',
     savings_account: 'Savings Account',
     investment_account: 'Investment Account',
+    quick_actions: 'Quick Actions',
     
     // Actions
-    send: 'Send',
+    international_transfer: 'International Transfer',
+    send_money_worldwide: 'Send money worldwide',
     receive: 'Receive',
+    request_money: 'Request money',
     add_money: 'Add Money',
-    transfer_funds: 'Transfer Funds',
+    fund_account: 'Fund account',
     live_chat: 'Live Chat',
-    customer_support: 'Customer Support',
-    
-    // Chat
-    type_message: 'Type your message...',
-    connected: 'Connected',
-    connecting: 'Connecting...',
-    
-    // Time
-    vs_last_month: 'vs last month',
+    customer_support: 'Customer support',
+    banking_alerts: 'Banking Alerts',
+    new_notifications: 'new notifications',
+    statements: 'Statements',
+    download_reports: 'Download reports',
+    exchange: 'Exchange',
+    currency_rates: 'Currency rates',
+    investments: 'Investments',
+    portfolio_view: 'Portfolio view',
     recent_transactions: 'Recent Transactions',
     
-    // Status
-    verified_account: 'Verified Account',
+    // Chat
+    world_bank_support: 'World Bank Support',
     online: 'Online',
-    authenticated: 'Authenticated'
+    hello_welcome: 'Hello! Welcome to World Bank. How can I help you today?',
+    connected: 'Connected',
+    press_enter_to_send: 'Press Enter to send',
+    type_message: 'Type your message here...',
+    
+    // Transfer
+    amount: 'Amount',
+    recipient_name: 'Recipient Name',
+    recipient_account: 'Recipient Account',
+    send_transfer: 'Send Transfer',
+    transfer_successful: 'Transfer Successful',
+    transfer_pending: 'Transfer Pending',
+    
+    // Common
+    submit: 'Submit',
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    continue: 'Continue',
+    back: 'Back',
+    next: 'Next',
+    save: 'Save',
+    edit: 'Edit',
+    delete: 'Delete',
+    search: 'Search',
+    filter: 'Filter',
+    sort: 'Sort',
+    loading: 'Loading...',
+    error: 'Error',
+    success: 'Success',
+    warning: 'Warning',
+    info: 'Information'
   },
   zh: {
     // Navigation
@@ -63,412 +92,249 @@ const translations = {
     history: '历史',
     profile: '个人资料',
     
-    // Common
+    // Dashboard
     welcome: '欢迎',
-    dashboard: '仪表板',
-    account: '账户',
-    balance: '余额',
-    available: '可用',
-    pending: '待处理',
+    account_number: '账户号码',
+    account_id: '账户ID',
     total_balance: '总余额',
+    available: '可用',
     my_accounts: '我的账户',
-    
-    // Account types
     checking_account: '支票账户',
     savings_account: '储蓄账户',
     investment_account: '投资账户',
+    quick_actions: '快捷操作',
     
     // Actions
-    send: '发送',
-    receive: '接收',
+    international_transfer: '国际转账',
+    send_money_worldwide: '全球汇款',
+    receive: '收款',
+    request_money: '请求付款',
     add_money: '充值',
-    transfer_funds: '转账',
+    fund_account: '资金账户',
     live_chat: '在线客服',
     customer_support: '客户支持',
-    
-    // Chat
-    type_message: '输入您的消息...',
-    connected: '已连接',
-    connecting: '连接中...',
-    
-    // Time
-    vs_last_month: '与上月相比',
+    banking_alerts: '银行提醒',
+    new_notifications: '新通知',
+    statements: '对账单',
+    download_reports: '下载报告',
+    exchange: '汇率',
+    currency_rates: '货币汇率',
+    investments: '投资',
+    portfolio_view: '投资组合',
     recent_transactions: '最近交易',
     
-    // Status
-    verified_account: '已验证账户',
+    // Chat
+    world_bank_support: '世界银行客服',
     online: '在线',
-    authenticated: '已认证'
+    hello_welcome: '您好！欢迎来到世界银行。我今天可以为您做些什么？',
+    connected: '已连接',
+    press_enter_to_send: '按回车发送',
+    type_message: '在此输入您的消息...',
+    
+    // Transfer
+    amount: '金额',
+    recipient_name: '收款人姓名',
+    recipient_account: '收款人账户',
+    send_transfer: '发送转账',
+    transfer_successful: '转账成功',
+    transfer_pending: '转账处理中',
+    
+    // Common
+    submit: '提交',
+    cancel: '取消',
+    confirm: '确认',
+    continue: '继续',
+    back: '返回',
+    next: '下一步',
+    save: '保存',
+    edit: '编辑',
+    delete: '删除',
+    search: '搜索',
+    filter: '筛选',
+    sort: '排序',
+    loading: '加载中...',
+    error: '错误',
+    success: '成功',
+    warning: '警告',
+    info: '信息'
   },
   es: {
-    // Navigation
     home: 'Inicio',
     cards: 'Tarjetas',
     transfer: 'Transferir',
     history: 'Historial',
     profile: 'Perfil',
-    
-    // Common
     welcome: 'Bienvenido',
-    dashboard: 'Panel',
-    account: 'Cuenta',
-    balance: 'Saldo',
-    available: 'Disponible',
-    pending: 'Pendiente',
+    account_number: 'Número de Cuenta',
     total_balance: 'Saldo Total',
-    my_accounts: 'Mis Cuentas',
-    
-    // Account types
-    checking_account: 'Cuenta Corriente',
-    savings_account: 'Cuenta de Ahorros',
-    investment_account: 'Cuenta de Inversión',
-    
-    // Actions
-    send: 'Enviar',
-    receive: 'Recibir',
-    add_money: 'Agregar Dinero',
-    transfer_funds: 'Transferir Fondos',
+    available: 'Disponible',
+    international_transfer: 'Transferencia Internacional',
     live_chat: 'Chat en Vivo',
     customer_support: 'Soporte al Cliente',
-    
-    // Chat
-    type_message: 'Escribe tu mensaje...',
+    type_message: 'Escribe tu mensaje aquí...',
     connected: 'Conectado',
-    connecting: 'Conectando...',
-    
-    // Time
-    vs_last_month: 'vs mes pasado',
-    recent_transactions: 'Transacciones Recientes',
-    
-    // Status
-    verified_account: 'Cuenta Verificada',
-    online: 'En Línea',
-    authenticated: 'Autenticado'
+    amount: 'Cantidad',
+    recipient_name: 'Nombre del Destinatario',
+    submit: 'Enviar',
+    cancel: 'Cancelar',
+    loading: 'Cargando...'
   },
   fr: {
-    // Navigation
     home: 'Accueil',
     cards: 'Cartes',
     transfer: 'Virement',
     history: 'Historique',
     profile: 'Profil',
-    
-    // Common
     welcome: 'Bienvenue',
-    dashboard: 'Tableau de Bord',
-    account: 'Compte',
-    balance: 'Solde',
-    available: 'Disponible',
-    pending: 'En Attente',
+    account_number: 'Numéro de Compte',
     total_balance: 'Solde Total',
-    my_accounts: 'Mes Comptes',
-    
-    // Account types
-    checking_account: 'Compte Courant',
-    savings_account: 'Compte Épargne',
-    investment_account: 'Compte Investissement',
-    
-    // Actions
-    send: 'Envoyer',
-    receive: 'Recevoir',
-    add_money: 'Ajouter Argent',
-    transfer_funds: 'Virer Fonds',
-    live_chat: 'Chat Live',
+    available: 'Disponible',
+    international_transfer: 'Virement International',
+    live_chat: 'Chat en Direct',
     customer_support: 'Support Client',
-    
-    // Chat
-    type_message: 'Tapez votre message...',
+    type_message: 'Tapez votre message ici...',
     connected: 'Connecté',
-    connecting: 'Connexion...',
-    
-    // Time
-    vs_last_month: 'vs mois dernier',
-    recent_transactions: 'Transactions Récentes',
-    
-    // Status
-    verified_account: 'Compte Vérifié',
-    online: 'En Ligne',
-    authenticated: 'Authentifié'
+    amount: 'Montant',
+    recipient_name: 'Nom du Destinataire',
+    submit: 'Soumettre',
+    cancel: 'Annuler',
+    loading: 'Chargement...'
   },
   de: {
-    // Navigation
     home: 'Startseite',
     cards: 'Karten',
     transfer: 'Überweisung',
     history: 'Verlauf',
     profile: 'Profil',
-    
-    // Common
     welcome: 'Willkommen',
-    dashboard: 'Dashboard',
-    account: 'Konto',
-    balance: 'Saldo',
-    available: 'Verfügbar',
-    pending: 'Ausstehend',
+    account_number: 'Kontonummer',
     total_balance: 'Gesamtsaldo',
-    my_accounts: 'Meine Konten',
-    
-    // Account types
-    checking_account: 'Girokonto',
-    savings_account: 'Sparkonto',
-    investment_account: 'Anlagekonto',
-    
-    // Actions
-    send: 'Senden',
-    receive: 'Erhalten',
-    add_money: 'Geld Hinzufügen',
-    transfer_funds: 'Geld Überweisen',
-    live_chat: 'Live Chat',
+    available: 'Verfügbar',
+    international_transfer: 'Internationale Überweisung',
+    live_chat: 'Live-Chat',
     customer_support: 'Kundensupport',
-    
-    // Chat
-    type_message: 'Nachricht eingeben...',
+    type_message: 'Geben Sie hier Ihre Nachricht ein...',
     connected: 'Verbunden',
-    connecting: 'Verbindung...',
-    
-    // Time
-    vs_last_month: 'vs letzter Monat',
-    recent_transactions: 'Aktuelle Transaktionen',
-    
-    // Status
-    verified_account: 'Verifiziertes Konto',
-    online: 'Online',
-    authenticated: 'Authentifiziert'
+    amount: 'Betrag',
+    recipient_name: 'Name des Empfängers',
+    submit: 'Einreichen',
+    cancel: 'Abbrechen',
+    loading: 'Wird geladen...'
   },
   ar: {
-    // Navigation
     home: 'الرئيسية',
     cards: 'البطاقات',
-    transfer: 'التحويل',
+    transfer: 'تحويل',
     history: 'التاريخ',
     profile: 'الملف الشخصي',
-    
-    // Common
     welcome: 'مرحباً',
-    dashboard: 'لوحة التحكم',
-    account: 'الحساب',
-    balance: 'الرصيد',
-    available: 'متاح',
-    pending: 'معلق',
+    account_number: 'رقم الحساب',
     total_balance: 'الرصيد الإجمالي',
-    my_accounts: 'حساباتي',
-    
-    // Account types
-    checking_account: 'حساب جاري',
-    savings_account: 'حساب توفير',
-    investment_account: 'حساب استثمار',
-    
-    // Actions
-    send: 'إرسال',
-    receive: 'استقبال',
-    add_money: 'إضافة أموال',
-    transfer_funds: 'تحويل الأموال',
+    available: 'متاح',
+    international_transfer: 'تحويل دولي',
     live_chat: 'دردشة مباشرة',
     customer_support: 'دعم العملاء',
-    
-    // Chat
-    type_message: 'اكتب رسالتك...',
+    type_message: 'اكتب رسالتك هنا...',
     connected: 'متصل',
-    connecting: 'يتصل...',
-    
-    // Time
-    vs_last_month: 'مقارنة بالشهر الماضي',
-    recent_transactions: 'المعاملات الأخيرة',
-    
-    // Status
-    verified_account: 'حساب موثق',
-    online: 'متصل',
-    authenticated: 'مصادق عليه'
+    amount: 'المبلغ',
+    recipient_name: 'اسم المستلم',
+    submit: 'إرسال',
+    cancel: 'إلغاء',
+    loading: 'جاري التحميل...'
   },
   ja: {
-    // Navigation
     home: 'ホーム',
     cards: 'カード',
     transfer: '送金',
     history: '履歴',
     profile: 'プロフィール',
-    
-    // Common
     welcome: 'ようこそ',
-    dashboard: 'ダッシュボード',
-    account: 'アカウント',
-    balance: '残高',
-    available: '利用可能',
-    pending: '保留中',
+    account_number: '口座番号',
     total_balance: '総残高',
-    my_accounts: 'マイアカウント',
-    
-    // Account types
-    checking_account: '当座預金',
-    savings_account: '普通預金',
-    investment_account: '投資口座',
-    
-    // Actions
-    send: '送信',
-    receive: '受信',
-    add_money: '入金',
-    transfer_funds: '送金',
+    available: '利用可能',
+    international_transfer: '国際送金',
     live_chat: 'ライブチャット',
     customer_support: 'カスタマーサポート',
-    
-    // Chat
-    type_message: 'メッセージを入力...',
+    type_message: 'メッセージを入力してください...',
     connected: '接続済み',
-    connecting: '接続中...',
-    
-    // Time
-    vs_last_month: '先月比',
-    recent_transactions: '最近の取引',
-    
-    // Status
-    verified_account: '確認済みアカウント',
-    online: 'オンライン',
-    authenticated: '認証済み'
+    amount: '金額',
+    recipient_name: '受取人名',
+    submit: '送信',
+    cancel: 'キャンセル',
+    loading: '読み込み中...'
   },
   pt: {
-    // Navigation
     home: 'Início',
     cards: 'Cartões',
     transfer: 'Transferir',
     history: 'Histórico',
     profile: 'Perfil',
-    
-    // Common
     welcome: 'Bem-vindo',
-    dashboard: 'Painel',
-    account: 'Conta',
-    balance: 'Saldo',
-    available: 'Disponível',
-    pending: 'Pendente',
+    account_number: 'Número da Conta',
     total_balance: 'Saldo Total',
-    my_accounts: 'Minhas Contas',
-    
-    // Account types
-    checking_account: 'Conta Corrente',
-    savings_account: 'Conta Poupança',
-    investment_account: 'Conta Investimento',
-    
-    // Actions
-    send: 'Enviar',
-    receive: 'Receber',
-    add_money: 'Adicionar Dinheiro',
-    transfer_funds: 'Transferir Fundos',
-    live_chat: 'Chat Ao Vivo',
+    available: 'Disponível',
+    international_transfer: 'Transferência Internacional',
+    live_chat: 'Chat ao Vivo',
     customer_support: 'Suporte ao Cliente',
-    
-    // Chat
-    type_message: 'Digite sua mensagem...',
+    type_message: 'Digite sua mensagem aqui...',
     connected: 'Conectado',
-    connecting: 'Conectando...',
-    
-    // Time
-    vs_last_month: 'vs mês passado',
-    recent_transactions: 'Transações Recentes',
-    
-    // Status
-    verified_account: 'Conta Verificada',
-    online: 'Online',
-    authenticated: 'Autenticado'
+    amount: 'Valor',
+    recipient_name: 'Nome do Destinatário',
+    submit: 'Enviar',
+    cancel: 'Cancelar',
+    loading: 'Carregando...'
   },
   ru: {
-    // Navigation
     home: 'Главная',
     cards: 'Карты',
     transfer: 'Перевод',
     history: 'История',
     profile: 'Профиль',
-    
-    // Common
     welcome: 'Добро пожаловать',
-    dashboard: 'Панель',
-    account: 'Счет',
-    balance: 'Баланс',
-    available: 'Доступно',
-    pending: 'В ожидании',
+    account_number: 'Номер счета',
     total_balance: 'Общий баланс',
-    my_accounts: 'Мои счета',
-    
-    // Account types
-    checking_account: 'Текущий счет',
-    savings_account: 'Сберегательный счет',
-    investment_account: 'Инвестиционный счет',
-    
-    // Actions
-    send: 'Отправить',
-    receive: 'Получить',
-    add_money: 'Добавить деньги',
-    transfer_funds: 'Перевести средства',
+    available: 'Доступно',
+    international_transfer: 'Международный перевод',
     live_chat: 'Живой чат',
     customer_support: 'Поддержка клиентов',
-    
-    // Chat
-    type_message: 'Введите сообщение...',
+    type_message: 'Введите ваше сообщение здесь...',
     connected: 'Подключено',
-    connecting: 'Подключение...',
-    
-    // Time
-    vs_last_month: 'в сравнении с прошлым месяцем',
-    recent_transactions: 'Недавние транзакции',
-    
-    // Status
-    verified_account: 'Верифицированный аккаунт',
-    online: 'Онлайн',
-    authenticated: 'Аутентифицирован'
+    amount: 'Сумма',
+    recipient_name: 'Имя получателя',
+    submit: 'Отправить',
+    cancel: 'Отменить',
+    loading: 'Загрузка...'
   },
   hi: {
-    // Navigation
     home: 'होम',
     cards: 'कार्ड',
     transfer: 'स्थानांतरण',
     history: 'इतिहास',
     profile: 'प्रोफ़ाइल',
-    
-    // Common
     welcome: 'स्वागत है',
-    dashboard: 'डैशबोर्ड',
-    account: 'खाता',
-    balance: 'शेष राशि',
+    account_number: 'खाता संख्या',
+    total_balance: 'कुल शेष',
     available: 'उपलब्ध',
-    pending: 'लंबित',
-    total_balance: 'कुल शेष राशि',
-    my_accounts: 'मेरे खाते',
-    
-    // Account types
-    checking_account: 'चालू खाता',
-    savings_account: 'बचत खाता',
-    investment_account: 'निवेश खाता',
-    
-    // Actions
-    send: 'भेजें',
-    receive: 'प्राप्त करें',
-    add_money: 'पैसे जोड़ें',
-    transfer_funds: 'फंड ट्रांसफर',
+    international_transfer: 'अंतर्राष्ट्रीय स्थानांतरण',
     live_chat: 'लाइव चैट',
     customer_support: 'ग्राहक सहायता',
-    
-    // Chat
-    type_message: 'अपना संदेश टाइप करें...',
+    type_message: 'यहाँ अपना संदेश टाइप करें...',
     connected: 'जुड़ा हुआ',
-    connecting: 'कनेक्ट हो रहा है...',
-    
-    // Time
-    vs_last_month: 'पिछले महीने की तुलना में',
-    recent_transactions: 'हाल की लेन-देन',
-    
-    // Status
-    verified_account: 'सत्यापित खाता',
-    online: 'ऑनलाइन',
-    authenticated: 'प्रमाणित'
+    amount: 'राशि',
+    recipient_name: 'प्राप्तकर्ता का नाम',
+    submit: 'जमा करें',
+    cancel: 'रद्द करें',
+    loading: 'लोड हो रहा है...'
   }
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
+export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('en');
 
   const t = (key: string): string => {
-    return translations[language]?.[key] || translations.en[key] || key;
+    return translations[language][key] || translations.en[key] || key;
   };
 
   return (
@@ -476,12 +342,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       {children}
     </LanguageContext.Provider>
   );
-}
+};
 
-export function useLanguage() {
+export const useLanguage = (): LanguageContextType => {
   const context = useContext(LanguageContext);
   if (context === undefined) {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }
   return context;
-}
+};

@@ -43,18 +43,33 @@ export default function InternationalTransfer() {
   const [fromCurrency, setFromCurrency] = useState('USD');
   const [toCurrency, setToCurrency] = useState('CNY');
 
-  const { data: userData, isLoading } = useQuery<User>({
+  // State for the form and submission
+  const [formData, setFormData] = useState({
+    amount: '',
+    currency: 'USD',
+    recipientName: '',
+    recipientAccount: '',
+    recipientCountry: 'CN',
+    bankName: '',
+    swiftCode: '',
+    purpose: '',
+  });
+  const [errors, setErrors] = useState({
+    amount: '',
+    recipientName: '',
+    recipientAccount: '',
+    recipientCountry: '',
+    bankName: '',
+    swiftCode: '',
+    submit: '',
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { data: userData, isLoading: isUserLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
-      </div>
-    );
-  }
-
+  // Mock data for calculations and display
   const exchangeRates = [
     { from: "USD", to: "CNY", rate: "7.23", trend: "up", flag: "🇨🇳", change: "+0.05", changePercent: "+0.69%" },
     { from: "USD", to: "EUR", rate: "0.92", trend: "down", flag: "🇪🇺", change: "-0.02", changePercent: "-2.13%" },
@@ -83,17 +98,112 @@ export default function InternationalTransfer() {
     { name: "Hiroshi Tanaka", country: "Japan", account: "****2187", lastTransfer: "2 weeks ago" }
   ];
 
-  const handleTransferSubmit = async () => {
+  // Validation function
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = { ...errors };
+
+    if (!formData.amount) {
+      newErrors.amount = 'Amount is required';
+      isValid = false;
+    } else if (isNaN(parseFloat(formData.amount))) {
+      newErrors.amount = 'Invalid amount';
+      isValid = false;
+    } else {
+      newErrors.amount = '';
+    }
+
+    if (!formData.recipientName) {
+      newErrors.recipientName = 'Recipient name is required';
+      isValid = false;
+    } else {
+      newErrors.recipientName = '';
+    }
+
+    if (!formData.recipientAccount) {
+      newErrors.recipientAccount = 'Recipient account is required';
+      isValid = false;
+    } else {
+      newErrors.recipientAccount = '';
+    }
+
+    if (!formData.recipientCountry) {
+      newErrors.recipientCountry = 'Recipient country is required';
+      isValid = false;
+    } else {
+      newErrors.recipientCountry = '';
+    }
+
+    if (!formData.bankName) {
+      newErrors.bankName = 'Bank name is required';
+      isValid = false;
+    } else {
+      newErrors.bankName = '';
+    }
+
+    if (!formData.swiftCode) {
+      newErrors.swiftCode = 'SWIFT/BIC code is required';
+      isValid = false;
+    } else {
+      newErrors.swiftCode = '';
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  // Handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear specific error on input change
+    setErrors(prev => ({ ...prev, [name]: '' }));
+  };
+
+  // Handle currency change
+  const handleCurrencyChange = (field: 'from' | 'to', value: string) => {
+    if (field === 'from') {
+      setFromCurrency(value);
+      setFormData(prev => ({ ...prev, currency: value }));
+    } else {
+      setToCurrency(value);
+    }
+  };
+
+  // Handle recipient country change
+  const handleRecipientCountryChange = (value: string) => {
+    setFormData(prev => ({ ...prev, recipientCountry: value }));
+    setErrors(prev => ({ ...prev, recipientCountry: '' }));
+  };
+
+  // Handle transfer purpose change
+  const handlePurposeChange = (value: string) => {
+    setFormData(prev => ({ ...prev, purpose: value }));
+  };
+
+  // Mock submission handler (will be replaced by actual API call)
+  const handleTransferSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+
     try {
       const transferData = {
-        amount: parseFloat(transferAmount) || 1000,
-        recipientName: "Zhang Wei",
-        recipientAccount: "6234567890123456",
-        recipientCountry: "China",
-        bankName: "Bank of China",
-        swiftCode: "BKCHCNBJ",
-        transferPurpose: "Family Support",
-        notes: "Monthly family support transfer"
+        transactionId: `WB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        amount: parseFloat(formData.amount),
+        currency: formData.currency,
+        recipientName: formData.recipientName,
+        recipientAccount: formData.recipientAccount,
+        recipientCountry: formData.recipientCountry,
+        bankName: formData.bankName,
+        swiftCode: formData.swiftCode,
+        transferType: 'international_transfer',
+        purpose: formData.purpose || 'Personal transfer',
+        status: 'pending_approval'
       };
 
       const response = await fetch('/api/transfers/create', {
@@ -101,22 +211,83 @@ export default function InternationalTransfer() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(transferData)
+        body: JSON.stringify(transferData),
       });
+
+      if (!response.ok) {
+        throw new Error('Transfer submission failed');
+      }
 
       const result = await response.json();
 
       if (result.success) {
-        alert(`Transfer submitted successfully! Transaction ID: ${result.transactionId}`);
-        setTransferAmount('');
+        // Store transfer details for success page
+        sessionStorage.setItem('transferDetails', JSON.stringify({
+          ...transferData,
+          transactionId: result.transactionId || transferData.transactionId
+        }));
+
+        setLocation('/transfer-pending');
       } else {
-        alert('Transfer failed: ' + result.message);
+        throw new Error(result.message || 'Transfer failed');
       }
     } catch (error) {
       console.error('Transfer error:', error);
-      alert('Transfer failed. Please try again.');
+      setErrors({ ...errors, submit: 'Failed to submit transfer. Please try again.' });
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  // Update formData and clear related errors when input changes
+  const handleInputChangeWithClearError = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setErrors(prev => ({ ...prev, [name]: '' }));
+  };
+
+  // Mock function to calculate recipient gets amount (based on current selection)
+  const calculateRecipientGets = () => {
+    const amount = parseFloat(transferAmount) || 0;
+    const rateData = exchangeRates.find(rate => rate.from === fromCurrency && rate.to === toCurrency);
+    if (!rateData) return "0.00";
+    const rate = parseFloat(rateData.rate);
+    return (amount * rate).toFixed(2);
+  };
+
+  // Mock function to get transfer fee (based on recipient country)
+  const getTransferFee = () => {
+    const destination = popularDestinations.find(dest => dest.currency === toCurrency);
+    return destination ? destination.fee : "$10.00";
+  };
+
+  // Mock function to get delivery time (based on recipient country)
+  const getDeliveryTime = () => {
+    const destination = popularDestinations.find(dest => dest.currency === toCurrency);
+    return destination ? destination.time : "1-2 business days";
+  };
+
+  // Effect to pre-fill form if user is logged in and has default data
+  useEffect(() => {
+    if (userData) {
+      setFormData(prev => ({
+        ...prev,
+        recipientName: userData.name || '',
+        // Assuming user object might have address or account details, adjust as needed
+        // recipientAccount: userData.accountNumber || '',
+        // recipientCountry: userData.country || '',
+      }));
+    }
+  }, [userData]);
+
+
+  if (isUserLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">Loading user data...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -161,67 +332,75 @@ export default function InternationalTransfer() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                  <div>
-                    <Label>You Send</Label>
-                    <div className="flex mt-1">
-                      <Select value={fromCurrency} onValueChange={setFromCurrency}>
-                        <SelectTrigger className="w-20">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="USD">🇺🇸 USD</SelectItem>
-                          <SelectItem value="EUR">🇪🇺 EUR</SelectItem>
-                          <SelectItem value="GBP">🇬🇧 GBP</SelectItem>
-                          <SelectItem value="CNY">🇨🇳 CNY</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input 
-                        className="flex-1 ml-2" 
-                        placeholder="0.00"
-                        value={transferAmount}
-                        onChange={(e) => setTransferAmount(e.target.value)}
-                      />
+                <form onSubmit={handleTransferSubmit}> {/* Wrap calculator inputs in a form */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                      <Label htmlFor="amount">You Send</Label>
+                      <div className="flex mt-1">
+                        <Select value={fromCurrency} onValueChange={(value) => handleCurrencyChange('from', value)}>
+                          <SelectTrigger className="w-20">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="USD">🇺🇸 USD</SelectItem>
+                            <SelectItem value="EUR">🇪🇺 EUR</SelectItem>
+                            <SelectItem value="GBP">🇬🇧 GBP</SelectItem>
+                            <SelectItem value="CNY">🇨🇳 CNY</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input 
+                          id="amount"
+                          name="amount"
+                          className="flex-1 ml-2" 
+                          placeholder="0.00"
+                          value={formData.amount}
+                          onChange={handleInputChangeWithClearError}
+                          aria-invalid={!!errors.amount}
+                          aria-describedby={errors.amount ? "amount-error" : undefined}
+                        />
+                      </div>
+                      {errors.amount && <p id="amount-error" className="text-red-500 text-sm mt-1">{errors.amount}</p>}
+                    </div>
+
+                    <div className="flex justify-center">
+                      <ArrowRightLeft className="w-6 h-6 text-blue-600" />
+                    </div>
+
+                    <div>
+                      <Label>Recipient Gets</Label>
+                      <div className="flex mt-1">
+                        <Select value={toCurrency} onValueChange={(value) => handleCurrencyChange('to', value)}>
+                          <SelectTrigger className="w-20">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="CNY">🇨🇳 CNY</SelectItem>
+                            <SelectItem value="EUR">🇪🇺 EUR</SelectItem>
+                            <SelectItem value="GBP">🇬🇧 GBP</SelectItem>
+                            <SelectItem value="JPY">🇯🇵 JPY</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input className="flex-1 ml-2" placeholder="0.00" readOnly value={calculateRecipientGets()} />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex justify-center">
-                    <ArrowRightLeft className="w-6 h-6 text-blue-600" />
-                  </div>
-
-                  <div>
-                    <Label>Recipient Gets</Label>
-                    <div className="flex mt-1">
-                      <Select value={toCurrency} onValueChange={setToCurrency}>
-                        <SelectTrigger className="w-20">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="CNY">🇨🇳 CNY</SelectItem>
-                          <SelectItem value="EUR">🇪🇺 EUR</SelectItem>
-                          <SelectItem value="GBP">🇬🇧 GBP</SelectItem>
-                          <SelectItem value="JPY">🇯🇵 JPY</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input className="flex-1 ml-2" placeholder="0.00" readOnly />
+                  <div className="mt-4 p-3 bg-white rounded-lg">
+                    <div className="flex justify-between text-sm">
+                      <span>Exchange Rate:</span>
+                      <span className="font-medium">1 {fromCurrency} = {exchangeRates.find(rate => rate.from === fromCurrency && rate.to === toCurrency)?.rate ?? 'N/A'} {toCurrency}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mt-1">
+                      <span>Transfer Fee:</span>
+                      <span className="font-medium">{getTransferFee()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mt-1">
+                      <span>Delivery Time:</span>
+                      <span className="font-medium text-green-600">{getDeliveryTime()}</span>
                     </div>
                   </div>
-                </div>
-
-                <div className="mt-4 p-3 bg-white rounded-lg">
-                  <div className="flex justify-between text-sm">
-                    <span>Exchange Rate:</span>
-                    <span className="font-medium">1 {fromCurrency} = 7.23 {toCurrency}</span>
-                  </div>
-                  <div className="flex justify-between text-sm mt-1">
-                    <span>Transfer Fee:</span>
-                    <span className="font-medium">$8.00</span>
-                  </div>
-                  <div className="flex justify-between text-sm mt-1">
-                    <span>Delivery Time:</span>
-                    <span className="font-medium text-green-600">Within 1 hour</span>
-                  </div>
-                </div>
+                  {/* Add a hidden submit button for the form if needed for Enter key submission */}
+                </form>
               </CardContent>
             </Card>
 
@@ -239,11 +418,26 @@ export default function InternationalTransfer() {
                   <Label className="text-base font-medium">Recent Recipients</Label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
                     {recentRecipients.map((recipient, index) => (
-                      <div key={index} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <button 
+                        key={index} 
+                        className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer text-left"
+                        onClick={() => {
+                          setFormData({
+                            recipientName: recipient.name,
+                            recipientAccount: recipient.account.replace('****', ''), // Remove masking for actual use
+                            recipientCountry: recipient.country === 'UK' ? 'GB' : recipient.country === 'China' ? 'CN' : recipient.country === 'Japan' ? 'JP' : '', // Map to country codes if necessary
+                            bankName: 'Mock Bank Name', // Placeholder
+                            swiftCode: 'MOCKSWIFT', // Placeholder
+                            amount: transferAmount,
+                            purpose: 'Family Support'
+                          });
+                          setErrors({ ...errors, recipientName: '', recipientAccount: '', recipientCountry: '', bankName: '', swiftCode: '' });
+                        }}
+                      >
                         <div className="font-medium">{recipient.name}</div>
                         <div className="text-sm text-gray-600">{recipient.country} • {recipient.account}</div>
                         <div className="text-xs text-gray-500">{recipient.lastTransfer}</div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -251,12 +445,22 @@ export default function InternationalTransfer() {
                 <div className="border-t pt-6">
                   <Label className="text-base font-medium">Add New Recipient</Label>
 
-                  {/* Personal Information */}
-                  <div className="mt-4 space-y-4">
+                  <form onSubmit={handleTransferSubmit} className="mt-4 space-y-4">
+                    {/* Personal Information */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label>First Name *</Label>
-                        <Input placeholder="Recipient's first name" className="mt-1" />
+                        <Label htmlFor="recipientName">First Name *</Label>
+                        <Input 
+                          id="recipientName"
+                          name="recipientName"
+                          placeholder="Recipient's first name" 
+                          className="mt-1" 
+                          value={formData.recipientName}
+                          onChange={handleInputChangeWithClearError}
+                          aria-invalid={!!errors.recipientName}
+                          aria-describedby={errors.recipientName ? "recipientName-error" : undefined}
+                        />
+                        {errors.recipientName && <p id="recipientName-error" className="text-red-500 text-sm mt-1">{errors.recipientName}</p>}
                       </div>
                       <div>
                         <Label>Last Name *</Label>
@@ -312,21 +516,22 @@ export default function InternationalTransfer() {
 
                         <div>
                           <Label>Country *</Label>
-                          <Select>
+                          <Select name="recipientCountry" value={formData.recipientCountry} onValueChange={handleRecipientCountryChange}>
                             <SelectTrigger className="mt-1">
                               <SelectValue placeholder="Select recipient's country" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="cn">🇨🇳 China</SelectItem>
-                              <SelectItem value="uk">🇬🇧 United Kingdom</SelectItem>
-                              <SelectItem value="jp">🇯🇵 Japan</SelectItem>
-                              <SelectItem value="sg">🇸🇬 Singapore</SelectItem>
-                              <SelectItem value="au">🇦🇺 Australia</SelectItem>
-                              <SelectItem value="de">🇩🇪 Germany</SelectItem>
-                              <SelectItem value="fr">🇫🇷 France</SelectItem>
-                              <SelectItem value="ca">🇨🇦 Canada</SelectItem>
+                              <SelectItem value="CN">🇨🇳 China</SelectItem>
+                              <SelectItem value="GB">🇬🇧 United Kingdom</SelectItem>
+                              <SelectItem value="JP">🇯🇵 Japan</SelectItem>
+                              <SelectItem value="SG">🇸🇬 Singapore</SelectItem>
+                              <SelectItem value="AU">🇦🇺 Australia</SelectItem>
+                              <SelectItem value="DE">🇩🇪 Germany</SelectItem>
+                              <SelectItem value="FR">🇫🇷 France</SelectItem>
+                              <SelectItem value="CA">🇨🇦 Canada</SelectItem>
                             </SelectContent>
                           </Select>
+                          {errors.recipientCountry && <p className="text-red-500 text-sm mt-1">{errors.recipientCountry}</p>}
                         </div>
                       </div>
                     </div>
@@ -337,7 +542,16 @@ export default function InternationalTransfer() {
                       <div className="space-y-4">
                         <div>
                           <Label>Bank Name *</Label>
-                          <Input placeholder="Recipient's bank name" className="mt-1" />
+                          <Input 
+                            name="bankName"
+                            placeholder="Recipient's bank name" 
+                            className="mt-1" 
+                            value={formData.bankName}
+                            onChange={handleInputChangeWithClearError}
+                            aria-invalid={!!errors.bankName}
+                            aria-describedby={errors.bankName ? "bankName-error" : undefined}
+                          />
+                          {errors.bankName && <p id="bankName-error" className="text-red-500 text-sm mt-1">{errors.bankName}</p>}
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -346,13 +560,19 @@ export default function InternationalTransfer() {
                             <div className="relative">
                               <Input 
                                 type={showAccountDetails ? "text" : "password"}
+                                name="recipientAccount"
                                 placeholder="Account number or IBAN" 
                                 className="mt-1 pr-10" 
+                                value={formData.recipientAccount}
+                                onChange={handleInputChangeWithClearError}
+                                aria-invalid={!!errors.recipientAccount}
+                                aria-describedby={errors.recipientAccount ? "recipientAccount-error" : undefined}
                               />
+                              {errors.recipientAccount && <p id="recipientAccount-error" className="text-red-500 text-sm mt-1">{errors.recipientAccount}</p>}
                               <button
                                 type="button"
                                 onClick={() => setShowAccountDetails(!showAccountDetails)}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                                className="absolute inset-y-0 right-3 flex items-center"
                               >
                                 {showAccountDetails ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                               </button>
@@ -360,7 +580,16 @@ export default function InternationalTransfer() {
                           </div>
                           <div>
                             <Label>SWIFT/BIC Code *</Label>
-                            <Input placeholder="Bank's SWIFT code" className="mt-1" />
+                            <Input 
+                              name="swiftCode"
+                              placeholder="Bank's SWIFT code" 
+                              className="mt-1" 
+                              value={formData.swiftCode}
+                              onChange={handleInputChangeWithClearError}
+                              aria-invalid={!!errors.swiftCode}
+                              aria-describedby={errors.swiftCode ? "swiftCode-error" : undefined}
+                            />
+                            {errors.swiftCode && <p id="swiftCode-error" className="text-red-500 text-sm mt-1">{errors.swiftCode}</p>}
                           </div>
                         </div>
 
@@ -388,19 +617,19 @@ export default function InternationalTransfer() {
                       <div className="space-y-4">
                         <div>
                           <Label>Transfer Purpose *</Label>
-                          <Select>
+                          <Select name="purpose" onValueChange={handlePurposeChange}>
                             <SelectTrigger className="mt-1">
                               <SelectValue placeholder="Select transfer purpose" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="family">Family Support</SelectItem>
-                              <SelectItem value="business">Business Payment</SelectItem>
-                              <SelectItem value="education">Education Expenses</SelectItem>
-                              <SelectItem value="investment">Investment</SelectItem>
-                              <SelectItem value="property">Property Purchase</SelectItem>
-                              <SelectItem value="medical">Medical Expenses</SelectItem>
-                              <SelectItem value="travel">Travel Expenses</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
+                              <SelectItem value="Family Support">Family Support</SelectItem>
+                              <SelectItem value="Business Payment">Business Payment</SelectItem>
+                              <SelectItem value="Education Expenses">Education Expenses</SelectItem>
+                              <SelectItem value="Investment">Investment</SelectItem>
+                              <SelectItem value="Property Purchase">Property Purchase</SelectItem>
+                              <SelectItem value="Medical Expenses">Medical Expenses</SelectItem>
+                              <SelectItem value="Travel Expenses">Travel Expenses</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -420,18 +649,30 @@ export default function InternationalTransfer() {
                               <SelectValue placeholder="Select relationship" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="family">Family Member</SelectItem>
-                              <SelectItem value="friend">Friend</SelectItem>
-                              <SelectItem value="business">Business Partner</SelectItem>
-                              <SelectItem value="employee">Employee</SelectItem>
-                              <SelectItem value="vendor">Vendor/Supplier</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
+                              <SelectItem value="Family Member">Family Member</SelectItem>
+                              <SelectItem value="Friend">Friend</SelectItem>
+                              <SelectItem value="Business Partner">Business Partner</SelectItem>
+                              <SelectItem value="Employee">Employee</SelectItem>
+                              <SelectItem value="Vendor/Supplier">Vendor/Supplier</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
                     </div>
-                  </div>
+
+                    {/* Submission Button */}
+                    <div className="mt-6 pt-4 border-t">
+                      {errors.submit && <p className="text-red-500 text-sm mb-2">{errors.submit}</p>}
+                      <Button 
+                        type="submit"
+                        className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Processing...' : 'Continue'}
+                      </Button>
+                    </div>
+                  </form>
                 </div>
               </CardContent>
             </Card>
@@ -448,23 +689,25 @@ export default function InternationalTransfer() {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span>Transfer Amount:</span>
-                    <span className="font-medium">$1,000.00 USD</span>
+                    <span className="font-medium">{transferAmount ? `${parseFloat(transferAmount).toFixed(2)} ${fromCurrency}` : '0.00 USD'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Exchange Rate:</span>
-                    <span className="font-medium">1 USD = 7.23 CNY</span>
+                    <span className="font-medium">1 {fromCurrency} = {exchangeRates.find(rate => rate.from === fromCurrency && rate.to === toCurrency)?.rate ?? 'N/A'} {toCurrency}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Transfer Fee:</span>
-                    <span className="font-medium">$8.00</span>
+                    <span className="font-medium">{getTransferFee()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Recipient Gets:</span>
-                    <span className="font-medium text-green-600">¥7,230.00 CNY</span>
+                    <span className="font-medium text-green-600">{calculateRecipientGets()} {toCurrency}</span>
                   </div>
                   <div className="flex justify-between border-t pt-2">
                     <span className="font-medium">Total Debit:</span>
-                    <span className="font-bold">$1,008.00 USD</span>
+                    <span className="font-bold">
+                      ${(parseFloat(transferAmount || '0') + parseFloat(getTransferFee().replace('$', ''))).toFixed(2)} {fromCurrency}
+                    </span>
                   </div>
                 </div>
 
@@ -472,6 +715,7 @@ export default function InternationalTransfer() {
                   <Button 
                     className="w-full bg-blue-600 text-white hover:bg-blue-700"
                     onClick={handleTransferSubmit}
+                    disabled={isLoading}
                   >
                     Send Money Now
                   </Button>
@@ -536,7 +780,14 @@ export default function InternationalTransfer() {
               <CardContent>
                 <div className="space-y-3">
                   {popularDestinations.map((dest, index) => (
-                    <div key={index} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <button 
+                      key={index} 
+                      className="w-full text-left p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                      onClick={() => {
+                        setToCurrency(dest.currency);
+                        setFormData(prev => ({ ...prev, recipientCountry: dest.country === 'United Kingdom' ? 'GB' : dest.country === 'China' ? 'CN' : dest.country === 'Japan' ? 'JP' : '' })); // Set country based on destination
+                      }}
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <span className="text-lg">{dest.flag}</span>
@@ -550,7 +801,7 @@ export default function InternationalTransfer() {
                           <div className="text-xs text-gray-600">{dest.time}</div>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </CardContent>

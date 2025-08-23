@@ -1,11 +1,30 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Clock, AlertCircle, Phone, Mail } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+
 
 export default function TransferPending() {
   const [, setLocation] = useLocation();
+  const [transferDetails, setTransferDetails] = useState({
+    referenceId: `WB${Date.now().toString().slice(-8)}`,
+    status: "Pending Review",
+    submitted: new Date().toLocaleString(),
+  });
+
+  useEffect(() => {
+    const details = sessionStorage.getItem('transferDetails');
+    if (details) {
+      try {
+        const parsedDetails = JSON.parse(details);
+        setTransferDetails(parsedDetails);
+        console.log('Transfer pending details:', parsedDetails);
+      } catch (error) {
+        console.error('Error parsing transfer details:', error);
+      }
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -24,7 +43,7 @@ export default function TransferPending() {
               <div className="text-left">
                 <h4 className="font-medium text-yellow-800">Under Review</h4>
                 <p className="text-sm text-yellow-700 mt-1">
-                  Your transfer has been submitted and is currently being reviewed by our security team. 
+                  Your transfer has been submitted and is currently being reviewed by our security team.
                   This process typically takes 1-24 hours.
                 </p>
               </div>
@@ -37,15 +56,15 @@ export default function TransferPending() {
               <div className="space-y-2 text-sm text-left">
                 <div className="flex justify-between">
                   <span>Reference ID:</span>
-                  <span className="font-mono">WB{Date.now().toString().slice(-8)}</span>
+                  <span className="font-mono">{transferDetails.referenceId}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Status:</span>
-                  <span className="text-yellow-600 font-medium">Pending Review</span>
+                  <span className="text-yellow-600 font-medium">{transferDetails.status}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Submitted:</span>
-                  <span>{new Date().toLocaleString()}</span>
+                  <span>{transferDetails.submitted}</span>
                 </div>
               </div>
             </div>
@@ -62,13 +81,13 @@ export default function TransferPending() {
           </div>
 
           <div className="space-y-3">
-            <Button 
+            <Button
               onClick={() => setLocation("/dashboard")}
               className="w-full"
             >
               Return to Dashboard
             </Button>
-            
+
             <div className="flex space-x-2">
               <Button variant="outline" size="sm" className="flex-1">
                 <Phone className="w-4 h-4 mr-2" />

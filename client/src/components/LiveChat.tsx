@@ -39,6 +39,9 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { userProfile } = useAuth();
 
+  // Mock WebSocket connection for demonstration purposes
+  const ws = useRef<{ send: (data: string) => void } | null>(null);
+
   useEffect(() => {
     if (isOpen) {
       connectSupabaseRealtime();
@@ -100,14 +103,32 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
     setIsConnected(false);
   };
 
-  const sendMessage = async () => {
-    if (!newMessage.trim()) return;
+  const sendMessage = () => {
+    if (newMessage.trim() && ws && isConnected) {
+      const message = {
+        id: Date.now().toString(),
+        type: 'chat_message',
+        senderId: 'customer_1',
+        senderName: 'Customer',
+        senderRole: 'customer',
+        message: newMessage.trim(),
+        timestamp: new Date().toISOString(),
+        isRead: false
+      };
 
-    try {
-      await realtimeChat.sendMessage(newMessage.trim(), 'customer');
-      setNewMessage("");
-    } catch (error) {
-      console.error('Failed to send message:', error);
+      // Add to local messages immediately
+      setMessages(prev => [...prev, message]);
+
+      // Send via WebSocket
+      try {
+        ws.current?.send(JSON.stringify(message));
+        console.log('Message sent successfully:', message.message);
+      } catch (error) {
+        console.error('Failed to send message:', error);
+      }
+
+      setNewMessage('');
+      setIsTyping(false);
     }
   };
 
