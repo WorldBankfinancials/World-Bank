@@ -256,19 +256,21 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
           {/* Message Input - Always Visible */}
           <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg flex-shrink-0">
             <div className="flex items-center space-x-2 mb-2">
-              <Input
+              <input
+                type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Type your message here..."
-                className="flex-1 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm h-12 px-4 py-3 rounded-md bg-white text-gray-900 placeholder-gray-500"
+                className="flex-1 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm h-12 px-4 py-3 rounded-md bg-white text-gray-900 placeholder-gray-500 outline-none"
                 disabled={!isConnected}
                 autoComplete="off"
-                autoFocus
                 style={{
                   fontSize: '16px',
                   lineHeight: '1.5',
-                  minHeight: '48px'
+                  minHeight: '48px',
+                  backgroundColor: 'white',
+                  color: '#111827'
                 }}
               />
               <Button 

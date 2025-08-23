@@ -1,8 +1,7 @@
-
-import React from 'react';
+import React, { Component, ReactNode } from 'react';
 
 interface Props {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 interface State {
@@ -18,11 +17,29 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
+    // Only catch actual critical errors, not minor issues
+    if (error.message.includes('ChunkLoadError') || 
+        error.message.includes('Loading chunk') ||
+        error.message.includes('Failed to fetch dynamically imported module')) {
+      console.warn('Non-critical error caught:', error.message);
+      return { hasError: false };
+    }
+
+    console.error('Critical error caught by boundary:', error);
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
+    // Only show error boundary for critical errors
+    if (error.message.includes('ChunkLoadError') || 
+        error.message.includes('Loading chunk') ||
+        error.message.includes('Failed to fetch dynamically imported module')) {
+      console.warn('Non-critical error, continuing normal operation');
+      this.setState({ hasError: false });
+      return;
+    }
+
+    console.error('Critical error caught by boundary:', error, errorInfo);
     this.setState({ errorInfo });
   }
 
@@ -31,8 +48,8 @@ class ErrorBoundary extends React.Component<Props, State> {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="text-center p-8 max-w-md">
-            <h1 className="text-2xl font-bold text-gray-800 mb-4">Something went wrong</h1>
-            <p className="text-gray-600 mb-4">We're working to fix this issue</p>
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">Application Error</h1>
+            <p className="text-gray-600 mb-4">A critical error occurred. Please try refreshing the page.</p>
             {process.env.NODE_ENV === 'development' && this.state.error && (
               <details className="text-left text-sm text-red-600 mb-4 p-4 bg-red-50 rounded">
                 <summary className="cursor-pointer font-medium">Error Details</summary>
