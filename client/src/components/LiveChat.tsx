@@ -38,9 +38,7 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { userProfile } = useAuth();
-
-  // Mock WebSocket connection for demonstration purposes
-  const ws = useRef<{ send: (data: string) => void } | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -79,40 +77,68 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
 
   const connectSupabaseRealtime = () => {
     try {
-      realtimeChat.subscribe((message: RealtimeMessage) => {
-        const newMessage: ChatMessage = {
-          id: message.id,
-          senderId: message.senderId,
-          senderName: message.senderName,
-          senderRole: message.senderRole,
-          message: message.message,
-          timestamp: message.timestamp,
-          isRead: message.isRead
-        };
-        setMessages(prev => [...prev, newMessage]);
-      });
-      setIsConnected(true);
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      
+      wsRef.current = new WebSocket(wsUrl);
+      
+      wsRef.current.onopen = () => {
+        setIsConnected(true);
+        console.log('Live chat connected');
+      };
+
+      wsRef.current.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === 'chat_message') {
+            const newMessage: ChatMessage = {
+              id: message.id,
+              senderId: message.senderId,
+              senderName: message.senderName,
+              senderRole: message.senderRole,
+              message: message.message,
+              timestamp: new Date(message.timestamp),
+              isRead: message.isRead
+            };
+            setMessages(prev => [...prev, newMessage]);
+          }
+        } catch (error) {
+          console.error('Error parsing message:', error);
+        }
+      };
+
+      wsRef.current.onclose = () => {
+        setIsConnected(false);
+        console.log('Live chat disconnected');
+      };
+
+      wsRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setIsConnected(false);
+      };
     } catch (error) {
-      console.error('Failed to connect to Supabase Realtime:', error);
+      console.error('Failed to connect to live chat:', error);
       setIsConnected(false);
     }
   };
 
   const disconnectSupabaseRealtime = () => {
-    realtimeChat.unsubscribe();
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
     setIsConnected(false);
   };
 
   const sendMessage = () => {
-    if (newMessage.trim() && ws && isConnected) {
-      const message = {
+    if (newMessage.trim() && wsRef.current && isConnected) {
+      const message: ChatMessage = {
         id: Date.now().toString(),
-        type: 'chat_message',
-        senderId: 'customer_1',
-        senderName: 'Customer',
+        senderId: userProfile?.accountId || 'customer_1',
+        senderName: userProfile?.fullName || 'Customer',
         senderRole: 'customer',
         message: newMessage.trim(),
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(),
         isRead: false
       };
 
@@ -121,8 +147,14 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
 
       // Send via WebSocket
       try {
-        ws.current?.send(JSON.stringify(message));
-        console.log('Message sent successfully:', message.message);
+        if (wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({
+            type: 'chat_message',
+            ...message,
+            timestamp: message.timestamp.toISOString()
+          }));
+          console.log('Message sent successfully:', message.message);
+        }
       } catch (error) {
         console.error('Failed to send message:', error);
       }
@@ -221,24 +253,24 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Message Input */}
-          <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg">
-            <div className="flex items-end space-x-2 mb-2">
-              <div className="flex-1">
-                <Input
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type your message here..."
-                  className="w-full border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm h-10 px-3 py-2 rounded-md"
-                  disabled={!isConnected}
-                />
-              </div>
+          {/* Message Input - Always Visible */}
+          <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg flex-shrink-0">
+            <div className="flex items-center space-x-2 mb-2">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message here..."
+                className="flex-1 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm h-10 px-3 py-2 rounded-md bg-white"
+                disabled={!isConnected}
+                autoComplete="off"
+                autoFocus
+              />
               <Button 
                 onClick={sendMessage} 
                 size="sm"
                 disabled={!newMessage.trim() || !isConnected}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 h-10 flex items-center"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 h-10 flex items-center justify-center flex-shrink-0"
               >
                 <Send className="w-4 h-4" />
               </Button>

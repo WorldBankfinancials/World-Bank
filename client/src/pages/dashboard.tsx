@@ -185,7 +185,7 @@ function ReceiveSection() {
               Request
             </Button>
           </div>
-          
+
           <div className="flex space-x-2">
             <Button onClick={() => setShowQR(!showQR)} variant="outline" className="flex-1">
               <QrCode className="w-4 h-4 mr-2" />
@@ -273,7 +273,7 @@ function AddMoneySection() {
               onChange={(e) => setAddAmount(e.target.value)}
             />
           </div>
-          
+
           <div className="grid grid-cols-5 gap-2">
             {quickAmounts.map((amount) => (
               <Button
@@ -471,6 +471,12 @@ export default function Dashboard() {
   const [showBalance, setShowBalance] = React.useState(true);
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [isChatOpen, setIsChatOpen] = React.useState(false);
+  
+  // Debug chat state
+  useEffect(() => {
+    console.log('Chat state changed:', isChatOpen);
+  }, [isChatOpen]);
+
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [userData, setUserData] = React.useState<any>({
     fullName: 'Liu Wei',
@@ -515,7 +521,7 @@ export default function Dashboard() {
         console.log('⚠️ API fetch failed, using default data:', error);
       }
     };
-    
+
     fetchUserData();
   }, []);
 
@@ -535,7 +541,7 @@ export default function Dashboard() {
     icon: any;
     id: number;
   }>>([]);
-  
+
   React.useEffect(() => {
     const fetchAccounts = async () => {
       try {
@@ -543,7 +549,7 @@ export default function Dashboard() {
         if (response.ok) {
           const accountsData = await response.json();
           // console.log('Accounts API Response:', accountsData);
-          
+
           if (Array.isArray(accountsData) && accountsData.length > 0) {
             const formattedAccounts = accountsData.map((account: any) => ({
               type: account.accountType ? account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1) : 'Account',
@@ -576,7 +582,7 @@ export default function Dashboard() {
         ]);
       }
     };
-    
+
     fetchAccounts();
     // Removed auto-refresh to prevent profile reset issues
   }, []);
@@ -651,7 +657,7 @@ export default function Dashboard() {
               <div className="text-xs text-gray-500">International Banking</div>
             </div>
           </div>
-          
+
           {/* Profile Section */}
           <div className="flex items-center space-x-3">
             {/* Real-time Alerts */}
@@ -743,7 +749,7 @@ export default function Dashboard() {
                   <Badge variant="outline" className="text-xs bg-orange-50 text-orange-600 border-orange-200">{t('authenticated')}</Badge>
                 </div>
               </div>
-              
+
               <Avatar size={80} />
             </div>
           </div>
@@ -785,7 +791,7 @@ export default function Dashboard() {
                 <p className="text-sm font-medium">****1234</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-1">
                 <ArrowUpRight className="w-4 h-4 text-green-300" />
@@ -980,7 +986,7 @@ export default function Dashboard() {
                 </div>
                 <span className="font-medium text-green-600">+$5,250.00</span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -993,7 +999,7 @@ export default function Dashboard() {
                 </div>
                 <span className="font-medium text-red-600">-$156.78</span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
