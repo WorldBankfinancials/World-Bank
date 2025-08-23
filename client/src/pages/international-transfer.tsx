@@ -31,12 +31,12 @@ import {
   Star
 } from "lucide-react";
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import { useAuth } from '../contexts/AuthContext';
 import type { User } from "@shared/schema";
 
 export default function InternationalTransfer() {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [transferAmount, setTransferAmount] = useState('');
