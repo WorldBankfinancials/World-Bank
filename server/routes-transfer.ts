@@ -9,22 +9,22 @@ export function setupTransferRoutes(app: Express) {
   // Enhanced Transfer API with proper workflow
   app.post('/api/transfers/create', async (req: Request, res: Response) => {
     try {
-      const { 
-        amount, 
-        recipientName, 
-        recipientAccount, 
-        recipientCountry, 
-        bankName, 
-        swiftCode, 
+      const {
+        amount,
+        recipientName,
+        recipientAccount,
+        recipientCountry,
+        bankName,
+        swiftCode,
         transferPurpose,
-        notes 
+        notes
       } = req.body;
 
       // Validate required fields
       if (!amount || !recipientName || !recipientAccount || !bankName) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Missing required fields: amount, recipient name, account, and bank name are required" 
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields: amount, recipient name, account, and bank name are required"
         });
       }
 
@@ -55,17 +55,17 @@ export function setupTransferRoutes(app: Express) {
       }
       global.pendingTransfers.push(transaction);
 
-      res.json({ 
+      res.json({
         success: true,
-        message: "Transfer submitted successfully", 
+        message: "Transfer submitted successfully",
         transaction,
         transactionId
       });
     } catch (error) {
       console.error("Error creating transfer:", error);
-      res.status(500).json({ 
-        success: false, 
-        message: "Failed to process transfer" 
+      res.status(500).json({
+        success: false,
+        message: "Failed to process transfer"
       });
     }
   });
@@ -89,7 +89,7 @@ export function setupTransferRoutes(app: Express) {
       const adminId = (req as any).session?.userId || 1; // Default admin
 
       const transaction = await storage.updateTransactionStatus(transactionId, 'approved', adminId, notes);
-      
+
       if (transaction) {
         // Log admin action
         await storage.createAdminAction({
@@ -117,7 +117,7 @@ export function setupTransferRoutes(app: Express) {
       const adminId = (req as any).session?.userId || 1; // Default admin
 
       const transaction = await storage.updateTransactionStatus(transactionId, 'rejected', adminId, notes);
-      
+
       if (transaction) {
         // Log admin action
         await storage.createAdminAction({

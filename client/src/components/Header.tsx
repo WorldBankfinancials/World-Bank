@@ -1,6 +1,6 @@
 import { Settings, User, LogOut, Shield, Check, Download, Building2, RotateCcw, TrendingUp, HelpCircle, CreditCard, ArrowUpRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { Link } from "wouter";
+import { Link, navigate } from "wouter";
 import type { User as UserType } from "../../../shared/schema";
 import NavigationMenu from "./NavigationMenu";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ export default function Header({}: HeaderProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { userProfile } = useAuth();
   const [freshUserData, setFreshUserData] = useState<any>(null);
+  const [unreadCount, setUnreadCount] = useState(0); // State for unread notifications
 
   // Fetch fresh user data once only
   useEffect(() => {
@@ -43,6 +44,26 @@ export default function Header({}: HeaderProps) {
 
     fetchFreshUserData();
   }, []);
+
+  // Fetch unread notification count
+  useEffect(() => {
+    const fetchUnreadNotifications = async () => {
+      try {
+        // Assuming an API endpoint to get unread notification count
+        const response = await fetch('/api/notifications/unread'); 
+        if (response.ok) {
+          const data = await response.json();
+          setUnreadCount(data.count);
+        }
+      } catch (error) {
+        // Silent error handling for notification count
+      }
+    };
+
+    fetchUnreadNotifications();
+    // Optionally, set up polling or WebSocket for real-time updates
+  }, []);
+
 
   const profileMenuItems = [
     { 
@@ -115,17 +136,23 @@ export default function Header({}: HeaderProps) {
           {/* Notification and Profile Section */}
           <div className="flex items-center space-x-4">
             {/* Consolidated Notifications */}
-            <div className="flex items-center space-x-2">
-              <RealtimeAlerts />
-              <Button size="sm" variant="ghost" className="relative p-2">
-                <Bell className="w-5 h-5 text-gray-600" />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">3</span>
-              </Button>
-              <Button size="sm" variant="ghost" className="relative p-2">
-                <MessageSquare className="w-5 h-5 text-gray-600" />
-                <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">2</span>
-              </Button>
+            <div className="relative">
+              <button 
+                onClick={() => navigate('/alerts')}
+                className="p-2 text-gray-600 hover:text-blue-600 relative transition-colors"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
             </div>
+            <Button size="sm" variant="ghost" className="relative p-2">
+              <MessageSquare className="w-5 h-5 text-gray-600" />
+              <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">2</span>
+            </Button>
 
             {/* Profile Icon with Dropdown */}
             <div className="relative">

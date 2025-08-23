@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, Send, X, Phone, Video, Paperclip, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";

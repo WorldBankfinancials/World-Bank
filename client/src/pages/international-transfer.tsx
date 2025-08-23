@@ -30,16 +30,20 @@ import {
   History,
   Star
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import type { User } from "@shared/schema";
 
 export default function InternationalTransfer() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [transferAmount, setTransferAmount] = useState('');
   const [fromCurrency, setFromCurrency] = useState('USD');
   const [toCurrency, setToCurrency] = useState('CNY');
 
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: userData, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
 
@@ -101,7 +105,7 @@ export default function InternationalTransfer() {
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         alert(`Transfer submitted successfully! Transaction ID: ${result.transactionId}`);
         setTransferAmount('');
@@ -116,7 +120,7 @@ export default function InternationalTransfer() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={user} />
+      <Header user={userData} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Enhanced Header */}
