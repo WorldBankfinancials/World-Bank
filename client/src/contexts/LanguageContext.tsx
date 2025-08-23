@@ -1,492 +1,812 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-type Language = 'en' | 'es' | 'fr' | 'de' | 'zh' | 'ar' | 'ja' | 'pt' | 'ru' | 'hi';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-interface LanguageContextType {
-  language: Language;
-  setLanguage: (lang: Language) => void;
-  t: (key: string) => string;
+export interface Language {
+  code: string;
+  name: string;
+  flag: string;
+  rtl?: boolean;
 }
 
-const translations = {
+export const languages: Language[] = [
+  { code: 'en', name: 'English', flag: '🇺🇸' },
+  { code: 'zh', name: '中文', flag: '🇨🇳' },
+  { code: 'es', name: 'Español', flag: '🇪🇸' },
+  { code: 'fr', name: 'Français', flag: '🇫🇷' },
+  { code: 'ar', name: 'العربية', flag: '🇸🇦', rtl: true },
+  { code: 'ru', name: 'Русский', flag: '🇷🇺' },
+  { code: 'ja', name: '日本語', flag: '🇯🇵' },
+  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+  { code: 'pt', name: 'Português', flag: '🇧🇷' },
+  { code: 'ko', name: '한국어', flag: '🇰🇷' },
+];
+
+export const translations = {
+  // English
   en: {
-    // Navigation
-    nav_home: 'Home',
-    nav_cards: 'Cards',
-    nav_transfer: 'Transfer',
-    nav_history: 'History',
-    nav: 'Profile',
-
-    // Dashboard
-    welcome: 'Welcome',
-    account_number: 'Account Number',
-    account_id: 'Account ID',
-    total_balance: 'Total Balance',
-    available: 'Available',
-    my_accounts: 'My Accounts',
-    checking_account: 'Checking Account',
-    savings_account: 'Savings Account',
-    investment_account: 'Investment Account',
-    quick_actions: 'Quick Actions',
-
-    // Actions
-    international_transfer: 'International Transfer',
-    send_money_worldwide: 'Send money worldwide',
-    receive: 'Receive',
-    request_money: 'Request money',
-    add_money: 'Add Money',
-    fund_account: 'Fund account',
-    live_chat: 'Live Chat',
-    customer_support: 'Customer support',
-    banking_alerts: 'Banking Alerts',
-    new_notifications: 'new notifications',
-    statements: 'Statements',
-    download_reports: 'Download reports',
-    exchange: 'Exchange',
-    currency_rates: 'Currency rates',
-    investments: 'Investments',
-    portfolio_view: 'Portfolio view',
-    recent_transactions: 'Recent Transactions',
-
-    // Chat
-    world_bank_support: 'World Bank Support',
-    online: 'Online',
-    hello_welcome: 'Hello! Welcome to World Bank. How can I help you today?',
-    connected: 'Connected',
-    press_enter_to_send: 'Press Enter to send',
-    type_message: 'Type your message here...',
-
-    // Transfer
-    amount: 'Amount',
-    recipient_name: 'Recipient Name',
-    recipient_account: 'Recipient Account',
-    send_transfer: 'Send Transfer',
-    transfer_successful: 'Transfer Successful',
-    transfer_pending: 'Transfer Pending',
-
     // Common
-    submit: 'Submit',
+    welcome: 'Welcome',
+    dashboard: 'Dashboard',
+    profile: 'Profile',
+    settings: 'Settings',
+    logout: 'Sign Out',
+    login: 'Sign In',
+    loading: 'Loading...',
+    error: 'Error',
+    success: 'Success',
     cancel: 'Cancel',
     confirm: 'Confirm',
-    continue: 'Continue',
-    back: 'Back',
-    next: 'Next',
     save: 'Save',
     edit: 'Edit',
     delete: 'Delete',
     search: 'Search',
     filter: 'Filter',
     sort: 'Sort',
-    loading: 'Loading...',
-    error: 'Error',
-    success: 'Success',
-    warning: 'Warning',
-    info: 'Information',
+    
+    // Account Management
     account: 'Account',
-    online: 'Online',
-    authenticated: 'Authenticated',
+    account_number: 'Account Number',
+    account_id: 'Account ID',
+    balance: 'Balance',
+    available_balance: 'Available Balance',
+    total_balance: 'Total Balance',
+    my_accounts: 'My Accounts',
+    
+    // Transfer & Payments
+    transfer: 'Transfer',
     transfer_money: 'Transfer Money',
+    send_money: 'Send Money',
+    receive_money: 'Receive Money',
+    amount: 'Amount',
+    recipient: 'Recipient',
     send_to: 'Send To',
     transfer_type: 'Transfer Type',
-    select_transfer_type: 'Select Transfer Type',
     quick_send: 'Quick Send',
     international: 'International',
     bank_transfer: 'Bank Transfer',
     mobile_money: 'Mobile Money',
-    processing_transfer: 'Processing Transfer',
-    send_amount: 'Send Amount',
-    account_email_phone_placeholder: 'Account, email, or phone'
+    processing_transfer: 'Processing Transfer...',
+    send_amount: 'Send',
+    account_email_phone_placeholder: 'Account, email or phone',
+    select_transfer_type: 'Select transfer type',
+    
+    // Status indicators
+    online: 'Online',
+    offline: 'Offline',
+    verified: 'Verified',
+    unverified: 'Unverified',
+    active: 'Active',
+    inactive: 'Inactive',
+    authenticated: 'Authenticated',
+    pending: 'Pending',
+    completed: 'Completed',
+    failed: 'Failed',
+    
+    // Countries
+    china: 'China',
+    usa: 'United States',
+    uk: 'United Kingdom',
+    germany: 'Germany',
+    france: 'France',
+    japan: 'Japan',
+    other: 'Other',
   },
+
+  // Chinese
   zh: {
-    // Navigation
-    nav_home: '首页',
-    nav_cards: '银行卡',
-    nav_transfer: '转账',
-    nav_history: '历史',
-    nav: '个人资料',
-
-    // Dashboard
-    welcome: '欢迎',
-    account_number: '账户号码',
-    account_id: '账户ID',
-    total_balance: '总余额',
-    available: '可用',
-    my_accounts: '我的账户',
-    checking_account: '支票账户',
-    savings_account: '储蓄账户',
-    investment_account: '投资账户',
-    quick_actions: '快捷操作',
-
-    // Actions
-    international_transfer: '国际转账',
-    send_money_worldwide: '全球汇款',
-    receive: '收款',
-    request_money: '请求付款',
-    add_money: '充值',
-    fund_account: '资金账户',
-    live_chat: '在线客服',
-    customer_support: '客户支持',
-    banking_alerts: '银行提醒',
-    new_notifications: '新通知',
-    statements: '对账单',
-    download_reports: '下载报告',
-    exchange: '汇率',
-    currency_rates: '货币汇率',
-    investments: '投资',
-    portfolio_view: '投资组合',
-    recent_transactions: '最近交易',
-
-    // Chat
-    world_bank_support: '世界银行客服',
-    online: '在线',
-    hello_welcome: '您好！欢迎来到世界银行。我今天可以为您做些什么？',
-    connected: '已连接',
-    press_enter_to_send: '按回车发送',
-    type_message: '在此输入您的消息...',
-
-    // Transfer
-    amount: '金额',
-    recipient_name: '收款人姓名',
-    recipient_account: '收款人账户',
-    send_transfer: '发送转账',
-    transfer_successful: '转账成功',
-    transfer_pending: '转账处理中',
-
     // Common
-    submit: '提交',
+    welcome: '欢迎',
+    dashboard: '仪表板',
+    profile: '个人资料',
+    settings: '设置',
+    logout: '登出',
+    login: '登录',
+    loading: '加载中...',
+    error: '错误',
+    success: '成功',
     cancel: '取消',
     confirm: '确认',
-    continue: '继续',
-    back: '返回',
-    next: '下一步',
     save: '保存',
     edit: '编辑',
     delete: '删除',
     search: '搜索',
     filter: '筛选',
     sort: '排序',
-    loading: '加载中...',
-    error: '错误',
-    success: '成功',
-    warning: '警告',
-    info: '信息',
+    
+    // Account Management
     account: '账户',
-    online: '在线',
-    authenticated: '已认证',
+    account_number: '账户号码',
+    account_id: '账户ID',
+    balance: '余额',
+    available_balance: '可用余额',
+    total_balance: '总余额',
+    my_accounts: '我的账户',
+    
+    // Transfer & Payments
+    transfer: '转账',
     transfer_money: '转账',
+    send_money: '汇款',
+    receive_money: '收款',
+    amount: '金额',
+    recipient: '收款人',
     send_to: '发送至',
     transfer_type: '转账类型',
-    select_transfer_type: '选择转账类型',
     quick_send: '快速发送',
-    international: '国际',
+    international: '国际转账',
     bank_transfer: '银行转账',
     mobile_money: '手机支付',
-    processing_transfer: '处理转账',
-    send_amount: '发送金额',
-    account_email_phone_placeholder: '账户, 邮箱, 或 电话'
+    processing_transfer: '正在处理转账...',
+    send_amount: '发送',
+    account_email_phone_placeholder: '账户、邮箱或电话',
+    select_transfer_type: '选择转账类型',
+    
+    // Status indicators
+    online: '在线',
+    offline: '离线',
+    verified: '已验证',
+    unverified: '未验证',
+    active: '活跃',
+    inactive: '非活跃',
+    authenticated: '已认证',
+    pending: '待处理',
+    completed: '已完成',
+    failed: '失败',
+    
+    // Countries
+    china: '中国',
+    usa: '美国',
+    uk: '英国',
+    germany: '德国',
+    france: '法国',
+    japan: '日本',
+    other: '其他',
   },
+
+  // Spanish
   es: {
-    nav_home: 'Inicio',
-    nav_cards: 'Tarjetas',
-    nav_transfer: 'Transferir',
-    nav_history: 'Historial',
-    nav: 'Perfil',
+    // Common
     welcome: 'Bienvenido',
-    account_number: 'Número de Cuenta',
-    total_balance: 'Saldo Total',
-    available: 'Disponible',
-    international_transfer: 'Transferencia Internacional',
-    live_chat: 'Chat en Vivo',
-    customer_support: 'Soporte al Cliente',
-    type_message: 'Escribe tu mensaje aquí...',
-    connected: 'Conectado',
-    amount: 'Cantidad',
-    recipient_name: 'Nombre del Destinatario',
-    submit: 'Enviar',
-    cancel: 'Cancelar',
+    dashboard: 'Panel',
+    profile: 'Perfil',
+    settings: 'Configuración',
+    logout: 'Cerrar Sesión',
+    login: 'Iniciar Sesión',
     loading: 'Cargando...',
+    error: 'Error',
+    success: 'Éxito',
+    cancel: 'Cancelar',
+    confirm: 'Confirmar',
+    save: 'Guardar',
+    edit: 'Editar',
+    delete: 'Eliminar',
+    search: 'Buscar',
+    filter: 'Filtrar',
+    sort: 'Ordenar',
+    
+    // Account Management
     account: 'Cuenta',
-    online: 'En línea',
-    authenticated: 'Autenticado',
+    account_number: 'Número de Cuenta',
+    account_id: 'ID de Cuenta',
+    balance: 'Saldo',
+    available_balance: 'Saldo Disponible',
+    total_balance: 'Saldo Total',
+    my_accounts: 'Mis Cuentas',
+    
+    // Transfer & Payments
+    transfer: 'Transferir',
     transfer_money: 'Transferir Dinero',
+    send_money: 'Enviar Dinero',
+    receive_money: 'Recibir Dinero',
+    amount: 'Cantidad',
+    recipient: 'Destinatario',
     send_to: 'Enviar a',
     transfer_type: 'Tipo de Transferencia',
-    select_transfer_type: 'Seleccionar Tipo de Transferencia',
     quick_send: 'Envío Rápido',
     international: 'Internacional',
     bank_transfer: 'Transferencia Bancaria',
     mobile_money: 'Dinero Móvil',
-    processing_transfer: 'Procesando Transferencia',
-    send_amount: 'Enviar Monto',
-    account_email_phone_placeholder: 'Cuenta, correo electrónico o teléfono'
+    processing_transfer: 'Procesando Transferencia...',
+    send_amount: 'Enviar',
+    account_email_phone_placeholder: 'Cuenta, email o teléfono',
+    select_transfer_type: 'Seleccionar tipo de transferencia',
+    
+    // Status indicators
+    online: 'En Línea',
+    offline: 'Fuera de Línea',
+    verified: 'Verificado',
+    unverified: 'No Verificado',
+    active: 'Activo',
+    inactive: 'Inactivo',
+    authenticated: 'Autenticado',
+    pending: 'Pendiente',
+    completed: 'Completado',
+    failed: 'Fallido',
+    
+    // Countries
+    china: 'China',
+    usa: 'Estados Unidos',
+    uk: 'Reino Unido',
+    germany: 'Alemania',
+    france: 'Francia',
+    japan: 'Japón',
+    other: 'Otro',
   },
+
+  // French
   fr: {
-    nav_home: 'Accueil',
-    nav_cards: 'Cartes',
-    nav_transfer: 'Virement',
-    nav_history: 'Historique',
-    nav: 'Profil',
+    // Common
     welcome: 'Bienvenue',
-    account_number: 'Numéro de Compte',
-    total_balance: 'Solde Total',
-    available: 'Disponible',
-    international_transfer: 'Virement International',
-    live_chat: 'Chat en Direct',
-    customer_support: 'Support Client',
-    type_message: 'Tapez votre message ici...',
-    connected: 'Connecté',
-    amount: 'Montant',
-    recipient_name: 'Nom du Destinataire',
-    submit: 'Soumettre',
-    cancel: 'Annuler',
+    dashboard: 'Tableau de bord',
+    profile: 'Profil',
+    settings: 'Paramètres',
+    logout: 'Se déconnecter',
+    login: 'Se connecter',
     loading: 'Chargement...',
+    error: 'Erreur',
+    success: 'Succès',
+    cancel: 'Annuler',
+    confirm: 'Confirmer',
+    save: 'Sauvegarder',
+    edit: 'Modifier',
+    delete: 'Supprimer',
+    search: 'Rechercher',
+    filter: 'Filtrer',
+    sort: 'Trier',
+    
+    // Account Management
     account: 'Compte',
-    online: 'En ligne',
-    authenticated: 'Authentifié',
-    transfer_money: 'Transférer de l\'argent',
+    account_number: 'Numéro de Compte',
+    account_id: 'ID de Compte',
+    balance: 'Solde',
+    available_balance: 'Solde Disponible',
+    total_balance: 'Solde Total',
+    my_accounts: 'Mes Comptes',
+    
+    // Transfer & Payments
+    transfer: 'Transfert',
+    transfer_money: 'Transférer de l\'Argent',
+    send_money: 'Envoyer de l\'Argent',
+    receive_money: 'Recevoir de l\'Argent',
+    amount: 'Montant',
+    recipient: 'Destinataire',
     send_to: 'Envoyer à',
-    transfer_type: 'Type de Virement',
-    select_transfer_type: 'Sélectionner le Type de Virement',
+    transfer_type: 'Type de Transfert',
     quick_send: 'Envoi Rapide',
     international: 'International',
     bank_transfer: 'Virement Bancaire',
-    mobile_money: 'Mobile Money',
-    processing_transfer: 'Virement en Cours',
-    send_amount: 'Montant à Envoyer',
-    account_email_phone_placeholder: 'Compte, email ou téléphone'
+    mobile_money: 'Argent Mobile',
+    processing_transfer: 'Traitement du Transfert...',
+    send_amount: 'Envoyer',
+    account_email_phone_placeholder: 'Compte, email ou téléphone',
+    select_transfer_type: 'Sélectionner le type de transfert',
+    
+    // Status indicators
+    online: 'En Ligne',
+    offline: 'Hors Ligne',
+    verified: 'Vérifié',
+    unverified: 'Non Vérifié',
+    active: 'Actif',
+    inactive: 'Inactif',
+    authenticated: 'Authentifié',
+    pending: 'En Attente',
+    completed: 'Terminé',
+    failed: 'Échoué',
+    
+    // Countries
+    china: 'Chine',
+    usa: 'États-Unis',
+    uk: 'Royaume-Uni',
+    germany: 'Allemagne',
+    france: 'France',
+    japan: 'Japon',
+    other: 'Autre',
   },
-  de: {
-    nav_home: 'Startseite',
-    nav_cards: 'Karten',
-    nav_transfer: 'Überweisung',
-    nav_history: 'Verlauf',
-    nav: 'Profil',
-    welcome: 'Willkommen',
-    account_number: 'Kontonummer',
-    total_balance: 'Gesamtsaldo',
-    available: 'Verfügbar',
-    international_transfer: 'Internationale Überweisung',
-    live_chat: 'Live-Chat',
-    customer_support: 'Kundensupport',
-    type_message: 'Geben Sie hier Ihre Nachricht ein...',
-    connected: 'Verbunden',
-    amount: 'Betrag',
-    recipient_name: 'Name des Empfängers',
-    submit: 'Einreichen',
-    cancel: 'Abbrechen',
-    loading: 'Wird geladen...',
-    account: 'Konto',
-    online: 'Online',
-    authenticated: 'Authentifiziert',
-    transfer_money: 'Geld überweisen',
-    send_to: 'Senden an',
-    transfer_type: 'Überweisungstyp',
-    select_transfer_type: 'Überweisungstyp auswählen',
-    quick_send: 'Schnellüberweisung',
-    international: 'International',
-    bank_transfer: 'Banküberweisung',
-    mobile_money: 'Mobile Money',
-    processing_transfer: 'Überweisung wird bearbeitet',
-    send_amount: 'Zu sendender Betrag',
-    account_email_phone_placeholder: 'Konto, E-Mail oder Telefon'
-  },
+
+  // Arabic
   ar: {
-    nav_home: 'الرئيسية',
-    nav_cards: 'البطاقات',
-    nav_transfer: 'تحويل',
-    nav_history: 'التاريخ',
-    nav: 'الملف الشخصي',
+    // Common
     welcome: 'مرحباً',
-    account_number: 'رقم الحساب',
-    total_balance: 'الرصيد الإجمالي',
-    available: 'متاح',
-    international_transfer: 'تحويل دولي',
-    live_chat: 'دردشة مباشرة',
-    customer_support: 'دعم العملاء',
-    type_message: 'اكتب رسالتك هنا...',
-    connected: 'متصل',
-    amount: 'المبلغ',
-    recipient_name: 'اسم المستلم',
-    submit: 'إرسال',
-    cancel: 'إلغاء',
+    dashboard: 'لوحة التحكم',
+    profile: 'الملف الشخصي',
+    settings: 'الإعدادات',
+    logout: 'تسجيل الخروج',
+    login: 'تسجيل الدخول',
     loading: 'جاري التحميل...',
+    error: 'خطأ',
+    success: 'نجح',
+    cancel: 'إلغاء',
+    confirm: 'تأكيد',
+    save: 'حفظ',
+    edit: 'تحرير',
+    delete: 'حذف',
+    search: 'بحث',
+    filter: 'تصفية',
+    sort: 'ترتيب',
+    
+    // Account Management
     account: 'حساب',
-    online: 'متصل',
-    authenticated: 'مصادق عليه',
-    transfer_money: 'تحويل الأموال',
+    account_number: 'رقم الحساب',
+    account_id: 'معرف الحساب',
+    balance: 'الرصيد',
+    available_balance: 'الرصيد المتاح',
+    total_balance: 'إجمالي الرصيد',
+    my_accounts: 'حساباتي',
+    
+    // Transfer & Payments
+    transfer: 'تحويل',
+    transfer_money: 'تحويل أموال',
+    send_money: 'إرسال أموال',
+    receive_money: 'استقبال أموال',
+    amount: 'المبلغ',
+    recipient: 'المستقبل',
     send_to: 'إرسال إلى',
     transfer_type: 'نوع التحويل',
-    select_transfer_type: 'اختر نوع التحويل',
     quick_send: 'إرسال سريع',
     international: 'دولي',
-    bank_transfer: 'تحويل بنكي',
-    mobile_money: 'أموال الهاتف المحمول',
-    processing_transfer: 'جاري معالجة التحويل',
-    send_amount: 'مبلغ الإرسال',
-    account_email_phone_placeholder: 'الحساب، البريد الإلكتروني، أو الهاتف'
+    bank_transfer: 'تحويل مصرفي',
+    mobile_money: 'النقود المحمولة',
+    processing_transfer: 'معالجة التحويل...',
+    send_amount: 'إرسال',
+    account_email_phone_placeholder: 'الحساب أو البريد أو الهاتف',
+    select_transfer_type: 'اختر نوع التحويل',
+    
+    // Status indicators
+    online: 'متصل',
+    offline: 'غير متصل',
+    verified: 'مُتحقق',
+    unverified: 'غير مُتحقق',
+    active: 'نشط',
+    inactive: 'غير نشط',
+    authenticated: 'مُصادق عليه',
+    pending: 'في انتظار',
+    completed: 'مكتمل',
+    failed: 'فشل',
+    
+    // Countries
+    china: 'الصين',
+    usa: 'الولايات المتحدة',
+    uk: 'المملكة المتحدة',
+    germany: 'ألمانيا',
+    france: 'فرنسا',
+    japan: 'اليابان',
+    other: 'أخرى',
   },
+
+  // Russian
+  ru: {
+    // Common
+    welcome: 'Добро пожаловать',
+    dashboard: 'Панель управления',
+    profile: 'Профиль',
+    settings: 'Настройки',
+    logout: 'Выйти',
+    login: 'Войти',
+    loading: 'Загрузка...',
+    error: 'Ошибка',
+    success: 'Успех',
+    cancel: 'Отмена',
+    confirm: 'Подтвердить',
+    save: 'Сохранить',
+    edit: 'Редактировать',
+    delete: 'Удалить',
+    search: 'Поиск',
+    filter: 'Фильтр',
+    sort: 'Сортировка',
+    
+    // Account Management
+    account: 'Счет',
+    account_number: 'Номер счета',
+    account_id: 'ID счета',
+    balance: 'Баланс',
+    available_balance: 'Доступный баланс',
+    total_balance: 'Общий баланс',
+    my_accounts: 'Мои счета',
+    
+    // Transfer & Payments
+    transfer: 'Перевод',
+    transfer_money: 'Перевести деньги',
+    send_money: 'Отправить деньги',
+    receive_money: 'Получить деньги',
+    amount: 'Сумма',
+    recipient: 'Получатель',
+    send_to: 'Отправить в',
+    transfer_type: 'Тип перевода',
+    quick_send: 'Быстрая отправка',
+    international: 'Международный',
+    bank_transfer: 'Банковский перевод',
+    mobile_money: 'Мобильные деньги',
+    processing_transfer: 'Обработка перевода...',
+    send_amount: 'Отправить',
+    account_email_phone_placeholder: 'Счет, email или телефон',
+    select_transfer_type: 'Выберите тип перевода',
+    
+    // Status indicators
+    online: 'Онлайн',
+    offline: 'Офлайн',
+    verified: 'Проверен',
+    unverified: 'Не проверен',
+    active: 'Активный',
+    inactive: 'Неактивный',
+    authenticated: 'Аутентифицирован',
+    pending: 'В ожидании',
+    completed: 'Завершено',
+    failed: 'Неудачно',
+    
+    // Countries
+    china: 'Китай',
+    usa: 'США',
+    uk: 'Великобритания',
+    germany: 'Германия',
+    france: 'Франция',
+    japan: 'Япония',
+    other: 'Другое',
+  },
+
+  // Japanese
   ja: {
-    nav_home: 'ホーム',
-    nav_cards: 'カード',
-    nav_transfer: '送金',
-    nav_history: '履歴',
-    nav: 'プロフィール',
+    // Common
     welcome: 'ようこそ',
-    account_number: '口座番号',
-    total_balance: '総残高',
-    available: '利用可能',
-    international_transfer: '国際送金',
-    live_chat: 'ライブチャット',
-    customer_support: 'カスタマーサポート',
-    type_message: 'メッセージを入力してください...',
-    connected: '接続済み',
-    amount: '金額',
-    recipient_name: '受取人名',
-    submit: '送信',
-    cancel: 'キャンセル',
+    dashboard: 'ダッシュボード',
+    profile: 'プロフィール',
+    settings: '設定',
+    logout: 'ログアウト',
+    login: 'ログイン',
     loading: '読み込み中...',
-    account: '口座',
-    online: 'オンライン',
-    authenticated: '認証済み',
+    error: 'エラー',
+    success: '成功',
+    cancel: 'キャンセル',
+    confirm: '確認',
+    save: '保存',
+    edit: '編集',
+    delete: '削除',
+    search: '検索',
+    filter: 'フィルター',
+    sort: 'ソート',
+    
+    // Account Management
+    account: 'アカウント',
+    account_number: 'アカウント番号',
+    account_id: 'アカウントID',
+    balance: '残高',
+    available_balance: '利用可能残高',
+    total_balance: '総残高',
+    my_accounts: '私のアカウント',
+    
+    // Transfer & Payments
+    transfer: '転送',
     transfer_money: '送金',
-    send_to: '送金先',
-    transfer_type: '送金タイプ',
-    select_transfer_type: '送金タイプを選択',
-    quick_send: 'クイック送金',
+    send_money: 'お金を送る',
+    receive_money: 'お金を受け取る',
+    amount: '金額',
+    recipient: '受信者',
+    send_to: '送信先',
+    transfer_type: '転送タイプ',
+    quick_send: 'クイック送信',
     international: '国際',
-    bank_transfer: '銀行送金',
+    bank_transfer: '銀行振込',
     mobile_money: 'モバイルマネー',
-    processing_transfer: '送金処理中',
-    send_amount: '送金金額',
-    account_email_phone_placeholder: '口座、メールアドレス、または電話番号'
+    processing_transfer: '転送処理中...',
+    send_amount: '送信',
+    account_email_phone_placeholder: 'アカウント、メール、または電話',
+    select_transfer_type: '転送タイプを選択',
+    
+    // Status indicators
+    online: 'オンライン',
+    offline: 'オフライン',
+    verified: '確認済み',
+    unverified: '未確認',
+    active: 'アクティブ',
+    inactive: '非アクティブ',
+    authenticated: '認証済み',
+    pending: '保留中',
+    completed: '完了',
+    failed: '失敗',
+    
+    // Countries
+    china: '中国',
+    usa: 'アメリカ',
+    uk: 'イギリス',
+    germany: 'ドイツ',
+    france: 'フランス',
+    japan: '日本',
+    other: 'その他',
   },
-  pt: {
-    nav_home: 'Início',
-    nav_cards: 'Cartões',
-    nav_transfer: 'Transferir',
-    nav_history: 'Histórico',
-    nav: 'Perfil',
-    welcome: 'Bem-vindo',
-    account_number: 'Número da Conta',
-    total_balance: 'Saldo Total',
-    available: 'Disponível',
-    international_transfer: 'Transferência Internacional',
-    live_chat: 'Chat ao Vivo',
-    customer_support: 'Suporte ao Cliente',
-    type_message: 'Digite sua mensagem aqui...',
-    connected: 'Conectado',
-    amount: 'Valor',
-    recipient_name: 'Nome do Destinatário',
-    submit: 'Enviar',
-    cancel: 'Cancelar',
-    loading: 'Carregando...',
-    account: 'Conta',
+
+  // German
+  de: {
+    // Common
+    welcome: 'Willkommen',
+    dashboard: 'Dashboard',
+    profile: 'Profil',
+    settings: 'Einstellungen',
+    logout: 'Abmelden',
+    login: 'Anmelden',
+    loading: 'Laden...',
+    error: 'Fehler',
+    success: 'Erfolg',
+    cancel: 'Abbrechen',
+    confirm: 'Bestätigen',
+    save: 'Speichern',
+    edit: 'Bearbeiten',
+    delete: 'Löschen',
+    search: 'Suchen',
+    filter: 'Filter',
+    sort: 'Sortieren',
+    
+    // Account Management
+    account: 'Konto',
+    account_number: 'Kontonummer',
+    account_id: 'Konto-ID',
+    balance: 'Saldo',
+    available_balance: 'Verfügbarer Saldo',
+    total_balance: 'Gesamtsaldo',
+    my_accounts: 'Meine Konten',
+    
+    // Transfer & Payments
+    transfer: 'Überweisung',
+    transfer_money: 'Geld überweisen',
+    send_money: 'Geld senden',
+    receive_money: 'Geld empfangen',
+    amount: 'Betrag',
+    recipient: 'Empfänger',
+    send_to: 'Senden an',
+    transfer_type: 'Überweisungstyp',
+    quick_send: 'Schnellsendung',
+    international: 'International',
+    bank_transfer: 'Banküberweisung',
+    mobile_money: 'Mobile Geld',
+    processing_transfer: 'Überweisung wird verarbeitet...',
+    send_amount: 'Senden',
+    account_email_phone_placeholder: 'Konto, E-Mail oder Telefon',
+    select_transfer_type: 'Überweisungstyp auswählen',
+    
+    // Status indicators
     online: 'Online',
-    authenticated: 'Autenticado',
+    offline: 'Offline',
+    verified: 'Verifiziert',
+    unverified: 'Nicht verifiziert',
+    active: 'Aktiv',
+    inactive: 'Inaktiv',
+    authenticated: 'Authentifiziert',
+    pending: 'Ausstehend',
+    completed: 'Abgeschlossen',
+    failed: 'Fehlgeschlagen',
+    
+    // Countries
+    china: 'China',
+    usa: 'USA',
+    uk: 'Vereinigtes Königreich',
+    germany: 'Deutschland',
+    france: 'Frankreich',
+    japan: 'Japan',
+    other: 'Andere',
+  },
+
+  // Portuguese
+  pt: {
+    // Common
+    welcome: 'Bem-vindo',
+    dashboard: 'Painel',
+    profile: 'Perfil',
+    settings: 'Configurações',
+    logout: 'Sair',
+    login: 'Entrar',
+    loading: 'Carregando...',
+    error: 'Erro',
+    success: 'Sucesso',
+    cancel: 'Cancelar',
+    confirm: 'Confirmar',
+    save: 'Salvar',
+    edit: 'Editar',
+    delete: 'Excluir',
+    search: 'Pesquisar',
+    filter: 'Filtrar',
+    sort: 'Classificar',
+    
+    // Account Management
+    account: 'Conta',
+    account_number: 'Número da Conta',
+    account_id: 'ID da Conta',
+    balance: 'Saldo',
+    available_balance: 'Saldo Disponível',
+    total_balance: 'Saldo Total',
+    my_accounts: 'Minhas Contas',
+    
+    // Transfer & Payments
+    transfer: 'Transferir',
     transfer_money: 'Transferir Dinheiro',
+    send_money: 'Enviar Dinheiro',
+    receive_money: 'Receber Dinheiro',
+    amount: 'Quantia',
+    recipient: 'Destinatário',
     send_to: 'Enviar para',
     transfer_type: 'Tipo de Transferência',
-    select_transfer_type: 'Selecionar Tipo de Transferência',
     quick_send: 'Envio Rápido',
     international: 'Internacional',
     bank_transfer: 'Transferência Bancária',
     mobile_money: 'Dinheiro Móvel',
-    processing_transfer: 'Transferência em Processamento',
-    send_amount: 'Valor a Enviar',
-    account_email_phone_placeholder: 'Conta, e-mail ou telefone'
+    processing_transfer: 'Processando Transferência...',
+    send_amount: 'Enviar',
+    account_email_phone_placeholder: 'Conta, email ou telefone',
+    select_transfer_type: 'Selecionar tipo de transferência',
+    
+    // Status indicators
+    online: 'Online',
+    offline: 'Offline',
+    verified: 'Verificado',
+    unverified: 'Não Verificado',
+    active: 'Ativo',
+    inactive: 'Inativo',
+    authenticated: 'Autenticado',
+    pending: 'Pendente',
+    completed: 'Concluído',
+    failed: 'Falhou',
+    
+    // Countries
+    china: 'China',
+    usa: 'Estados Unidos',
+    uk: 'Reino Unido',
+    germany: 'Alemanha',
+    france: 'França',
+    japan: 'Japão',
+    other: 'Outro',
   },
-  ru: {
-    nav_home: 'Главная',
-    nav_cards: 'Карты',
-    nav_transfer: 'Перевод',
-    nav_history: 'История',
-    nav: 'Профиль',
-    welcome: 'Добро пожаловать',
-    account_number: 'Номер счета',
-    total_balance: 'Общий баланс',
-    available: 'Доступно',
-    international_transfer: 'Международный перевод',
-    live_chat: 'Живой чат',
-    customer_support: 'Поддержка клиентов',
-    type_message: 'Введите ваше сообщение здесь...',
-    connected: 'Подключено',
-    amount: 'Сумма',
-    recipient_name: 'Имя получателя',
-    submit: 'Отправить',
-    cancel: 'Отменить',
-    loading: 'Загрузка...',
-    account: 'Счет',
-    online: 'Онлайн',
-    authenticated: 'Аутентифицирован',
-    transfer_money: 'Перевести деньги',
-    send_to: 'Отправить кому',
-    transfer_type: 'Тип перевода',
-    select_transfer_type: 'Выберите тип перевода',
-    quick_send: 'Быстрый перевод',
-    international: 'Международный',
-    bank_transfer: 'Банковский перевод',
-    mobile_money: 'Мобильные деньги',
-    processing_transfer: 'Обработка перевода',
-    send_amount: 'Сумма перевода',
-    account_email_phone_placeholder: 'Счет, email или телефон'
+
+  // Korean
+  ko: {
+    // Common
+    welcome: '환영합니다',
+    dashboard: '대시보드',
+    profile: '프로필',
+    settings: '설정',
+    logout: '로그아웃',
+    login: '로그인',
+    loading: '로딩 중...',
+    error: '오류',
+    success: '성공',
+    cancel: '취소',
+    confirm: '확인',
+    save: '저장',
+    edit: '편집',
+    delete: '삭제',
+    search: '검색',
+    filter: '필터',
+    sort: '정렬',
+    
+    // Account Management
+    account: '계정',
+    account_number: '계좌번호',
+    account_id: '계정 ID',
+    balance: '잔액',
+    available_balance: '사용 가능한 잔액',
+    total_balance: '총 잔액',
+    my_accounts: '내 계정',
+    
+    // Transfer & Payments
+    transfer: '이체',
+    transfer_money: '송금',
+    send_money: '돈 보내기',
+    receive_money: '돈 받기',
+    amount: '금액',
+    recipient: '수신자',
+    send_to: '보내기',
+    transfer_type: '이체 유형',
+    quick_send: '빠른 송금',
+    international: '국제',
+    bank_transfer: '은행 이체',
+    mobile_money: '모바일 머니',
+    processing_transfer: '이체 처리 중...',
+    send_amount: '보내기',
+    account_email_phone_placeholder: '계정, 이메일 또는 전화',
+    select_transfer_type: '이체 유형 선택',
+    
+    // Status indicators
+    online: '온라인',
+    offline: '오프라인',
+    verified: '검증됨',
+    unverified: '미검증',
+    active: '활성',
+    inactive: '비활성',
+    authenticated: '인증됨',
+    pending: '대기 중',
+    completed: '완료',
+    failed: '실패',
+    
+    // Countries
+    china: '중국',
+    usa: '미국',
+    uk: '영국',
+    germany: '독일',
+    france: '프랑스',
+    japan: '일본',
+    other: '기타',
   },
-  hi: {
-    nav_home: 'होम',
-    nav_cards: 'कार्ड',
-    nav_transfer: 'स्थानांतरण',
-    nav_history: 'इतिहास',
-    nav: 'प्रोफ़ाइल',
-    welcome: 'स्वागत है',
-    account_number: 'खाता संख्या',
-    total_balance: 'कुल शेष',
-    available: 'उपलब्ध',
-    international_transfer: 'अंतर्राष्ट्रीय स्थानांतरण',
-    live_chat: 'लाइव चैट',
-    customer_support: 'ग्राहक सहायता',
-    type_message: 'यहाँ अपना संदेश टाइप करें...',
-    connected: 'जुड़ा हुआ',
-    amount: 'राशि',
-    recipient_name: 'प्राप्तकर्ता का नाम',
-    submit: 'जमा करें',
-    cancel: 'रद्द करें',
-    loading: 'लोड हो रहा है...',
-    account: 'खाता',
-    online: 'ऑनलाइन',
-    authenticated: 'प्रमाणित',
-    transfer_money: 'धन हस्तांतरण',
-    send_to: 'को भेजें',
-    transfer_type: 'स्थानांतरण प्रकार',
-    select_transfer_type: 'स्थानांतरण प्रकार चुनें',
-    quick_send: 'त्वरित भेजें',
-    international: 'अंतर्राष्ट्रीय',
-    bank_transfer: 'बैंक हस्तांतरण',
-    mobile_money: 'मोबाइल पैसा',
-    processing_transfer: 'स्थानांतरण संसाधित हो रहा है',
-    send_amount: 'राशि भेजें',
-    account_email_phone_placeholder: 'खाता, ईमेल, या फोन'
-  }
 };
+
+interface LanguageContextType {
+  currentLanguage: Language;
+  setLanguage: (language: string) => void;
+  t: (key: string) => string;
+  isRTL: boolean;
+}
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('en');
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  const [currentLanguage, setCurrentLanguage] = useState<Language>(languages[0]); // Default to English
+
+  useEffect(() => {
+    // Load saved language from localStorage
+    const savedLanguage = localStorage.getItem('preferred-language');
+    if (savedLanguage) {
+      const language = languages.find(lang => lang.code === savedLanguage);
+      if (language) {
+        setCurrentLanguage(language);
+      }
+    } else {
+      // Detect browser language
+      const browserLang = navigator.language.split('-')[0];
+      const language = languages.find(lang => lang.code === browserLang);
+      if (language) {
+        setCurrentLanguage(language);
+      }
+    }
+  }, []);
+
+  const setLanguage = (languageCode: string) => {
+    const language = languages.find(lang => lang.code === languageCode);
+    if (language) {
+      setCurrentLanguage(language);
+      localStorage.setItem('preferred-language', languageCode);
+      
+      // Update document direction for RTL languages
+      document.documentElement.setAttribute('dir', language.rtl ? 'rtl' : 'ltr');
+      document.documentElement.setAttribute('lang', languageCode);
+    }
+  };
 
   const t = (key: string): string => {
-    return translations[language][key] || translations.en[key] || key;
+    const translation = translations[currentLanguage.code as keyof typeof translations];
+    if (translation && translation[key as keyof typeof translation]) {
+      return translation[key as keyof typeof translation] as string;
+    }
+    
+    // Fallback to English
+    const englishTranslation = translations.en[key as keyof typeof translations.en];
+    if (englishTranslation) {
+      return englishTranslation as string;
+    }
+    
+    // Return the key if no translation found
+    return key;
+  };
+
+  const isRTL = currentLanguage.rtl || false;
+
+  // Update document direction when language changes
+  useEffect(() => {
+    document.documentElement.setAttribute('dir', isRTL ? 'rtl' : 'ltr');
+    document.documentElement.setAttribute('lang', currentLanguage.code);
+  }, [currentLanguage, isRTL]);
+
+  const value: LanguageContextType = {
+    currentLanguage,
+    setLanguage,
+    t,
+    isRTL,
   };
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );
-};
+}
 
-export const useLanguage = (): LanguageContextType => {
+export function useLanguage(): LanguageContextType {
   const context = useContext(LanguageContext);
   if (context === undefined) {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }
   return context;
-};
+}
