@@ -14,8 +14,8 @@ export function LanguageSelector() {
   const { currentLanguage, languages, changeLanguage } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Ensure we have a valid current language
-  if (!currentLanguage || !currentLanguage.flag || !currentLanguage.name) {
+  // Safe fallback if language context is not available
+  if (!currentLanguage || !languages) {
     return (
       <div className="flex items-center space-x-2">
         <Globe className="h-4 w-4 text-gray-600" />
@@ -41,9 +41,9 @@ export function LanguageSelector() {
           size="sm" 
           className="flex items-center space-x-2 hover:bg-gray-100"
         >
-          <span className="text-lg">{currentLanguage.flag}</span>
+          <span className="text-lg">{currentLanguage.flag || '🇺🇸'}</span>
           <span className="hidden sm:inline text-sm font-medium">
-            {currentLanguage.name}
+            {currentLanguage.name || 'English'}
           </span>
           <ChevronDown className="h-3 w-3" />
         </Button>
