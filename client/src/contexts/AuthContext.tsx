@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { fallbackAuth } from '../lib/auth-fallback';
 import type { User } from '@supabase/supabase-js';
 
 interface UserProfile {
@@ -48,26 +47,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserData = async (supabaseUser?: User) => {
     try {
-      if (!supabaseUser) return;
+      if (!supabaseUser) {
+        setUserProfile(null);
+        return;
+      }
       
-      // Try to fetch from API first (hybrid approach)
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'X-Supabase-Email': supabaseUser.email || '',
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      };
+      console.log('🔍 Fetching user data for:', supabaseUser.email);
       
-      const response = await fetch(`/api/user?t=${Date.now()}`, {
-        credentials: 'include',
-        headers,
-        cache: 'no-cache'
-      });
+      // Try to fetch from Supabase user_profiles table directly
+      const { data: profileData, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
 
-      if (response.ok) {
-        const userData = await response.json();
-        setUserProfile(userData);
+      if (profileData && !error) {
+        console.log('✅ Found user profile in database:', profileData);
+        setUserProfile({
+          id: profileData.id,
+          email: supabaseUser.email || '',
+          fullName: profileData.full_name || supabaseUser.email?.split('@')[0] || 'User',
+          phone: profileData.phone_number,
+          role: 'customer',
+          isVerified: profileData.email_verified || false,
+          isActive: true,
+          isOnline: true,
+          country: profileData.country,
+          city: profileData.city,
+          state: profileData.state
+        });
       } else {
-        // Fallback to Supabase profile data
+        console.log('📝 No profile found, creating basic profile');
+        // Create a basic profile for new users
         setUserProfile({
           id: supabaseUser.id,
           email: supabaseUser.email || '',
@@ -127,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, metadata?: any): Promise<{ error?: string }> => {
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -167,7 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         await fetchUserData(session.user);
