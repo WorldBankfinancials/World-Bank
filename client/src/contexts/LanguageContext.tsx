@@ -16,6 +16,19 @@ const LANGUAGES: Language[] = [
     name: 'English',
     flag: '🇺🇸',
     translations: {
+      // Brand and main
+      world_bank: 'World Bank',
+      international_banking_solutions: 'International Banking Solutions',
+      secure_trusted_global: 'Secure, Trusted & Global',
+      licensed_regulated: 'Licensed & Regulated',
+      
+      // Authentication
+      sign_in: 'Sign In',
+      user_id_or_email: 'User ID or Email',
+      password: 'Password',
+      new_customer: 'New Customer?',
+      create_account: 'Create Account',
+      
       // Navigation
       welcome: 'Welcome',
       dashboard: 'Dashboard',
@@ -24,6 +37,7 @@ const LANGUAGES: Language[] = [
       cards: 'Cards',
       profile: 'Profile',
       logout: 'Logout',
+      home: 'Home',
       
       // Common
       balance: 'Balance',
@@ -65,11 +79,26 @@ const LANGUAGES: Language[] = [
       'lock-card-desc': 'Enter your PIN to lock this card',
       'unlock-card-desc': 'Enter your PIN to unlock this card',
       
-      // Personal Banking
+      // Banking Services
+      banking_services: 'Banking Services',
       'personal-banking': 'Personal Banking',
+      business_banking: 'Business Banking',
       'investment-services': 'Investment Services',
+      loans_credit: 'Loans & Credit',
+      
+      // Support
+      support: 'Support',
+      help_center: 'Help Center',
+      contact_us: 'Contact Us',
+      security_center: 'Security Center',
+      privacy_policy: 'Privacy Policy',
+      contact_support: 'Contact Support',
+      copyright_notice: 'Copyright Notice',
+      
+      // Footer
       copyright: 'Copyright',
       'terms-of-service': 'Terms of Service',
+      connect: 'Connect',
       
       // Verification
       'phone-verification': 'Phone Verification',
