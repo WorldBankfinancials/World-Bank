@@ -96,61 +96,234 @@ function App() {
                       {/* Public Routes */}
                       <Route path="/login" component={Login} />
                       <Route path="/register" component={Registration} />
+                      
+                      {/* Admin Routes */}
                       <Route path="/admin-login" component={AdminLogin} />
                       <Route path="/admin-dashboard" component={AdminDashboard} />
                       <Route path="/enhanced-admin" component={EnhancedAdmin} />
                       <Route path="/admin-live-chat" component={AdminLiveChat} />
                       <Route path="/customer-service" component={CustomerServicePortal} />
+                      
+                      {/* Transfer Status Pages (Public) */}
                       <Route path="/transfer-processing" component={TransferProcessing} />
                       <Route path="/transfer-pending" component={TransferPending} />
                       <Route path="/transfer-success" component={TransferSuccess} />
                       <Route path="/transfer-failed" component={TransferFailed} />
 
-                      {/* Protected Routes with Bottom Navigation */}
-                      <Route path="/" nest>
+                      {/* Protected Routes */}
+                      <Route path="/dashboard">
                         <ProtectedRoute>
-                          <div className="pb-20">
-                            <Switch>
-                              <Route path="/" component={Dashboard} />
-                              <Route path="/dashboard" component={Dashboard} />
-                              <Route path="/transfer-funds" component={TransferFunds} />
-                              <Route path="/profile-settings" component={ProfileSettings} />
-                              <Route path="/security-settings" component={SecuritySettings} />
-                              <Route path="/pin-settings" component={PinSettings} />
-                              <Route path="/credit-cards" component={CreditCards} />
-                              <Route path="/transaction-history" component={TransactionHistory} />
-                              <Route path="/history" component={History} />
-                              <Route path="/statements-reports" component={StatementsReports} />
-                              <Route path="/investment-portfolio" component={InvestmentPortfolio} />
-                              <Route path="/wealth-management" component={WealthManagement} />
-                              <Route path="/support-center" component={SupportCenter} />
-                              <Route path="/customer-support" component={CustomerSupport} />
-                              <Route path="/banking-services" component={BankingServices} />
-                              <Route path="/digital-wallet" component={DigitalWallet} />
-                              <Route path="/mobile-pay" component={MobilePay} />
-                              <Route path="/security-center" component={SecurityCenter} />
-                              <Route path="/find-branches" component={FindBranches} />
-                              <Route path="/international-transfer" component={InternationalTransfer} />
-                              <Route path="/add-money" component={AddMoney} />
-                              <Route path="/receive" component={Receive} />
-                              <Route path="/alerts" component={Alerts} />
-                              <Route path="/verification" component={Verification} />
-                              <Route path="/cards" component={Cards} />
-                              <Route path="/transfer" component={Transfer} />
-                              <Route path="/verification-center" component={VerificationCenter} />
-                              <Route path="/admin-accounts" component={AdminAccounts} />
-                              <Route path="/admin-transaction-dashboard" component={AdminTransactionDashboard} />
-                              <Route path="/admin-transaction-creator" component={AdminTransactionCreator} />
-                              <Route path="/customer-management" component={CustomerManagement} />
-                              <Route path="/fund-management" component={FundManagement} />
-                              <Route component={NotFound} />
-                            </Switch>
-                          </div>
-                          <BottomNavigation />
+                          <Dashboard />
                         </ProtectedRoute>
                       </Route>
+                      
+                      <Route path="/credit-cards">
+                        <ProtectedRoute>
+                          <CreditCards />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/transfer-funds">
+                        <ProtectedRoute>
+                          <TransferFunds />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/transaction-history">
+                        <ProtectedRoute>
+                          <TransactionHistory />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/profile-settings">
+                        <ProtectedRoute>
+                          <ProfileSettings />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/security-settings">
+                        <ProtectedRoute>
+                          <SecuritySettings />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/pin-settings">
+                        <ProtectedRoute>
+                          <PinSettings />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/account-preferences">
+                        <ProtectedRoute>
+                          <AccountPreferences />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/international-transfer">
+                        <ProtectedRoute>
+                          <InternationalTransfer />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/customer-support">
+                        <ProtectedRoute>
+                          <CustomerSupport />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/support-center">
+                        <ProtectedRoute>
+                          <SupportCenter />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/security-center">
+                        <ProtectedRoute>
+                          <SecurityCenter />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/banking-services">
+                        <ProtectedRoute>
+                          <BankingServices />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/business-banking">
+                        <ProtectedRoute>
+                          <BusinessBanking />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/wealth-management">
+                        <ProtectedRoute>
+                          <WealthManagement />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/investment-portfolio">
+                        <ProtectedRoute>
+                          <InvestmentPortfolio />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/investment-trading">
+                        <ProtectedRoute>
+                          <InvestmentTrading />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/digital-wallet">
+                        <ProtectedRoute>
+                          <DigitalWallet />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/mobile-pay">
+                        <ProtectedRoute>
+                          <MobilePay />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/alerts">
+                        <ProtectedRoute>
+                          <Alerts />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/statements-reports">
+                        <ProtectedRoute>
+                          <StatementsReports />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/find-branches">
+                        <ProtectedRoute>
+                          <FindBranches />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/add-money">
+                        <ProtectedRoute>
+                          <AddMoney />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/receive">
+                        <ProtectedRoute>
+                          <Receive />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/verification">
+                        <ProtectedRoute>
+                          <Verification />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/cards">
+                        <ProtectedRoute>
+                          <Cards />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/transfer">
+                        <ProtectedRoute>
+                          <Transfer />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/history">
+                        <ProtectedRoute>
+                          <History />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/verification-center">
+                        <ProtectedRoute>
+                          <VerificationCenter />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/admin-accounts">
+                        <ProtectedRoute>
+                          <AdminAccounts />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/admin-transaction-dashboard">
+                        <ProtectedRoute>
+                          <AdminTransactionDashboard />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/admin-transaction-creator">
+                        <ProtectedRoute>
+                          <AdminTransactionCreator />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/customer-management">
+                        <ProtectedRoute>
+                          <CustomerManagement />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/fund-management">
+                        <ProtectedRoute>
+                          <FundManagement />
+                        </ProtectedRoute>
+                      </Route>
+
+                      {/* Default route */}
+                      <Route path="/" component={Login} />
+                      <Route component={NotFound} />
                     </Switch>
                   </main>
+                  
+                  {/* Global Bottom Navigation - only shows on protected routes */}
+                  <BottomNavigation />
+                  
                   <Toaster />
                 </div>
               </Router>
