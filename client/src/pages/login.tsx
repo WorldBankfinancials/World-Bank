@@ -17,7 +17,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { signIn, user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const { currentLanguage, t, languages, setLanguage } = useLanguage();
+  const { currentLanguage, languages, changeLanguage } = useLanguage();
   const [loginLoading, setLoginLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPinVerification, setShowPinVerification] = useState(false);
@@ -100,7 +100,7 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
       {/* Top Language Selector */}
       <div className="absolute top-4 right-4 z-10">
-        <Select value={currentLanguage} onValueChange={setLanguage}>
+        <Select value={currentLanguage?.code || 'en'} onValueChange={changeLanguage}>
           <SelectTrigger className="w-32 bg-white/80 backdrop-blur-sm">
             <SelectValue />
           </SelectTrigger>
@@ -121,7 +121,7 @@ export default function Login() {
         {/* Left Side - Branding */}
         <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-900 to-blue-800 text-white p-8 flex-col justify-between">
           <div>
-            <BankLogo variant="white" size="large" />
+            <BankLogo className="w-16 h-16" />
             <h1 className="text-4xl font-bold mt-8 mb-4">WORLD BANK</h1>
             <p className="text-blue-100 text-xl mb-8">Secure, Trusted & Global</p>
             <p className="text-blue-200 text-lg">Banking Services</p>
@@ -164,7 +164,7 @@ export default function Login() {
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
               <div className="lg:hidden mb-6">
-                <BankLogo variant="default" size="medium" className="mx-auto" />
+                <BankLogo className="w-12 h-12 mx-auto" />
               </div>
               <h2 className="text-3xl font-bold text-gray-900">Sign In</h2>
               <p className="mt-2 text-gray-600">

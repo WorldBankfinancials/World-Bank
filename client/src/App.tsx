@@ -12,7 +12,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import BottomNavigation from '@/components/BottomNavigation';
-import Header from '@/components/Header';
+// import Header from '@/components/Header'; // Imported in ProtectedRoute
 import Footer from '@/components/Footer';
 import LiveChat from '@/components/LiveChat';
 import RealtimeAlerts from '@/components/RealtimeAlerts';
