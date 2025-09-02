@@ -1,3 +1,4 @@
+import React from 'react';
 import { Router, Switch, Route } from "wouter";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
@@ -11,9 +12,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import BottomNavigation from '@/components/BottomNavigation';
-import Footer from '@/components/Footer';
-import LiveChat from '@/components/LiveChat';
-import RealtimeAlerts from '@/components/RealtimeAlerts';
+import Header from '@/components/Header';
 
 // Pages
 import Dashboard from '@/pages/dashboard';
@@ -51,7 +50,6 @@ import NotFound from '@/pages/not-found';
 import History from '@/pages/history';
 import Cards from '@/pages/cards';
 import Transfer from '@/pages/transfer';
-import VerificationCenter from '@/pages/verification-center';
 
 // Admin Pages
 import AdminLogin from '@/pages/admin-login';
@@ -94,6 +92,7 @@ function App() {
             <TooltipProvider>
               <Router>
                 <div className="min-h-screen bg-gray-50">
+                  <Header />
                   <main className="flex-1">
                     <Switch>
                       {/* Public Routes */}
@@ -121,12 +120,6 @@ function App() {
                         </ProtectedRoute>
                       </Route>
                       
-                      <Route path="/verification-center">
-                        <ProtectedRoute>
-                          <VerificationCenter />
-                        </ProtectedRoute>
-                      </Route>
-                      
                       <Route path="/history">
                         <ProtectedRoute>
                           <History />
@@ -138,25 +131,8 @@ function App() {
                           <ProfileSettings />
                         </ProtectedRoute>
                       </Route>
-                      
-                      <Route path="/security-settings">
-                        <ProtectedRoute>
-                          <SecuritySettings />
-                        </ProtectedRoute>
-                      </Route>
-                      
-                      <Route path="/pin-settings">
-                        <ProtectedRoute>
-                          <PinSettings />
-                        </ProtectedRoute>
-                      </Route>
-                      
-                      <Route path="/account-preferences">
-                        <ProtectedRoute>
-                          <AccountPreferences />
-                        </ProtectedRoute>
-                      </Route>
-                      
+
+                      {/* Additional Banking Routes */}
                       <Route path="/credit-cards">
                         <ProtectedRoute>
                           <CreditCards />
@@ -181,9 +157,21 @@ function App() {
                         </ProtectedRoute>
                       </Route>
                       
-                      <Route path="/profile-settings">
+                      <Route path="/security-settings">
                         <ProtectedRoute>
-                          <ProfileSettings />
+                          <SecuritySettings />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/pin-settings">
+                        <ProtectedRoute>
+                          <PinSettings />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/account-preferences">
+                        <ProtectedRoute>
+                          <AccountPreferences />
                         </ProtectedRoute>
                       </Route>
                       
@@ -348,10 +336,7 @@ function App() {
                       <Route component={NotFound} />
                     </Switch>
                   </main>
-                  <Footer />
                   <BottomNavigation />
-                  <LiveChat isOpen={false} onClose={() => {}} />
-                  <RealtimeAlerts />
                   <Toaster />
                 </div>
               </Router>

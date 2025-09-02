@@ -2,7 +2,6 @@ import React from "react";
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from "wouter";
 import { useEffect } from 'react';
-import Header from './Header';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -40,9 +39,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   return (
-    <>
-      <Header />
+    <div className="pb-20">
       {children}
-    </>
+    </div>
   );
 }
