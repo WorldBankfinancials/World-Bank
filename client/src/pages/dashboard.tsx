@@ -471,7 +471,7 @@ export default function Dashboard() {
   const [showBalance, setShowBalance] = React.useState(true);
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [isChatOpen, setIsChatOpen] = React.useState(false);
-  const [showNotifications, setShowNotifications] = React.useState(false);
+  const [showNotifications] = React.useState(false);
   const [userData, setUserData] = React.useState<any>({
     fullName: 'Liu Wei',
     email: 'bankmanagerworld5@gmail.com',

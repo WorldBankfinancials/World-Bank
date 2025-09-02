@@ -34,11 +34,8 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
     }
   ]);
   const [newMessage, setNewMessage] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { userProfile } = useAuth();
-  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     if (isOpen) {
