@@ -17,10 +17,16 @@ import { useQuery } from "@tanstack/react-query";
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { signIn } = useAuth();
+  const { signIn, user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const { currentLanguage, t, languages } = useLanguage();
-  const [loading, setLoading] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  
+  // Redirect authenticated users to dashboard
+  if (!authLoading && user) {
+    setLocation('/dashboard');
+    return null;
+  }
   const [showPassword, setShowPassword] = useState(false);
   const [showPinVerification, setShowPinVerification] = useState(false);
   const [loginPin, setLoginPin] = useState("");
@@ -38,7 +44,7 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setLoginLoading(true);
 
     try {
       const result = await signIn(loginData.email, loginData.password);
@@ -49,13 +55,13 @@ export default function Login() {
           description: result.error,
           variant: "destructive"
         });
-        setLoading(false);
+        setLoginLoading(false);
         return;
       }
 
       // Always require PIN verification for enhanced security
       setShowPinVerification(true);
-      setLoading(false);
+      setLoginLoading(false);
       return;
 
       // Direct login without PIN (should not happen in production)
@@ -68,7 +74,7 @@ export default function Login() {
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setLoginLoading(false);
     }
   };
 
@@ -210,9 +216,9 @@ export default function Login() {
                   <Button
                     type="submit"
                     className="wb-button-primary w-full h-14 text-base"
-                    disabled={loading}
+                    disabled={loginLoading}
                   >
-                    {loading ? (
+                    {loginLoading ? (
                       <div className="flex items-center space-x-2">
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         <span>Signing In...</span>
