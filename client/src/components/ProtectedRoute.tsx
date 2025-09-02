@@ -40,9 +40,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   return (
-    <div className="pb-20">
+    <>
       <Header />
       {children}
-    </div>
+    </>
   );
 }

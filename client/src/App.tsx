@@ -11,6 +11,9 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import BottomNavigation from '@/components/BottomNavigation';
+import Footer from '@/components/Footer';
+import LiveChat from '@/components/LiveChat';
+import RealtimeAlerts from '@/components/RealtimeAlerts';
 
 // Pages
 import Dashboard from '@/pages/dashboard';
@@ -94,21 +97,10 @@ function App() {
                   <main className="flex-1">
                     <Switch>
                       {/* Public Routes */}
+                      <Route path="/" component={Login} />
                       <Route path="/login" component={Login} />
                       <Route path="/register" component={Registration} />
-                      
-                      {/* Admin Routes */}
                       <Route path="/admin-login" component={AdminLogin} />
-                      <Route path="/admin-dashboard" component={AdminDashboard} />
-                      <Route path="/enhanced-admin" component={EnhancedAdmin} />
-                      <Route path="/admin-live-chat" component={AdminLiveChat} />
-                      <Route path="/customer-service" component={CustomerServicePortal} />
-                      
-                      {/* Transfer Status Pages (Public) */}
-                      <Route path="/transfer-processing" component={TransferProcessing} />
-                      <Route path="/transfer-pending" component={TransferPending} />
-                      <Route path="/transfer-success" component={TransferSuccess} />
-                      <Route path="/transfer-failed" component={TransferFailed} />
 
                       {/* Protected Routes */}
                       <Route path="/dashboard">
@@ -117,25 +109,31 @@ function App() {
                         </ProtectedRoute>
                       </Route>
                       
-                      <Route path="/credit-cards">
+                      <Route path="/transfer">
                         <ProtectedRoute>
-                          <CreditCards />
+                          <Transfer />
                         </ProtectedRoute>
                       </Route>
                       
-                      <Route path="/transfer-funds">
+                      <Route path="/cards">
                         <ProtectedRoute>
-                          <TransferFunds />
+                          <Cards />
                         </ProtectedRoute>
                       </Route>
                       
-                      <Route path="/transaction-history">
+                      <Route path="/verification-center">
                         <ProtectedRoute>
-                          <TransactionHistory />
+                          <VerificationCenter />
                         </ProtectedRoute>
                       </Route>
                       
-                      <Route path="/profile-settings">
+                      <Route path="/history">
+                        <ProtectedRoute>
+                          <History />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/profile">
                         <ProtectedRoute>
                           <ProfileSettings />
                         </ProtectedRoute>
@@ -159,9 +157,33 @@ function App() {
                         </ProtectedRoute>
                       </Route>
                       
+                      <Route path="/credit-cards">
+                        <ProtectedRoute>
+                          <CreditCards />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/transfer-funds">
+                        <ProtectedRoute>
+                          <TransferFunds />
+                        </ProtectedRoute>
+                      </Route>
+                      
                       <Route path="/international-transfer">
                         <ProtectedRoute>
                           <InternationalTransfer />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/transaction-history">
+                        <ProtectedRoute>
+                          <TransactionHistory />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/profile-settings">
+                        <ProtectedRoute>
+                          <ProfileSettings />
                         </ProtectedRoute>
                       </Route>
                       
@@ -260,34 +282,17 @@ function App() {
                           <Verification />
                         </ProtectedRoute>
                       </Route>
-                      
-                      <Route path="/cards">
+
+                      {/* Transfer Status Pages */}
+                      <Route path="/transfer-success" component={TransferSuccess} />
+                      <Route path="/transfer-pending" component={TransferPending} />
+                      <Route path="/transfer-failed" component={TransferFailed} />
+                      <Route path="/transfer-processing" component={TransferProcessing} />
+
+                      {/* Admin Routes */}
+                      <Route path="/admin-dashboard">
                         <ProtectedRoute>
-                          <Cards />
-                        </ProtectedRoute>
-                      </Route>
-                      
-                      <Route path="/transfer">
-                        <ProtectedRoute>
-                          <Transfer />
-                        </ProtectedRoute>
-                      </Route>
-                      
-                      <Route path="/history">
-                        <ProtectedRoute>
-                          <History />
-                        </ProtectedRoute>
-                      </Route>
-                      
-                      <Route path="/verification-center">
-                        <ProtectedRoute>
-                          <VerificationCenter />
-                        </ProtectedRoute>
-                      </Route>
-                      
-                      <Route path="/admin-accounts">
-                        <ProtectedRoute>
-                          <AdminAccounts />
+                          <AdminDashboard />
                         </ProtectedRoute>
                       </Route>
                       
@@ -303,9 +308,33 @@ function App() {
                         </ProtectedRoute>
                       </Route>
                       
+                      <Route path="/admin-accounts">
+                        <ProtectedRoute>
+                          <AdminAccounts />
+                        </ProtectedRoute>
+                      </Route>
+                      
                       <Route path="/customer-management">
                         <ProtectedRoute>
                           <CustomerManagement />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/customer-service-portal">
+                        <ProtectedRoute>
+                          <CustomerServicePortal />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/enhanced-admin">
+                        <ProtectedRoute>
+                          <EnhancedAdmin />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/admin-live-chat">
+                        <ProtectedRoute>
+                          <AdminLiveChat />
                         </ProtectedRoute>
                       </Route>
                       
@@ -315,15 +344,14 @@ function App() {
                         </ProtectedRoute>
                       </Route>
 
-                      {/* Default route */}
-                      <Route path="/" component={Login} />
+                      {/* 404 route */}
                       <Route component={NotFound} />
                     </Switch>
                   </main>
-                  
-                  {/* Global Bottom Navigation - only shows on protected routes */}
+                  <Footer />
                   <BottomNavigation />
-                  
+                  <LiveChat isOpen={false} onClose={() => {}} />
+                  <RealtimeAlerts />
                   <Toaster />
                 </div>
               </Router>
