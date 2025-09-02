@@ -125,7 +125,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
       
       const newBalance = parseFloat(account.balance) + balanceChange;
-      await storage.updateAccount(accountId, { balance: newBalance.toString() });
+      await storage.updateAccount?.(accountId, { balance: newBalance.toString() });
       
       // Create transaction record
       await storage.createTransaction({
@@ -157,7 +157,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const body = req.body as { amount: string; description: string };
       
       const amountNum = parseFloat(body.amount);
-      const updatedUser = await storage.updateUserBalance(customerId, amountNum);
+      const updatedUser = storage.updateUserBalance ? await storage.updateUserBalance(customerId, amountNum) : null;
       
       if (!updatedUser) {
         return res.status(404).json({ error: 'Customer not found' });

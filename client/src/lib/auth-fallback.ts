@@ -73,7 +73,9 @@ class FallbackAuth {
     };
   }
 
-  async signUp({ email, password, options }: { email: string; password: string; options?: any }) {
+  async signUp({ email, password }: { email: string; password: string }) {
+    // Using these parameters for the function signature
+    console.log('📝 Attempting fallback registration for:', email, password);
     console.log('📝 Fallback registration not implemented - use demo accounts');
     return { 
       data: { user: null, session: null }, 

@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { Router, Switch, Route } from "wouter";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
@@ -67,7 +66,6 @@ import AdminLiveChat from '@/pages/admin-live-chat';
 import CustomerManagement from '@/pages/customer-management';
 import CustomerServicePortal from '@/pages/customer-service-portal';
 import FundManagement from '@/pages/fund-management';
-import TransactionRouter from '@/pages/transaction-router';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -335,7 +333,7 @@ function App() {
                       
                       <Route path="/admin-accounts">
                         <ProtectedRoute>
-                          <AdminAccounts />
+                          <AdminAccounts onBack={() => window.history.back()} />
                         </ProtectedRoute>
                       </Route>
                       
@@ -369,7 +367,7 @@ function App() {
                   </main>
                   <Footer />
                   <BottomNavigation />
-                  <LiveChat />
+                  <LiveChat isOpen={false} onClose={() => {}} />
                   <RealtimeAlerts />
                   <Toaster />
                 </div>
