@@ -16,7 +16,38 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // User endpoints with proper typing
   app.get('/api/user', async (req: Request, res: Response) => {
     try {
-      const user = await storage.getUser(1); // Liu Wei's ID
+      // Check for Supabase user info in headers
+      const supabaseEmail = req.headers['x-supabase-email'] as string;
+      
+      if (supabaseEmail === 'bankmanagerworld5@gmail.com') {
+        // Return Liu Wei's account data for this specific Supabase user
+        const user = await storage.getUser(1); // Liu Wei's ID
+        if (user) {
+          res.json(user);
+          return;
+        }
+      }
+      
+      // For other authenticated users, provide basic profile
+      if (supabaseEmail) {
+        const userProfile = {
+          id: 'supabase-user-1',
+          email: supabaseEmail,
+          fullName: supabaseEmail.split('@')[0] || 'Banking Customer',
+          role: 'customer',
+          isVerified: true,
+          isActive: true,
+          isOnline: true,
+          balance: 125000.50,
+          accountNumber: '4389-7721-3456-9012',
+          accountId: 'WB-2025-8901'
+        };
+        res.json(userProfile);
+        return;
+      }
+      
+      // Fall back to existing user lookup
+      const user = await storage.getUser(1);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }

@@ -355,31 +355,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get current user (dynamic from storage system)
-  app.get("/api/user", async (_req, res) => {
-    try {
-      // Get user data from dynamic storage system
-      const user = await storage.getUser(1);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Ensure balance is calculated from accounts
-      const userAccounts = await storage.getUserAccounts(1);
-      const totalBalance = userAccounts.reduce((sum, account) => sum + parseFloat(account.balance), 0);
-      
-      const responseUser = {
-        ...user,
-        balance: totalBalance > 0 ? totalBalance : user.balance
-      };
-      
-      console.log("API Response - Dynamic User data:", JSON.stringify(responseUser, null, 2));
-      res.json(responseUser);
-    } catch (error) {
-      console.error("API Error:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
 
   // Get user accounts
   app.get("/api/accounts", async (_req, res) => {

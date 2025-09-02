@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Router, Switch, Route } from "wouter";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -54,7 +55,6 @@ import History from '@/pages/history';
 import Cards from '@/pages/cards';
 import Transfer from '@/pages/transfer';
 import VerificationCenter from '@/pages/verification-center';
-import About from '@/pages/about'; // Assuming 'About' page exists
 
 // Admin Pages
 import AdminLogin from '@/pages/admin-login';
@@ -68,122 +68,26 @@ import CustomerManagement from '@/pages/customer-management';
 import CustomerServicePortal from '@/pages/customer-service-portal';
 import FundManagement from '@/pages/fund-management';
 import TransactionRouter from '@/pages/transaction-router';
-import SimpleAdmin from '@/pages/simple-admin'; // Assuming 'SimpleAdmin' page exists
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      queryFn: async ({ queryKey }) => {
+        const url = queryKey[0] as string;
+        const res = await fetch(url, {
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          throw new Error(`${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      },
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 5,
     },
   },
 });
-
-// Safe App Content Component
-function SafeAppContent() {
-  try {
-    return <AppContent />;
-  } catch (error) {
-    console.error('AppContent error:', error);
-    // Optionally return a simplified fallback or a specific error component
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center p-8 max-w-md">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">An Error Occurred</h1>
-          <p className="text-gray-600 mb-4">We encountered a problem loading the application. Please try refreshing.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Refresh Application
-          </button>
-        </div>
-      </div>
-    );
-  }
-}
-
-function AppContent() {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <main className="flex-1">
-        <Switch>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Registration />} />
-
-          {/* Protected Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/transfer" element={<Transfer />} />
-            <Route path="/cards" element={<Cards />} />
-            <Route path="/verification-center" element={<VerificationCenter />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/profile" element={<ProfileSettings />} />
-            <Route path="/security-settings" element={<SecuritySettings />} />
-            <Route path="/pin-settings" element={<PinSettings />} />
-            <Route path="/account-preferences" element={<AccountPreferences />} />
-
-            {/* Transfer routes */}
-            <Route path="/transfer-funds" element={<TransferFunds />} />
-            <Route path="/international-transfer" element={<InternationalTransfer />} />
-            <Route path="/transfer-processing" element={<TransferProcessing />} />
-            <Route path="/transfer-success" element={<TransferSuccess />} />
-            <Route path="/transfer-failed" element={<TransferFailed />} />
-            <Route path="/transfer-pending" element={<TransferPending />} />
-
-            {/* Additional banking routes */}
-            <Route path="/credit-cards" element={<CreditCards />} />
-            <Route path="/mobile-pay" element={<MobilePay />} />
-            <Route path="/add-money" element={<AddMoney />} />
-            <Route path="/receive" element={<Receive />} />
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/banking-services" element={<BankingServices />} />
-            <Route path="/business-banking" element={<BusinessBanking />} />
-            <Route path="/investment-portfolio" element={<InvestmentPortfolio />} />
-            <Route path="/investment-trading" element={<InvestmentTrading />} />
-            <Route path="/wealth-management" element={<WealthManagement />} />
-            <Route path="/fund-management" element={<FundManagement />} />
-            <Route path="/digital-wallet" element={<DigitalWallet />} />
-            <Route path="/find-branches" element={<FindBranches />} />
-            <Route path="/customer-support" element={<CustomerSupport />} />
-            <Route path="/support-center" element={<SupportCenter />} />
-            <Route path="/security-center" element={<SecurityCenter />} />
-            <Route path="/statements-reports" element={<StatementsReports />} />
-            <Route path="/transaction-history" element={<TransactionHistory />} />
-            <Route path="/verification" element={<Verification />} />
-            <Route path="/about" element={<About />} />
-
-            {/* Admin routes */}
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
-            <Route path="/admin-transaction-dashboard" element={<AdminTransactionDashboard />} />
-            <Route path="/admin-transaction-creator" element={<AdminTransactionCreator />} />
-            <Route path="/admin-accounts" element={<AdminAccounts />} />
-            <Route path="/customer-management" element={<CustomerManagement />} />
-            <Route path="/customer-service-portal" element={<CustomerServicePortal />} />
-            <Route path="/enhanced-admin" element={<EnhancedAdmin />} />
-            <Route path="/simple-admin" element={<SimpleAdmin />} />
-            <Route path="/admin-live-chat" element={<AdminLiveChat />} />
-          </Route>
-
-          {/* Admin login */}
-          <Route path="/admin-login" element={<AdminLogin />} />
-
-          {/* 404 route */}
-          <Route path="*" element={<NotFound />} />
-        </Switch>
-      </main>
-      <Footer />
-      <BottomNavigation />
-      <LiveChat />
-      <RealtimeAlerts />
-      <Toaster />
-    </div>
-  );
-}
-
 
 function App() {
   return (
@@ -191,31 +95,286 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <LanguageProvider>
           <AuthProvider>
-            <Router>
-              <div className="min-h-screen bg-gray-50">
-                <ErrorBoundary>
+            <TooltipProvider>
+              <Router>
+                <div className="min-h-screen bg-gray-50">
                   <Header />
-                </ErrorBoundary>
-                <main className="flex-1">
-                  <ErrorBoundary>
-                    <SafeAppContent />
-                  </ErrorBoundary>
-                </main>
-                <ErrorBoundary>
+                  <main className="flex-1">
+                    <Switch>
+                      {/* Public Routes */}
+                      <Route path="/" component={Login} />
+                      <Route path="/login" component={Login} />
+                      <Route path="/register" component={Registration} />
+                      <Route path="/admin-login" component={AdminLogin} />
+
+                      {/* Protected Routes */}
+                      <Route path="/dashboard">
+                        <ProtectedRoute>
+                          <Dashboard />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/transfer">
+                        <ProtectedRoute>
+                          <Transfer />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/cards">
+                        <ProtectedRoute>
+                          <Cards />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/verification-center">
+                        <ProtectedRoute>
+                          <VerificationCenter />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/history">
+                        <ProtectedRoute>
+                          <History />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/profile">
+                        <ProtectedRoute>
+                          <ProfileSettings />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/security-settings">
+                        <ProtectedRoute>
+                          <SecuritySettings />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/pin-settings">
+                        <ProtectedRoute>
+                          <PinSettings />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/account-preferences">
+                        <ProtectedRoute>
+                          <AccountPreferences />
+                        </ProtectedRoute>
+                      </Route>
+
+                      {/* Transfer routes */}
+                      <Route path="/transfer-funds">
+                        <ProtectedRoute>
+                          <TransferFunds />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/international-transfer">
+                        <ProtectedRoute>
+                          <InternationalTransfer />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/transfer-processing">
+                        <ProtectedRoute>
+                          <TransferProcessing />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/transfer-success">
+                        <ProtectedRoute>
+                          <TransferSuccess />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/transfer-failed">
+                        <ProtectedRoute>
+                          <TransferFailed />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/transfer-pending">
+                        <ProtectedRoute>
+                          <TransferPending />
+                        </ProtectedRoute>
+                      </Route>
+
+                      {/* Additional banking routes */}
+                      <Route path="/credit-cards">
+                        <ProtectedRoute>
+                          <CreditCards />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/mobile-pay">
+                        <ProtectedRoute>
+                          <MobilePay />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/add-money">
+                        <ProtectedRoute>
+                          <AddMoney />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/receive">
+                        <ProtectedRoute>
+                          <Receive />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/alerts">
+                        <ProtectedRoute>
+                          <Alerts />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/banking-services">
+                        <ProtectedRoute>
+                          <BankingServices />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/business-banking">
+                        <ProtectedRoute>
+                          <BusinessBanking />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/investment-portfolio">
+                        <ProtectedRoute>
+                          <InvestmentPortfolio />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/investment-trading">
+                        <ProtectedRoute>
+                          <InvestmentTrading />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/wealth-management">
+                        <ProtectedRoute>
+                          <WealthManagement />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/fund-management">
+                        <ProtectedRoute>
+                          <FundManagement />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/digital-wallet">
+                        <ProtectedRoute>
+                          <DigitalWallet />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/find-branches">
+                        <ProtectedRoute>
+                          <FindBranches />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/customer-support">
+                        <ProtectedRoute>
+                          <CustomerSupport />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/support-center">
+                        <ProtectedRoute>
+                          <SupportCenter />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/security-center">
+                        <ProtectedRoute>
+                          <SecurityCenter />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/statements-reports">
+                        <ProtectedRoute>
+                          <StatementsReports />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/transaction-history">
+                        <ProtectedRoute>
+                          <TransactionHistory />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/verification">
+                        <ProtectedRoute>
+                          <Verification />
+                        </ProtectedRoute>
+                      </Route>
+
+                      {/* Admin routes */}
+                      <Route path="/admin-dashboard">
+                        <ProtectedRoute>
+                          <AdminDashboard />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/admin-transaction-dashboard">
+                        <ProtectedRoute>
+                          <AdminTransactionDashboard />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/admin-transaction-creator">
+                        <ProtectedRoute>
+                          <AdminTransactionCreator />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/admin-accounts">
+                        <ProtectedRoute>
+                          <AdminAccounts />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/customer-management">
+                        <ProtectedRoute>
+                          <CustomerManagement />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/customer-service-portal">
+                        <ProtectedRoute>
+                          <CustomerServicePortal />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/enhanced-admin">
+                        <ProtectedRoute>
+                          <EnhancedAdmin />
+                        </ProtectedRoute>
+                      </Route>
+                      
+                      <Route path="/admin-live-chat">
+                        <ProtectedRoute>
+                          <AdminLiveChat />
+                        </ProtectedRoute>
+                      </Route>
+
+                      {/* 404 route */}
+                      <Route component={NotFound} />
+                    </Switch>
+                  </main>
                   <Footer />
-                </ErrorBoundary>
-                <ErrorBoundary>
                   <BottomNavigation />
-                </ErrorBoundary>
-                <ErrorBoundary>
                   <LiveChat />
-                </ErrorBoundary>
-                <ErrorBoundary>
                   <RealtimeAlerts />
-                </ErrorBoundary>
-                <Toaster />
-              </div>
-            </Router>
+                  <Toaster />
+                </div>
+              </Router>
+            </TooltipProvider>
           </AuthProvider>
         </LanguageProvider>
       </QueryClientProvider>
