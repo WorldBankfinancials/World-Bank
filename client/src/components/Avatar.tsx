@@ -1,7 +1,18 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { LogOut } from 'lucide-react';
+import { useLocation } from 'wouter';
 
 export function Avatar({ size = 48 }: { size?: number }) {
   const [profileImageData, setProfileImageData] = useState<string>("");
+  const { signOut } = useAuth();
+  const [, setLocation] = useLocation();
+
+  const handleLogout = async () => {
+    await signOut();
+    setLocation('/login');
+  };
 
   useEffect(() => {
     // Fetch the latest profile image from API
@@ -19,24 +30,34 @@ export function Avatar({ size = 48 }: { size?: number }) {
   }, []);
 
   return (
-    <div style={{
-      position: 'relative',
-      display: 'inline-block',
-      width: `${size}px`,
-      height: `${size}px`
-    }}>
-      <img 
-        src={profileImageData}
-        alt="Profile"
-        style={{
-          width: '100%',
-          height: '100%',
-          borderRadius: '50%',
-          objectFit: 'cover',
-          border: '2px solid #dbeafe'
-        }}
-      />
-
+    <div className="flex items-center space-x-2">
+      <div style={{
+        position: 'relative',
+        display: 'inline-block',
+        width: `${size}px`,
+        height: `${size}px`
+      }}>
+        <img 
+          src={profileImageData}
+          alt="Profile"
+          style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            objectFit: 'cover',
+            border: '2px solid #dbeafe'
+          }}
+        />
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleLogout}
+        className="text-gray-600 hover:text-red-600"
+        title="Logout"
+      >
+        <LogOut className="w-4 h-4" />
+      </Button>
     </div>
   );
 }

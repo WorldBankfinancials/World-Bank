@@ -144,6 +144,19 @@ const LANGUAGES: Language[] = [
     name: '中文',
     flag: '🇨🇳',
     translations: {
+      // Brand and main
+      world_bank: '世界银行',
+      international_banking_solutions: '国际银行解决方案',
+      secure_trusted_global: '安全、可信、全球',
+      licensed_regulated: '持牌与受监管',
+      
+      // Authentication
+      sign_in: '登录',
+      user_id_or_email: '用户ID或邮箱',
+      password: '密码',
+      new_customer: '新客户？',
+      create_account: '创建账户',
+      
       // Navigation
       welcome: '欢迎',
       dashboard: '仪表板',
@@ -152,6 +165,7 @@ const LANGUAGES: Language[] = [
       cards: '卡片',
       profile: '资料',
       logout: '注销',
+      home: '首页',
       
       // Common
       balance: '余额',
@@ -193,11 +207,26 @@ const LANGUAGES: Language[] = [
       'lock-card-desc': '输入您的PIN码以锁定此卡片',
       'unlock-card-desc': '输入您的PIN码以解锁此卡片',
       
-      // Personal Banking
+      // Banking Services
+      banking_services: '银行服务',
       'personal-banking': '个人银行',
+      business_banking: '企业银行',
       'investment-services': '投资服务',
+      loans_credit: '贷款与信贷',
+      
+      // Support
+      support: '支持',
+      help_center: '帮助中心',
+      contact_us: '联系我们',
+      security_center: '安全中心',
+      privacy_policy: '隐私政策',
+      contact_support: '联系支持',
+      copyright_notice: '版权声明',
+      
+      // Footer
       copyright: '版权',
       'terms-of-service': '服务条款',
+      connect: '联系',
       
       // Verification
       'phone-verification': '手机验证',

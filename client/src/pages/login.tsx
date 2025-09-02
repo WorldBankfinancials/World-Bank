@@ -21,12 +21,6 @@ export default function Login() {
   const { toast } = useToast();
   const { currentLanguage, t, languages } = useLanguage();
   const [loginLoading, setLoginLoading] = useState(false);
-  
-  // Redirect authenticated users to dashboard
-  if (!authLoading && user) {
-    setLocation('/dashboard');
-    return null;
-  }
   const [showPassword, setShowPassword] = useState(false);
   const [showPinVerification, setShowPinVerification] = useState(false);
   const [loginPin, setLoginPin] = useState("");
@@ -35,6 +29,21 @@ export default function Login() {
     email: "",
     password: "",
   });
+  
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Redirect authenticated users to dashboard
+  if (user) {
+    setLocation('/dashboard');
+    return null;
+  }
 
   // Fetch user data to get current PIN when PIN verification is shown
   // const { data: userData } = useQuery({
