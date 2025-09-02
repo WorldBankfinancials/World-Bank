@@ -61,6 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', supabaseUser.id)
         .single();
 
+      console.log('📊 Profile fetch result:', { profileData, error: error?.message });
+
       if (profileData && !error) {
         console.log('✅ Found user profile in database:', profileData);
         setUserProfile({
@@ -76,9 +78,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           city: profileData.city,
           state: profileData.state
         });
+      } else if (error?.message?.includes('PGRST116')) {
+        console.log('📝 No profile found, creating one in database');
+        // Try to create a profile in the database
+        const { data: newProfile, error: insertError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: supabaseUser.id,
+            full_name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
+            email_verified: supabaseUser.email_confirmed_at ? true : false,
+            country: 'United States',
+            preferred_language: 'en'
+          })
+          .select()
+          .single();
+
+        if (newProfile && !insertError) {
+          console.log('✅ Created new user profile:', newProfile);
+          setUserProfile({
+            id: newProfile.id,
+            email: supabaseUser.email || '',
+            fullName: newProfile.full_name,
+            role: 'customer',
+            isVerified: newProfile.email_verified || false,
+            isActive: true,
+            isOnline: true,
+            country: newProfile.country
+          });
+        } else {
+          console.log('⚠️ Failed to create profile, using fallback:', insertError?.message);
+          // Fallback to basic profile without database
+          setUserProfile({
+            id: supabaseUser.id,
+            email: supabaseUser.email || '',
+            fullName: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
+            role: 'customer',
+            isVerified: supabaseUser.email_confirmed_at ? true : false,
+            isActive: true,
+            isOnline: true
+          });
+        }
       } else {
-        console.log('📝 No profile found, creating basic profile');
-        // Create a basic profile for new users
+        console.log('📝 Database table may not exist, using fallback profile');
+        // Create a basic profile for when database isn't set up yet
         setUserProfile({
           id: supabaseUser.id,
           email: supabaseUser.email || '',
@@ -170,22 +212,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('📋 Initial session check:', !!session?.user, session?.user?.email);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserData(session.user);
+        fetchUserData(session.user).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth state change:', event, !!session?.user);
       setUser(session?.user ?? null);
       if (session?.user) {
-        await fetchUserData(session.user);
+        await fetchUserData(session.user).finally(() => setLoading(false));
       } else {
         setUserProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
