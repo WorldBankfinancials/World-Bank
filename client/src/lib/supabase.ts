@@ -1,16 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Get Supabase credentials from environment
-const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || 'https://icbsxmrmorkdgxtumamu.supabase.co';
-const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYnN4bXJtb3JrZGd4dHVtYW11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NTkxMDksImV4cCI6MjA3MDMzNTEwOX0.GDBjj7flp-6sLjfHh3mil31zPq_97Tvfw47Oz5KxKqk';
-
-console.log('🔧 Environment Check:');
-console.log('VITE_SUPABASE_URL available:', !!import.meta.env?.VITE_SUPABASE_URL);
-console.log('Using URL:', supabaseUrl);
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase configuration. Please check your environment variables.');
-}
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://sgxmfpirkjlomzfaqqzr.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNneG1mcGlya2psb216ZmFxcXpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5NzM0MzIsImV4cCI6MjA2NDU0OTQzMn0.y7YhuW22z-p2JiGLHGEGJligvqnnJS8JfF856O-z8IY';
 
 console.log('🔧 Supabase Configuration:');
 console.log('URL:', supabaseUrl);
@@ -48,7 +40,7 @@ const testConnection = async () => {
     console.log('📍 Project URL:', supabaseUrl);
     
     // Test basic connectivity
-    await supabase.auth.getSession();
+    const { data, error } = await supabase.auth.getSession();
     console.log('✅ Supabase connection restored successfully');
     console.log('🔐 Auth system ready for real authentication');
     return true;

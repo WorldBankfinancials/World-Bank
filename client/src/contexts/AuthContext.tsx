@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { fallbackAuth } from '../lib/auth-fallback';
 import type { User } from '@supabase/supabase-js';
 
 interface UserProfile {
@@ -45,128 +46,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Add timeout to prevent infinite loading and force dashboard access
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (loading) {
-        console.log('⚠️ Loading timeout - forcing completion with emergency profile');
-        // Force create a basic profile if we have a user but no profile
-        if (user && !userProfile) {
-          setUserProfile({
-            id: user.id,
-            email: user.email || '',
-            fullName: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-            role: 'customer',
-            isVerified: true,
-            isActive: true,
-            isOnline: true,
-            balance: 1000.00
-          });
-        }
-        setLoading(false);
-      }
-    }, 3000); // Reduced to 3 seconds
-
-    return () => clearTimeout(timeout);
-  }, [loading, user, userProfile]);
-
   const fetchUserData = async (supabaseUser?: User) => {
     try {
-      if (!supabaseUser) {
-        console.log('❌ No supabase user provided');
-        setUserProfile(null);
-        return;
-      }
+      if (!supabaseUser) return;
       
-      console.log('🔍 Fetching user data for:', supabaseUser.email);
-      console.log('🆔 User ID:', supabaseUser.id);
+      // Try to fetch from API first (hybrid approach)
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Supabase-Email': supabaseUser.email || '',
+        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+      };
       
-      // Try to fetch from Supabase user_profiles table directly with timeout
-      console.log('📊 Attempting to fetch profile from database...');
-      
-      const profilePromise = supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .single();
+      const response = await fetch(`/api/user?t=${Date.now()}`, {
+        credentials: 'include',
+        headers,
+        cache: 'no-cache'
+      });
 
-      // Add timeout to database query
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database query timeout')), 3000)
-      );
-
-      let profileData = null;
-      let error = null;
-
-      try {
-        const result = await Promise.race([profilePromise, timeoutPromise]) as any;
-        profileData = result?.data || null;
-        error = result?.error || null;
-      } catch (timeoutError) {
-        console.log('⏱️ Database query timed out, using fallback');
-        error = timeoutError as Error;
-      }
-
-      console.log('📊 Profile fetch result:', { profileData, error: error?.message });
-
-      if (profileData && !error) {
-        console.log('✅ Found user profile in database:', profileData);
-        setUserProfile({
-          id: profileData.id,
-          email: supabaseUser.email || '',
-          fullName: profileData.full_name || supabaseUser.email?.split('@')[0] || 'User',
-          phone: profileData.phone_number,
-          role: 'customer',
-          isVerified: profileData.email_verified || false,
-          isActive: true,
-          isOnline: true,
-          country: profileData.country,
-          city: profileData.city,
-          state: profileData.state
-        });
-      } else if (error?.message?.includes('PGRST116')) {
-        console.log('📝 No profile found, creating one in database');
-        // Try to create a profile in the database
-        const { data: newProfile, error: insertError } = await supabase
-          .from('user_profiles')
-          .insert({
-            id: supabaseUser.id,
-            full_name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
-            email_verified: supabaseUser.email_confirmed_at ? true : false,
-            country: 'United States',
-            preferred_language: 'en'
-          })
-          .select()
-          .single();
-
-        if (newProfile && !insertError) {
-          console.log('✅ Created new user profile:', newProfile);
-          setUserProfile({
-            id: newProfile.id,
-            email: supabaseUser.email || '',
-            fullName: newProfile.full_name,
-            role: 'customer',
-            isVerified: newProfile.email_verified || false,
-            isActive: true,
-            isOnline: true,
-            country: newProfile.country
-          });
-        } else {
-          console.log('⚠️ Failed to create profile, using fallback:', insertError?.message);
-          // Fallback to basic profile without database
-          setUserProfile({
-            id: supabaseUser.id,
-            email: supabaseUser.email || '',
-            fullName: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
-            role: 'customer',
-            isVerified: supabaseUser.email_confirmed_at ? true : false,
-            isActive: true,
-            isOnline: true
-          });
-        }
+      if (response.ok) {
+        const userData = await response.json();
+        setUserProfile(userData);
       } else {
-        console.log('📝 Database table may not exist, using fallback profile');
-        // Create a basic profile for when database isn't set up yet
+        // Fallback to Supabase profile data
         setUserProfile({
           id: supabaseUser.id,
           email: supabaseUser.email || '',
@@ -174,15 +75,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: 'customer',
           isVerified: supabaseUser.email_confirmed_at ? true : false,
           isActive: true,
-          isOnline: true,
-          balance: 1000.00 // Starting balance for testing
+          isOnline: true
         });
       }
     } catch (error) {
       console.error('Failed to fetch user data:', error);
-      // Set minimal profile from Supabase user - ensure this always works
+      // Set minimal profile from Supabase user
       if (supabaseUser) {
-        console.log('🚨 Using emergency fallback profile');
         setUserProfile({
           id: supabaseUser.id,
           email: supabaseUser.email || '',
@@ -190,8 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: 'customer',
           isVerified: true,
           isActive: true,
-          isOnline: true,
-          balance: 1000.00
+          isOnline: true
         });
       }
     }
@@ -229,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, metadata?: any): Promise<{ error?: string }> => {
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -259,40 +157,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    let mounted = true;
-    
-    // Get initial session with better error handling
-    const initializeAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        console.log('📋 Initial session check:', !!session?.user, session?.user?.email, error?.message);
-        
-        if (!mounted) return;
-        
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          console.log('👤 Processing authenticated user...');
-          await fetchUserData(session.user);
-        } else {
-          console.log('👻 No authenticated user found');
-        }
-      } catch (error) {
-        console.error('❌ Auth initialization failed:', error);
-      } finally {
-        if (mounted) {
-          console.log('✅ Auth initialization complete');
-          setLoading(false);
-        }
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserData(session.user);
       }
-    };
-
-    initializeAuth();
+      setLoading(false);
+    });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-      
-      console.log('🔄 Auth state change:', event, !!session?.user);
       setUser(session?.user ?? null);
       if (session?.user) {
         await fetchUserData(session.user);
@@ -302,10 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
