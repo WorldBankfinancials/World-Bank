@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Mail, Lock, Eye, EyeOff, Shield } from "lucide-react";
+import { AlertCircle, Lock, Eye, EyeOff, Shield } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
@@ -13,13 +13,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
-import type { User } from "@shared/schema";
+// import type { User } from "@shared/schema";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { signIn } = useAuth();
   const { toast } = useToast();
-  const { currentLanguage, t, setLanguage, languages } = useLanguage();
+  const { currentLanguage, t, languages } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPinVerification, setShowPinVerification] = useState(false);
@@ -31,10 +31,10 @@ export default function Login() {
   });
 
   // Fetch user data to get current PIN when PIN verification is shown
-  const { data: userData } = useQuery<User>({
-    queryKey: ['/api/user'],
-    enabled: showPinVerification, // Only fetch when PIN verification is needed
-  });
+  // const { data: userData } = useQuery({
+  //   queryKey: ['/api/user'],
+  //   enabled: showPinVerification, // Only fetch when PIN verification is needed
+  // });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
