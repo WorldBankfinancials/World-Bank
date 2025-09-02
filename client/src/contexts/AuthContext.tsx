@@ -45,14 +45,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Add timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.log('⚠️ Loading timeout - forcing completion');
+        setLoading(false);
+      }
+    }, 5000); // 5 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [loading]);
+
   const fetchUserData = async (supabaseUser?: User) => {
     try {
       if (!supabaseUser) {
+        console.log('❌ No supabase user provided');
         setUserProfile(null);
         return;
       }
       
       console.log('🔍 Fetching user data for:', supabaseUser.email);
+      console.log('🆔 User ID:', supabaseUser.id);
       
       // Try to fetch from Supabase user_profiles table directly
       const { data: profileData, error } = await supabase
@@ -128,13 +142,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: 'customer',
           isVerified: supabaseUser.email_confirmed_at ? true : false,
           isActive: true,
-          isOnline: true
+          isOnline: true,
+          balance: 1000.00 // Starting balance for testing
         });
       }
     } catch (error) {
       console.error('Failed to fetch user data:', error);
-      // Set minimal profile from Supabase user
+      // Set minimal profile from Supabase user - ensure this always works
       if (supabaseUser) {
+        console.log('🚨 Using emergency fallback profile');
         setUserProfile({
           id: supabaseUser.id,
           email: supabaseUser.email || '',
@@ -142,7 +158,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: 'customer',
           isVerified: true,
           isActive: true,
-          isOnline: true
+          isOnline: true,
+          balance: 1000.00
         });
       }
     }
@@ -210,30 +227,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('📋 Initial session check:', !!session?.user, session?.user?.email);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserData(session.user).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
+    let mounted = true;
+    
+    // Get initial session with better error handling
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('📋 Initial session check:', !!session?.user, session?.user?.email, error?.message);
+        
+        if (!mounted) return;
+        
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          console.log('👤 Processing authenticated user...');
+          await fetchUserData(session.user);
+        } else {
+          console.log('👻 No authenticated user found');
+        }
+      } catch (error) {
+        console.error('❌ Auth initialization failed:', error);
+      } finally {
+        if (mounted) {
+          console.log('✅ Auth initialization complete');
+          setLoading(false);
+        }
       }
-    });
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      
       console.log('🔄 Auth state change:', event, !!session?.user);
       setUser(session?.user ?? null);
       if (session?.user) {
-        await fetchUserData(session.user).finally(() => setLoading(false));
+        await fetchUserData(session.user);
       } else {
         setUserProfile(null);
-        setLoading(false);
       }
+      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
