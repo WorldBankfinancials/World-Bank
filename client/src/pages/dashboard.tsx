@@ -1,9 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   CreditCard, 
@@ -18,7 +17,6 @@ import {
   Wallet,
   Shield,
   Smartphone,
-  Globe
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -28,7 +26,7 @@ export default function Dashboard() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [showBalance, setShowBalance] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const [hasError] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -76,16 +74,16 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold mb-2">
-                {t('welcome')}, {userProfile?.firstName || user?.email?.split('@')[0] || 'User'}!
+                {t('welcome')}, {userProfile?.fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'User'}!
               </h1>
               <p className="text-blue-100">
                 Welcome back to World Bank Online Banking
               </p>
             </div>
             <Avatar className="h-16 w-16">
-              <AvatarImage src={userProfile?.avatar || '/world-bank-logo.jpeg'} />
+              <AvatarImage src={userProfile?.avatarUrl || '/world-bank-logo.jpeg'} />
               <AvatarFallback>
-                {(userProfile?.firstName?.[0] || user?.email?.[0] || 'U').toUpperCase()}
+                {(userProfile?.fullName?.[0] || user?.email?.[0] || 'U').toUpperCase()}
               </AvatarFallback>
             </Avatar>
           </div>

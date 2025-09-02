@@ -1,13 +1,12 @@
 
-import { Settings, User, LogOut, Shield, Check, Download, Building2, RotateCcw, TrendingUp, HelpCircle, CreditCard, ArrowUpRight, Bell, MessageSquare, FileText, Menu } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Bell, MessageSquare, Menu } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useLocation } from "wouter";
 import type { User as UserType } from "../../../shared/schema";
 import NavigationMenu from "./NavigationMenu";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar } from './Avatar';
-import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import LanguageSelector from "./LanguageSelector";
 import RealtimeAlerts from "./RealtimeAlerts";
@@ -21,16 +20,7 @@ export default function Header({ user }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLiveChat, setShowLiveChat] = useState(false);
   const [location] = useLocation();
-  const { signOut } = useAuth();
-  const { t } = useLanguage();
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Sign out error:', error);
-    }
-  };
 
   const notifications = [
     {
@@ -148,7 +138,7 @@ export default function Header({ user }: HeaderProps) {
                 <p className="text-xs text-gray-600">{user.accountNumber}</p>
               </div>
             )}
-            <Avatar user={user} />
+            <Avatar />
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -171,7 +161,7 @@ export default function Header({ user }: HeaderProps) {
 
       {/* Live Chat */}
       {showLiveChat && (
-        <LiveChat onClose={() => setShowLiveChat(false)} />
+        <LiveChat isOpen={showLiveChat} onClose={() => setShowLiveChat(false)} />
       )}
 
       {/* Realtime Alerts */}
