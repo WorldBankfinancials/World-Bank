@@ -180,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         balance: parseFloat(initialDeposit) || 5000.00,
         avatarUrl: avatarUrl || null,
         adminNotes: approvalNotes || 'Approved by admin',
-        modifiedByAdmin: 1
+        modifiedByAdmin: "1"
       });
 
       if (updatedUser) {
@@ -240,7 +240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isVerified: false,
         isActive: false,
         adminNotes: `REJECTED: ${rejectionReason}`,
-        modifiedByAdmin: 1
+        modifiedByAdmin: "1"
       });
 
       if (updatedUser) {
@@ -741,7 +741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         recipientCountry: recipientCountry || "Unknown",
         bankName: bankName || "Unknown Bank",
         swiftCode: swiftCode || "",
-        purpose: purpose || "Personal",
+        transferPurpose: purpose || "Personal",
         status: "pending_approval" // All transfers require admin approval
       });
 
@@ -1167,7 +1167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Fund management endpoints
-  app.post('/api/admin/create-transaction', async (req: Request, res: Response) => {
+  app.post('/api/admin/create-transaction', async (req, res) => {
     try {
       const { customerId, type, amount, description, category, reference, status } = req.body as any;
       
@@ -1208,7 +1208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/update-balance', async (req: Request, res: Response) => {
+  app.post('/api/admin/update-balance', async (req, res) => {
     try {
       const { customerId, amount, description } = req.body;
       
@@ -1260,7 +1260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/transactions', async (req: Request, res: Response) => {
+  app.get('/api/admin/transactions', async (req, res) => {
     try {
       const allTransactions = await storage.getAllTransactions();
       
@@ -1286,7 +1286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin customer management endpoints
-  app.patch('/api/admin/customers/:id', async (req: Request, res: Response) => {
+  app.patch('/api/admin/customers/:id', async (req, res) => {
     try {
       const customerId = parseInt(req.params.id);
       const updateData = req.body;
@@ -1324,7 +1324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/customers/:id/balance', async (req: Request, res: Response) => {
+  app.post('/api/admin/customers/:id/balance', async (req, res) => {
     try {
       const customerId = parseInt(req.params.id);
       const { amount } = req.body;
@@ -1384,7 +1384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User Registration Approval API endpoints
-  app.post('/api/admin/approve-registration/:id', async (req: Request, res: Response) => {
+  app.post('/api/admin/approve-registration/:id', async (req, res) => {
     try {
       const registrationId = parseInt(req.params.id);
       const { initialBalance, notes } = req.body;
@@ -1441,7 +1441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/reject-registration/:id', async (req: Request, res: Response) => {
+  app.post('/api/admin/reject-registration/:id', async (req, res) => {
     try {
       const registrationId = parseInt(req.params.id);
       const { reason } = req.body;
@@ -1483,7 +1483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get pending registrations for admin dashboard (simplified access)
-  app.get('/api/admin/pending-registrations', async (req: Request, res: Response) => {
+  app.get('/api/admin/pending-registrations', async (req, res) => {
     try {
       const allUsers = await storage.getAllUsers();
       const pendingRegistrations = allUsers.filter(user => 
@@ -1498,7 +1498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Fund account endpoint for direct account number operations
-  app.post('/api/admin/fund-account', async (req: Request, res: Response) => {
+  app.post('/api/admin/fund-account', async (req, res) => {
     try {
       const { accountNumber, type, amount, description, reference } = req.body;
 
@@ -1559,7 +1559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Change user PIN endpoint
-  app.post('/api/user/change-pin', async (req: Request, res: Response) => {
+  app.post('/api/user/change-pin', async (req, res) => {
     try {
       const { currentPin, newPin } = req.body;
       
@@ -1639,7 +1639,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Client authentication
           clientId = message.userId || `client_${Date.now()}`;
           clientRole = message.role || 'customer';
-          clients.set(clientId, { ws, userId: clientId, role: clientRole });
+          if (clientId) {
+            clients.set(clientId, { ws, userId: clientId, role: clientRole });
+          }
           
           ws.send(JSON.stringify({
             type: 'auth_success',

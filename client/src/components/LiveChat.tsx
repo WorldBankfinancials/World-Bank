@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { MessageSquare, Send, X, Phone, Video, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/contexts/AuthContext";
+// import { useAuth } from "@/contexts/AuthContext";
 import { realtimeChat, RealtimeMessage } from "@/lib/supabase-realtime";
 
 
@@ -35,6 +35,7 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
   ]);
   const [newMessage, setNewMessage] = useState("");
   const [isConnected, setIsConnected] = useState(false);
+  const [isTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
