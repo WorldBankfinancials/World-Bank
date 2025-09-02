@@ -38,9 +38,5 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return null;
   }
 
-  return (
-    <div className="pb-20">
-      {children}
-    </div>
-  );
+  return <>{children}</>;
 }

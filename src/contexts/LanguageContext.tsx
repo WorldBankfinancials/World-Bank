@@ -252,6 +252,7 @@ const translations: Record<string, Record<string, string>> = {
     'card_settings_updated': 'Your card settings have been updated successfully',
     'unlock': 'Unlock',
     'lock': 'Lock',
+    'phone_number': 'Phone Number',
     'send_payment': 'Send Payment',
     'bill_provider': 'Bill Provider',
     'pay_now': 'Pay Now',
@@ -361,6 +362,7 @@ const translations: Record<string, Record<string, string>> = {
     'mobile_banking': 'Mobile Banking',
     'online_banking': 'Online Banking',
     'digital_wallet': 'Digital Wallet',
+    'contactless_payments': 'Contactless Payments',
     'biometric_login': 'Biometric Login',
     
     // Support & Help
@@ -374,6 +376,7 @@ const translations: Record<string, Record<string, string>> = {
     'complaints': 'Complaints',
     
     // Status
+    'active': 'Active',
     'inactive': 'Inactive',
     'approved': 'Approved',
     'rejected': 'Rejected',
@@ -918,15 +921,18 @@ const translations: Record<string, Record<string, string>> = {
     'card_settings_updated': '您的卡片设置已成功更新',
     'unlock': '解锁',
     'lock': '锁定',
+    'phone_number': '手机号码',
     'send_payment': '发送支付',
     'bill_provider': '缴费机构',
     'pay_now': '立即支付',
     'card_settings': '卡片设置',
     'daily_spending_limit': '每日消费限额',
+    'contactless_payments': '非接触式支付',
     'card_status': '卡片状态',
     'enabled': '已启用',
     'disabled': '已禁用',
     'locked': '已锁定',
+    'active': '活跃',
     'save_changes': '保存更改',
     'sent': '已发送',
     'to': '到',
@@ -992,11 +998,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       }
       
       if (!translation) {
+        // console.warn(`Missing translation for key: ${key} in both ${langCode} and English`);
         return key;
       }
       
       return translation;
     } catch (error) {
+      // console.error(`Translation error for key: ${key}`, error);
       return key;
     }
   };

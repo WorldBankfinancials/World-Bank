@@ -1,10 +1,10 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Lock, Eye, EyeOff, Shield } from "lucide-react";
+import { AlertCircle, Mail, Lock, Eye, EyeOff, Shield } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
@@ -12,13 +12,15 @@ import { BankLogo } from "@/components/BankLogo";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import type { User } from "@shared/schema";
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { signIn, user, loading: authLoading } = useAuth();
+  const { signIn } = useAuth();
   const { toast } = useToast();
-  const { currentLanguage, languages, changeLanguage } = useLanguage();
-  const [loginLoading, setLoginLoading] = useState(false);
+  const { t, currentLanguage, setLanguage, languages } = useLanguage();
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPinVerification, setShowPinVerification] = useState(false);
   const [loginPin, setLoginPin] = useState("");
@@ -27,254 +29,230 @@ export default function Login() {
     email: "",
     password: "",
   });
-  
-  // Show loading while checking auth
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
 
-  // Redirect authenticated users to dashboard
-  if (user) {
-    setLocation('/dashboard');
-    return null;
-  }
+  // Fetch user data to get current PIN when PIN verification is shown
+  const { data: userData } = useQuery<User>({
+    queryKey: ['/api/user'],
+    enabled: showPinVerification, // Only fetch when PIN verification is needed
+  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoginLoading(true);
+    setLoading(true);
 
     try {
       const result = await signIn(loginData.email, loginData.password);
-
+      
       if (result.error) {
         toast({
-          title: 'Login Failed',
+          title: t('login_failed'),
           description: result.error,
           variant: "destructive"
         });
-        setLoginLoading(false);
+        setLoading(false);
         return;
       }
 
       // Always require PIN verification for enhanced security
       setShowPinVerification(true);
-      setLoginLoading(false);
+      setLoading(false);
       return;
 
+      // Direct login without PIN (should not happen in production)
+      setLocation("/dashboard");
     } catch (error) {
+      // console.error("Login error:", error);
       toast({
-        title: 'Login Failed',
-        description: 'An unexpected error occurred',
+        title: t('login_failed'),
+        description: t('unexpected_error'),
         variant: "destructive"
       });
     } finally {
-      setLoginLoading(false);
+      setLoading(false);
     }
   };
 
   const handlePinVerification = async () => {
     if (loginPin.length !== 4) {
-      setPinError("PIN must be 4 digits");
+      setPinError(t('pin_must_be_4_digits'));
       return;
     }
 
     try {
-      // For demo purposes, accept any 4-digit PIN
-      // In production, this would verify against the user's actual PIN
-      if (loginPin === "1234" || loginPin === "0000" || loginPin.length === 4) {
+      const response = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: 'bankmanagerworld5@gmail.com',
+          pin: loginPin
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success && result.verified) {
         setShowPinVerification(false);
+        setLoginPin("");
+        setPinError("");
+        toast({
+          title: t('login_successful'),
+          description: t('welcome_back'),
+        });
         setLocation("/dashboard");
       } else {
-        setPinError("Invalid PIN. Please try again.");
+        setPinError(t('invalid_pin'));
+        setLoginPin("");
       }
     } catch (error) {
-      setPinError("PIN verification failed. Please try again.");
+      // console.error("PIN verification error:", error);
+      setPinError(t('verification_failed'));
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
-      {/* Top Language Selector */}
-      <div className="absolute top-4 right-4 z-10">
-        <Select value={currentLanguage?.code || 'en'} onValueChange={changeLanguage}>
-          <SelectTrigger className="w-32 bg-white/80 backdrop-blur-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {languages.map((lang) => (
-              <SelectItem key={lang.code} value={lang.code}>
-                <span className="flex items-center space-x-2">
-                  <span>{lang.flag}</span>
-                  <span>{lang.name}</span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex min-h-screen">
-        {/* Left Side - Branding */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-900 to-blue-800 text-white p-8 flex-col justify-between">
-          <div>
-            <BankLogo className="w-16 h-16" />
-            <h1 className="text-4xl font-bold mt-8 mb-4">WORLD BANK</h1>
-            <p className="text-blue-100 text-xl mb-8">Secure, Trusted & Global</p>
-            <p className="text-blue-200 text-lg">Banking Services</p>
-          </div>
-
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <h3 className="font-semibold text-lg mb-3">personal_banking</h3>
-                <p className="text-blue-200 text-sm">Business Banking</p>
-                <p className="text-blue-200 text-sm">investment_services</p>
-                <p className="text-blue-200 text-sm">Loans & Credit</p>
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg mb-3">Support</h3>
-                <p className="text-blue-200 text-sm">Help Center</p>
-                <p className="text-blue-200 text-sm">Contact Us</p>
-                <p className="text-blue-200 text-sm">Security Center</p>
-                <p className="text-blue-200 text-sm">Privacy Policy</p>
-              </div>
-            </div>
-            
-            <div className="border-t border-blue-700 pt-4">
-              <div className="flex justify-between text-sm text-blue-300">
-                <button className="hover:text-white transition-colors">Security Center</button>
-                <button className="hover:text-white transition-colors">Privacy Policy</button>
-                <button className="hover:text-white transition-colors">Contact Support</button>
-              </div>
-            </div>
-            <div className="text-gray-500 text-xs space-y-1">
-              <p>Copyright Notice</p>
-              <p>Secure, Trusted & Global</p>
-              <p>Licensed & Regulated</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex flex-col">
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md relative">
+          {/* Language Selector */}
+          <div className="flex justify-end mb-6">
+            <div className="w-32">
+              <Select value={currentLanguage.code} onValueChange={(value) => setLanguage(languages.find(l => l.code === value)!)}>
+                <SelectTrigger className="bg-white/80 backdrop-blur-sm border-white/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {languages.map((lang) => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </div>
 
-        {/* Right Side - Login Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-          <div className="w-full max-w-md">
-            <div className="text-center mb-8">
-              <div className="lg:hidden mb-6">
-                <BankLogo className="w-12 h-12 mx-auto" />
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900">Sign In</h2>
-              <p className="mt-2 text-gray-600">
-                New Customer? <a href="#" className="text-blue-600 hover:text-blue-800 font-medium">Create Account</a>
+          {/* Centered Bank Logo and Title */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <BankLogo className="w-16 h-16" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('world_bank')}</h1>
+            <p className="text-gray-600 text-lg">{t('international_banking_solutions')}</p>
+          </div>
+
+          <Card className="wb-login-card">
+            <CardHeader className="space-y-3 pb-6 pt-8">
+              <CardTitle className="text-2xl font-bold text-center text-gray-900">
+                {t('sign_in')}
+              </CardTitle>
+              <p className="text-center text-gray-600">
+                Access your secure banking portal
               </p>
-            </div>
-
-            <Card className="wb-card shadow-xl">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Lock className="w-5 h-5 text-blue-600" />
-                  Secure Login
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleLogin} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">User ID or Email</Label>
+              <div className="flex justify-center">
+                <div className="w-16 h-1 bg-blue-600 rounded-full"></div>
+              </div>
+            </CardHeader>
+          
+            <CardContent className="space-y-6 px-8 pb-8">
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div className="space-y-3">
+                  <Label htmlFor="identifier" className="text-sm font-semibold text-gray-700">
+                    {t('user_id_or_email')}
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-4 text-gray-500 font-medium text-base">@/</span>
                     <Input
                       id="email"
                       type="email"
                       value={loginData.email}
-                      onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                      className="wb-input h-12"
-                      placeholder="Enter your email"
+                      onChange={(e) => setLoginData(prev => ({
+                        ...prev,
+                        email: e.target.value
+                      }))}
+                      className="wb-input pl-12 h-14 text-base"
+                      placeholder="Enter your email address"
                       required
                     />
                   </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        value={loginData.password}
-                        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                        className="wb-input h-12 pr-12"
-                        placeholder="Enter your password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                      >
-                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <Button
-                      type="submit"
-                      className="wb-button-primary w-full h-14 text-base"
-                      disabled={loginLoading}
+                <div className="space-y-3">
+                  <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
+                    {t('password')}
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={loginData.password}
+                      onChange={(e) => setLoginData(prev => ({
+                        ...prev,
+                        password: e.target.value
+                      }))}
+                      className="wb-input pl-12 pr-12 h-14 text-base"
+                      placeholder="Enter your password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors"
                     >
-                      {loginLoading ? (
-                        <div className="flex items-center space-x-2">
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Signing In...</span>
-                        </div>
-                      ) : (
-                        'Sign In'
-                      )}
-                    </Button>
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                   </div>
-                </form>
-              </CardContent>
-            </Card>
+                </div>
 
-            {/* Mobile Footer */}
-            <div className="lg:hidden mt-8 text-center space-y-4">
-              <div className="flex justify-center space-x-6 text-sm">
-                <button className="hover:text-gray-800 transition-colors">Security Center</button>
-                <button className="hover:text-gray-800 transition-colors">Privacy Policy</button>
-                <button className="hover:text-gray-800 transition-colors">Contact Support</button>
+                <div className="pt-2">
+                  <Button
+                    type="submit"
+                    className="wb-button-primary w-full h-14 text-base"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Signing In...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <Shield className="w-5 h-5" />
+                        <span>{t('sign_in')}</span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              </form>
+
+              <div className="text-center pt-4 border-t border-gray-100">
+                <p className="text-sm text-gray-600">
+                  {t('new_customer')}{" "}
+                  <button
+                    onClick={() => setLocation("/register")}
+                    className="text-blue-600 hover:text-blue-700 font-semibold hover:underline transition-all"
+                  >
+                    {t('create_account')}
+                  </button>
+                </p>
               </div>
-              <div className="text-gray-500 text-xs space-y-1">
-                <p>Copyright Notice</p>
-                <p>Secure, Trusted & Global</p>
-                <p>Licensed & Regulated</p>
-              </div>
+            </CardContent>
+          </Card>
+
+          {/* Professional Footer */}
+          <div className="text-center mt-8 space-y-4">
+            <div className="flex justify-center space-x-6 text-gray-600 text-sm">
+              <button className="hover:text-gray-800 transition-colors">{t('security_center')}</button>
+              <button className="hover:text-gray-800 transition-colors">{t('privacy_policy')}</button>
+              <button className="hover:text-gray-800 transition-colors">{t('contact_support')}</button>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Mobile Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2">
-        <div className="flex justify-around">
-          <div className="flex flex-col items-center space-y-1 text-xs">
-            <div className="w-6 h-6 bg-blue-600 rounded"></div>
-            <span className="text-blue-600">Home</span>
-          </div>
-          <div className="flex flex-col items-center space-y-1 text-xs text-gray-500">
-            <div className="w-6 h-6 bg-gray-300 rounded"></div>
-            <span>Cards</span>
-          </div>
-          <div className="flex flex-col items-center space-y-1 text-xs text-gray-500">
-            <div className="w-6 h-6 bg-gray-300 rounded"></div>
-            <span>Transfer</span>
-          </div>
-          <div className="flex flex-col items-center space-y-1 text-xs text-gray-500">
-            <div className="w-6 h-6 bg-gray-300 rounded"></div>
-            <span>History</span>
-          </div>
-          <div className="flex flex-col items-center space-y-1 text-xs text-gray-500">
-            <div className="w-6 h-6 bg-gray-300 rounded"></div>
-            <span>Profile</span>
+            <div className="text-gray-500 text-xs space-y-1">
+              <p>{t('copyright_notice')}</p>
+              <p>{t('secure_trusted_global')}</p>
+              <p>{t('licensed_regulated')}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -285,16 +263,16 @@ export default function Login() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-blue-600" />
-              PIN Verification Required
+              {t('pin_verification_required')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
-              Please enter your 4-digit security PIN to complete login
+              {t('enter_pin_complete_login')}
             </p>
-
+            
             <div className="space-y-2">
-              <Label htmlFor="pin">Security PIN</Label>
+              <Label htmlFor="pin">{t('security_pin')}</Label>
               <Input
                 id="pin"
                 type="password"
@@ -319,7 +297,7 @@ export default function Login() {
                 </Alert>
               )}
             </div>
-
+            
             <div className="flex space-x-3">
               <Button
                 variant="outline"
@@ -330,14 +308,14 @@ export default function Login() {
                   setPinError("");
                 }}
               >
-                Cancel
+                {t('cancel')}
               </Button>
               <Button
                 className="flex-1 wb-btn-primary"
                 onClick={handlePinVerification}
                 disabled={loginPin.length !== 4}
               >
-                Verify PIN
+                {t('verify_pin')}
               </Button>
             </div>
           </div>

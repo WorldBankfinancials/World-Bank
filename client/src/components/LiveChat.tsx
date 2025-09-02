@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, Send, X, Phone, Video, Paperclip, Minimize2 } from "lucide-react";
+import { MessageSquare, Send, X, Phone, Video, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { realtimeChat, RealtimeMessage } from "@/lib/supabase-realtime";
-import { useLanguage } from '@/contexts/LanguageContext';
+
 
 interface ChatMessage {
   id: string;
@@ -28,7 +28,7 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
       senderId: 'admin-1',
       senderName: 'Customer Support',
       senderRole: 'admin',
-      message: 'Hello! Welcome to World Bank. How can I help you today?',
+      message: 'Hello! How can I help you today?',
       timestamp: new Date(Date.now() - 60000),
       isRead: true
     }
@@ -36,24 +36,9 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { userProfile } = useAuth();
-  const { t } = useLanguage(); // Use language context
   const wsRef = useRef<WebSocket | null>(null);
-
-  // Safe translation function
-  const safeT = (key: string, fallback?: string) => {
-    try {
-      // Ensure t is called correctly and handle potential errors
-      const translatedText = t(key);
-      return translatedText || fallback || key;
-    } catch (error) {
-      console.warn('Translation error for key:', key, error);
-      return fallback || key;
-    }
-  };
-
 
   useEffect(() => {
     if (isOpen) {
@@ -72,6 +57,7 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
     scrollToBottom();
   }, [messages]);
 
+  // Load chat history from Supabase
   const loadChatHistory = async () => {
     try {
       const chatMessages = await realtimeChat.getMessages();
@@ -81,101 +67,51 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
         senderName: msg.senderName,
         senderRole: msg.senderRole,
         message: msg.message,
-        timestamp: new Date(msg.timestamp),
+        timestamp: msg.timestamp,
         isRead: msg.isRead
       }));
-      setMessages(prev => [...prev, ...formattedMessages]);
+      setMessages(formattedMessages);
     } catch (error) {
       console.error('Failed to load chat history:', error);
     }
   };
 
+  // Connect to Supabase Realtime for live chat
   const connectSupabaseRealtime = () => {
     try {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-
-      wsRef.current = new WebSocket(wsUrl);
-
-      wsRef.current.onopen = () => {
-        setIsConnected(true);
-        console.log('Live chat connected');
-      };
-
-      wsRef.current.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          if (message.type === 'chat_message') {
-            const newMessage: ChatMessage = {
-              id: message.id,
-              senderId: message.senderId,
-              senderName: message.senderName,
-              senderRole: message.senderRole,
-              message: message.message,
-              timestamp: new Date(message.timestamp),
-              isRead: message.isRead
-            };
-            setMessages(prev => [...prev, newMessage]);
-          }
-        } catch (error) {
-          console.error('Error parsing message:', error);
-        }
-      };
-
-      wsRef.current.onclose = () => {
-        setIsConnected(false);
-        console.log('Live chat disconnected');
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setIsConnected(false);
-      };
+      realtimeChat.subscribe((message: RealtimeMessage) => {
+        const newMessage: ChatMessage = {
+          id: message.id,
+          senderId: message.senderId,
+          senderName: message.senderName,
+          senderRole: message.senderRole,
+          message: message.message,
+          timestamp: message.timestamp,
+          isRead: message.isRead
+        };
+        setMessages(prev => [...prev, newMessage]);
+      });
+      setIsConnected(true);
     } catch (error) {
-      console.error('Failed to connect to live chat:', error);
+      console.error('Failed to connect to Supabase Realtime:', error);
       setIsConnected(false);
     }
   };
 
   const disconnectSupabaseRealtime = () => {
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
+    realtimeChat.unsubscribe();
     setIsConnected(false);
   };
 
-  const sendMessage = () => {
-    if (newMessage.trim() && wsRef.current && isConnected) {
-      const message: ChatMessage = {
-        id: Date.now().toString(),
-        senderId: userProfile?.accountId || 'customer_1',
-        senderName: userProfile?.fullName || 'Customer',
-        senderRole: 'customer',
-        message: newMessage.trim(),
-        timestamp: new Date(),
-        isRead: false
-      };
+  const sendMessage = async () => {
+    if (!newMessage.trim()) return;
 
-      // Add to local messages immediately
-      setMessages(prev => [...prev, message]);
-
-      // Send via WebSocket
-      try {
-        if (wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({
-            type: 'chat_message',
-            ...message,
-            timestamp: message.timestamp.toISOString()
-          }));
-          console.log('Message sent successfully:', message.message);
-        }
-      } catch (error) {
-        console.error('Failed to send message:', error);
-      }
-
-      setNewMessage('');
-      setIsTyping(false);
+    try {
+      // Send message via Supabase Realtime
+      await realtimeChat.sendMessage(newMessage.trim(), 'customer');
+      setNewMessage("");
+    } catch (error) {
+      console.error('Failed to send message:', error);
     }
   };
 
@@ -193,35 +129,30 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
   if (!isOpen) return null;
 
   return (
-    <div className={`fixed bottom-4 right-4 w-80 bg-white rounded-lg shadow-2xl border border-gray-200 z-50 flex flex-col transition-all duration-300 ${
-      isMinimized ? 'h-14' : 'h-[500px]'
-    }`}>
+    <div className="fixed bottom-4 right-4 w-80 h-[500px] bg-white rounded-lg shadow-xl border border-gray-200 z-50 flex flex-col">
       {/* Chat Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-blue-600 text-white rounded-t-lg">
         <div className="flex items-center space-x-2">
           <MessageSquare className="w-5 h-5" />
           <div>
-            {/* Use safeT for translated strings */}
-            <div className="font-semibold">{safeT('WorldBankSupport', 'World Bank Support')}</div>
+            <div className="font-semibold">Live Support</div>
             <div className="text-xs flex items-center space-x-1">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
-              <span>{isConnected ? safeT('Online', 'Online') : safeT('Connecting', 'Connecting...')}</span>
+              <span>{isConnected ? 'Online' : 'Connecting...'}</span>
             </div>
           </div>
         </div>
-        <div className="flex items-center space-x-1">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-white hover:bg-blue-700 p-1 h-8 w-8"
-            onClick={() => setIsMinimized(!isMinimized)}
-          >
-            <Minimize2 className="w-4 h-4" />
+        <div className="flex items-center space-x-2">
+          <Button size="sm" variant="ghost" className="text-white hover:bg-blue-700 p-1">
+            <Phone className="w-4 h-4" />
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-white hover:bg-blue-700 p-1 h-8 w-8"
+          <Button size="sm" variant="ghost" className="text-white hover:bg-blue-700 p-1">
+            <Video className="w-4 h-4" />
+          </Button>
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            className="text-white hover:bg-blue-700 p-1"
             onClick={onClose}
           >
             <X className="w-4 h-4" />
@@ -229,85 +160,71 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
         </div>
       </div>
 
-      {!isMinimized && (
-        <>
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.senderRole === 'customer' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-xs p-3 rounded-lg shadow-sm ${
-                    message.senderRole === 'customer'
-                      ? 'bg-blue-600 text-white ml-4'
-                      : 'bg-white text-gray-800 mr-4 border'
-                  }`}
-                >
-                  <div className="text-sm">{message.message}</div>
-                  <div className={`text-xs mt-1 ${
-                    message.senderRole === 'customer' ? 'text-blue-100' : 'text-gray-500'
-                  }`}>
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${message.senderRole === 'customer' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-xs p-3 rounded-lg ${
+                message.senderRole === 'customer'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-800'
+              }`}
+            >
+              <div className="text-sm">{message.message}</div>
+              <div className={`text-xs mt-1 ${
+                message.senderRole === 'customer' ? 'text-blue-100' : 'text-gray-500'
+              }`}>
+                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
-            ))}
-
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="bg-white text-gray-800 p-3 rounded-lg border mr-4">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Message Input - Always Visible */}
-          <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg flex-shrink-0">
-            <div className="flex items-center space-x-2 mb-2">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={safeT("Typeyourmessagehere...", "Type your message here...")}
-                className="flex-1 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm h-12 px-4 py-3 rounded-md bg-white text-gray-900 placeholder-gray-500 outline-none"
-                disabled={!isConnected}
-                autoComplete="off"
-                style={{
-                  fontSize: '16px',
-                  lineHeight: '1.5',
-                  minHeight: '48px',
-                  backgroundColor: 'white',
-                  color: '#111827'
-                }}
-              />
-              <Button
-                onClick={sendMessage}
-                size="sm"
-                disabled={!newMessage.trim() || !isConnected}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 h-12 flex items-center justify-center flex-shrink-0 rounded-md"
-              >
-                <Send className="w-5 h-5" />
-              </Button>
-            </div>
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span className="flex items-center space-x-1">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
-                <span>{isConnected ? safeT('Connected', 'Connected') : safeT('Connecting', 'Connecting...')}</span>
-              </span>
-              <span className="font-medium">{safeT('PressEntertosend', 'Press Enter to send')}</span>
             </div>
           </div>
-        </>
-      )}
+        ))}
+
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="bg-gray-100 text-gray-800 p-3 rounded-lg">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Message Input - Fixed Layout */}
+      <div className="p-4 border-t border-gray-200 bg-gray-50 rounded-b-lg flex-shrink-0">
+        <div className="flex items-center space-x-2">
+          <Button size="sm" variant="ghost" className="p-2 hover:bg-gray-200">
+            <Paperclip className="w-4 h-4 text-gray-500" />
+          </Button>
+          <Input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type your message..."
+            className="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+            disabled={!isConnected}
+          />
+          <Button 
+            onClick={sendMessage} 
+            size="sm"
+            disabled={!newMessage.trim() || !isConnected}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2"
+          >
+            <Send className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="mt-2 text-xs text-gray-500 text-center">
+          {isConnected ? 'Connected to support' : 'Connecting...'}
+        </div>
+      </div>
     </div>
   );
 }

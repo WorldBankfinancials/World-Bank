@@ -1,62 +1,98 @@
-
-import { Bell, MessageSquare, Menu } from 'lucide-react';
-import { useState } from 'react';
-import { Link, useLocation } from "wouter";
+import { Settings, User, LogOut, Shield, Check, Download, Building2, RotateCcw, TrendingUp, HelpCircle, CreditCard, ArrowUpRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Link } from "wouter";
 import type { User as UserType } from "../../../shared/schema";
 import NavigationMenu from "./NavigationMenu";
 import { Badge } from "@/components/ui/badge";
-// Removed unused import
+import { useAuth } from '@/contexts/AuthContext';
 import { Avatar } from './Avatar';
-import { Button } from "@/components/ui/button";
-import LanguageSelector from "./LanguageSelector";
-import RealtimeAlerts from "./RealtimeAlerts";
-import LiveChat from "./LiveChat";
 
 interface HeaderProps {
-  user?: UserType;
+  user?: UserType | any;
 }
 
-export default function Header({ user }: HeaderProps) {
+export default function Header({}: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showLiveChat, setShowLiveChat] = useState(false);
-  const [location] = useLocation();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const { userProfile } = useAuth();
+  const [freshUserData, setFreshUserData] = useState<any>(null);
 
+  // Fetch fresh user data once only
+  useEffect(() => {
+    const fetchFreshUserData = async () => {
+      try {
+        const response = await fetch('/api/user', {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        if (response.ok) {
+          const userData = await response.json();
+          setFreshUserData(userData);
+        }
+      } catch (error) {
+        // Silent error handling
+      }
+    };
 
-  const notifications = [
-    {
-      id: 1,
-      type: 'transaction',
-      title: 'Transfer Completed',
-      message: 'Your transfer of $1,000 to Zhang Wei has been completed successfully.',
-      timestamp: '2 minutes ago',
-      read: false
+    fetchFreshUserData();
+  }, []);
+
+  const profileMenuItems = [
+    { 
+      category: "ACCOUNT MANAGEMENT",
+      items: [
+        { icon: User, label: "Profile Settings", href: "/profile-settings" },
+        { icon: Shield, label: "Security Settings", href: "/security-settings" },
+        { icon: Settings, label: "Account Preferences", href: "/account-preferences" },
+        { icon: Check, label: "Verification Center", href: "/verification" }
+      ]
     },
     {
-      id: 2,
-      type: 'security',
-      title: 'Login Alert',
-      message: 'New login detected from Beijing, China',
-      timestamp: '1 hour ago',
-      read: false
+      category: "BANKING SERVICES", 
+      items: [
+        { icon: CreditCard, label: "Credit Cards", href: "/credit-cards" },
+        { icon: ArrowUpRight, label: "Transaction History", href: "/transaction-history" },
+        { icon: Download, label: "Statements & Reports", href: "/statements-reports" },
+        { icon: Building2, label: "Banking Services", href: "/banking-services" },
+        { icon: RotateCcw, label: "Transfer Funds", href: "/transfer-funds" }
+      ]
     },
     {
-      id: 3,
-      type: 'system',
-      title: 'Account Verification',
-      message: 'Your account verification has been approved.',
-      timestamp: '3 hours ago',
-      read: true
+      category: "INVESTMENT & WEALTH",
+      items: [
+        { icon: TrendingUp, label: "Investment Portfolio", href: "/investment-portfolio" },
+        { icon: Building2, label: "Wealth Management", href: "/wealth-management" },
+        { icon: TrendingUp, label: "Investment Trading", href: "/investment-trading" },
+        { icon: Building2, label: "Business Banking", href: "/business-banking" }
+      ]
+    },
+    {
+      category: "DIGITAL SERVICES",
+      items: [
+        { icon: CreditCard, label: "Digital Wallet", href: "/digital-wallet" },
+        { icon: User, label: "Mobile Pay", href: "/mobile-pay" },
+        { icon: ArrowUpRight, label: "International Transfer", href: "/international-transfer" }
+      ]
+    },
+    {
+      category: "SUPPORT & HELP",
+      items: [
+        { icon: HelpCircle, label: "Support Center", href: "/support-center" },        
+        { icon: User, label: "Customer Support", href: "/customer-support" },
+        { icon: Shield, label: "Security Center", href: "/security-center" },
+        { icon: Building2, label: "Find Branches", href: "/find-branches" },
+        { icon: LogOut, label: "Sign Out", href: "/login" }
+      ]
     }
   ];
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-      <div className="container flex h-16 items-center justify-between px-4">
-        {/* Logo Section */}
-        <div className="flex items-center space-x-3">
-          <Link href="/dashboard">
+    <div className="relative">
+      <header className="bg-white px-4 py-4 relative z-40">
+        <div className="flex items-center justify-between mb-0">
+          <Link href="/">
             <div className="flex items-center space-x-2 cursor-pointer">
               <img 
                 src="/world-bank-logo.jpeg" 
@@ -67,105 +103,81 @@ export default function Header({ user }: HeaderProps) {
                   target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/8/80/World_Bank_Group_logo.svg/1200px-World_Bank_Group_logo.svg.png";
                 }}
               />
-              <div className="hidden sm:block">
-                <h1 className="text-xl font-bold text-blue-900">WORLD BANK</h1>
-                <p className="text-xs text-gray-600">Digital Banking Platform</p>
-              </div>
+              <div className="text-gray-900 font-bold text-sm tracking-wide">WORLD BANK</div>
             </div>
           </Link>
-        </div>
 
-        {/* Center Section - Quick Navigation */}
-        <nav className="hidden md:flex items-center space-x-1">
-          <Link href="/dashboard">
-            <Button variant={location === '/dashboard' ? 'default' : 'ghost'} size="sm">
-              Dashboard
-            </Button>
-          </Link>
-          <Link href="/transfer">
-            <Button variant={location === '/transfer' ? 'default' : 'ghost'} size="sm">
-              Transfer
-            </Button>
-          </Link>
-          <Link href="/cards">
-            <Button variant={location === '/cards' ? 'default' : 'ghost'} size="sm">
-              Cards
-            </Button>
-          </Link>
-          <Link href="/history">
-            <Button variant={location === '/history' ? 'default' : 'ghost'} size="sm">
-              History
-            </Button>
-          </Link>
-        </nav>
-
-        {/* Right Section */}
-        <div className="flex items-center space-x-2">
-          {/* Language Selector */}
-          <LanguageSelector />
-
-          {/* Notifications */}
+          {/* Profile Icon with Dropdown */}
           <div className="relative">
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="w-5 h-5" />
-              {unreadCount > 0 && (
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                >
-                  {unreadCount}
-                </Badge>
+            <button
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <Avatar size={40} />
+            </button>
+
+              {/* Profile Dropdown Menu */}
+              {showProfileMenu && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  {/* Profile Header in Dropdown */}
+                  <div className="p-4 border-b border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <Avatar size={64} />
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900">{freshUserData?.fullName || userProfile?.fullName || 'Liu Wei'}</div>
+                        <div className="text-sm text-gray-600">{freshUserData?.profession || userProfile?.profession || 'Marine Engineer'}</div>
+                        <div className="text-sm text-gray-600">{freshUserData?.email || userProfile?.email || 'bankmanagerworld5@gmail.com'}</div>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Badge variant="default" className="text-xs bg-green-100 text-green-800 flex items-center space-x-1">
+                            <Check className="w-3 h-3" />
+                            <span>Verified Account</span>
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Scrollable Menu Items */}
+                  <div className="max-h-64 overflow-y-auto">
+                    {profileMenuItems.map((section, sectionIndex) => (
+                      <div key={sectionIndex} className="mb-4">
+                        <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                          {section.category}
+                        </div>
+                        {section.items.map((item, itemIndex) => (
+                          <Link key={itemIndex} href={item.href}>
+                            <div 
+                              onClick={() => setShowProfileMenu(false)}
+                              className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors cursor-pointer"
+                            >
+                              <item.icon className="w-5 h-5 text-gray-500" />
+                              <span className="text-sm text-gray-700">{item.label}</span>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Account Info Footer */}
+                  <div className="p-4 border-t border-gray-100 bg-gray-50">
+                    <div className="text-xs text-gray-500">
+                      Account ID: WB-2024-7829
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Last Login: Dec 15, 2024
+                    </div>
+                  </div>
+                </div>
               )}
-            </Button>
           </div>
-
-          {/* Live Chat */}
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setShowLiveChat(true)}
-            className="relative"
-          >
-            <MessageSquare className="w-5 h-5" />
-            <div className="absolute -top-1 -right-1 h-3 w-3 bg-green-500 rounded-full border-2 border-white"></div>
-          </Button>
-
-          {/* User Menu */}
-          <div className="flex items-center space-x-2">
-            {user && (
-              <div className="hidden sm:block text-right">
-                <p className="text-sm font-medium">{user.fullName || 'User'}</p>
-                <p className="text-xs text-gray-600">{user.accountNumber}</p>
-              </div>
-            )}
-            <Avatar />
-          </div>
-
-          {/* Mobile Menu Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="md:hidden"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            <Menu className="w-5 h-5" />
-          </Button>
         </div>
-      </div>
+      </header>
 
-      {/* Navigation Menu */}
       <NavigationMenu 
         isOpen={isMenuOpen} 
         onClose={() => setIsMenuOpen(false)} 
       />
-
-      {/* Live Chat */}
-      {showLiveChat && (
-        <LiveChat isOpen={showLiveChat} onClose={() => setShowLiveChat(false)} />
-      )}
-
-      {/* Realtime Alerts */}
-      <RealtimeAlerts />
-    </header>
+    </div>
   );
 }

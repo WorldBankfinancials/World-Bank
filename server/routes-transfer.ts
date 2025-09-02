@@ -7,76 +7,61 @@ function generateReferenceNumber(): string {
 
 export function setupTransferRoutes(app: Express) {
   // Enhanced Transfer API with proper workflow
-  app.post('/api/transfers/create', async (req: Request, res: Response) => {
+  app.post('/api/transactions', async (req: Request, res: Response) => {
     try {
+      const userId = (req as any).session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
       const {
+        transactionId,
         amount,
+        currency,
         recipientName,
         recipientAccount,
         recipientCountry,
         bankName,
         swiftCode,
-        transferPurpose,
-        notes
+        transferType,
+        purpose,
+        status = 'pending_approval'
       } = req.body;
 
       // Validate required fields
-      if (!amount || !recipientName || !recipientAccount || !bankName) {
-        return res.status(400).json({
-          success: false,
-          message: "Missing required fields: amount, recipient name, account, and bank name are required"
-        });
+      if (!amount || !recipientName || !recipientAccount) {
+        return res.status(400).json({ message: "Missing required fields" });
       }
 
-      // Generate unique transaction ID
-      const transactionId = generateReferenceNumber();
-
-      // Create transaction record
-      const transaction = {
-        id: Date.now(),
-        transactionId,
-        amount: parseFloat(amount),
-        currency: 'USD',
-        recipientName,
-        recipientAccount,
-        recipientCountry: recipientCountry || 'Unknown',
-        bankName,
-        swiftCode: swiftCode || '',
-        transferPurpose: transferPurpose || 'Personal',
-        notes: notes || '',
-        status: 'pending_approval',
-        createdAt: new Date().toISOString(),
-        userId: 'current-user' // Will be replaced with real auth
-      };
-
-      // Store in memory for demo (replace with real database)
-      if (!global.pendingTransfers) {
-        global.pendingTransfers = [];
+      // Get user accounts
+      const accounts = await storage.getUserAccounts(userId);
+      if (accounts.length === 0) {
+        return res.status(400).json({ message: "No account found" });
       }
-      global.pendingTransfers.push(transaction);
 
-      res.json({
-        success: true,
-        message: "Transfer submitted successfully",
-        transaction,
-        transactionId
+      const fromAccount = accounts[0];
+
+      // Create transaction record for admin approval (all transfers require approval)
+      const transaction = await storage.createTransaction({
+        date: new Date(),
+        accountId: fromAccount.id,
+        type: transferType || "international_transfer",
+        amount: amount.toString(),
+        description: `Transfer to ${recipientName}`,
+        recipientName: recipientName,
+        recipientCountry: recipientCountry || "Unknown",
+        bankName: bankName || "Unknown Bank",
+        swiftCode: swiftCode || "",
+        status: "pending_approval" // All transfers require admin approval
+      });
+
+      res.json({ 
+        message: "Transfer submitted for approval", 
+        transaction: transaction,
+        transactionId: transactionId || generateReferenceNumber()
       });
     } catch (error) {
       console.error("Error creating transfer:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to process transfer"
-      });
-    }
-  });
-
-  // Get pending transfers for admin
-  app.get('/api/admin/pending-transfers', async (req: Request, res: Response) => {
-    try {
-      const pendingTransfers = global.pendingTransfers || [];
-      res.json(pendingTransfers);
-    } catch (error) {
-      console.error("Error getting pending transfers:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -89,7 +74,7 @@ export function setupTransferRoutes(app: Express) {
       const adminId = (req as any).session?.userId || 1; // Default admin
 
       const transaction = await storage.updateTransactionStatus(transactionId, 'approved', adminId, notes);
-
+      
       if (transaction) {
         // Log admin action
         await storage.createAdminAction({
@@ -117,7 +102,7 @@ export function setupTransferRoutes(app: Express) {
       const adminId = (req as any).session?.userId || 1; // Default admin
 
       const transaction = await storage.updateTransactionStatus(transactionId, 'rejected', adminId, notes);
-
+      
       if (transaction) {
         // Log admin action
         await storage.createAdminAction({

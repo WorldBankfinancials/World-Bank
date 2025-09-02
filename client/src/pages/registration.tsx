@@ -1,11 +1,10 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Mail, Lock, User, Phone, Eye, EyeOff, Check, ArrowLeft, ArrowRight } from "lucide-react";
+import { AlertCircle, Mail, Lock, User, Phone } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import { BankLogo } from "@/components/BankLogo";
@@ -13,51 +12,57 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/lib/supabase";
-import { Building2, Shield, Globe, MapPin, Briefcase, FileText, UserCheck } from "lucide-react";
+import { Building2, Shield, Globe, Eye, EyeOff, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Registration() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [formData, setFormData] = useState({
-    // Page 1: Personal Information
+    // Personal Information
     firstName: "",
     lastName: "",
     middleName: "",
     dateOfBirth: "",
     gender: "",
     nationality: "",
+
+    // Contact Information
     email: "",
     phone: "",
     alternativePhone: "",
 
-    // Page 2: Address Information
+    // Address Information
     address: "",
     city: "",
     state: "",
     country: "",
     postalCode: "",
 
-    // Page 3: Professional & Financial Information
+    // Professional Information
     occupation: "",
     employer: "",
     annualIncome: "",
     sourceOfIncome: "",
+
+    // Identification
     idType: "",
     idNumber: "",
     idExpiryDate: "",
     issuingCountry: "",
 
-    // Page 4: Security & Terms
+    // Account Information
     password: "",
     confirmPassword: "",
     transferPin: "",
     confirmTransferPin: "",
+
+    // Agreements
     termsAccepted: false,
     privacyAccepted: false,
     marketingOptIn: false,
@@ -77,38 +82,29 @@ export default function Registration() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const validatePage = (pageNumber: number) => {
-    switch (pageNumber) {
+  const validateStep = (stepNumber: number) => {
+    switch (stepNumber) {
       case 1:
         return formData.firstName && formData.lastName && formData.dateOfBirth && 
                formData.email && formData.phone && formData.nationality;
       case 2:
-        return formData.address && formData.city && formData.country;
+        return formData.address && formData.city && formData.country && 
+               formData.occupation && formData.annualIncome;
       case 3:
-        return formData.occupation && formData.annualIncome && formData.idType && formData.idNumber;
+        return formData.idType && formData.idNumber && formData.password && 
+               formData.confirmPassword && formData.transferPin && 
+               formData.password === formData.confirmPassword &&
+               formData.transferPin === formData.confirmTransferPin;
       case 4:
-        return formData.password && formData.confirmPassword && formData.transferPin && 
-               formData.confirmTransferPin && formData.password === formData.confirmPassword &&
-               formData.transferPin === formData.confirmTransferPin && 
-               formData.termsAccepted && formData.privacyAccepted;
+        return formData.termsAccepted && formData.privacyAccepted;
       default:
         return true;
     }
   };
 
-  const handleNext = () => {
-    if (validatePage(currentPage)) {
-      setCurrentPage(prev => prev + 1);
-    }
-  };
-
-  const handlePrevious = () => {
-    setCurrentPage(prev => prev - 1);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validatePage(4)) return;
+    if (!validateStep(4)) return;
 
     setLoading(true);
 
@@ -206,23 +202,15 @@ export default function Registration() {
     }
   };
 
-  const pageIcons = [User, MapPin, Briefcase, Shield];
-  const pageNames = ["Personal Info", "Address Details", "Professional Info", "Security & Terms"];
-
-  const renderPage = () => {
-    switch (currentPage) {
+  const renderStep = () => {
+    switch (step) {
       case 1:
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <User className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900">Personal Information</h3>
-              <p className="text-gray-600">Tell us about yourself to get started</p>
-            </div>
-
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Personal Information</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium">First Name *</Label>
+                <Label>First Name *</Label>
                 <Input
                   value={formData.firstName}
                   onChange={(e) => handleInputChange('firstName', e.target.value)}
@@ -232,7 +220,7 @@ export default function Registration() {
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium">Last Name *</Label>
+                <Label>Last Name *</Label>
                 <Input
                   value={formData.lastName}
                   onChange={(e) => handleInputChange('lastName', e.target.value)}
@@ -244,7 +232,7 @@ export default function Registration() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium">Middle Name</Label>
+              <Label>Middle Name</Label>
               <Input
                 value={formData.middleName}
                 onChange={(e) => handleInputChange('middleName', e.target.value)}
@@ -255,7 +243,7 @@ export default function Registration() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium">Date of Birth *</Label>
+                <Label>Date of Birth *</Label>
                 <Input
                   type="date"
                   value={formData.dateOfBirth}
@@ -265,7 +253,7 @@ export default function Registration() {
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium">Gender</Label>
+                <Label>Gender</Label>
                 <Select value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select gender" />
@@ -281,7 +269,7 @@ export default function Registration() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium">Nationality *</Label>
+              <Label>Nationality *</Label>
               <Select value={formData.nationality} onValueChange={(value) => handleInputChange('nationality', value)}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select nationality" />
@@ -302,7 +290,7 @@ export default function Registration() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium">Email Address *</Label>
+                <Label>Email Address *</Label>
                 <Input
                   type="email"
                   value={formData.email}
@@ -313,7 +301,7 @@ export default function Registration() {
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium">Phone Number *</Label>
+                <Label>Phone Number *</Label>
                 <Input
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
@@ -325,7 +313,7 @@ export default function Registration() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium">Alternative Phone</Label>
+              <Label>Alternative Phone</Label>
               <Input
                 value={formData.alternativePhone}
                 onChange={(e) => handleInputChange('alternativePhone', e.target.value)}
@@ -338,28 +326,23 @@ export default function Registration() {
 
       case 2:
         return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <MapPin className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900">Address Information</h3>
-              <p className="text-gray-600">Where can we reach you?</p>
-            </div>
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Address & Professional Information</h3>
 
             <div>
-              <Label className="text-sm font-medium">Street Address *</Label>
+              <Label>Street Address *</Label>
               <Textarea
                 value={formData.address}
                 onChange={(e) => handleInputChange('address', e.target.value)}
                 placeholder="Enter complete street address"
                 className="mt-1"
                 required
-                rows={3}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium">City *</Label>
+                <Label>City *</Label>
                 <Input
                   value={formData.city}
                   onChange={(e) => handleInputChange('city', e.target.value)}
@@ -369,7 +352,7 @@ export default function Registration() {
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium">State/Province</Label>
+                <Label>State/Province</Label>
                 <Input
                   value={formData.state}
                   onChange={(e) => handleInputChange('state', e.target.value)}
@@ -381,7 +364,7 @@ export default function Registration() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium">Country *</Label>
+                <Label>Country *</Label>
                 <Select value={formData.country} onValueChange={(value) => handleInputChange('country', value)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select country" />
@@ -393,14 +376,12 @@ export default function Registration() {
                     <SelectItem value="ca">🇨🇦 Canada</SelectItem>
                     <SelectItem value="au">🇦🇺 Australia</SelectItem>
                     <SelectItem value="de">🇩🇪 Germany</SelectItem>
-                    <SelectItem value="fr">🇫🇷 France</SelectItem>
-                    <SelectItem value="jp">🇯🇵 Japan</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-sm font-medium">Postal Code</Label>
+                <Label>Postal Code</Label>
                 <Input
                   value={formData.postalCode}
                   onChange={(e) => handleInputChange('postalCode', e.target.value)}
@@ -409,20 +390,9 @@ export default function Registration() {
                 />
               </div>
             </div>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <Briefcase className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900">Professional & Financial Information</h3>
-              <p className="text-gray-600">Help us understand your financial profile</p>
-            </div>
 
             <div>
-              <Label className="text-sm font-medium">Occupation *</Label>
+              <Label>Occupation *</Label>
               <Input
                 value={formData.occupation}
                 onChange={(e) => handleInputChange('occupation', e.target.value)}
@@ -433,7 +403,7 @@ export default function Registration() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium">Employer</Label>
+              <Label>Employer</Label>
               <Input
                 value={formData.employer}
                 onChange={(e) => handleInputChange('employer', e.target.value)}
@@ -444,7 +414,7 @@ export default function Registration() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium">Annual Income *</Label>
+                <Label>Annual Income *</Label>
                 <Select value={formData.annualIncome} onValueChange={(value) => handleInputChange('annualIncome', value)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select income range" />
@@ -460,7 +430,7 @@ export default function Registration() {
                 </Select>
               </div>
               <div>
-                <Label className="text-sm font-medium">Source of Income</Label>
+                <Label>Source of Income</Label>
                 <Select value={formData.sourceOfIncome} onValueChange={(value) => handleInputChange('sourceOfIncome', value)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select source" />
@@ -475,10 +445,17 @@ export default function Registration() {
                 </Select>
               </div>
             </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Identification & Security</h3>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium">ID Document Type *</Label>
+                <Label>ID Document Type *</Label>
                 <Select value={formData.idType} onValueChange={(value) => handleInputChange('idType', value)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select ID type" />
@@ -492,7 +469,7 @@ export default function Registration() {
                 </Select>
               </div>
               <div>
-                <Label className="text-sm font-medium">ID Number *</Label>
+                <Label>ID Number *</Label>
                 <Input
                   value={formData.idNumber}
                   onChange={(e) => handleInputChange('idNumber', e.target.value)}
@@ -505,7 +482,7 @@ export default function Registration() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium">ID Expiry Date</Label>
+                <Label>ID Expiry Date</Label>
                 <Input
                   type="date"
                   value={formData.idExpiryDate}
@@ -514,7 +491,7 @@ export default function Registration() {
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium">Issuing Country</Label>
+                <Label>Issuing Country</Label>
                 <Select value={formData.issuingCountry} onValueChange={(value) => handleInputChange('issuingCountry', value)}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select country" />
@@ -529,20 +506,9 @@ export default function Registration() {
                 </Select>
               </div>
             </div>
-          </div>
-        );
-
-      case 4:
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <Shield className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900">Security & Terms</h3>
-              <p className="text-gray-600">Secure your account and accept our terms</p>
-            </div>
 
             <div>
-              <Label className="text-sm font-medium">Password *</Label>
+              <Label>Password *</Label>
               <div className="relative">
                 <Input
                   type={showPassword ? "text" : "password"}
@@ -563,7 +529,7 @@ export default function Registration() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium">Confirm Password *</Label>
+              <Label>Confirm Password *</Label>
               <div className="relative">
                 <Input
                   type={showConfirmPassword ? "text" : "password"}
@@ -587,7 +553,7 @@ export default function Registration() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium">Transfer PIN (6 digits) *</Label>
+              <Label>Transfer PIN (6 digits) *</Label>
               <div className="relative">
                 <Input
                   type={showPin ? "text" : "password"}
@@ -609,7 +575,7 @@ export default function Registration() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium">Confirm Transfer PIN *</Label>
+              <Label>Confirm Transfer PIN *</Label>
               <Input
                 type={showPin ? "text" : "password"}
                 value={formData.confirmTransferPin}
@@ -623,6 +589,13 @@ export default function Registration() {
                 <p className="text-red-500 text-sm mt-1">PINs do not match</p>
               )}
             </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold">Terms & Conditions</h3>
 
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
@@ -717,80 +690,63 @@ export default function Registration() {
         <Card className="shadow-2xl">
           <CardHeader>
             <CardTitle className="text-center text-2xl">Account Registration</CardTitle>
-            
-            {/* Progress Steps */}
-            <div className="flex justify-center space-x-2 mt-6">
-              {[1, 2, 3, 4].map((i) => {
-                const Icon = pageIcons[i - 1];
-                return (
-                  <div
-                    key={i}
-                    className={`flex flex-col items-center ${
-                      i === currentPage
-                        ? 'text-blue-600'
-                        : i < currentPage
-                        ? 'text-green-600'
-                        : 'text-gray-400'
-                    }`}
-                  >
-                    <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-medium mb-2 ${
-                        i === currentPage
-                          ? 'bg-blue-600 text-white'
-                          : i < currentPage
-                          ? 'bg-green-600 text-white'
-                          : 'bg-gray-200 text-gray-600'
-                      }`}
-                    >
-                      {i < currentPage ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
-                    </div>
-                    <span className="text-xs text-center px-1">{pageNames[i - 1]}</span>
-                  </div>
-                );
-              })}
+            <div className="flex justify-center space-x-2 mt-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                    i === step
+                      ? 'bg-blue-600 text-white'
+                      : i < step
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-200 text-gray-600'
+                  }`}
+                >
+                  {i < step ? <Check className="w-4 h-4" /> : i}
+                </div>
+              ))}
             </div>
-            
-            <div className="text-center mt-4">
+            <div className="text-center mt-2">
               <span className="text-sm text-gray-600">
-                Page {currentPage} of 4
+                Step {step} of 4: {
+                  step === 1 ? "Personal Information" :
+                  step === 2 ? "Address & Professional" :
+                  step === 3 ? "Identification & Security" :
+                  "Terms & Conditions"
+                }
               </span>
             </div>
           </CardHeader>
-          
           <CardContent>
-            <form onSubmit={currentPage === 4 ? handleSubmit : (e) => e.preventDefault()}>
-              {renderPage()}
+            <form onSubmit={step === 4 ? handleSubmit : (e) => e.preventDefault()}>
+              {renderStep()}
 
               <div className="flex justify-between mt-8">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentPage === 1}
-                  className="flex items-center space-x-2"
+                  onClick={() => setStep(step - 1)}
+                  disabled={step === 1}
                 >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Previous</span>
+                  Previous
                 </Button>
 
-                {currentPage < 4 ? (
+                {step < 4 ? (
                   <Button
                     type="button"
-                    onClick={handleNext}
-                    disabled={!validatePage(currentPage)}
-                    className="bg-blue-600 hover:bg-blue-700 flex items-center space-x-2"
+                    onClick={() => setStep(step + 1)}
+                    disabled={!validateStep(step)}
+                    className="bg-blue-600 hover:bg-blue-700"
                   >
-                    <span>Next</span>
-                    <ArrowRight className="w-4 h-4" />
+                    Next
                   </Button>
                 ) : (
                   <Button
                     type="submit"
-                    disabled={!validatePage(4) || loading}
-                    className="bg-green-600 hover:bg-green-700 flex items-center space-x-2"
+                    disabled={!validateStep(4) || loading}
+                    className="bg-green-600 hover:bg-green-700"
                   >
-                    <UserCheck className="w-4 h-4" />
-                    <span>{loading ? "Creating Account..." : "Create Account"}</span>
+                    {loading ? "Creating Account..." : "Create Account"}
                   </Button>
                 )}
               </div>

@@ -7,11 +7,11 @@ export default function BottomNavigation() {
   const { t } = useLanguage();
 
   const navigationItems = [
-    { icon: Home, label: t('home'), href: "/dashboard" },
-    { icon: CreditCard, label: t('cards'), href: "/credit-cards" },
-    { icon: ArrowLeftRight, label: t('transfer'), href: "/transfer-funds" },
-    { icon: FileText, label: t('history'), href: "/transaction-history" },
-    { icon: User, label: t('profile'), href: "/profile-settings" }
+    { icon: Home, label: t('nav_home'), href: "/dashboard" },
+    { icon: CreditCard, label: t('nav_cards'), href: "/credit-cards" },
+    { icon: ArrowLeftRight, label: t('nav_transfer'), href: "/transfer-funds" },
+    { icon: FileText, label: t('nav_history'), href: "/transaction-history" },
+    { icon: User, label: t('nav_profile'), href: "/profile-settings" }
   ];
 
   return (
