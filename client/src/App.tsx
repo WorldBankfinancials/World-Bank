@@ -96,7 +96,6 @@ function App() {
             <TooltipProvider>
               <Router>
                 <div className="min-h-screen bg-gray-50">
-                  <Header />
                   <main className="flex-1">
                     <Switch>
                       {/* Public Routes */}

@@ -5,7 +5,7 @@ import { Link, useLocation } from "wouter";
 import type { User as UserType } from "../../../shared/schema";
 import NavigationMenu from "./NavigationMenu";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from '@/contexts/AuthContext';
+// Removed unused import
 import { Avatar } from './Avatar';
 import { Button } from "@/components/ui/button";
 import LanguageSelector from "./LanguageSelector";
