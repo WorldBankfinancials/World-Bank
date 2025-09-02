@@ -28,22 +28,9 @@ export default function Dashboard() {
   const [showBalance, setShowBalance] = useState(true);
   const [hasError] = useState(false);
 
-  useEffect(() => {
-    if (!user) {
-      setLocation('/login');
-    }
-  }, [user, setLocation]);
+  // Removed redundant redirect - ProtectedRoute already handles this
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  // User check removed - handled by ProtectedRoute
 
   if (hasError) {
     return (
