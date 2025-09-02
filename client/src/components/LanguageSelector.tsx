@@ -11,11 +11,11 @@ import {
 import { ChevronDown, Globe } from 'lucide-react';
 
 export function LanguageSelector() {
-  const { currentLanguage, languages, changeLanguage } = useLanguage();
+  const languageContext = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
 
   // Safe fallback if language context is not available
-  if (!currentLanguage || !languages) {
+  if (!languageContext || !languageContext.currentLanguage || !languageContext.languages) {
     return (
       <div className="flex items-center space-x-2">
         <Globe className="h-4 w-4 text-gray-600" />
@@ -23,6 +23,8 @@ export function LanguageSelector() {
       </div>
     );
   }
+
+  const { currentLanguage, languages, changeLanguage } = languageContext;
 
   const handleLanguageSelect = (languageCode: string) => {
     try {

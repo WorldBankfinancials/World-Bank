@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Router, Switch, Route } from "wouter";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -13,6 +12,10 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import BottomNavigation from '@/components/BottomNavigation';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import LiveChat from '@/components/LiveChat';
+import RealtimeAlerts from '@/components/RealtimeAlerts';
 
 // Pages
 import Dashboard from '@/pages/dashboard';
@@ -50,6 +53,8 @@ import NotFound from '@/pages/not-found';
 import History from '@/pages/history';
 import Cards from '@/pages/cards';
 import Transfer from '@/pages/transfer';
+import VerificationCenter from '@/pages/verification-center';
+import About from '@/pages/about'; // Assuming 'About' page exists
 
 // Admin Pages
 import AdminLogin from '@/pages/admin-login';
@@ -63,6 +68,7 @@ import CustomerManagement from '@/pages/customer-management';
 import CustomerServicePortal from '@/pages/customer-service-portal';
 import FundManagement from '@/pages/fund-management';
 import TransactionRouter from '@/pages/transaction-router';
+import SimpleAdmin from '@/pages/simple-admin'; // Assuming 'SimpleAdmin' page exists
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,142 +80,147 @@ const queryClient = new QueryClient({
   },
 });
 
-// Error Fallback Component
-function ErrorFallback() {
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center p-8 max-w-md">
-        <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-        </div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">WORLD BANK</h1>
-        <p className="text-gray-600 mb-4">Starting your banking session...</p>
-        <button 
-          onClick={() => {
-            // Clear any problematic localStorage and reload
-            try {
-              localStorage.removeItem('selectedLanguage');
-            } catch (e) {}
-            window.location.reload();
-          }} 
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Refresh Application
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // Safe App Content Component
 function SafeAppContent() {
   try {
     return <AppContent />;
   } catch (error) {
     console.error('AppContent error:', error);
-    return <ErrorFallback />;
+    // Optionally return a simplified fallback or a specific error component
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center p-8 max-w-md">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">An Error Occurred</h1>
+          <p className="text-gray-600 mb-4">We encountered a problem loading the application. Please try refreshing.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Refresh Application
+          </button>
+        </div>
+      </div>
+    );
   }
 }
 
 function AppContent() {
-  try {
-    return (
-      <div className="min-h-screen bg-gray-50">
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <main className="flex-1">
         <Switch>
-          {/* Public Routes */}
-          <Route path="/login" component={Login} />
-          <Route path="/register" component={Registration} />
-          <Route path="/registration" component={Registration} />
-          <Route path="/verification" component={Verification} />
-          <Route path="/banking-services" component={BankingServices} />
-          <Route path="/business-banking" component={BusinessBanking} />
-          <Route path="/wealth-management" component={WealthManagement} />
-          <Route path="/find-branches" component={FindBranches} />
-          
-          {/* Admin Routes */}
-          <Route path="/admin" component={AdminLogin} />
-          <Route path="/admin/login" component={AdminLogin} />
-          <Route path="/admin/dashboard" component={AdminDashboard} />
-          <Route path="/admin/enhanced" component={EnhancedAdmin} />
-          <Route path="/admin/accounts" component={AdminAccounts} />
-          <Route path="/admin/transactions" component={AdminTransactionDashboard} />
-          <Route path="/admin/transaction-creator" component={AdminTransactionCreator} />
-          <Route path="/admin/live-chat" component={AdminLiveChat} />
-          <Route path="/admin/customers" component={CustomerManagement} />
-          <Route path="/admin/customer-service" component={CustomerServicePortal} />
-          <Route path="/admin/fund-management" component={FundManagement} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Registration />} />
 
           {/* Protected Routes */}
-          <ProtectedRoute>
-            <Switch>
-              <Route path="/" component={Dashboard} />
-              <Route path="/dashboard" component={Dashboard} />
-              <Route path="/credit-cards" component={CreditCards} />
-              <Route path="/cards" component={Cards} />
-              <Route path="/transfer-funds" component={TransferFunds} />
-              <Route path="/transfer" component={Transfer} />
-              <Route path="/international-transfer" component={InternationalTransfer} />
-              <Route path="/transaction-history" component={TransactionHistory} />
-              <Route path="/history" component={History} />
-              <Route path="/profile-settings" component={ProfileSettings} />
-              <Route path="/profile" component={ProfileSettings} />
-              <Route path="/security-settings" component={SecuritySettings} />
-              <Route path="/pin-settings" component={PinSettings} />
-              <Route path="/account-preferences" component={AccountPreferences} />
-              <Route path="/customer-support" component={CustomerSupport} />
-              <Route path="/support-center" component={SupportCenter} />
-              <Route path="/security-center" component={SecurityCenter} />
-              <Route path="/investment-portfolio" component={InvestmentPortfolio} />
-              <Route path="/investment-trading" component={InvestmentTrading} />
-              <Route path="/digital-wallet" component={DigitalWallet} />
-              <Route path="/mobile-pay" component={MobilePay} />
-              <Route path="/alerts" component={Alerts} />
-              <Route path="/statements-reports" component={StatementsReports} />
-              <Route path="/add-money" component={AddMoney} />
-              <Route path="/receive" component={Receive} />
-              <Route path="/transfer-success" component={TransferSuccess} />
-              <Route path="/transfer-pending" component={TransferPending} />
-              <Route path="/transfer-failed" component={TransferFailed} />
-              <Route path="/transfer-processing" component={TransferProcessing} />
-              <Route path="/transaction-router" component={TransactionRouter} />
-              <Route path="/customer-management" component={CustomerManagement} />
-              <Route path="/fund-management" component={FundManagement} />
-              <Route component={NotFound} />
-            </Switch>
-          </ProtectedRoute>
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/transfer" element={<Transfer />} />
+            <Route path="/cards" element={<Cards />} />
+            <Route path="/verification-center" element={<VerificationCenter />} />
+            <Route path="/history" element={<History />} />
+            <Route path="/profile" element={<ProfileSettings />} />
+            <Route path="/security-settings" element={<SecuritySettings />} />
+            <Route path="/pin-settings" element={<PinSettings />} />
+            <Route path="/account-preferences" element={<AccountPreferences />} />
+
+            {/* Transfer routes */}
+            <Route path="/transfer-funds" element={<TransferFunds />} />
+            <Route path="/international-transfer" element={<InternationalTransfer />} />
+            <Route path="/transfer-processing" element={<TransferProcessing />} />
+            <Route path="/transfer-success" element={<TransferSuccess />} />
+            <Route path="/transfer-failed" element={<TransferFailed />} />
+            <Route path="/transfer-pending" element={<TransferPending />} />
+
+            {/* Additional banking routes */}
+            <Route path="/credit-cards" element={<CreditCards />} />
+            <Route path="/mobile-pay" element={<MobilePay />} />
+            <Route path="/add-money" element={<AddMoney />} />
+            <Route path="/receive" element={<Receive />} />
+            <Route path="/alerts" element={<Alerts />} />
+            <Route path="/banking-services" element={<BankingServices />} />
+            <Route path="/business-banking" element={<BusinessBanking />} />
+            <Route path="/investment-portfolio" element={<InvestmentPortfolio />} />
+            <Route path="/investment-trading" element={<InvestmentTrading />} />
+            <Route path="/wealth-management" element={<WealthManagement />} />
+            <Route path="/fund-management" element={<FundManagement />} />
+            <Route path="/digital-wallet" element={<DigitalWallet />} />
+            <Route path="/find-branches" element={<FindBranches />} />
+            <Route path="/customer-support" element={<CustomerSupport />} />
+            <Route path="/support-center" element={<SupportCenter />} />
+            <Route path="/security-center" element={<SecurityCenter />} />
+            <Route path="/statements-reports" element={<StatementsReports />} />
+            <Route path="/transaction-history" element={<TransactionHistory />} />
+            <Route path="/verification" element={<Verification />} />
+            <Route path="/about" element={<About />} />
+
+            {/* Admin routes */}
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/admin-transaction-dashboard" element={<AdminTransactionDashboard />} />
+            <Route path="/admin-transaction-creator" element={<AdminTransactionCreator />} />
+            <Route path="/admin-accounts" element={<AdminAccounts />} />
+            <Route path="/customer-management" element={<CustomerManagement />} />
+            <Route path="/customer-service-portal" element={<CustomerServicePortal />} />
+            <Route path="/enhanced-admin" element={<EnhancedAdmin />} />
+            <Route path="/simple-admin" element={<SimpleAdmin />} />
+            <Route path="/admin-live-chat" element={<AdminLiveChat />} />
+          </Route>
+
+          {/* Admin login */}
+          <Route path="/admin-login" element={<AdminLogin />} />
+
+          {/* 404 route */}
+          <Route path="*" element={<NotFound />} />
         </Switch>
-      </div>
-    );
-  } catch (error) {
-    console.error('App render error:', error);
-    return <ErrorFallback />;
-  }
+      </main>
+      <Footer />
+      <BottomNavigation />
+      <LiveChat />
+      <RealtimeAlerts />
+      <Toaster />
+    </div>
+  );
 }
 
+
 function App() {
-  try {
-    return (
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <AuthProvider>
-              <LanguageProvider>
-                <Router>
-                  <SafeAppContent />
-                </Router>
-              </LanguageProvider>
-            </AuthProvider>
-          </TooltipProvider>
-          <Toaster />
-        </QueryClientProvider>
-      </ErrorBoundary>
-    );
-  } catch (error) {
-    console.error('Critical app error:', error);
-    return <ErrorFallback />;
-  }
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <AuthProvider>
+            <Router>
+              <div className="min-h-screen bg-gray-50">
+                <ErrorBoundary>
+                  <Header />
+                </ErrorBoundary>
+                <main className="flex-1">
+                  <ErrorBoundary>
+                    <SafeAppContent />
+                  </ErrorBoundary>
+                </main>
+                <ErrorBoundary>
+                  <Footer />
+                </ErrorBoundary>
+                <ErrorBoundary>
+                  <BottomNavigation />
+                </ErrorBoundary>
+                <ErrorBoundary>
+                  <LiveChat />
+                </ErrorBoundary>
+                <ErrorBoundary>
+                  <RealtimeAlerts />
+                </ErrorBoundary>
+                <Toaster />
+              </div>
+            </Router>
+          </AuthProvider>
+        </LanguageProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
 }
 
 export default App;

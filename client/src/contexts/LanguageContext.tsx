@@ -533,18 +533,23 @@ interface LanguageProviderProps {
 
 // Language provider component
 export function LanguageProvider({ children }: LanguageProviderProps) {
-  const [currentLanguage, setCurrentLanguage] = useState<Language>(() => {
+  const [currentLanguage, setCurrentLanguage] = useState<Language>(LANGUAGES[0]);
+
+  // Initialize language on mount
+  useEffect(() => {
     try {
       const savedLang = localStorage.getItem('selectedLanguage');
       if (savedLang) {
         const found = LANGUAGES.find(lang => lang.code === savedLang);
-        return found || LANGUAGES[0];
+        if (found) {
+          setCurrentLanguage(found);
+        }
       }
     } catch (error) {
       console.warn('Error loading saved language:', error);
+      setCurrentLanguage(LANGUAGES[0]);
     }
-    return LANGUAGES[0];
-  });
+  }, []);
 
   // Change language function
   const changeLanguage = (code: string) => {

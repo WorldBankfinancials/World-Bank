@@ -11,6 +11,16 @@ interface State {
   errorInfo?: React.ErrorInfo;
 }
 
+interface Props {
+  children: React.ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error?: Error;
+  errorInfo?: React.ErrorInfo;
+}
+
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -25,8 +35,7 @@ class ErrorBoundary extends Component<Props, State> {
       'ChunkLoadError',
       'Loading chunk',
       'Failed to fetch dynamically imported module',
-      'Network Error',
-      'TypeError: undefined is not an object'
+      'Network Error'
     ];
     
     const isCritical = criticalErrorMessages.some(msg => 
@@ -34,9 +43,12 @@ class ErrorBoundary extends Component<Props, State> {
     );
     
     // For language/translation errors, try to recover
-    if (error.message && error.message.includes('currentLanguage')) {
+    if (error.message && (
+      error.message.includes('currentLanguage') ||
+      error.message.includes('useLanguage') ||
+      error.message.includes('translation')
+    )) {
       console.warn('Language context error - attempting recovery');
-      // Don't show error boundary, let the component handle it
       return { hasError: false };
     }
     
@@ -47,13 +59,59 @@ class ErrorBoundary extends Component<Props, State> {
     console.error('Error caught by boundary:', error, errorInfo);
     
     // For language-related errors, don't show error boundary
-    if (error.message && error.message.includes('currentLanguage')) {
+    if (error.message && (
+      error.message.includes('currentLanguage') ||
+      error.message.includes('useLanguage') ||
+      error.message.includes('translation')
+    )) {
       this.setState({ hasError: false });
       return;
     }
     
     this.setState({ errorInfo });
   }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+          <div className="text-center p-8">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">
+              Critical Application Error
+            </h1>
+            <p className="text-gray-600 mb-4">
+              A critical error occurred that prevents the application from running.
+            </p>
+            <div className="space-y-2">
+              <button 
+                onClick={() => window.location.reload()}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                Try Again
+              </button>
+              <button 
+                onClick={() => window.location.reload()}
+                className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 ml-2"
+              >
+                Refresh Page
+              </button>
+            </div>
+            {this.state.error && (
+              <details className="mt-4 text-left">
+                <summary className="cursor-pointer text-gray-500">Error Details</summary>
+                <pre className="mt-2 p-2 bg-gray-100 text-xs overflow-auto">
+                  {this.state.error.message}
+                </pre>
+              </details>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
   render() {
     if (this.state.hasError) {

@@ -466,8 +466,18 @@ function AlertsSection() {
 }
 
 export default function Dashboard() {
-  const { t } = useLanguage();
-  const { userProfile, isLoading: isLoadingAuth } = useAuth(); // Assuming useAuth provides isLoading
+  const { user, logout } = useAuth();
+  const languageContext = useLanguage();
+
+  // Safe translation function
+  const t = (key: string, fallback?: string) => {
+    try {
+      return languageContext?.t?.(key) || fallback || key;
+    } catch (error) {
+      console.warn('Translation error for key:', key, error);
+      return fallback || key;
+    }
+  };
   const [showBalance, setShowBalance] = React.useState(true);
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [isChatOpen, setIsChatOpen] = React.useState(false);
@@ -700,7 +710,7 @@ export default function Dashboard() {
       </div>
     );
   }
-  
+
   // Render the dashboard if no loading or error states
   return (
     <div className="min-h-screen bg-gray-50 pb-20">

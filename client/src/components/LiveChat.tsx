@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { realtimeChat, RealtimeMessage } from "@/lib/supabase-realtime";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ChatMessage {
   id: string;
@@ -38,7 +39,21 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { userProfile } = useAuth();
+  const { t } = useLanguage(); // Use language context
   const wsRef = useRef<WebSocket | null>(null);
+
+  // Safe translation function
+  const safeT = (key: string, fallback?: string) => {
+    try {
+      // Ensure t is called correctly and handle potential errors
+      const translatedText = t(key);
+      return translatedText || fallback || key;
+    } catch (error) {
+      console.warn('Translation error for key:', key, error);
+      return fallback || key;
+    }
+  };
+
 
   useEffect(() => {
     if (isOpen) {
@@ -66,7 +81,7 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
         senderName: msg.senderName,
         senderRole: msg.senderRole,
         message: msg.message,
-        timestamp: msg.timestamp,
+        timestamp: new Date(msg.timestamp),
         isRead: msg.isRead
       }));
       setMessages(prev => [...prev, ...formattedMessages]);
@@ -79,9 +94,9 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = `${protocol}//${window.location.host}/ws`;
-      
+
       wsRef.current = new WebSocket(wsUrl);
-      
+
       wsRef.current.onopen = () => {
         setIsConnected(true);
         console.log('Live chat connected');
@@ -186,25 +201,26 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
         <div className="flex items-center space-x-2">
           <MessageSquare className="w-5 h-5" />
           <div>
-            <div className="font-semibold">World Bank Support</div>
+            {/* Use safeT for translated strings */}
+            <div className="font-semibold">{safeT('WorldBankSupport', 'World Bank Support')}</div>
             <div className="text-xs flex items-center space-x-1">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
-              <span>{isConnected ? 'Online' : 'Connecting...'}</span>
+              <span>{isConnected ? safeT('Online', 'Online') : safeT('Connecting', 'Connecting...')}</span>
             </div>
           </div>
         </div>
         <div className="flex items-center space-x-1">
-          <Button 
-            size="sm" 
-            variant="ghost" 
+          <Button
+            size="sm"
+            variant="ghost"
             className="text-white hover:bg-blue-700 p-1 h-8 w-8"
             onClick={() => setIsMinimized(!isMinimized)}
           >
             <Minimize2 className="w-4 h-4" />
           </Button>
-          <Button 
-            size="sm" 
-            variant="ghost" 
+          <Button
+            size="sm"
+            variant="ghost"
             className="text-white hover:bg-blue-700 p-1 h-8 w-8"
             onClick={onClose}
           >
@@ -261,7 +277,7 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Type your message here..."
+                placeholder={safeT("Typeyourmessagehere...", "Type your message here...")}
                 className="flex-1 border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-sm h-12 px-4 py-3 rounded-md bg-white text-gray-900 placeholder-gray-500 outline-none"
                 disabled={!isConnected}
                 autoComplete="off"
@@ -273,8 +289,8 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
                   color: '#111827'
                 }}
               />
-              <Button 
-                onClick={sendMessage} 
+              <Button
+                onClick={sendMessage}
                 size="sm"
                 disabled={!newMessage.trim() || !isConnected}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 h-12 flex items-center justify-center flex-shrink-0 rounded-md"
@@ -285,9 +301,9 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
             <div className="flex items-center justify-between text-xs text-gray-500">
               <span className="flex items-center space-x-1">
                 <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
-                <span>{isConnected ? 'Connected' : 'Connecting...'}</span>
+                <span>{isConnected ? safeT('Connected', 'Connected') : safeT('Connecting', 'Connecting...')}</span>
               </span>
-              <span className="font-medium">Press Enter to send</span>
+              <span className="font-medium">{safeT('PressEntertosend', 'Press Enter to send')}</span>
             </div>
           </div>
         </>
