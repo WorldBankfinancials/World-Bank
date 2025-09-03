@@ -90,7 +90,7 @@ export default function InternationalTransfer() {
       }
     } catch (error) {
       console.error('International transfer error:', error);
-      setPinError("Network error. Please check your connection and try again.");
+      setPinError("System error. Transfer failed. Please try again.");
     } finally {
       setIsProcessing(false);
     }

@@ -6,6 +6,81 @@ function generateReferenceNumber(): string {
 }
 
 export function setupTransferRoutes(app: Express) {
+  // Regular Transfer API
+  app.post('/api/transfers', async (req: Request, res: Response) => {
+    try {
+      const {
+        amount,
+        recipientName,
+        recipientAccount,
+        recipientCountry,
+        bankName,
+        swiftCode,
+        transferPin
+      } = req.body;
+
+      // Validate PIN
+      if (transferPin !== "0192") {
+        return res.status(400).json({ message: "Invalid PIN. Please try PIN: 0192" });
+      }
+
+      // Validate required fields
+      if (!amount || !recipientName || !recipientAccount) {
+        return res.status(400).json({ message: "Missing required transfer details" });
+      }
+
+      const transactionId = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+      res.json({ 
+        message: "Transfer submitted successfully", 
+        transactionId: transactionId,
+        status: "pending_approval",
+        amount: amount
+      });
+    } catch (error) {
+      console.error("Regular transfer error:", error);
+      res.status(500).json({ message: "Transfer system error" });
+    }
+  });
+
+  // International Transfer API
+  app.post('/api/international-transfers', async (req: Request, res: Response) => {
+    try {
+      const {
+        amount,
+        recipientName,
+        recipientCountry,
+        bankName,
+        swiftCode,
+        accountNumber,
+        transferPurpose,
+        transferPin
+      } = req.body;
+
+      // Validate PIN
+      if (transferPin !== "0192") {
+        return res.status(400).json({ message: "Invalid PIN. Please try PIN: 0192" });
+      }
+
+      // Validate required fields
+      if (!amount || !recipientName || !recipientCountry) {
+        return res.status(400).json({ message: "Missing required international transfer details" });
+      }
+
+      const transactionId = `INT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+      res.json({ 
+        message: "International transfer submitted successfully", 
+        id: transactionId,
+        status: "processing",
+        amount: amount
+      });
+    } catch (error) {
+      console.error("International transfer error:", error);
+      res.status(500).json({ message: "International transfer system error" });
+    }
+  });
+
   // Enhanced Transfer API with proper workflow
   app.post('/api/transactions', async (req: Request, res: Response) => {
     try {

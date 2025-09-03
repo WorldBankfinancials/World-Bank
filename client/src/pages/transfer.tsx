@@ -156,7 +156,7 @@ export default function Transfer() {
         setPinError(error.message || "Invalid PIN. Please try PIN: 0192");
       }
     } catch (error) {
-      setPinError("An error occurred. Please try again.");
+      setPinError("Connection error. Please check network and try again.");
     } finally {
       setIsProcessing(false);
     }
