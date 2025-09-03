@@ -13,22 +13,26 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     res.json({ status: 'OK', timestamp: new Date() });
   });
 
-  // Test Supabase connection endpoint
+  // Test Supabase connection and create tables
   app.get('/test-supabase-connection', async (req: Request, res: Response) => {
     try {
-      if (storage instanceof (await import('./supabase-public-storage')).SupabasePublicStorage) {
+      const { SupabasePublicStorage } = await import('./supabase-public-storage');
+      if (storage instanceof SupabasePublicStorage) {
         const connected = await (storage as any).testConnection();
         if (!connected) {
+          console.log('🔄 Creating banking tables in Supabase...');
           await (storage as any).createTables();
         }
         res.json({ 
-          connected, 
-          message: connected ? 'Supabase connection successful' : 'Created tables in Supabase' 
+          connected: true, 
+          message: connected ? 'Supabase connection successful' : 'Created banking tables in Supabase',
+          details: 'Banking system ready with international support'
         });
       } else {
         res.json({ connected: false, message: 'Not using Supabase storage' });
       }
     } catch (error) {
+      console.error('Supabase setup error:', error);
       res.status(500).json({ error: 'Connection test failed', details: error.message });
     }
   });

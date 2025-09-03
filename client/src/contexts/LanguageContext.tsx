@@ -156,7 +156,26 @@ const translations = {
     'error': 'Error',
     'success': 'Success',
     'warning': 'Warning',
-    'info': 'Information'
+    'info': 'Information',
+    
+    // International Banking
+    'international_banking': 'International Banking',
+    'international_transfers': 'International Transfers',
+    'currency_exchange': 'Currency Exchange',
+    'cross_border_payments': 'Cross-Border Payments',
+    'swift_transfers': 'SWIFT Transfers',
+    'correspondent_banking': 'Correspondent Banking',
+    'foreign_exchange': 'Foreign Exchange',
+    'trade_finance': 'Trade Finance',
+    'letter_of_credit': 'Letter of Credit',
+    'wire_transfers': 'Wire Transfers',
+    'multi_currency_accounts': 'Multi-Currency Accounts',
+    'exchange_rates': 'Exchange Rates',
+    'international_compliance': 'International Compliance',
+    'anti_money_laundering': 'Anti-Money Laundering (AML)',
+    'know_your_customer': 'Know Your Customer (KYC)',
+    'sanctions_screening': 'Sanctions Screening',
+    'regulatory_reporting': 'Regulatory Reporting'
   },
   zh: {
     // Login & Auth
@@ -267,7 +286,26 @@ const translations = {
     'error': '错误',
     'success': '成功',
     'warning': '警告',
-    'info': '信息'
+    'info': '信息',
+    
+    // International Banking (Chinese)
+    'international_banking': '国际银行',
+    'international_transfers': '国际转账',
+    'currency_exchange': '外汇兑换',
+    'cross_border_payments': '跨境支付',
+    'swift_transfers': 'SWIFT转账',
+    'correspondent_banking': '代理银行',
+    'foreign_exchange': '外汇',
+    'trade_finance': '贸易融资',
+    'letter_of_credit': '信用证',
+    'wire_transfers': '电汇',
+    'multi_currency_accounts': '多币种账户',
+    'exchange_rates': '汇率',
+    'international_compliance': '国际合规',
+    'anti_money_laundering': '反洗钱 (AML)',
+    'know_your_customer': '了解您的客户 (KYC)',
+    'sanctions_screening': '制裁筛查',
+    'regulatory_reporting': '监管报告'
   }
 };
 
