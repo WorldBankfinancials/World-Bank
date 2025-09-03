@@ -131,6 +131,11 @@ const translations = {
     // Common
     'loading': 'Loading...',
     'common.loading': 'Loading...',
+    'pin_verification_required': 'PIN Verification Required',
+    'enter_pin_complete_login': 'Enter your PIN to complete login',
+    'security_pin': 'Security PIN',
+    'cancel': 'Cancel',
+    'verify_pin': 'Verify PIN',
     'common.error': 'Error',
     'common.success': 'Success',
     'common.cancel': 'Cancel',
