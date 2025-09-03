@@ -103,7 +103,7 @@ export default function MultiStepRegisterPage() {
         }
       }
 
-      // Create Supabase account
+      // Create Supabase account - REQUIRES ADMIN APPROVAL
       const { error } = await signUp(completeData.email, completeData.password, {
         full_name: `${completeData.firstName} ${completeData.lastName}`,
         phone: completeData.phone,
@@ -122,7 +122,11 @@ export default function MultiStepRegisterPage() {
         id_type: completeData.idType,
         id_number: completeData.idNumber,
         transfer_pin: completeData.transferPin,
-        id_card_url: idCardUrl
+        id_card_url: idCardUrl,
+        // ADMIN APPROVAL REQUIRED
+        approval_status: 'pending',
+        is_approved: false,
+        registration_date: new Date().toISOString()
       });
 
       if (error) {
@@ -130,12 +134,13 @@ export default function MultiStepRegisterPage() {
       }
 
       toast({
-        title: 'Registration Successful!',
-        description: 'Your account has been created. Please check your email to verify your account.',
+        title: 'Registration Submitted Successfully!',
+        description: 'Your application is pending admin approval. You will receive an email notification once approved.',
+        duration: 5000,
       });
 
-      // Redirect to login or dashboard
-      setLocation('/login');
+      // Redirect to login with pending approval message
+      setLocation('/login?status=pending');
 
     } catch (error) {
       console.error('Registration error:', error);

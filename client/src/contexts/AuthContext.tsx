@@ -115,6 +115,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.user) {
+        // CHECK FOR ADMIN APPROVAL BEFORE ALLOWING ACCESS
+        const approvalStatus = data.user.user_metadata?.approval_status;
+        const isApproved = data.user.user_metadata?.is_approved;
+        
+        if (approvalStatus === 'pending' || isApproved === false) {
+          // Sign out the user immediately
+          await supabase.auth.signOut();
+          console.log('❌ User not approved yet:', email);
+          return { 
+            error: 'Your registration is pending admin approval. Please wait for approval email before logging in.' 
+          };
+        }
+        
         setUser(data.user);
         await fetchUserData(data.user);
         return {};

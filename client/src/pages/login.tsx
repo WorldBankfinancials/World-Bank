@@ -21,6 +21,18 @@ export default function Login() {
   const { toast } = useToast();
   const { t, currentLanguage, setLanguage, languages } = useLanguage();
   const [loading, setLoading] = useState(false);
+
+  // Check for pending approval status from URL params
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('status') === 'pending') {
+      toast({
+        title: "Registration Pending Approval",
+        description: "Your registration is being reviewed by our admin team. You'll receive an email once approved.",
+        duration: 8000,
+      });
+    }
+  }, [toast]);
   const [showPassword, setShowPassword] = useState(false);
   const [showPinVerification, setShowPinVerification] = useState(false);
   const [loginPin, setLoginPin] = useState("");
@@ -231,7 +243,7 @@ export default function Login() {
                 <p className="text-sm text-gray-600">
                   {t('new_customer')}{" "}
                   <button
-                    onClick={() => setLocation("/register")}
+                    onClick={() => setLocation("/register-multi")}
                     className="text-blue-600 hover:text-blue-700 font-semibold hover:underline transition-all"
                   >
                     {t('create_account')}
