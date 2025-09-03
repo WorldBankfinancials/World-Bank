@@ -13,14 +13,18 @@ import {
 } from "@shared/schema";
 import { IStorage } from "./storage";
 
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Use DATABASE_URL for direct PostgreSQL connection instead of Supabase
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase environment variables');
+const databaseUrl = process.env.DATABASE_URL!;
+
+if (!databaseUrl) {
+  throw new Error('Missing DATABASE_URL environment variable');
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const connection = postgres(databaseUrl);
+const db = drizzle(connection);
 
 export class SupabaseStorage implements IStorage {
   
