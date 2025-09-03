@@ -44,7 +44,8 @@ export default function RegistrationStep2({ initialData = {}, onNext, onBack }: 
     defaultValues: initialData
   });
 
-  const country = watch('country');
+  // Remove unused variable
+  // const country = watch('country');
 
   const onSubmit = async (data: Step2Data) => {
     setIsLoading(true);

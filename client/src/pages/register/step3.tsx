@@ -37,7 +37,7 @@ export default function RegistrationStep3({ initialData = {}, onNext, onBack }: 
     handleSubmit,
     formState: { errors },
     setValue,
-    watch
+    // watch - removed unused import
   } = useForm<Step3Data>({
     resolver: zodResolver(step3Schema),
     defaultValues: initialData
