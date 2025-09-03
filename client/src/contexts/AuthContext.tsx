@@ -52,36 +52,93 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       console.log('🔍 Fetching user data for:', supabaseUser.email);
       
-      // For authenticated users, create profile from Supabase user data
-      // We'll fetch real banking data from your new Supabase tables
-      const userProfile: UserProfile = {
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        fullName: supabaseUser.user_metadata?.full_name || 'Liu Wei (刘娟)',
-        phone: '+86 138 0013 8000',
-        accountNumber: '4789-6523-1087-9234',
-        accountId: 'WB-2024-7829',
-        profession: 'Fashion Brands Manager',
-        dateOfBirth: '1963-10-17',
-        address: 'Beijing Shijingshan District',
-        city: 'Beijing',
-        state: 'Beijing',
-        country: 'China',
-        postalCode: '100043',
-        annualIncome: '$150,000+',
-        idType: 'National ID',
-        idNumber: '310115198503150123',
-        transferPin: '0192',
-        role: 'customer',
-        isVerified: true,
-        isOnline: true,
-        isActive: true,
-        avatarUrl: undefined,
-        balance: 4498882.65
-      };
+      // Try to fetch existing user from your banking system using Supabase UUID
+      try {
+        const response = await fetch(`/api/users/supabase/${supabaseUser.id}`);
+        if (response.ok) {
+          const bankingUser = await response.json();
+          
+          // User exists in banking system - use real data
+          const userProfile: UserProfile = {
+            id: supabaseUser.id,
+            email: supabaseUser.email || '',
+            fullName: bankingUser.fullName,
+            phone: bankingUser.phone,
+            accountNumber: bankingUser.accountNumber,
+            accountId: bankingUser.accountId,
+            profession: bankingUser.profession,
+            dateOfBirth: bankingUser.dateOfBirth,
+            address: bankingUser.address,
+            city: bankingUser.city,
+            state: bankingUser.state,
+            country: bankingUser.country,
+            postalCode: bankingUser.postalCode,
+            annualIncome: bankingUser.annualIncome,
+            idType: bankingUser.idType,
+            idNumber: bankingUser.idNumber,
+            transferPin: bankingUser.transferPin,
+            role: bankingUser.role,
+            isVerified: bankingUser.isVerified,
+            isOnline: bankingUser.isOnline,
+            isActive: bankingUser.isActive,
+            avatarUrl: bankingUser.avatarUrl || supabaseUser.user_metadata?.avatar_url,
+            balance: bankingUser.balance
+          };
+          
+          console.log('✅ User profile loaded from banking system');
+          setUserProfile(userProfile);
+          return;
+        }
+      } catch (error) {
+        console.log('User not found in banking system, creating new profile...');
+      }
       
-      setUserProfile(userProfile);
-      console.log('✅ User profile created from Supabase data');
+      // User doesn't exist in banking system - create new banking profile
+      try {
+        const response = await fetch('/api/users/create-supabase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            supabaseUserId: supabaseUser.id,
+            email: supabaseUser.email,
+            fullName: supabaseUser.user_metadata?.full_name || 'Banking Customer'
+          })
+        });
+        
+        if (response.ok) {
+          const newBankingUser = await response.json();
+          const userProfile: UserProfile = {
+            id: supabaseUser.id,
+            email: supabaseUser.email || '',
+            fullName: newBankingUser.fullName,
+            phone: newBankingUser.phone,
+            accountNumber: newBankingUser.accountNumber,
+            accountId: newBankingUser.accountId,
+            profession: newBankingUser.profession,
+            dateOfBirth: newBankingUser.dateOfBirth,
+            address: newBankingUser.address,
+            city: newBankingUser.city,
+            state: newBankingUser.state,
+            country: newBankingUser.country,
+            postalCode: newBankingUser.postalCode,
+            annualIncome: newBankingUser.annualIncome,
+            idType: newBankingUser.idType,
+            idNumber: newBankingUser.idNumber,
+            transferPin: newBankingUser.transferPin,
+            role: newBankingUser.role,
+            isVerified: newBankingUser.isVerified,
+            isOnline: newBankingUser.isOnline,
+            isActive: newBankingUser.isActive,
+            avatarUrl: newBankingUser.avatarUrl || supabaseUser.user_metadata?.avatar_url,
+            balance: newBankingUser.balance
+          };
+          
+          console.log('✅ New banking profile created');
+          setUserProfile(userProfile);
+        }
+      } catch (error) {
+        console.error('Failed to create banking profile:', error);
+      }
     } catch (error) {
       console.error('Failed to fetch user data:', error);
       // Set minimal profile from Supabase user

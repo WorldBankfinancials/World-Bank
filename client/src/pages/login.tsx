@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Mail, Lock, Eye, EyeOff, Shield } from "lucide-react";
+import { AlertCircle, Lock, Eye, EyeOff, Shield } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
@@ -13,13 +13,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
-import type { User } from "@shared/schema";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { signIn } = useAuth();
   const { toast } = useToast();
-  const { t, currentLanguage, setLanguage, languages } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const [loading, setLoading] = useState(false);
 
   // Check for pending approval status from URL params
@@ -43,7 +42,7 @@ export default function Login() {
   });
 
   // Fetch user data to get current PIN when PIN verification is shown
-  const { data: userData } = useQuery<User>({
+  const { data: userData } = useQuery({
     queryKey: ['/api/user'],
     enabled: showPinVerification, // Only fetch when PIN verification is needed
   });
@@ -130,16 +129,13 @@ export default function Login() {
           {/* Language Selector */}
           <div className="flex justify-end mb-6">
             <div className="w-32">
-              <Select value={currentLanguage.code} onValueChange={(value) => setLanguage(languages.find(l => l.code === value)!)}>
+              <Select value={language} onValueChange={(value: 'en' | 'zh') => setLanguage(value)}>
                 <SelectTrigger className="bg-white/80 backdrop-blur-sm border-white/50">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {languages.map((lang) => (
-                    <SelectItem key={lang.code} value={lang.code}>
-                      {lang.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="zh">中文</SelectItem>
                 </SelectContent>
               </Select>
             </div>

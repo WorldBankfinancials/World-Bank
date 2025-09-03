@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   Send, 
@@ -16,21 +16,16 @@ import {
   Smartphone,
   Users,
   Clock,
-  Shield,
-  CheckCircle,
-  ArrowRight,
-  Calculator
+  Shield
 } from "lucide-react";
-import type { User } from "@shared/schema";
 
 export default function Transfer() {
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading } = useQuery({
     queryKey: ['/api/user'],
   });
   const { userProfile } = useAuth();
   
   const [amount, setAmount] = useState("");
-  const [recipient, setRecipient] = useState("");
   const [transferType, setTransferType] = useState("international");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPinVerification, setShowPinVerification] = useState(false);
