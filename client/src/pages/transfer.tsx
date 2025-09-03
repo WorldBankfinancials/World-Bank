@@ -122,9 +122,10 @@ export default function Transfer() {
 
       if (response.ok) {
         const result = await response.json();
+        console.log('Transfer successful:', result);
         setShowPinVerification(false);
         setTransferPin("");
-        setTransferReference(result.id);
+        setTransferReference(result.transactionId || result.id || `WB-${Date.now()}`);
         
         // Show pending status instead of alert
         setShowPendingStatus(true);

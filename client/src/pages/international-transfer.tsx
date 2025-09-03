@@ -78,9 +78,10 @@ export default function InternationalTransfer() {
       const result = await response.json();
       
       if (response.ok) {
+        console.log('International transfer successful:', result);
         setShowPinModal(false);
         setTransferPin('');
-        setTransferId(result.id || 'INT-' + Date.now());
+        setTransferId(result.id || `INT-${Date.now()}`);
         setShowProcessingPage(true);
       } else {
         setPinError(result.message || "Transfer failed");
