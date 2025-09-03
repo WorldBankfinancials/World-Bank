@@ -127,7 +127,7 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 w-80 h-[450px] bg-white rounded-lg shadow-xl border border-gray-200 z-50 flex flex-col">
+    <div className="fixed bottom-20 right-4 w-80 h-[400px] bg-white rounded-lg shadow-xl border border-gray-200 z-50 flex flex-col">
       {/* Chat Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-blue-600 text-white rounded-t-lg">
         <div className="flex items-center space-x-2">

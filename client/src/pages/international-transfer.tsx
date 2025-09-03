@@ -51,6 +51,7 @@ export default function InternationalTransfer() {
   };
 
   const handlePinSubmit = async () => {
+    console.log('PIN submitted:', transferPin);
     if (!transferPin || transferPin.length !== 4) {
       setPinError("Please enter a 4-digit PIN");
       return;

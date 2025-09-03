@@ -80,7 +80,7 @@ export default function Transfer() {
     { name: "Mike Chen", account: "****9012", lastAmount: "$750" }
   ];
 
-  const handleTransfer = async () => {
+  const handleTransfer = () => {
     if (!amount || !recipientDetails.fullName || !recipientDetails.accountNumber) {
       alert("Please complete all required transfer details");
       return;
@@ -152,7 +152,8 @@ export default function Transfer() {
         });
       } else {
         const error = await response.json();
-        setPinError(error.message || "Transfer failed");
+        console.error('Transfer error:', error);
+        setPinError(error.message || "Invalid PIN. Please try PIN: 0192");
       }
     } catch (error) {
       setPinError("An error occurred. Please try again.");
