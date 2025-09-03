@@ -496,8 +496,8 @@ export default function Transfer() {
 
             <Button 
               onClick={handleTransfer}
-              disabled={!amount || !recipientDetails.fullName || !recipientDetails.accountNumber || !recipientDetails.swiftCode || isProcessing}
-              className="w-full bg-blue-600 text-white h-12"
+              disabled={!amount || !recipientDetails.fullName || !recipientDetails.accountNumber || isProcessing}
+              className="w-full bg-blue-600 text-white h-12 hover:bg-blue-700"
             >
               {isProcessing ? (
                 <>

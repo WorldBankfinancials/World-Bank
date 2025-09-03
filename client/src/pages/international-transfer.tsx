@@ -84,10 +84,12 @@ export default function InternationalTransfer() {
         setTransferId(result.id || `INT-${Date.now()}`);
         setShowProcessingPage(true);
       } else {
-        setPinError(result.message || "Transfer failed");
+        console.log('Transfer failed:', result);
+        setPinError(result.message || "Invalid PIN. Please try again.");
       }
     } catch (error) {
-      setPinError("An error occurred. Please try again.");
+      console.error('International transfer error:', error);
+      setPinError("Network error. Please check your connection and try again.");
     } finally {
       setIsProcessing(false);
     }
