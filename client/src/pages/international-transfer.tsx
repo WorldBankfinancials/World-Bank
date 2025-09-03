@@ -137,9 +137,9 @@ export default function InternationalTransfer() {
                   <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Clock className="w-10 h-10 text-blue-600 animate-spin" />
                   </div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">International Transfer Pending Admin Approval</h2>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">International Transfer Processing</h2>
                   <p className="text-gray-600 mb-4">
-                    Your international transfer is being processed and submitted for admin approval.
+                    Your international transfer is being processed securely through our banking network.
                   </p>
                 </div>
                 
@@ -150,7 +150,7 @@ export default function InternationalTransfer() {
                   </div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-600">Status</span>
-                    <span className="text-sm font-medium text-orange-600">Pending Admin Approval</span>
+                    <span className="text-sm font-medium text-orange-600">Processing</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Amount</span>
@@ -165,11 +165,11 @@ export default function InternationalTransfer() {
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-orange-500 rounded-full mr-3 animate-pulse"></div>
-                    <span className="text-sm text-gray-700">Awaiting admin approval</span>
+                    <span className="text-sm text-gray-700">Processing to recipient bank</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
-                    <span className="text-sm text-gray-500">Processing to recipient bank</span>
+                    <span className="text-sm text-gray-500">Awaiting bank confirmation</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
