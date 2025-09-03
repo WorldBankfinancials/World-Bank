@@ -13,23 +13,34 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     res.json({ status: 'OK', timestamp: new Date() });
   });
 
-  // Test Supabase connection and create tables
+  // Test Supabase connection and verify tables exist
   app.get('/test-supabase-connection', async (req: Request, res: Response) => {
     try {
       const { SupabasePublicStorage } = await import('./supabase-public-storage');
-      if (storage instanceof SupabasePublicStorage) {
-        const connected = await (storage as any).testConnection();
-        if (!connected) {
-          console.log('🔄 Creating banking tables in Supabase...');
-          await (storage as any).createTables();
-        }
+      const { supabase } = await import('./supabase-public-storage');
+      
+      // Test connection by checking if bank_users table exists
+      const { data, error } = await supabase
+        .from('bank_users')
+        .select('id, full_name, email, balance')
+        .limit(5);
+      
+      if (error) {
+        console.error('❌ Supabase table test failed:', error);
         res.json({ 
-          connected: true, 
-          message: connected ? 'Supabase connection successful' : 'Created banking tables in Supabase',
-          details: 'Banking system ready with international support'
+          connected: false, 
+          message: 'Banking tables not found in Supabase',
+          error: error.message,
+          action: 'Please run the SQL in supabase-cleanup-and-setup.sql'
         });
       } else {
-        res.json({ connected: false, message: 'Not using Supabase storage' });
+        console.log('✅ Banking tables found in Supabase:', data?.length || 0, 'users');
+        res.json({ 
+          connected: true, 
+          message: `Banking tables working! Found ${data?.length || 0} users`,
+          users: data,
+          details: 'International banking system ready with realtime synchronization'
+        });
       }
     } catch (error) {
       console.error('Supabase setup error:', error);
