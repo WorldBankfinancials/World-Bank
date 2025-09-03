@@ -1,14 +1,29 @@
--- COMPLETE SUPABASE PRODUCTION BANKING SCHEMA
+-- FIXED SUPABASE PRODUCTION BANKING SCHEMA
 -- Run this in your Supabase SQL Editor (Dashboard > SQL Editor)
 
 /* Ensure the uuid-ossp extension is available for UUID generation */
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA extensions;
 
+/* Helper function to generate a unique bank account number */
+CREATE OR REPLACE FUNCTION public.generate_account_number()
+RETURNS text LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+    acct_num text;
+BEGIN
+    LOOP
+        acct_num := lpad((floor(random() * 1000000000))::text, 10, '0');
+        -- Ensure uniqueness
+        EXIT WHEN NOT EXISTS (SELECT 1 FROM public.bank_accounts WHERE account_number = acct_num);
+    END LOOP;
+    RETURN acct_num;
+END;
+$$;
+
 /* Create comprehensive banking tables */
 CREATE TABLE IF NOT EXISTS public.bank_accounts (
     id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    account_number TEXT UNIQUE NOT NULL,
+    account_number TEXT UNIQUE NOT NULL DEFAULT public.generate_account_number(),
     account_type VARCHAR(50) NOT NULL DEFAULT 'checking',
     account_name VARCHAR(255) NOT NULL,
     balance DECIMAL(15,2) DEFAULT 0.00,
@@ -89,21 +104,6 @@ CREATE TABLE IF NOT EXISTS public.alerts (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-/* Helper function to generate a unique bank account number */
-CREATE OR REPLACE FUNCTION public.generate_account_number()
-RETURNS text LANGUAGE plpgsql SECURITY DEFINER AS $$
-DECLARE
-    acct_num text;
-BEGIN
-    LOOP
-        acct_num := lpad((floor(random() * 1000000000))::text, 10, '0');
-        -- Ensure uniqueness
-        EXIT WHEN NOT EXISTS (SELECT 1 FROM public.bank_accounts WHERE account_number = acct_num);
-    END LOOP;
-    RETURN acct_num;
-END;
-$$;
-
 /* Indexes for foreign keys (optimizing joins and RLS checks) */
 CREATE INDEX IF NOT EXISTS idx_bank_accounts_user_id ON public.bank_accounts(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_from_account_id ON public.transactions(from_account_id);
@@ -129,10 +129,13 @@ ALTER TABLE public.alerts ENABLE ROW LEVEL SECURITY;
 -- Bank accounts – users can view, insert, update, delete their own accounts
 CREATE POLICY "Bank accounts: select own" ON public.bank_accounts
 FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);
+
 CREATE POLICY "Bank accounts: insert own" ON public.bank_accounts
 FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) = user_id);
+
 CREATE POLICY "Bank accounts: update own" ON public.bank_accounts
 FOR UPDATE TO authenticated USING ((SELECT auth.uid()) = user_id) WITH CHECK ((SELECT auth.uid()) = user_id);
+
 CREATE POLICY "Bank accounts: delete own" ON public.bank_accounts
 FOR DELETE TO authenticated USING ((SELECT auth.uid()) = user_id);
 
@@ -145,12 +148,14 @@ FOR SELECT TO authenticated USING (
         SELECT user_id FROM public.bank_accounts WHERE id = to_account_id
     )
 );
+
 CREATE POLICY "Transactions: insert own" ON public.transactions
 FOR INSERT TO authenticated WITH CHECK (
     (SELECT auth.uid()) = (
         SELECT user_id FROM public.bank_accounts WHERE id = from_account_id
     )
 );
+
 CREATE POLICY "Transactions: update own" ON public.transactions
 FOR UPDATE TO authenticated USING (
     status = 'pending' AND (
@@ -165,6 +170,7 @@ FOR UPDATE TO authenticated USING (
         )
     )
 );
+
 CREATE POLICY "Transactions: delete own" ON public.transactions
 FOR DELETE TO authenticated USING (
     status = 'pending' AND (
@@ -177,26 +183,33 @@ FOR DELETE TO authenticated USING (
 -- Cards – users can manage cards linked to their accounts
 CREATE POLICY "Cards: select own" ON public.cards
 FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);
+
 CREATE POLICY "Cards: insert own" ON public.cards
 FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) = user_id);
+
 CREATE POLICY "Cards: update own" ON public.cards
 FOR UPDATE TO authenticated USING ((SELECT auth.uid()) = user_id) WITH CHECK ((SELECT auth.uid()) = user_id);
+
 CREATE POLICY "Cards: delete own" ON public.cards
 FOR DELETE TO authenticated USING ((SELECT auth.uid()) = user_id);
 
 -- Messages – users can read messages they sent
 CREATE POLICY "Messages: select own" ON public.messages
 FOR SELECT TO authenticated USING ((SELECT auth.uid()) = sender_id);
+
 CREATE POLICY "Messages: insert own" ON public.messages
 FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) = sender_id);
 
 -- Beneficiaries – users manage their own beneficiaries
 CREATE POLICY "Beneficiaries: select own" ON public.beneficiaries
 FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);
+
 CREATE POLICY "Beneficiaries: insert own" ON public.beneficiaries
 FOR INSERT TO authenticated WITH CHECK ((SELECT auth.uid()) = user_id);
+
 CREATE POLICY "Beneficiaries: update own" ON public.beneficiaries
 FOR UPDATE TO authenticated USING ((SELECT auth.uid()) = user_id) WITH CHECK ((SELECT auth.uid()) = user_id);
+
 CREATE POLICY "Beneficiaries: delete own" ON public.beneficiaries
 FOR DELETE TO authenticated USING ((SELECT auth.uid()) = user_id);
 
@@ -211,8 +224,10 @@ FOR SELECT TO authenticated USING (
 -- Alerts – users can view and manage their own alerts
 CREATE POLICY "Alerts: select own" ON public.alerts
 FOR SELECT TO authenticated USING ((SELECT auth.uid()) = user_id);
+
 CREATE POLICY "Alerts: update own" ON public.alerts
 FOR UPDATE TO authenticated USING ((SELECT auth.uid()) = user_id) WITH CHECK ((SELECT auth.uid()) = user_id);
+
 CREATE POLICY "Alerts: delete own" ON public.alerts
 FOR DELETE TO authenticated USING ((SELECT auth.uid()) = user_id);
 
