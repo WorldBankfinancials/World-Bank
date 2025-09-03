@@ -10,27 +10,32 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function LanguageSelector() {
-  const { currentLanguage, setLanguage, languages } = useLanguage();
+  const { language, setLanguage } = useLanguage();
+  
+  const languages = [
+    { code: 'en', name: 'English', flag: '🇺🇸' },
+    { code: 'zh', name: '中文', flag: '🇨🇳' }
+  ];
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Globe className="w-4 h-4" />
-          <span className="text-lg">{currentLanguage.flag}</span>
-          <span className="hidden sm:inline">{currentLanguage.name}</span>
+          <span className="text-lg">{language === 'en' ? '🇺🇸' : '🇨🇳'}</span>
+          <span className="hidden sm:inline">{language === 'en' ? 'English' : '中文'}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        {languages.map((language) => (
+        {languages.map((lang) => (
           <DropdownMenuItem
-            key={language.code}
-            onClick={() => setLanguage(language)}
+            key={lang.code}
+            onClick={() => setLanguage(lang.code as 'en' | 'zh')}
             className="gap-3"
           >
-            <span className="text-lg">{language.flag}</span>
-            <span>{language.name}</span>
-            {currentLanguage.code === language.code && (
+            <span className="text-lg">{lang.flag}</span>
+            <span>{lang.name}</span>
+            {language === lang.code && (
               <span className="ml-auto text-blue-600">✓</span>
             )}
           </DropdownMenuItem>

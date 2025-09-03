@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageSquare, Send, X, Phone, Video, Paperclip } from "lucide-react";
+import { MessageSquare, Send, X, Phone, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // import { useAuth } from "@/contexts/AuthContext";
