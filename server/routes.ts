@@ -757,6 +757,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // International Transfer API 
+  app.post("/api/international-transfers", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const {
+        amount,
+        recipientName,
+        recipientCountry,
+        bankName,
+        swiftCode,
+        accountNumber,
+        transferPurpose,
+        transferPin
+      } = req.body;
+
+      // Validate required fields
+      if (!amount || !recipientName || !recipientCountry) {
+        return res.status(400).json({ message: "Missing required fields: amount, recipient name, and country" });
+      }
+
+      // Verify PIN (simplified for demo)
+      const user = await storage.getUser(userId);
+      if (!user || user.transferPin !== transferPin) {
+        return res.status(400).json({ message: "Invalid transfer PIN" });
+      }
+
+      // Get user accounts
+      const accounts = await storage.getUserAccounts(userId);
+      if (accounts.length === 0) {
+        return res.status(400).json({ message: "No account found" });
+      }
+
+      const fromAccount = accounts[0];
+
+      // Create international transfer transaction
+      const transaction = await storage.createTransaction({
+        date: new Date(),
+        accountId: fromAccount.id,
+        type: "international_transfer",
+        amount: amount.toString(),
+        description: `International transfer to ${recipientName} in ${recipientCountry}`,
+        recipientName: recipientName,
+        recipientCountry: recipientCountry,
+        bankName: bankName || "Unknown Bank",
+        swiftCode: swiftCode || "",
+        transferPurpose: transferPurpose || "Personal",
+        status: "pending_approval" // All international transfers require admin approval
+      });
+
+      res.json({ 
+        message: "International transfer submitted for approval", 
+        transaction: transaction,
+        id: `INT-${Date.now()}`,
+        status: "pending_approval"
+      });
+    } catch (error) {
+      console.error("Error creating international transfer:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/admin/stats", async (req, res) => {
     try {
       const userId = req.session.userId;

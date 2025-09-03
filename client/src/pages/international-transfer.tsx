@@ -36,9 +36,61 @@ import type { User } from "@shared/schema";
 
 export default function InternationalTransfer() {
   const [showAccountDetails, setShowAccountDetails] = useState(false);
-  const [transferAmount, setTransferAmount] = useState('');
+  const [transferAmount, setTransferAmount] = useState('1000');
   const [fromCurrency, setFromCurrency] = useState('USD');
   const [toCurrency, setToCurrency] = useState('CNY');
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [transferPin, setTransferPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showProcessingPage, setShowProcessingPage] = useState(false);
+  const [transferId, setTransferId] = useState('');
+
+  const handleInternationalTransfer = () => {
+    setShowPinModal(true);
+  };
+
+  const handlePinSubmit = async () => {
+    if (!transferPin || transferPin.length !== 4) {
+      setPinError("Please enter a 4-digit PIN");
+      return;
+    }
+
+    setPinError("");
+    setIsProcessing(true);
+    
+    try {
+      const response = await fetch('/api/international-transfers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: parseFloat(transferAmount),
+          recipientName: "John Smith",
+          recipientCountry: "China",
+          bankName: "Bank of China",
+          swiftCode: "BKCHCNBJ",
+          accountNumber: "1234567890",
+          transferPurpose: "Family Support",
+          transferPin: transferPin
+        })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        setShowPinModal(false);
+        setTransferPin('');
+        setTransferId(result.id || 'INT-' + Date.now());
+        setShowProcessingPage(true);
+      } else {
+        setPinError(result.message || "Transfer failed");
+      }
+    } catch (error) {
+      setPinError("An error occurred. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
@@ -48,6 +100,82 @@ export default function InternationalTransfer() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  // Processing page
+  if (showProcessingPage) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header user={user} />
+        
+        <div className="px-4 py-6 pb-20">
+          <div className="max-w-md mx-auto">
+            <Card className="text-center">
+              <CardContent className="pt-6">
+                <div className="mb-6">
+                  <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="w-10 h-10 text-blue-600 animate-spin" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">International Transfer Processing</h2>
+                  <p className="text-gray-600 mb-4">
+                    Your international transfer is being processed and submitted for admin approval.
+                  </p>
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">Reference Number</span>
+                    <span className="font-mono text-sm font-medium">{transferId}</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">Status</span>
+                    <span className="text-sm font-medium text-orange-600">Pending Admin Approval</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Amount</span>
+                    <span className="text-sm font-medium">${transferAmount} USD</span>
+                  </div>
+                </div>
+                
+                <div className="text-left space-y-3 mb-6">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-700">Transfer request submitted</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full mr-3 animate-pulse"></div>
+                    <span className="text-sm text-gray-700">Awaiting admin approval</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-500">Processing to recipient bank</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-500">Transfer completed</span>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-3">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => setShowProcessingPage(false)}
+                  >
+                    New Transfer
+                  </Button>
+                  <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+                    Track Transfer
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        
+        <Footer />
       </div>
     );
   }
@@ -431,7 +559,10 @@ export default function InternationalTransfer() {
                 </div>
                 
                 <div className="mt-6 space-y-3">
-                  <Button className="w-full bg-blue-600 text-white hover:bg-blue-700">
+                  <Button 
+                    className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                    onClick={handleInternationalTransfer}
+                  >
                     Send Money Now
                   </Button>
                   <Button variant="outline" className="w-full">
@@ -575,6 +706,57 @@ export default function InternationalTransfer() {
           </div>
         </div>
       </div>
+      
+      {/* PIN Verification Modal */}
+      {showPinModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-80 mx-4">
+            <h3 className="text-lg font-semibold mb-4">Enter Transfer PIN</h3>
+            <p className="text-gray-600 text-sm mb-4">
+              Please enter your 4-digit transfer PIN to authorize this international transfer.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  placeholder="Enter PIN"
+                  value={transferPin}
+                  onChange={(e) => setTransferPin(e.target.value)}
+                  maxLength={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg tracking-widest"
+                />
+              </div>
+              
+              {pinError && (
+                <p className="text-red-600 text-sm">{pinError}</p>
+              )}
+              
+              <div className="flex space-x-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowPinModal(false);
+                    setTransferPin('');
+                    setPinError('');
+                  }}
+                  disabled={isProcessing}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handlePinSubmit}
+                  disabled={isProcessing || transferPin.length !== 4}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isProcessing ? 'Processing...' : 'Confirm'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       <Footer />
     </div>
