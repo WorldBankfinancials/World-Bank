@@ -308,12 +308,12 @@ export default function Transfer() {
               <p className="text-sm text-gray-600 mt-1">Exchange rate: 1 USD = 1.00 USD • Fee: $15.00</p>
             </div>
 
-            {/* Recipient Information */}
+            {/* Recipient Information - Simplified */}
             <div>
               <h3 className="font-semibold text-lg mb-3 text-gray-800">Recipient Information</h3>
               <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <Label htmlFor="fullName">Full Name (as on bank account)</Label>
+                  <Label htmlFor="fullName">Full Name *</Label>
                   <Input
                     id="fullName"
                     placeholder="John Smith"
@@ -322,40 +322,9 @@ export default function Transfer() {
                   />
                 </div>
                 
-                <div>
-                  <Label htmlFor="address">Street Address</Label>
-                  <Input
-                    id="address"
-                    placeholder="123 Main Street, Apt 4B"
-                    value={recipientDetails.address}
-                    onChange={(e) => setRecipientDetails(prev => ({...prev, address: e.target.value}))}
-                  />
-                </div>
-                
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                      id="city"
-                      placeholder="New York"
-                      value={recipientDetails.city}
-                      onChange={(e) => setRecipientDetails(prev => ({...prev, city: e.target.value}))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="state">State/Province</Label>
-                    <Input
-                      id="state"
-                      placeholder="NY"
-                      value={recipientDetails.state}
-                      onChange={(e) => setRecipientDetails(prev => ({...prev, state: e.target.value}))}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="country">Country</Label>
+                    <Label htmlFor="country">Country *</Label>
                     <Select value={recipientDetails.country} onValueChange={(value) => setRecipientDetails(prev => ({...prev, country: value}))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select country" />
@@ -364,28 +333,14 @@ export default function Transfer() {
                         <SelectItem value="US">United States</SelectItem>
                         <SelectItem value="CA">Canada</SelectItem>
                         <SelectItem value="GB">United Kingdom</SelectItem>
-                        <SelectItem value="DE">Germany</SelectItem>
-                        <SelectItem value="FR">France</SelectItem>
+                        <SelectItem value="CN">China</SelectItem>
                         <SelectItem value="JP">Japan</SelectItem>
                         <SelectItem value="AU">Australia</SelectItem>
-                        <SelectItem value="CN">China</SelectItem>
+                        <SelectItem value="DE">Germany</SelectItem>
                         <SelectItem value="IN">India</SelectItem>
-                        <SelectItem value="MX">Mexico</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label htmlFor="postalCode">Postal Code</Label>
-                    <Input
-                      id="postalCode"
-                      placeholder="10001"
-                      value={recipientDetails.postalCode}
-                      onChange={(e) => setRecipientDetails(prev => ({...prev, postalCode: e.target.value}))}
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="phoneNumber">Phone Number</Label>
                     <Input
@@ -393,16 +348,6 @@ export default function Transfer() {
                       placeholder="+1 555 123 4567"
                       value={recipientDetails.phoneNumber}
                       onChange={(e) => setRecipientDetails(prev => ({...prev, phoneNumber: e.target.value}))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="john.smith@email.com"
-                      value={recipientDetails.email}
-                      onChange={(e) => setRecipientDetails(prev => ({...prev, email: e.target.value}))}
                     />
                   </div>
                 </div>
