@@ -1,93 +1,101 @@
-# World Bank Vercel Deployment Guide
+# 🏦 World Bank - Vercel Deployment Guide
 
-## ✅ Complete Database Schema Created
-Your complete Supabase database schema is ready in `COMPLETE_SUPABASE_SCHEMA.sql`
+## 🚀 Quick Deployment Steps
 
-## 🚀 Vercel Deployment Steps
+### 1. Environment Variables Setup in Vercel Dashboard
 
-### 1. Run Database Setup
-1. Go to your [Supabase dashboard](https://supabase.com/dashboard/projects)
-2. Open project: `icbsxmrmorkdgxtumamu`
-3. Click **SQL Editor** 
-4. Copy all contents from `COMPLETE_SUPABASE_SCHEMA.sql`
-5. Paste and click **Run**
-
-### 2. Configure Environment Variables in Vercel
-Add these environment variables in Vercel Dashboard > Settings > Environment Variables:
+Go to your Vercel dashboard → Project → Settings → Environment Variables and add:
 
 ```bash
 # Supabase Configuration
-SUPABASE_URL=https://icbsxmrmorkdgxtumamu.supabase.co
-SUPABASE_ANON_KEY=your_anon_key_here
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+VITE_SUPABASE_URL=https://icbsxmrmorkdgxtumamu.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYnN4cm1yb3JrZGd4dHVtYW11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjUzNTI2MDIsImV4cCI6MjA0MDkyODYwMn0.XqJiGI9zFo_0Wgt3gKPpjjY9X8QdCLWdCG7OVBIgN4A
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYnN4cm1yb3JrZGd4dHVtYW11Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyNTM1MjYwMiwiZXhwIjoyMDQwOTI4NjAyfQ.LGjEFiwZe9g_8j0f_P-vVFIR_N6CKQKwwBbp1L0g7S4
 
-# Vercel Specific
+# Production Configuration
 NODE_ENV=production
+DATABASE_URL=postgresql://...your-supabase-db-url-here...
 ```
 
-### 3. Deployment Configuration
-Your `vercel.json` is already configured:
-- ✅ Static build with npm run build
-- ✅ API routes pointing to /dist/index.js
-- ✅ Frontend serving from /dist/public
-- ✅ Node.js 20.x runtime
+### 2. Build Configuration
 
-### 4. Build Process
-The build command does:
-1. Install client dependencies
-2. Build React frontend (TypeScript + Vite)
-3. Bundle server (Express + TypeScript)
-4. Copy frontend to dist/public
-5. Create optimized production bundle
+The app is configured with `vercel.json` for:
+- ✅ Backend API routes (`/api/*` → `server/index.ts`)
+- ✅ Frontend static files served from `dist/`
+- ✅ SPA routing with fallback to `index.html`
 
-### 5. What Gets Deployed
-```
-dist/
-├── index.js (Express server bundle)
-└── public/ (React frontend)
-    ├── index.html
-    ├── assets/
-    └── ...
+### 3. Deploy Commands
+
+**Option 1: GitHub Integration (Recommended)**
+1. Push your code to GitHub
+2. Connect GitHub repo to Vercel
+3. Deploy automatically on push
+
+**Option 2: Manual Deploy**
+```bash
+npm install -g vercel
+vercel --prod
 ```
 
-## 🔧 Pre-deployment Fixes Applied
-- ✅ Fixed TypeScript errors in components
-- ✅ Optimized imports and exports
-- ✅ Configured proper build pipeline
-- ✅ Set up Supabase integration
-- ✅ International banking translations ready
+## 🔧 Production-Ready Features
 
-## 📊 Database Features Ready
-- ✅ Wei Liu user profile ($98,251.25 total balance)
-- ✅ Multiple bank accounts (checking, savings, investment, business)
-- ✅ Transaction history and international transfers
-- ✅ Real-time messaging and alerts
-- ✅ Row Level Security (RLS) policies
-- ✅ Realtime subscriptions for admin sync
-- ✅ Beneficiaries and account statements
-- ✅ Performance indexes and constraints
+✅ **Real Supabase Integration** - Connected to live database
+✅ **Authentication System** - Supabase Auth working
+✅ **Banking Operations** - Real account balances and transfers
+✅ **Real-time Sync** - Live updates from Supabase
+✅ **Multi-Account Support** - Checking, Savings, Investment, Business accounts
+✅ **PIN Security** - Transaction PIN validation (0192)
+✅ **Admin Controls** - Supabase service role for backend operations
 
-## 🌍 International Features
-- ✅ English/Chinese translations (17 banking terms each)
-- ✅ Multi-currency support (USD primary)
-- ✅ SWIFT transfers and correspondent banking
-- ✅ AML/KYC compliance features
-- ✅ Cross-border payment capabilities
+## 📊 Live Database Status
 
-## 🏦 Banking Functionality
-- ✅ Multi-account management
-- ✅ Real-time balance tracking
-- ✅ International wire transfers
-- ✅ Transaction approval workflow
-- ✅ Customer support chat
-- ✅ Security PIN verification
-- ✅ Professional banking UI
+**Production Database**: Supabase PostgreSQL
+- 🏦 Wei Liu profile: $98,251.25 total balance
+- 💳 4 active accounts (Checking, Savings, Investment, Business)
+- 🔐 PIN validation: 0192
+- 🔄 Real-time subscriptions active
 
-## ⚡ Performance Optimizations
-- ✅ Database indexes on all lookup fields
-- ✅ Optimized React Query caching
-- ✅ Compressed production build
-- ✅ Static asset optimization
-- ✅ Efficient SQL queries with RLS
+## 🌐 Environment Variables for Vercel
 
-Your World Bank application is now production-ready for Vercel deployment with authentic Supabase data and comprehensive international banking features.
+**CRITICAL**: Add these exact environment variables in Vercel:
+
+1. **VITE_SUPABASE_URL** = `https://icbsxmrmorkdgxtumamu.supabase.co`
+2. **VITE_SUPABASE_ANON_KEY** = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` (anon key)
+3. **SUPABASE_SERVICE_ROLE_KEY** = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` (service key)
+
+The **SUPABASE_SERVICE_ROLE_KEY** is essential for:
+- ✅ Backend database operations
+- ✅ Admin user management
+- ✅ Real-time synchronization
+- ✅ Transaction processing
+
+## 📱 Expected Live Site Features
+
+After deployment, your site will have:
+- ✅ Real user authentication with Supabase
+- ✅ Live bank account balances
+- ✅ Working money transfers with PIN validation
+- ✅ Real-time balance updates
+- ✅ Multi-language support (English/Chinese)
+- ✅ Responsive mobile-first design
+
+## ⚠️ Troubleshooting
+
+**Issue**: Site not loading
+**Solution**: Check environment variables are added correctly in Vercel Dashboard
+
+**Issue**: Database not connecting
+**Solution**: Verify SUPABASE_SERVICE_ROLE_KEY is set in production
+
+**Issue**: Real-time not working
+**Solution**: Ensure all 3 Supabase environment variables are configured
+
+## 🎯 Deployment Verification
+
+After deployment, test:
+1. ✅ Login with `vaa33053@gmail.com`
+2. ✅ View bank account balances
+3. ✅ Attempt a money transfer (PIN: 0192)
+4. ✅ Check real-time balance updates
+
+Your World Bank application is production-ready for Vercel deployment!

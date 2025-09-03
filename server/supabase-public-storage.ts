@@ -217,7 +217,9 @@ export class SupabasePublicStorage implements IStorage {
         currency: account.currency,
         isActive: account.is_active,
         createdAt: account.created_at,
-        updatedAt: account.updated_at
+        updatedAt: account.updated_at,
+        interestRate: account.interest_rate?.toString() || null,
+        minimumBalance: account.minimum_balance?.toString() || null
       }));
     } catch (error) {
       console.error('❌ Error fetching accounts:', error);
@@ -250,7 +252,9 @@ export class SupabasePublicStorage implements IStorage {
         currency: account.currency,
         isActive: account.is_active,
         createdAt: account.created_at,
-        updatedAt: account.updated_at
+        updatedAt: account.updated_at,
+        interestRate: account.interest_rate?.toString() || null,
+        minimumBalance: account.minimum_balance?.toString() || null
       }));
     } catch (error) {
       console.error('Error getting accounts:', error);
@@ -263,15 +267,14 @@ export class SupabasePublicStorage implements IStorage {
       const { data: transaction, error } = await supabase
         .from('transactions')
         .insert({
-          from_account_id: data.fromAccountId,
-          to_account_id: data.toAccountId,
-          from_account_number: data.fromAccountNumber,
-          to_account_number: data.toAccountNumber,
+          account_id: data.accountId,
+          type: data.type,
           amount: data.amount,
-          currency: data.currency || 'USD',
           description: data.description,
-          transaction_type: data.transactionType || 'transfer',
-          status: data.status || 'pending'
+          category: data.category,
+          status: data.status || 'pending',
+          date: data.date || new Date().toISOString(),
+          admin_notes: data.adminNotes
         })
         .select()
         .single();
