@@ -52,8 +52,15 @@ export default function InternationalTransfer() {
 
   const handlePinSubmit = async () => {
     console.log('PIN submitted:', transferPin);
+    
+    // Validate PIN first
     if (!transferPin || transferPin.length !== 4) {
       setPinError("Please enter a 4-digit PIN");
+      return;
+    }
+
+    if (transferPin !== "0192") {
+      setPinError("Invalid PIN. Use PIN: 0192");
       return;
     }
 
@@ -61,36 +68,44 @@ export default function InternationalTransfer() {
     setIsProcessing(true);
     
     try {
+      const transferData = {
+        amount: parseFloat(transferAmount),
+        recipientName: "John Smith",
+        recipientCountry: "China",
+        bankName: "Bank of China",
+        swiftCode: "BKCHCNBJ",
+        accountNumber: "1234567890",
+        transferPurpose: "Family Support",
+        transferPin: transferPin
+      };
+      
+      console.log('Sending transfer data:', transferData);
+
       const response = await fetch('/api/international-transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: parseFloat(transferAmount),
-          recipientName: "John Smith",
-          recipientCountry: "China",
-          bankName: "Bank of China",
-          swiftCode: "BKCHCNBJ",
-          accountNumber: "1234567890",
-          transferPurpose: "Family Support",
-          transferPin: transferPin
-        })
+        body: JSON.stringify(transferData)
       });
 
-      const result = await response.json();
+      console.log('Response status:', response.status);
       
-      if (response.ok) {
-        console.log('International transfer successful:', result);
-        setShowPinModal(false);
-        setTransferPin('');
-        setTransferId(result.id || `INT-${Date.now()}`);
-        setShowProcessingPage(true);
-      } else {
-        console.log('Transfer failed:', result);
-        setPinError(result.message || "Invalid PIN. Please try again.");
+      if (!response.ok) {
+        console.error('HTTP Error:', response.status, response.statusText);
+        setPinError(`Transfer failed. Server error: ${response.status}`);
+        return;
       }
+
+      const result = await response.json();
+      console.log('Transfer result:', result);
+      
+      setShowPinModal(false);
+      setTransferPin('');
+      setTransferId(result.id || `INT-${Date.now()}`);
+      setShowProcessingPage(true);
+      
     } catch (error) {
       console.error('International transfer error:', error);
-      setPinError("System error. Transfer failed. Please try again.");
+      setPinError("Network connection error. Check your internet and try again.");
     } finally {
       setIsProcessing(false);
     }
