@@ -31,20 +31,18 @@ console.log('🔗 Connected to Supabase public schema with realtime synchronizat
 console.log('📊 Database URL:', supabaseUrl);
 console.log('🔐 Using service role for admin operations');
 
-export class SupabasePublicStorage {
+export class SupabasePublicStorage implements IStorage {
   
   async getUser(id: number): Promise<User | undefined> {
     try {
-      const { data: users, error } = await supabase
+      const { data: user, error } = await supabase
         .from('bank_users')
         .select('*')
         .eq('id', id)
-        .limit(1)
         .single();
       
-      if (error || !users) return undefined;
+      if (error || !user) return undefined;
       
-      const user = users;
       return {
         id: user.id,
         username: user.username,
@@ -73,7 +71,12 @@ export class SupabasePublicStorage {
         avatarUrl: user.avatar_url,
         balance: parseFloat(user.balance || '0'),
         createdAt: user.created_at,
-        supabaseUserId: user.supabase_user_id
+        supabaseUserId: user.supabase_user_id,
+        lastLogin: user.last_login,
+        createdByAdmin: user.created_by_admin,
+        modifiedByAdmin: user.modified_by_admin,
+        adminNotes: user.admin_notes,
+        updatedAt: user.updated_at
       };
     } catch (error) {
       console.error('Error getting user:', error);
@@ -83,16 +86,14 @@ export class SupabasePublicStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
-      const { data: users, error } = await supabase
+      const { data: user, error } = await supabase
         .from('bank_users')
         .select('*')
         .eq('email', email)
-        .limit(1)
         .single();
       
-      if (error || !users) return undefined;
+      if (error || !user) return undefined;
       
-      const user = users[0];
       return {
         id: user.id,
         username: user.username,
@@ -121,7 +122,12 @@ export class SupabasePublicStorage {
         avatarUrl: user.avatar_url,
         balance: parseFloat(user.balance || '0'),
         createdAt: user.created_at,
-        supabaseUserId: user.supabase_user_id
+        supabaseUserId: user.supabase_user_id,
+        lastLogin: user.last_login,
+        createdByAdmin: user.created_by_admin,
+        modifiedByAdmin: user.modified_by_admin,
+        adminNotes: user.admin_notes,
+        updatedAt: user.updated_at
       };
     } catch (error) {
       console.error('Error getting user by email:', error);
@@ -131,16 +137,14 @@ export class SupabasePublicStorage {
 
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
     try {
-      const { data: users, error } = await supabase
+      const { data: user, error } = await supabase
         .from('bank_users')
         .select('*')
         .eq('supabase_user_id', supabaseUserId)
-        .limit(1)
         .single();
       
-      if (error || !users) return undefined;
+      if (error || !user) return undefined;
       
-      const user = users[0];
       return {
         id: user.id,
         username: user.username,
@@ -169,7 +173,12 @@ export class SupabasePublicStorage {
         avatarUrl: user.avatar_url,
         balance: parseFloat(user.balance || '0'),
         createdAt: user.created_at,
-        supabaseUserId: user.supabase_user_id
+        supabaseUserId: user.supabase_user_id,
+        lastLogin: user.last_login,
+        createdByAdmin: user.created_by_admin,
+        modifiedByAdmin: user.modified_by_admin,
+        adminNotes: user.admin_notes,
+        updatedAt: user.updated_at
       };
     } catch (error) {
       console.error('Error getting user by Supabase ID:', error);
@@ -177,27 +186,67 @@ export class SupabasePublicStorage {
     }
   }
 
-  async getAccounts(userId?: number): Promise<Account[]> {
+  async getUserAccounts(userId: number): Promise<Account[]> {
+    console.log('🏦 Fetching accounts for user ID:', userId);
     try {
-      let query;
-      if (userId) {
-        query = sql`
-          SELECT * FROM bank_accounts WHERE user_id = ${userId} AND is_active = true ORDER BY id
-        `;
-      } else {
-        query = sql`
-          SELECT * FROM bank_accounts WHERE is_active = true ORDER BY id
-        `;
+      const { data: accounts, error } = await supabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('id');
+      
+      if (error) {
+        console.error('❌ Supabase error fetching accounts:', error);
+        return [];
       }
       
-      const accounts = await query;
+      if (!accounts || accounts.length === 0) {
+        console.log('❌ No accounts found for user ID:', userId);
+        return [];
+      }
       
+      console.log('✅ Found accounts in Supabase:', accounts);
       return accounts.map(account => ({
         id: account.id,
         userId: account.user_id,
         accountNumber: account.account_number,
         accountType: account.account_type,
-        balance: parseFloat(account.balance),
+        accountName: account.account_name,
+        balance: account.balance.toString(),
+        currency: account.currency,
+        isActive: account.is_active,
+        createdAt: account.created_at,
+        updatedAt: account.updated_at
+      }));
+    } catch (error) {
+      console.error('❌ Error fetching accounts:', error);
+      return [];
+    }
+  }
+
+  async getAccounts(userId?: number): Promise<Account[]> {
+    try {
+      let query = supabase.from('bank_accounts').select('*').eq('is_active', true);
+      
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+      
+      const { data: accounts, error } = await query.order('id');
+      
+      if (error) {
+        console.error('Error getting accounts:', error);
+        return [];
+      }
+      
+      return (accounts || []).map(account => ({
+        id: account.id,
+        userId: account.user_id,
+        accountNumber: account.account_number,
+        accountType: account.account_type,
+        accountName: account.account_name,
+        balance: account.balance.toString(),
         currency: account.currency,
         isActive: account.is_active,
         createdAt: account.created_at,
@@ -211,19 +260,26 @@ export class SupabasePublicStorage {
 
   async createTransaction(data: InsertTransaction): Promise<Transaction> {
     try {
-      const transactions = await sql`
-        INSERT INTO transactions (
-          from_account_id, to_account_id, from_account_number, to_account_number,
-          amount, currency, description, transaction_type, status,
-          created_at, updated_at
-        ) VALUES (
-          ${data.fromAccountId}, ${data.toAccountId}, ${data.fromAccountNumber}, ${data.toAccountNumber},
-          ${data.amount}, ${data.currency}, ${data.description}, ${data.transactionType}, ${data.status || 'pending'},
-          NOW(), NOW()
-        ) RETURNING *
-      `;
+      const { data: transaction, error } = await supabase
+        .from('transactions')
+        .insert({
+          from_account_id: data.fromAccountId,
+          to_account_id: data.toAccountId,
+          from_account_number: data.fromAccountNumber,
+          to_account_number: data.toAccountNumber,
+          amount: data.amount,
+          currency: data.currency || 'USD',
+          description: data.description,
+          transaction_type: data.transactionType || 'transfer',
+          status: data.status || 'pending'
+        })
+        .select()
+        .single();
 
-      const transaction = transactions[0];
+      if (error || !transaction) {
+        throw error || new Error('Failed to create transaction');
+      }
+
       return {
         id: transaction.id,
         fromAccountId: transaction.from_account_id,
@@ -246,22 +302,20 @@ export class SupabasePublicStorage {
 
   async getTransactions(accountId?: number): Promise<Transaction[]> {
     try {
-      let query;
+      let query = supabase.from('transactions').select('*');
+      
       if (accountId) {
-        query = sql`
-          SELECT * FROM transactions 
-          WHERE from_account_id = ${accountId} OR to_account_id = ${accountId}
-          ORDER BY created_at DESC
-        `;
-      } else {
-        query = sql`
-          SELECT * FROM transactions ORDER BY created_at DESC
-        `;
+        query = query.or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`);
       }
       
-      const transactions = await query;
+      const { data: transactions, error } = await query.order('created_at', { ascending: false });
       
-      return transactions.map(transaction => ({
+      if (error) {
+        console.error('Error getting transactions:', error);
+        return [];
+      }
+      
+      return (transactions || []).map(transaction => ({
         id: transaction.id,
         fromAccountId: transaction.from_account_id,
         toAccountId: transaction.to_account_id,
@@ -283,22 +337,480 @@ export class SupabasePublicStorage {
 
   async verifyPin(email: string, pin: string): Promise<boolean> {
     try {
-      const users = await sql`
-        SELECT transfer_pin FROM bank_users 
-        WHERE email = ${email} AND transfer_pin = ${pin} 
-        LIMIT 1
-      `;
+      const { data: user, error } = await supabase
+        .from('bank_users')
+        .select('transfer_pin')
+        .eq('email', email)
+        .eq('transfer_pin', pin)
+        .single();
       
-      return users.length > 0;
+      return !error && !!user;
     } catch (error) {
       console.error('Error verifying PIN:', error);
       return false;
     }
   }
 
+  // Additional IStorage interface methods (stub implementations)
+  async getAllUsers(): Promise<User[]> {
+    try {
+      const { data: users, error } = await supabase
+        .from('bank_users')
+        .select('*');
+      
+      if (error || !users) return [];
+      
+      return users.map(user => ({
+        id: user.id,
+        username: user.username,
+        password: user.password_hash,
+        fullName: user.full_name,
+        email: user.email,
+        phone: user.phone,
+        accountNumber: user.account_number,
+        accountId: user.account_id,
+        profession: user.profession,
+        dateOfBirth: user.date_of_birth,
+        address: user.address,
+        city: user.city,
+        state: user.state,
+        country: user.country,
+        postalCode: user.postal_code,
+        nationality: user.nationality,
+        annualIncome: user.annual_income,
+        idType: user.id_type,
+        idNumber: user.id_number,
+        transferPin: user.transfer_pin,
+        role: user.role,
+        isVerified: user.is_verified,
+        isOnline: user.is_online,
+        isActive: user.is_active,
+        avatarUrl: user.avatar_url,
+        balance: parseFloat(user.balance || '0'),
+        createdAt: user.created_at,
+        supabaseUserId: user.supabase_user_id,
+        lastLogin: user.last_login,
+        createdByAdmin: user.created_by_admin,
+        modifiedByAdmin: user.modified_by_admin,
+        adminNotes: user.admin_notes,
+        updatedAt: user.updated_at
+      }));
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      return [];
+    }
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    try {
+      const { data: user, error } = await supabase
+        .from('bank_users')
+        .select('*')
+        .eq('username', username)
+        .single();
+      
+      if (error || !user) return undefined;
+      
+      return {
+        id: user.id,
+        username: user.username,
+        password: user.password_hash,
+        fullName: user.full_name,
+        email: user.email,
+        phone: user.phone,
+        accountNumber: user.account_number,
+        accountId: user.account_id,
+        profession: user.profession,
+        dateOfBirth: user.date_of_birth,
+        address: user.address,
+        city: user.city,
+        state: user.state,
+        country: user.country,
+        postalCode: user.postal_code,
+        nationality: user.nationality,
+        annualIncome: user.annual_income,
+        idType: user.id_type,
+        idNumber: user.id_number,
+        transferPin: user.transfer_pin,
+        role: user.role,
+        isVerified: user.is_verified,
+        isOnline: user.is_online,
+        isActive: user.is_active,
+        avatarUrl: user.avatar_url,
+        balance: parseFloat(user.balance || '0'),
+        createdAt: user.created_at,
+        supabaseUserId: user.supabase_user_id,
+        lastLogin: user.last_login,
+        createdByAdmin: user.created_by_admin,
+        modifiedByAdmin: user.modified_by_admin,
+        adminNotes: user.admin_notes,
+        updatedAt: user.updated_at
+      };
+    } catch (error) {
+      console.error('Error getting user by username:', error);
+      return undefined;
+    }
+  }
+
+  async createUser(data: InsertUser): Promise<User> {
+    try {
+      const { data: user, error } = await supabase
+        .from('bank_users')
+        .insert({
+          username: data.username,
+          password_hash: data.password,
+          full_name: data.fullName,
+          email: data.email,
+          phone: data.phone,
+          account_number: data.accountNumber,
+          account_id: data.accountId,
+          profession: data.profession,
+          date_of_birth: data.dateOfBirth,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          country: data.country,
+          postal_code: data.postalCode,
+          nationality: data.nationality,
+          annual_income: data.annualIncome,
+          id_type: data.idType,
+          id_number: data.idNumber,
+          transfer_pin: data.transferPin,
+          role: data.role || 'customer',
+          is_verified: data.isVerified || false,
+          is_online: data.isOnline || false,
+          is_active: data.isActive || false,
+          balance: data.balance || 0,
+          supabase_user_id: data.supabaseUserId,
+          admin_notes: data.adminNotes
+        })
+        .select()
+        .single();
+
+      if (error || !user) {
+        throw error || new Error('Failed to create user');
+      }
+
+      return {
+        id: user.id,
+        username: user.username,
+        password: user.password_hash,
+        fullName: user.full_name,
+        email: user.email,
+        phone: user.phone,
+        accountNumber: user.account_number,
+        accountId: user.account_id,
+        profession: user.profession,
+        dateOfBirth: user.date_of_birth,
+        address: user.address,
+        city: user.city,
+        state: user.state,
+        country: user.country,
+        postalCode: user.postal_code,
+        nationality: user.nationality,
+        annualIncome: user.annual_income,
+        idType: user.id_type,
+        idNumber: user.id_number,
+        transferPin: user.transfer_pin,
+        role: user.role,
+        isVerified: user.is_verified,
+        isOnline: user.is_online,
+        isActive: user.is_active,
+        avatarUrl: user.avatar_url,
+        balance: parseFloat(user.balance || '0'),
+        createdAt: user.created_at,
+        supabaseUserId: user.supabase_user_id,
+        lastLogin: user.last_login,
+        createdByAdmin: user.created_by_admin,
+        modifiedByAdmin: user.modified_by_admin,
+        adminNotes: user.admin_notes,
+        updatedAt: user.updated_at
+      };
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
+  }
+
+  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined> {
+    try {
+      const { data: user, error } = await supabase
+        .from('bank_users')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error || !user) return undefined;
+
+      return {
+        id: user.id,
+        username: user.username,
+        password: user.password_hash,
+        fullName: user.full_name,
+        email: user.email,
+        phone: user.phone,
+        accountNumber: user.account_number,
+        accountId: user.account_id,
+        profession: user.profession,
+        dateOfBirth: user.date_of_birth,
+        address: user.address,
+        city: user.city,
+        state: user.state,
+        country: user.country,
+        postalCode: user.postal_code,
+        nationality: user.nationality,
+        annualIncome: user.annual_income,
+        idType: user.id_type,
+        idNumber: user.id_number,
+        transferPin: user.transfer_pin,
+        role: user.role,
+        isVerified: user.is_verified,
+        isOnline: user.is_online,
+        isActive: user.is_active,
+        avatarUrl: user.avatar_url,
+        balance: parseFloat(user.balance || '0'),
+        createdAt: user.created_at,
+        supabaseUserId: user.supabase_user_id,
+        lastLogin: user.last_login,
+        createdByAdmin: user.created_by_admin,
+        modifiedByAdmin: user.modified_by_admin,
+        adminNotes: user.admin_notes,
+        updatedAt: user.updated_at
+      };
+    } catch (error) {
+      console.error('Error updating user:', error);
+      return undefined;
+    }
+  }
+
+  async createAccount(data: InsertAccount): Promise<Account> {
+    try {
+      const { data: account, error } = await supabase
+        .from('bank_accounts')
+        .insert({
+          user_id: data.userId,
+          account_number: data.accountNumber,
+          account_type: data.accountType,
+          account_name: data.accountName,
+          balance: data.balance,
+          currency: data.currency || 'USD',
+          is_active: data.isActive !== false
+        })
+        .select()
+        .single();
+
+      if (error || !account) {
+        throw error || new Error('Failed to create account');
+      }
+
+      return {
+        id: account.id,
+        userId: account.user_id,
+        accountNumber: account.account_number,
+        accountType: account.account_type,
+        accountName: account.account_name,
+        balance: account.balance.toString(),
+        currency: account.currency,
+        isActive: account.is_active,
+        createdAt: account.created_at,
+        updatedAt: account.updated_at
+      };
+    } catch (error) {
+      console.error('Error creating account:', error);
+      throw error;
+    }
+  }
+
+  // Stub implementations for remaining interface methods
+  async getAccount(id: number): Promise<Account | undefined> {
+    try {
+      const { data: account, error } = await supabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !account) return undefined;
+
+      return {
+        id: account.id,
+        userId: account.user_id,
+        accountNumber: account.account_number,
+        accountType: account.account_type,
+        accountName: account.account_name,
+        balance: account.balance.toString(),
+        currency: account.currency,
+        isActive: account.is_active,
+        createdAt: account.created_at,
+        updatedAt: account.updated_at
+      };
+    } catch (error) {
+      console.error('Error getting account:', error);
+      return undefined;
+    }
+  }
+
+  // Transaction-related methods (extended for IStorage)
+  async getAccountTransactions(accountId: number, limit?: number): Promise<Transaction[]> {
+    try {
+      let query = supabase
+        .from('transactions')
+        .select('*')
+        .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
+        .order('created_at', { ascending: false });
+
+      if (limit) {
+        query = query.limit(limit);
+      }
+
+      const { data: transactions, error } = await query;
+
+      if (error) {
+        console.error('Error getting account transactions:', error);
+        return [];
+      }
+
+      return (transactions || []).map(transaction => ({
+        id: transaction.id,
+        fromAccountId: transaction.from_account_id,
+        toAccountId: transaction.to_account_id,
+        fromAccountNumber: transaction.from_account_number,
+        toAccountNumber: transaction.to_account_number,
+        amount: parseFloat(transaction.amount),
+        currency: transaction.currency,
+        description: transaction.description,
+        transactionType: transaction.transaction_type,
+        status: transaction.status,
+        createdAt: transaction.created_at,
+        updatedAt: transaction.updated_at
+      }));
+    } catch (error) {
+      console.error('Error getting account transactions:', error);
+      return [];
+    }
+  }
+
+  async getPendingTransactions(): Promise<Transaction[]> {
+    return this.getTransactionsByStatus('pending');
+  }
+
+  async getTransactionsByStatus(status: string): Promise<Transaction[]> {
+    try {
+      const { data: transactions, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('status', status)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting transactions by status:', error);
+        return [];
+      }
+
+      return (transactions || []).map(transaction => ({
+        id: transaction.id,
+        fromAccountId: transaction.from_account_id,
+        toAccountId: transaction.to_account_id,
+        fromAccountNumber: transaction.from_account_number,
+        toAccountNumber: transaction.to_account_number,
+        amount: parseFloat(transaction.amount),
+        currency: transaction.currency,
+        description: transaction.description,
+        transactionType: transaction.transaction_type,
+        status: transaction.status,
+        createdAt: transaction.created_at,
+        updatedAt: transaction.updated_at
+      }));
+    } catch (error) {
+      console.error('Error getting transactions by status:', error);
+      return [];
+    }
+  }
+
+  async updateTransactionStatus(id: number, status: string, adminId?: number, notes?: string): Promise<Transaction | undefined> {
+    try {
+      const updates: any = { status, updated_at: new Date().toISOString() };
+      if (adminId) updates.approved_by = adminId;
+      if (notes) updates.admin_notes = notes;
+
+      const { data: transaction, error } = await supabase
+        .from('transactions')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error || !transaction) return undefined;
+
+      return {
+        id: transaction.id,
+        fromAccountId: transaction.from_account_id,
+        toAccountId: transaction.to_account_id,
+        fromAccountNumber: transaction.from_account_number,
+        toAccountNumber: transaction.to_account_number,
+        amount: parseFloat(transaction.amount),
+        currency: transaction.currency,
+        description: transaction.description,
+        transactionType: transaction.transaction_type,
+        status: transaction.status,
+        createdAt: transaction.created_at,
+        updatedAt: transaction.updated_at
+      };
+    } catch (error) {
+      console.error('Error updating transaction status:', error);
+      return undefined;
+    }
+  }
+
+  // Admin actions (stub implementations)
+  async createAdminAction(data: InsertAdminAction): Promise<AdminAction> {
+    // Stub implementation - could be implemented if admin actions table exists
+    return {
+      id: Date.now(),
+      adminId: data.adminId,
+      actionType: data.actionType,
+      targetType: data.targetType,
+      targetId: data.targetId,
+      description: data.description,
+      metadata: data.metadata,
+      createdAt: new Date()
+    };
+  }
+
+  async getAdminActions(): Promise<AdminAction[]> {
+    return [];
+  }
+
+  // Support tickets (stub implementations)
+  async createSupportTicket(data: InsertSupportTicket): Promise<SupportTicket> {
+    // Stub implementation
+    return {
+      id: Date.now(),
+      userId: data.userId,
+      subject: data.subject,
+      message: data.message,
+      status: 'open',
+      priority: data.priority || 'medium',
+      category: data.category || 'general',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }
+
+  async getSupportTickets(): Promise<SupportTicket[]> {
+    return [];
+  }
+
+  async updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
+    return undefined;
+  }
+
   // Realtime synchronization methods for admin changes
   async subscribeToAdminChanges(callback: (change: any) => void) {
-    // Subscribe to realtime changes in admin-relevant tables
     const channel = supabase
       .channel('admin-changes')
       .on(
