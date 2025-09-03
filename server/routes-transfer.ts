@@ -32,10 +32,11 @@ export function setupTransferRoutes(app: Express) {
       const transactionId = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
       res.json({ 
-        message: "Transfer submitted successfully", 
+        message: "Transfer submitted for admin approval", 
         transactionId: transactionId,
-        status: "pending_approval",
-        amount: amount
+        status: "pending_admin_approval",
+        amount: amount,
+        requiresApproval: true
       });
     } catch (error) {
       console.error("Regular transfer error:", error);
@@ -70,10 +71,11 @@ export function setupTransferRoutes(app: Express) {
       const transactionId = `INT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
       res.json({ 
-        message: "International transfer submitted successfully", 
+        message: "International transfer submitted for admin approval", 
         id: transactionId,
-        status: "processing",
-        amount: amount
+        status: "pending_admin_approval",
+        amount: amount,
+        requiresApproval: true
       });
     } catch (error) {
       console.error("International transfer error:", error);
