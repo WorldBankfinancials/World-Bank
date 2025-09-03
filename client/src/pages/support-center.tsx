@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Phone, MessageCircle, FileText, Clock } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function SupportCenter() {
   const { data: user, isLoading } = useQuery<User>({

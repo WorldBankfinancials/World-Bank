@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function InvestmentPortfolio() {
   const { data: user, isLoading } = useQuery<User>({

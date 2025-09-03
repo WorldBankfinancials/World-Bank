@@ -22,7 +22,7 @@ import {
   Activity,
   Fingerprint
 } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function SecurityCenter() {
   const { data: user, isLoading } = useQuery<User>({

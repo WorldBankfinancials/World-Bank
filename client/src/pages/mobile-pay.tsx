@@ -19,7 +19,7 @@ import {
   Clock,
   CheckCircle
 } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function MobilePay() {
   const { data: user, isLoading } = useQuery<User>({

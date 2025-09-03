@@ -21,7 +21,7 @@ import {
   Car,
   GraduationCap
 } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function BankingServices() {
   const { t } = useLanguage();

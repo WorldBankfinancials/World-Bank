@@ -32,7 +32,7 @@ import {
   Star
 } from "lucide-react";
 import { useState } from "react";
-import type { User } from "@shared/schema";
+
 
 export default function InternationalTransfer() {
   const [showAccountDetails, setShowAccountDetails] = useState(false);

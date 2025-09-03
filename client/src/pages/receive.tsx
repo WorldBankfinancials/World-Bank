@@ -18,7 +18,7 @@ import {
   Smartphone,
   Mail
 } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function Receive() {
   const { data: user, isLoading } = useQuery<User>({

@@ -19,7 +19,7 @@ import {
   ArrowUpRight,
   ArrowDownRight
 } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function InvestmentTrading() {
   const { data: user, isLoading } = useQuery<User>({

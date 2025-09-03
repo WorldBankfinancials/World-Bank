@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { Target, Calendar, Users, Award } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function WealthManagement() {
   const { data: user, isLoading } = useQuery<User>({

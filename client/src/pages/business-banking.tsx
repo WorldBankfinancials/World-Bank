@@ -23,7 +23,7 @@ import {
   DollarSign,
   Phone
 } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function BusinessBanking() {
   const { data: user, isLoading } = useQuery<User>({

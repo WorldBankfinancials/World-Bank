@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Search, Edit3, UserCheck, AlertTriangle, Save, X } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 interface Customer {
   id: number;

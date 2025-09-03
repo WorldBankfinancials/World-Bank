@@ -18,7 +18,7 @@ import {
   Wallet,
   ArrowUpRight
 } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function AddMoney() {
   const { data: user, isLoading } = useQuery<User>({

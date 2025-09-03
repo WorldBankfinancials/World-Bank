@@ -7,7 +7,7 @@ import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
-import type { User } from "@shared/schema";
+
 
 export default function CreditCards() {
   const { data: user, isLoading } = useQuery<User>({

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, Key, Smartphone, AlertTriangle } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function SecuritySettings() {
   const { data: user, isLoading } = useQuery<User>({

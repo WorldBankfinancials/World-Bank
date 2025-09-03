@@ -24,7 +24,7 @@ import {
   Filter,
   Trash2
 } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function Alerts() {
   const { data: user, isLoading } = useQuery<User>({

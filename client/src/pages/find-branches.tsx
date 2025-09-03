@@ -20,7 +20,7 @@ import {
   Building,
   Globe
 } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function FindBranches() {
   const { data: user, isLoading } = useQuery<User>({

@@ -24,7 +24,7 @@ import {
   ArrowDownRight,
   Scan
 } from "lucide-react";
-import type { User } from "@shared/schema";
+
 
 export default function DigitalWallet() {
   const { data: user, isLoading } = useQuery<User>({

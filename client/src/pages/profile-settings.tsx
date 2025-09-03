@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { User, Shield, MapPin, Check, Eye, Lock, KeyRound } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
-import type { User as UserType } from "@shared/schema";
+
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function ProfileSettings() {
