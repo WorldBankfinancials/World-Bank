@@ -1,6 +1,7 @@
 import { config } from './config';
 import { MemStorage } from './storage';
 import { PostgresStorage } from './postgres-storage';
+import { SupabasePublicStorage } from './supabase-public-storage';
 import type { IStorage } from './storage';
 
 // Environment-based storage factory
@@ -12,6 +13,12 @@ export function createStorage(): IStorage {
   console.log(`💾 Data Source: ${dataSource}`);
   console.log(`🔐 Auth Source: ${config.getAuthSource()}`);
   console.log('');
+  
+  // Check if we have Supabase database URL to use Supabase public schema
+  if (process.env.SUPABASE_DATABASE_URL) {
+    console.log('Using Supabase public schema with realtime synchronization');
+    return new SupabasePublicStorage();
+  }
   
   // Use PostgreSQL database when available
   if (process.env.DATABASE_URL) {

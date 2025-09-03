@@ -13,6 +13,26 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     res.json({ status: 'OK', timestamp: new Date() });
   });
 
+  // Test Supabase connection endpoint
+  app.get('/test-supabase-connection', async (req: Request, res: Response) => {
+    try {
+      if (storage instanceof (await import('./supabase-public-storage')).SupabasePublicStorage) {
+        const connected = await (storage as any).testConnection();
+        if (!connected) {
+          await (storage as any).createTables();
+        }
+        res.json({ 
+          connected, 
+          message: connected ? 'Supabase connection successful' : 'Created tables in Supabase' 
+        });
+      } else {
+        res.json({ connected: false, message: 'Not using Supabase storage' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: 'Connection test failed', details: error.message });
+    }
+  });
+
   // User endpoints with proper typing
   app.get('/api/user', async (req: Request, res: Response) => {
     try {
