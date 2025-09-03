@@ -22,6 +22,11 @@ export const config = {
   
   // Default data source selection
   getDataSource(): 'supabase' | 'memory' | 'mock' {
+    // Force Supabase usage when credentials are available
+    if (this.SUPABASE_URL && this.SUPABASE_SERVICE_ROLE_KEY) {
+      return 'supabase';
+    }
+    
     // Production: Always use Supabase
     if (this.isProduction) {
       return 'supabase';

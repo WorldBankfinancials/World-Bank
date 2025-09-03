@@ -16,7 +16,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // User endpoints with proper typing
   app.get('/api/user', async (req: Request, res: Response) => {
     try {
-      const user = await storage.getUser(1); // Liu Wei's ID
+      const user = await storage.getUser(1); // Legacy endpoint for compatibility
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -24,6 +24,49 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get user error:', error);
       res.status(500).json({ error: 'Failed to get user' });
+    }
+  });
+
+  // Real user profile endpoint based on email
+  app.post('/api/user/profile', async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: 'Email required' });
+      }
+
+      const user = await (storage as any).getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      console.log('🔍 Fetching real user profile for:', email);
+      res.json(user);
+    } catch (error) {
+      console.error('Get user profile error:', error);
+      res.status(500).json({ error: 'Failed to get user profile' });
+    }
+  });
+
+  // Real user accounts endpoint
+  app.post('/api/accounts/user', async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: 'Email required' });
+      }
+
+      const user = await (storage as any).getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const accounts = await storage.getUserAccounts(user.id);
+      console.log('🏦 Fetching real account data for user:', user.id);
+      res.json(accounts);
+    } catch (error) {
+      console.error('Get user accounts error:', error);
+      res.status(500).json({ error: 'Failed to get user accounts' });
     }
   });
 

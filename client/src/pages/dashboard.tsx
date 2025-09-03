@@ -3,6 +3,7 @@ import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";
 import RealtimeAlerts from "@/components/RealtimeAlerts";
+import { useUserData, useAccountData } from "@/hooks/useUserData";
 
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
