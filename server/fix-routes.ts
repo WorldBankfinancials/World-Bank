@@ -322,6 +322,61 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Transfer endpoint with proper PostgreSQL integration
+  app.post('/api/transfer', async (req: Request, res: Response) => {
+    try {
+      const { fromUserId, amount, currency, transactionType, recipientName, recipientAccount, description, pin } = req.body;
+      
+      console.log('🏦 Processing transfer:', { fromUserId, amount, currency, transactionType });
+      
+      // Validate PIN
+      const user = await storage.getUser(fromUserId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      if (user.transferPin !== pin) {
+        return res.status(401).json({ error: 'Invalid PIN' });
+      }
+      
+      // Generate transaction ID
+      const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Create transaction with PostgreSQL storage
+      const transaction = await storage.createTransaction({
+        transactionId,
+        fromUserId,
+        toUserId: null,
+        fromAccountId: 1,
+        toAccountId: null,
+        amount: parseFloat(amount),
+        currency: currency || 'USD',
+        transactionType,
+        status: 'pending',
+        description,
+        recipientName,
+        recipientAccount,
+        referenceNumber: transactionId,
+        fee: transactionType === 'international' ? 25 : 0,
+        countryCode: 'US',
+        bankName: 'World Bank',
+        adminNotes: 'Awaiting admin approval'
+      });
+      
+      console.log('✅ Transfer created successfully:', transaction);
+      res.json({ 
+        success: true, 
+        transactionId: transaction.transactionId,
+        status: 'pending',
+        message: 'Transfer submitted for admin approval'
+      });
+      
+    } catch (error) {
+      console.error('❌ Transfer error:', error);
+      res.status(500).json({ error: 'Transfer failed' });
+    }
+  });
+
   // Setup transfer routes
   setupTransferRoutes(app);
 
