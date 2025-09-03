@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage-factory";
 import { setupTransferRoutes } from './routes-transfer';
+import { ObjectStorageService } from './objectStorage';
 
 
 // Utility functions for generating account details
@@ -1712,6 +1713,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log('WebSocket server initialized on /ws path');
 
   // Setup transfer routes
+  // Object Storage Routes for ID Card Uploads
+  app.post('/api/objects/upload', async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error('Upload URL generation error:', error);
+      res.status(500).json({ error: 'Failed to generate upload URL' });
+    }
+  });
+
   setupTransferRoutes(app);
 
   return httpServer;

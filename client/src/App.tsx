@@ -29,6 +29,7 @@ import BusinessBanking from "./pages/business-banking";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import MultiStepRegister from "@/pages/register-multi-step";
 import AdminLogin from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard";
 import SimpleAdmin from "@/pages/simple-admin";
@@ -66,6 +67,7 @@ function App() {
               <Switch>
                 <Route path="/login" component={Login} />
                 <Route path="/register" component={Register} />
+            <Route path="/register-multi" component={MultiStepRegister} />
                 <Route path="/admin-login" component={AdminLogin} />
                 <Route path="/admin-dashboard" component={AdminDashboard} />
                 <Route path="/simple-admin" component={SimpleAdmin} />
