@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 
 type Language = 'en' | 'zh';
 
@@ -145,7 +145,6 @@ const translations = {
     'common.edit': 'Edit',
     'common.delete': 'Delete',
     'save': 'Save',
-    'cancel': 'Cancel',
     'edit': 'Edit',
     'delete': 'Delete',
     'close': 'Close',

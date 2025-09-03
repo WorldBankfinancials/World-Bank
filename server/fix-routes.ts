@@ -247,12 +247,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const body = req.body as { username: string; pin: string };
       console.log('PIN verification request:', { username: body.username, pin: body.pin });
       
-      // Try to find user by email first (since login uses email), then by username
-      let user = await storage.getUserByUsername(body.username);
+      // Try to find user by email (which is the primary method for login)
+      let user = await (storage as any).getUserByEmail?.(body.username);
       if (!user) {
-        // If not found by username, search all users for matching email
-        const allUsers = await storage.getAllUsers();
-        user = allUsers.find(u => u.email === body.username);
+        // Fallback to username search
+        user = await storage.getUserByUsername(body.username);
       }
       
       console.log('Found user:', user ? { id: user.id, email: user.email, transferPin: user.transferPin } : 'No user found');

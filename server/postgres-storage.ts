@@ -77,6 +77,26 @@ export class PostgresStorage implements IStorage {
     }
   }
 
+  async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
+    console.log('🔍 Searching for user with Supabase UUID:', supabaseUserId);
+    try {
+      const result = await sql`
+        SELECT * FROM public.bank_users WHERE supabase_user_id = ${supabaseUserId}::uuid
+      `;
+      
+      if (result.length === 0) {
+        console.log('❌ No user found with Supabase UUID:', supabaseUserId);
+        return undefined;
+      }
+      
+      console.log('✅ Found user by Supabase UUID:', result[0]);
+      return this.mapDbUser(result[0]);
+    } catch (error) {
+      console.error('❌ Database error fetching user by Supabase UUID:', error);
+      return undefined;
+    }
+  }
+
   async getAllUsers(): Promise<User[]> {
     try {
       const result = await sql`
