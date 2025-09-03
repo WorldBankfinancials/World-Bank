@@ -127,7 +127,7 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 w-96 h-[600px] bg-white rounded-lg shadow-xl border border-gray-200 z-50 flex flex-col">
+    <div className="fixed bottom-4 right-4 w-80 h-[450px] bg-white rounded-lg shadow-xl border border-gray-200 z-50 flex flex-col">
       {/* Chat Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-blue-600 text-white rounded-t-lg">
         <div className="flex items-center space-x-2">
@@ -196,31 +196,28 @@ export default function LiveChat({ isOpen, onClose }: LiveChatProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input - Fixed Layout */}
-      <div className="p-4 border-t border-gray-200 bg-gray-50 rounded-b-lg flex-shrink-0">
-        <div className="flex items-center space-x-2">
-          <Button size="sm" variant="ghost" className="p-2 hover:bg-gray-200">
-            <Paperclip className="w-4 h-4 text-gray-500" />
-          </Button>
+      {/* Message Input - Fixed at Bottom */}
+      <div className="p-3 border-t border-gray-200 bg-white rounded-b-lg flex-shrink-0 min-h-[80px]">
+        <div className="flex items-end space-x-2">
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Type your message..."
-            className="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+            className="flex-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-10"
             disabled={!isConnected}
           />
           <Button 
             onClick={sendMessage} 
             size="sm"
             disabled={!newMessage.trim() || !isConnected}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 h-10"
           >
             <Send className="w-4 h-4" />
           </Button>
         </div>
         <div className="mt-2 text-xs text-gray-500 text-center">
-          {isConnected ? 'Connected to support' : 'Connecting...'}
+          {isConnected ? 'Press Enter to send • Connected to support' : 'Connecting...'}
         </div>
       </div>
     </div>
