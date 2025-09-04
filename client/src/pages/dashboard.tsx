@@ -144,9 +144,9 @@ function ReceiveSection() {
   const [copied, setCopied] = React.useState(false);
 
   const accountDetails = {
-    name: "Mr. Liu Wei",
-    accountNumber: "4789-6523-1087-9234",
-    accountId: "WB-2024-7829"
+    name: userData?.fullName || "Account Holder",
+    accountNumber: userData?.accountNumber || "Loading...",
+    accountId: userData?.accountId || "Loading..."
   };
 
   const handleCopyDetails = (text: string) => {
@@ -473,19 +473,7 @@ export default function Dashboard() {
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const [showNotifications] = React.useState(false);
-  const [userData, setUserData] = React.useState<any>({
-    fullName: 'Liu Wei',
-    email: 'bankmanagerworld5@gmail.com',
-    phone: '+86 138 0013 8000',
-    accountNumber: '4789-6523-1087-9234',
-    accountId: 'WB-2024-7829',
-    profession: 'Marine Engineer - Oil Rig Operations',
-    balance: 2001382.65,
-    transferPin: '0192',
-    isVerified: true,
-    isOnline: true,
-    isActive: true
-  });
+  const [userData, setUserData] = React.useState<any>(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -494,21 +482,7 @@ export default function Dashboard() {
         if (response.ok) {
           const data = await response.json();
           console.log('✅ Dashboard - Loaded user data:', data);
-          setUserData({
-            ...data,
-            // Ensure all fields are populated
-            fullName: data.fullName || 'Liu Wei',
-            email: data.email || 'bankmanagerworld5@gmail.com',
-            phone: data.phone || '+86 138 0013 8000',
-            accountNumber: data.accountNumber || '4789-6523-1087-9234',
-            accountId: data.accountId || 'WB-2024-7829',
-            profession: data.profession || 'Marine Engineer - Oil Rig Operations',
-            balance: data.balance || 2001382.65,
-            transferPin: data.transferPin || '0192',
-            isVerified: data.isVerified !== undefined ? data.isVerified : true,
-            isOnline: data.isOnline !== undefined ? data.isOnline : true,
-            isActive: data.isActive !== undefined ? data.isActive : true
-          });
+          setUserData(data);
         } else {
           console.log('⚠️ API response not OK, using default data');
         }

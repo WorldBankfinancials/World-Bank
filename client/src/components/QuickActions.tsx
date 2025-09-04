@@ -12,7 +12,9 @@ import {
   Bell,
   X,
   Send,
-  User
+  User,
+  TrendingUp,
+  DollarSign
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,8 +71,8 @@ export default function QuickActions() {
         // Send customer connection message
         ws.send(JSON.stringify({
           type: 'customer_connect',
-          userId: 'liu-wei-001',
-          userName: 'Liu Wei'
+          userId: 'user-' + Math.random().toString(36).substr(2, 9),
+          userName: 'Customer'
         }));
       };
 
@@ -205,6 +207,16 @@ export default function QuickActions() {
       label: "Mobile Pay",
       onClick: () => setLocation("/mobile-pay")
     },
+    { 
+      icon: TrendingUp, 
+      label: "Investment",
+      onClick: () => setLocation("/investment")
+    },
+    { 
+      icon: DollarSign, 
+      label: "Exchange",
+      onClick: () => setLocation("/exchange")
+    },
   ];
 
   const handleSendMessage = () => {
@@ -212,8 +224,8 @@ export default function QuickActions() {
 
     const message: ChatMessage = {
       id: Date.now().toString(),
-      senderId: 'liu-wei-001',
-      senderName: 'Liu Wei',
+      senderId: 'user-' + Math.random().toString(36).substr(2, 9),
+      senderName: 'Customer',
       senderRole: 'customer',
       message: currentMessage,
       timestamp: new Date(),
@@ -225,8 +237,8 @@ export default function QuickActions() {
     // Send to WebSocket
     wsRef.current.send(JSON.stringify({
       type: 'chat_message',
-      senderId: 'liu-wei-001',
-      senderName: 'Liu Wei',
+      senderId: 'user-' + Math.random().toString(36).substr(2, 9),
+      senderName: 'Customer',
       senderRole: 'customer',
       message: currentMessage
     }));

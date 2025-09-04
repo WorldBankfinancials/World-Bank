@@ -162,10 +162,10 @@ export default function Header({}: HeaderProps) {
                   {/* Account Info Footer */}
                   <div className="p-4 border-t border-gray-100 bg-gray-50">
                     <div className="text-xs text-gray-500">
-                      Account ID: WB-2024-7829
+                      Account ID: {freshUserData?.accountId || userProfile?.accountId || 'Loading...'}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Last Login: Dec 15, 2024
+                      Last Login: {freshUserData?.lastLogin ? new Date(freshUserData.lastLogin).toLocaleDateString() : userProfile?.lastLogin ? new Date(userProfile.lastLogin).toLocaleDateString() : 'Loading...'}
                     </div>
                   </div>
                 </div>
