@@ -596,7 +596,7 @@ export default function Transfer() {
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      onClick={() => setRecipient(contact.name)}
+                      onClick={() => setRecipientDetails(prev => ({...prev, fullName: contact.name}))}
                     >
                       Select
                     </Button>

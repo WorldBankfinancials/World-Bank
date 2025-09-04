@@ -28,8 +28,20 @@ import { useLocation } from "wouter";
 import type { User } from "@shared/schema";
 
 // Type definitions
-type Transaction = any;
-type SupportTicket = any;
+interface Transaction {
+  id: number;
+  amount: string;
+  description: string;
+  status: string;
+  date: Date;
+}
+
+interface SupportTicket {
+  id: number;
+  subject: string;
+  status: string;
+  priority: string;
+}
 
 interface PendingTransfer {
   id: number;
@@ -98,7 +110,7 @@ export default function AdminDashboard() {
   });
 
   // Fetch admin statistics
-  const { data: adminStats = { totalCustomers: 8, todayVolume: '$156,420' } } = useQuery({
+  const { data: adminStats = { totalCustomers: 8, todayVolume: '$156,420' } } = useQuery<{ totalCustomers: number; todayVolume: string }>({
     queryKey: ['/api/admin/stats'],
   });
 

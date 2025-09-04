@@ -1,3 +1,4 @@
+import type { User } from "@shared/schema";
 
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
