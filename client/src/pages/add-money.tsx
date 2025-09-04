@@ -79,11 +79,11 @@ export default function AddMoney() {
     }
   ];
 
-  const recentTransactions = [
-    { method: "Debit Card", amount: "+$500.00", status: "completed", time: "2 hours ago" },
-    { method: "Bank Transfer", amount: "+$1,200.00", status: "completed", time: "1 day ago" },
-    { method: "Cash Deposit", amount: "+$300.00", status: "completed", time: "3 days ago" }
-  ];
+  // Fetch real transaction data from Supabase
+  const { data: recentTransactions } = useQuery({
+    queryKey: ['/api/recent-deposits'],
+    staleTime: 30000
+  });
 
   const handleAddMoney = async () => {
     if (!selectedMethod || !amount) {
@@ -107,7 +107,7 @@ export default function AddMoney() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={user} />
+      <Header />
       
       <div className="px-4 py-6 pb-20">
         {/* Header Section */}

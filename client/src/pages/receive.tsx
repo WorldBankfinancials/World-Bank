@@ -40,20 +40,20 @@ export default function Receive() {
   }
 
   const accountDetails = {
-    name: "Mr. Liu Wei",
-    accountNumber: "4789-6523-1087-9234",
-    accountId: "WB-2024-7829",
+    name: user?.fullName || "Account Holder",
+    accountNumber: user?.accountNumber || "Loading...",
+    accountId: (user as any)?.accountId || "Loading...",
     bankName: "World Bank Group",
     swiftCode: "WBGLUS33"
   };
 
   const shareLink = `https://worldbank.app/pay/LW-${Date.now()}`;
 
-  const pendingRequests = [
-    { from: "John Smith", amount: "$250.00", status: "pending", time: "2 hours ago" },
-    { from: "Sarah Johnson", amount: "$1,200.00", status: "completed", time: "1 day ago" },
-    { from: "Mike Chen", amount: "$500.00", status: "pending", time: "3 days ago" }
-  ];
+  // Fetch real pending requests from Supabase
+  const { data: pendingRequests } = useQuery({
+    queryKey: ['/api/payment-requests'],
+    staleTime: 30000
+  });
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareLink);
@@ -78,18 +78,7 @@ export default function Receive() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={{
-        id: 1,
-        username: "liu.wei",
-        password: "password123",
-        fullName: "Mr. Liu Wei",
-        accountNumber: "4789-6523-1087-9234",
-        accountId: "WB-2024-7829",
-        profession: "Marine Engineer at Oil Rig Company",
-        isVerified: true,
-        isOnline: true,
-        avatarUrl: null
-      }} />
+      <Header />
       
       <div className="px-4 py-6 pb-20">
         {/* Header Section */}

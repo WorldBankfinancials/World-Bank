@@ -26,41 +26,16 @@ export default function CreditCards() {
     );
   }
 
-  const creditCards = [
-    {
-      id: 1,
-      name: "World Bank Platinum",
-      type: "Platinum",
-      number: "4789 6523 1087 9234",
-      maskedNumber: "**** **** **** 9234",
-      expiry: "12/27",
-      balance: "15420.85",
-      limit: "50000.00",
-      availableCredit: "34579.15",
-      status: "Active",
-      color: "from-blue-600 to-blue-800"
-    },
-    {
-      id: 2,
-      name: "World Bank Business",
-      type: "Business",
-      number: "5234 8765 2109 5678",
-      maskedNumber: "**** **** **** 5678",
-      expiry: "08/26",
-      balance: "8230.40",
-      limit: "75000.00",
-      availableCredit: "66769.60",
-      status: "Active",
-      color: "from-gray-700 to-gray-900"
-    }
-  ];
+  // Fetch real credit card data from Supabase
+  const { data: creditCards } = useQuery({
+    queryKey: ['/api/cards'],
+    staleTime: 30000
+  });
 
-  const recentTransactions = [
-    { description: "Amazon Prime", amount: "14.99", date: "Dec 15, 2024", category: "Subscription" },
-    { description: "Shell Gas Station", amount: "89.45", date: "Dec 14, 2024", category: "Fuel" },
-    { description: "Whole Foods Market", amount: "156.78", date: "Dec 13, 2024", category: "Groceries" },
-    { description: "Netflix", amount: "15.99", date: "Dec 12, 2024", category: "Entertainment" },
-  ];
+  const { data: recentTransactions } = useQuery({
+    queryKey: ['/api/card-transactions'],
+    staleTime: 30000
+  });
 
   const quickActions = [
     { icon: Lock, label: "Lock Card", action: () => alert("Card locked successfully") },
@@ -71,18 +46,7 @@ export default function CreditCards() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={{
-        id: 1,
-        username: "liu.wei",
-        password: "password123",
-        fullName: "Mr. Liu Wei",
-        accountNumber: "4789-6523-1087-9234",
-        accountId: "WB-2024-7829",
-        profession: "Marine Engineer at Oil Rig Company",
-        isVerified: true,
-        isOnline: true,
-        avatarUrl: null
-      }} />
+      <Header />
       
       <div className="px-4 py-6 pb-20">
         {/* Header Section */}

@@ -165,7 +165,7 @@ export default function Header({}: HeaderProps) {
                       Account ID: {freshUserData?.accountId || userProfile?.accountId || 'Loading...'}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Last Login: {freshUserData?.lastLogin ? new Date(freshUserData.lastLogin).toLocaleDateString() : userProfile?.lastLogin ? new Date(userProfile.lastLogin).toLocaleDateString() : 'Loading...'}
+                      Last Login: {freshUserData?.lastLogin ? new Date(freshUserData.lastLogin).toLocaleDateString() : (userProfile as any)?.lastLogin ? new Date((userProfile as any).lastLogin).toLocaleDateString() : 'Loading...'}
                     </div>
                   </div>
                 </div>

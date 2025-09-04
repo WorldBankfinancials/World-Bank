@@ -56,12 +56,11 @@ export default function MobilePay() {
     }
   ];
 
-  const recentPayments = [
-    { merchant: "Starbucks Coffee", amount: "$5.75", time: "2 hours ago", method: "QR Code" },
-    { merchant: "Metro Transit", amount: "$2.50", time: "4 hours ago", method: "NFC" },
-    { merchant: "Amazon", amount: "$89.99", time: "1 day ago", method: "Online" },
-    { merchant: "Target", amount: "$45.32", time: "2 days ago", method: "QR Code" }
-  ];
+  // Fetch real payment data from Supabase
+  const { data: recentPayments } = useQuery({
+    queryKey: ['/api/mobile-payments'],
+    staleTime: 30000
+  });
 
   const nearbyMerchants = [
     { name: "Starbucks", distance: "0.2 miles", category: "Coffee", accepts: ["QR", "NFC"] },
@@ -72,7 +71,7 @@ export default function MobilePay() {
 
   return (
     <div className="min-h-screen bg-wb-gray">
-      <Header user={user} />
+      <Header />
       
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}

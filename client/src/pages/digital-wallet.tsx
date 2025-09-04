@@ -43,35 +43,31 @@ export default function DigitalWallet() {
     );
   }
 
-  const walletBalance = "12,456.78";
-  const recentTransactions = [
-    { type: "received", amount: "+$250.00", from: "John Smith", time: "2 hours ago" },
-    { type: "sent", amount: "-$89.99", to: "Amazon", time: "1 day ago" },
-    { type: "received", amount: "+$1,200.00", from: "Salary Deposit", time: "2 days ago" },
-    { type: "sent", amount: "-$45.50", to: "Starbucks", time: "3 days ago" }
-  ];
+  // Fetch real wallet data from Supabase
+  const { data: walletData } = useQuery({
+    queryKey: ['/api/wallet-balance'],
+    enabled: !!user,
+    staleTime: 30000
+  });
+
+  const { data: recentTransactions } = useQuery({
+    queryKey: ['/api/wallet-transactions'],
+    enabled: !!user,
+    staleTime: 30000
+  });
+
+  const walletBalance = walletData?.balance || (user as any)?.balance || 0;
 
   const quickActions = [
-    { icon: Send, label: "Send Money", action: () => alert("Send money feature") },
-    { icon: QrCode, label: "QR Pay", action: () => alert("QR code scanner") },
-    { icon: Plus, label: "Add Funds", action: () => alert("Add funds feature") },
-    { icon: History, label: "History", action: () => setActiveTab('history') }
+    { icon: Send, label: "Send Money", action: () => window.location.href = "/transfer" },
+    { icon: QrCode, label: "QR Pay", action: () => window.location.href = "/mobile-pay" },
+    { icon: Plus, label: "Add Funds", action: () => window.location.href = "/add-money" },
+    { icon: History, label: "History", action: () => window.location.href = "/history" }
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={{
-        id: 1,
-        username: "liu.wei",
-        password: "password123",
-        fullName: "Mr. Liu Wei",
-        accountNumber: "4789-6523-1087-9234",
-        accountId: "WB-2024-7829",
-        profession: "Marine Engineer at Oil Rig Company",
-        isVerified: true,
-        isOnline: true,
-        avatarUrl: null
-      }} />
+      <Header />
       
       <div className="px-4 py-6 pb-20">
         {/* Header Section */}
@@ -107,11 +103,11 @@ export default function DigitalWallet() {
           <CardContent>
             <div className="mb-6">
               <div className="text-3xl font-bold mb-2">
-                {showBalance ? `$${walletBalance}` : "••••••"}
+                {showBalance ? `$${walletBalance.toLocaleString()}` : "••••••"}
               </div>
               <div className="flex items-center space-x-4 text-blue-100">
-                <span>Account: 4789-6523-1087-9234</span>
-                <Badge className="bg-green-500 text-white">Active</Badge>
+                <span>Account: {user?.accountNumber || 'Loading...'}</span>
+                <Badge className="bg-green-500 text-white">{(user as any)?.isActive ? 'Active' : 'Inactive'}</Badge>
               </div>
             </div>
           </CardContent>
@@ -146,7 +142,7 @@ export default function DigitalWallet() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentTransactions.map((transaction, index) => (
+              {(recentTransactions as any[])?.map((transaction: any, index: number) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
