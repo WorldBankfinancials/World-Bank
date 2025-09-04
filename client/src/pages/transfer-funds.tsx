@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import * as React from "react";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
