@@ -1,4 +1,3 @@
-import * as React from "react";
 import { useState, useEffect } from "react";
 import { useLanguage } from '../contexts/LanguageContext';
 import { Avatar } from './Avatar';

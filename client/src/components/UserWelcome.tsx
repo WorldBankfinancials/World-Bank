@@ -1,8 +1,8 @@
 import * as React from "react";
-import type { User } from '@/lib/schema';
-import { useAuth } from "@/contexts/AuthContext";
+import type { User } from "../lib/schema";
+import { useAuth } from "../contexts/AuthContext";
 import { useState, useEffect } from "react";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage } from "../contexts/LanguageContext";
 
 interface UserWelcomeProps {
   user: User;
