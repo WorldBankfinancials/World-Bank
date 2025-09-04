@@ -11,6 +11,7 @@ import {
   LogOut
 } from "lucide-react";
 import { Link } from "wouter";
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NavigationMenuProps {
   isOpen: boolean;
@@ -19,6 +20,8 @@ interface NavigationMenuProps {
 
 export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps) {
   if (!isOpen) return null;
+  
+  const { userProfile } = useAuth();
 
   const menuSections = [
     {
@@ -79,12 +82,14 @@ export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps)
             <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center ring-2 ring-white ring-opacity-30 relative">
-                  <span className="text-lg font-medium text-white">LW</span>
+                  <span className="text-lg font-medium text-white">
+                    {userProfile?.fullName ? userProfile.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+                  </span>
                   <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border border-white"></div>
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-white">Mr. Liu Wei</h3>
-                  <p className="text-sm text-blue-100">Marine Engineer</p>
+                  <h3 className="font-semibold text-white">{userProfile?.fullName || 'User'}</h3>
+                  <p className="text-sm text-blue-100">{userProfile?.profession || 'Customer'}</p>
                   <div className="flex items-center space-x-2 mt-1">
                     <div className="flex items-center space-x-1">
                       <div className="w-2 h-2 bg-green-400 rounded-full"></div>

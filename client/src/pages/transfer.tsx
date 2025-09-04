@@ -93,8 +93,24 @@ export default function Transfer() {
       return;
     }
 
-    if (transferPin !== "0192") {
-      setPinError("Invalid PIN. Use PIN: 0192");
+    // Verify PIN with backend
+    try {
+      const pinResponse = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: userProfile?.email,
+          pin: transferPin
+        })
+      });
+      
+      const pinResult = await pinResponse.json();
+      if (!pinResult.success) {
+        setPinError("Invalid PIN");
+        return;
+      }
+    } catch (error) {
+      setPinError("PIN verification failed");
       return;
     }
 

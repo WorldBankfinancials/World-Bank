@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CreditCard, Plus, Eye, EyeOff, MoreVertical, Zap, Shield, Smartphone, Lock, Unlock, CreditCard as CreditCardIcon, Settings, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import BottomNavigation from '@/components/BottomNavigation';
 import QuickActions from '@/components/QuickActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function Cards() {
   const { userProfile } = useAuth();
@@ -28,35 +29,12 @@ export default function Cards() {
   const [billProvider, setBillProvider] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
 
-  const [creditCards, setCreditCards] = useState([
-    {
-      id: 1,
-      name: 'World Bank Platinum',
-      number: '•••• •••• •••• 4321',
-      type: 'Platinum',
-      balance: 47832.15,
-      limit: 50000,
-      expiry: '12/27',
-      color: 'bg-gradient-to-r from-gray-800 to-gray-900',
-      isLocked: false,
-      dailyLimit: 5000,
-      contactlessEnabled: true
-    },
-    {
-      id: 2,
-      name: 'Business Elite',
-      number: '•••• •••• •••• 8765',
-      type: 'Business',
-      balance: 12450.50,
-      limit: 25000,
-      expiry: '08/26',
-      color: 'bg-gradient-to-r from-blue-600 to-blue-800',
-      isLocked: false,
-      dailyLimit: 3000,
-      contactlessEnabled: true
-    }
-  ]);
-
+  const queryClient = useQueryClient();
+  const { data: creditCards, isLoading: cardsLoading } = useQuery({
+    queryKey: ['/api/cards'],
+    staleTime: 30000
+  });
+  
   const handleLockCard = async () => {
     if (!selectedCard) return;
     
@@ -64,15 +42,23 @@ export default function Cards() {
       const response = await fetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'bankmanagerworld5@gmail.com', pin })
+        body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
       });
 
       if (response.ok) {
-        setCreditCards(prev => prev.map(card => 
-          card.id === selectedCard.id 
-            ? { ...card, isLocked: !card.isLocked }
-            : card
-        ));
+        // Update card lock status in database
+        await fetch('/api/cards/lock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cardId: selectedCard.id,
+            isLocked: !selectedCard.isLocked
+          })
+        });
+        
+        // Refresh cards data
+        queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
+        
         toast({
           title: selectedCard.isLocked ? t('card_unlocked') || 'Card Unlocked' : t('card_locked') || 'Card Locked',
           description: selectedCard.isLocked 
@@ -102,7 +88,7 @@ export default function Cards() {
       const response = await fetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'bankmanagerworld5@gmail.com', pin })
+        body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
       });
 
       if (response.ok) {
@@ -135,7 +121,7 @@ export default function Cards() {
       const response = await fetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'bankmanagerworld5@gmail.com', pin })
+        body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
       });
 
       if (response.ok) {
@@ -165,17 +151,33 @@ export default function Cards() {
   };
 
   const handleUpdateSettings = async () => {
-    setCreditCards(prev => prev.map(card => 
-      card.id === selectedCard?.id 
-        ? { ...card, dailyLimit: parseInt(amount) || card.dailyLimit }
-        : card
-    ));
-    toast({
-      title: t('settings_updated') || 'Settings Updated',
-      description: t('card_settings_updated') || 'Your card settings have been updated successfully',
-    });
-    setSettingsDialogOpen(false);
-    setAmount('');
+    try {
+      await fetch('/api/cards/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cardId: selectedCard?.id,
+          dailyLimit: parseInt(amount) || selectedCard?.dailyLimit,
+          contactlessEnabled: selectedCard?.contactlessEnabled
+        })
+      });
+      
+      // Refresh cards data
+      queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
+      
+      toast({
+        title: t('settings_updated') || 'Settings Updated',
+        description: t('card_settings_updated') || 'Your card settings have been updated successfully',
+      });
+      setSettingsDialogOpen(false);
+      setAmount('');
+    } catch (error) {
+      toast({
+        title: t('error') || 'Error',
+        description: t('operation_failed') || 'Failed to update settings',
+        variant: 'destructive'
+      });
+    }
   };
 
   return (
@@ -197,7 +199,8 @@ export default function Cards() {
 
         {/* Credit Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {creditCards.map((card) => (
+          {cardsLoading && <div className="text-center py-8">Loading cards...</div>}
+          {creditCards && creditCards.map((card) => (
             <Card key={card.id} className="overflow-hidden">
               <div className={`${card.color} text-white p-6 relative`}>
                 <div className="flex justify-between items-start mb-4">
@@ -205,9 +208,20 @@ export default function Cards() {
                     <p className="text-sm opacity-80">{card.name}</p>
                     <p className="text-lg font-mono">{card.number}</p>
                   </div>
-                  <Badge variant="secondary" className="bg-white/20 text-white">
-                    {card.type}
-                  </Badge>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="secondary" className="bg-white/20 text-white">
+                      {card.type}
+                    </Badge>
+                    <button 
+                      onClick={() => {
+                        setSelectedCard(card);
+                        setSettingsDialogOpen(true);
+                      }}
+                      className="p-1 rounded hover:bg-white/20 transition-colors"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="flex justify-between items-end">

@@ -371,6 +371,76 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(transactions);
     }
 
+    // Get user cards
+    if (apiPath === '/cards' && req.method === 'GET') {
+      const { data, error } = await supabase
+        .from('cards')
+        .select('*')
+        .eq('user_id', 1)
+        .eq('is_active', true);
+      
+      if (error) {
+        return res.status(500).json({ error: 'Failed to fetch cards' });
+      }
+      
+      const cards = (data || []).map(card => ({
+        id: card.id,
+        name: card.card_name,
+        number: card.card_number.replace(/(\d{4})/g, '•••• ').trim().replace(/•{4}$/, card.card_number.slice(-4)),
+        type: card.card_type,
+        balance: parseFloat(card.balance),
+        limit: parseFloat(card.credit_limit),
+        expiry: card.expiry_date,
+        color: card.card_type === 'Platinum' ? 'bg-gradient-to-r from-gray-800 to-gray-900' : 'bg-gradient-to-r from-blue-600 to-blue-800',
+        isLocked: card.is_locked,
+        dailyLimit: parseFloat(card.daily_limit),
+        contactlessEnabled: card.contactless_enabled
+      }));
+      
+      return res.status(200).json(cards);
+    }
+    
+    // Update card lock status
+    if (apiPath === '/cards/lock' && req.method === 'POST') {
+      const { cardId, isLocked } = req.body;
+      
+      const { data, error } = await supabase
+        .from('cards')
+        .update({ is_locked: isLocked })
+        .eq('id', cardId)
+        .eq('user_id', 1)
+        .select()
+        .single();
+      
+      if (error) {
+        return res.status(500).json({ error: 'Failed to update card' });
+      }
+      
+      return res.status(200).json({ success: true, card: data });
+    }
+    
+    // Update card settings
+    if (apiPath === '/cards/settings' && req.method === 'POST') {
+      const { cardId, dailyLimit, contactlessEnabled } = req.body;
+      
+      const { data, error } = await supabase
+        .from('cards')
+        .update({ 
+          daily_limit: dailyLimit,
+          contactless_enabled: contactlessEnabled 
+        })
+        .eq('id', cardId)
+        .eq('user_id', 1)
+        .select()
+        .single();
+      
+      if (error) {
+        return res.status(500).json({ error: 'Failed to update card settings' });
+      }
+      
+      return res.status(200).json({ success: true, card: data });
+    }
+
     // Default response for unimplemented endpoints
     return res.status(404).json({ 
       error: 'API endpoint not found',
