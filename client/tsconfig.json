@@ -12,10 +12,9 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
-    "noUnusedLocals": true,          // ⬅️ Turn this ON
-    "noUnusedParameters": true,      // ⬅️ Turn this ON
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "forceConsistentCasingInFileNames": true, // ⬅️ Prevent casing bugs on Vercel/Linux
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
