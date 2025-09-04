@@ -1,3 +1,4 @@
+import React from "react";
 import { Shield } from "lucide-react";
 import type { User } from '@/lib/schema';
 import { useAuth } from "@/contexts/AuthContext";
