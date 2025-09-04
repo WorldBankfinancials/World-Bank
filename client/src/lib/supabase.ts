@@ -1,12 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Get Supabase credentials from environment (updated to new project)
-const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || 'https://icbsxmrmorkdgxtumamu.supabase.co';
-const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYnN4bXJtb3JrZGd4dHVtYW11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NTkxMDksImV4cCI6MjA3MDMzNTEwOX0.GDBjj7flp-6sLjfHh3mil31zPq_97Tvfw47Oz5KxKqk';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-console.log('🔧 Supabase Configuration:');
-console.log('URL:', supabaseUrl);
-console.log('Key prefix:', supabaseAnonKey.substring(0, 20) + '...');
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    "❌ Missing Supabase credentials. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file."
+  );
+}
+
+console.log("🔧 Supabase Configuration Loaded");
+console.log("📍 URL:", supabaseUrl);
+console.log("🔑 Key Prefix:", supabaseAnonKey.substring(0, 10) + "...");
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -16,39 +21,40 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     flowType: 'pkce',
   },
   realtime: {
-    params: {
-      eventsPerSecond: 10,
-    },
+    params: { eventsPerSecond: 10 },
   },
 });
 
-// Add error handling and debugging
 supabase.auth.onAuthStateChange((event, session) => {
-  console.log('Supabase auth event:', event, session?.user?.email);
-  if (event === 'SIGNED_IN' && session) {
-    console.log('✅ Successfully signed in:', session.user.email);
+  console.log("Supabase Auth Event:", event, session?.user?.email);
+
+  if (event === "SIGNED_IN" && session) {
+    console.log("✅ User signed in:", session.user.email);
   }
-  if (event === 'SIGNED_OUT') {
-    console.log('✅ Successfully signed out');
+
+  if (event === "SIGNED_OUT") {
+    console.log("✅ User signed out");
   }
 });
 
-// Test connectivity and log project info
 const testConnection = async () => {
   try {
-    console.log('🔍 Testing Supabase connection...');
-    console.log('📍 Project URL:', supabaseUrl);
-    
-    // Test basic connectivity
-    await supabase.auth.getSession();
-    console.log('✅ Supabase connection restored successfully');
-    console.log('🔐 Auth system ready for real authentication');
+    console.log("🔍 Testing Supabase connection...");
+    const { data, error } = await supabase.auth.getSession();
+
+    if (error) throw error;
+
+    console.log("✅ Supabase is connected.");
+    if (data?.session?.user?.email) {
+      console.log("👤 Active session:", data.session.user.email);
+    } else {
+      console.log("ℹ️ No active session found.");
+    }
     return true;
   } catch (error) {
-    console.log('❌ Supabase connection issue:', error);
+    console.error("❌ Supabase connection failed:", error);
     return false;
   }
 };
 
-// Run connection test
 testConnection();
