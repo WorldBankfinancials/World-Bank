@@ -116,7 +116,7 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
               fontSize: '40px',
               textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
             }}>
-              {(freshUserData?.fullName || userProfile?.fullName || 'User').split(' ').map(n => n[0]).join('')}
+              {(freshUserData?.fullName || userProfile?.fullName || 'User').split(' ').map((n: string) => n[0]).join('')}
             </span>
             <div style={{
               position: 'absolute',

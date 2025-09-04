@@ -4,6 +4,8 @@ import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";
 import RealtimeAlerts from "@/components/RealtimeAlerts";
 import { useUserData, useAccountData } from "@/hooks/useUserData";
+import { useQuery } from '@tanstack/react-query';
+import type { User } from '@shared/schema';
 
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -139,6 +141,9 @@ function TransferSection() {
 
 // Receive Section Component
 function ReceiveSection() {
+  const { data: user } = useQuery<User>({
+    queryKey: ['/api/user'],
+  });
   const [requestAmount, setRequestAmount] = React.useState("");
   const [showQR, setShowQR] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -688,10 +693,10 @@ export default function Dashboard() {
                   {/* Account Info Footer */}
                   <div className="p-4 border-t border-gray-100 bg-gray-50">
                     <div className="text-xs text-gray-500">
-                      Account ID: WB-2024-7829
+                      Account ID: {userProfile?.accountId || 'Loading...'}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Last Login: Dec 15, 2024
+                      Last Login: {(userProfile as any)?.lastLogin ? new Date((userProfile as any).lastLogin).toLocaleDateString() : 'Loading...'}
                     </div>
                   </div>
                 </div>
@@ -705,10 +710,10 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">{t('welcome')}, {user?.fullName || 'Loading...'}</h1>
-                <p className="text-sm text-gray-600">{t('account_number')}: {user?.accountNumber || 'Loading...'}</p>
-                <p className="text-sm text-gray-600">{t('account_id')}: {(user as any)?.accountId || 'Loading...'}</p>
-                <p className="text-sm text-gray-600">{user?.profession || 'Loading...'}</p>
+                <h1 className="text-lg font-semibold text-gray-900">{t('welcome')}, {userProfile?.fullName || 'Loading...'}</h1>
+                <p className="text-sm text-gray-600">{t('account_number')}: {userProfile?.accountNumber || 'Loading...'}</p>
+                <p className="text-sm text-gray-600">{t('account_id')}: {(userProfile as any)?.accountId || 'Loading...'}</p>
+                <p className="text-sm text-gray-600">{userProfile?.profession || 'Loading...'}</p>
                 <div className="flex items-center space-x-2 mt-1">
                   <Badge variant="default" className="text-xs bg-green-100 text-green-800 flex items-center space-x-1">
                     <Check className="w-3 h-3" />
@@ -744,7 +749,7 @@ export default function Dashboard() {
                 <p className="text-blue-100 text-sm">{t('total_balance')}</p>
                 <div className="flex items-center space-x-2">
                   <h2 className="text-2xl font-bold">
-                    {showBalance ? `$${user?.balance?.toLocaleString() || userProfile?.balance?.toLocaleString() || "0.00"}` : "****"}
+                    {showBalance ? `$${userProfile?.balance?.toLocaleString() || "0.00"}` : "****"}
                   </h2>
                   <button onClick={toggleBalance}>
                     {showBalance ? (
