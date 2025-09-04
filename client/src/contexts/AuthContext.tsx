@@ -135,9 +135,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           console.log('✅ New banking profile created');
           setUserProfile(userProfile);
-          
-          // Store profile data for professional session persistence
-          localStorage.setItem('worldbank_user_profile', JSON.stringify(userProfile));
         }
       } catch (error) {
         console.error('Failed to create banking profile:', error);
@@ -156,9 +153,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isOnline: true
         };
         setUserProfile(minimalProfile);
-        
-        // Store minimal profile for persistence
-        localStorage.setItem('worldbank_user_profile', JSON.stringify(minimalProfile));
       }
     }
   };
@@ -229,132 +223,100 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      // Clear professional banking session data
+      // Clear all session data for maximum security
       localStorage.removeItem('worldbank_session');
       localStorage.removeItem('worldbank_user_profile');
       localStorage.removeItem('worldbank_auth_timestamp');
+      sessionStorage.clear();
       
       await supabase.auth.signOut();
       setUser(null);
       setUserProfile(null);
       
-      console.log('🔐 Professional logout completed - all session data cleared');
+      console.log('🔐 Secure logout completed - all session data cleared');
     } catch (error) {
       console.error("Sign out error:", error);
     }
   };
 
   useEffect(() => {
-    const initializeSession = async () => {
+    const initializeSecureSession = async () => {
       try {
-        console.log('🏦 Initializing professional banking session...');
+        console.log('🔐 Initializing secure banking session - strict security mode');
         
-        // Check for existing Supabase session first (most reliable)
+        // Clear any old session data on app start for maximum security
+        localStorage.removeItem('worldbank_session');
+        localStorage.removeItem('worldbank_user_profile');
+        localStorage.removeItem('worldbank_auth_timestamp');
+        sessionStorage.clear();
+        
+        // Only check for valid Supabase session - no backup restoration
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (session?.user) {
-          console.log('✅ Found valid Supabase session for:', session.user.email);
-          setUser(session.user);
-          await fetchUserData(session.user);
+        if (session?.user && session.expires_at) {
+          // Check if session is still valid and not expired
+          const expirationTime = new Date(session.expires_at * 1000);
+          const now = new Date();
           
-          // Store session backup data with timestamp
-          localStorage.setItem('worldbank_session', JSON.stringify({
-            userId: session.user.id,
-            email: session.user.email,
-            timestamp: new Date().toISOString(),
-            sessionHash: btoa(session.user.id + session.user.email)
-          }));
-          localStorage.setItem('worldbank_auth_timestamp', new Date().toISOString());
-          
-        } else {
-          // Check local storage backup for professional continuity
-          const savedSession = localStorage.getItem('worldbank_session');
-          const savedProfile = localStorage.getItem('worldbank_user_profile');
-          const authTimestamp = localStorage.getItem('worldbank_auth_timestamp');
-          
-          if (savedSession && savedProfile && authTimestamp) {
-            const sessionData = JSON.parse(savedSession);
-            const profileData = JSON.parse(savedProfile);
-            const lastAuth = new Date(authTimestamp);
-            const now = new Date();
+          if (expirationTime > now) {
+            console.log('✅ Found valid active Supabase session for:', session.user.email);
+            console.log('⏰ Session expires at:', expirationTime.toLocaleString());
             
-            // Professional banking: allow 24 hour session persistence
-            const hoursSinceAuth = (now.getTime() - lastAuth.getTime()) / (1000 * 60 * 60);
-            
-            if (hoursSinceAuth < 24 && sessionData.userId && profileData.email) {
-              console.log('🔄 Restoring professional banking session from backup');
-              console.log('⏰ Hours since last auth:', Math.round(hoursSinceAuth * 10) / 10);
-              
-              // Create minimal user object for continuity
-              const restoredUser = {
-                id: sessionData.userId,
-                email: sessionData.email,
-                aud: 'authenticated',
-                role: 'authenticated',
-                user_metadata: profileData
-              };
-              
-              setUser(restoredUser as any);
-              setUserProfile(profileData);
-              
-              // Try to refresh the actual Supabase session in the background
-              setTimeout(async () => {
-                try {
-                  await supabase.auth.refreshSession();
-                } catch (error) {
-                  console.log('Background session refresh failed:', error);
-                }
-              }, 1000);
-              
-            } else {
-              console.log('⚠️ Saved session expired or invalid, requiring fresh login');
-              localStorage.removeItem('worldbank_session');
-              localStorage.removeItem('worldbank_user_profile');
-              localStorage.removeItem('worldbank_auth_timestamp');
-            }
+            setUser(session.user);
+            await fetchUserData(session.user);
+          } else {
+            console.log('🔐 Session expired - forcing fresh login');
+            await supabase.auth.signOut();
+            setUser(null);
+            setUserProfile(null);
           }
+        } else {
+          console.log('🔐 No valid session found - user must login');
+          setUser(null);
+          setUserProfile(null);
         }
         
         setLoading(false);
         
       } catch (error) {
-        console.error('Session initialization error:', error);
+        console.error('Secure session initialization error:', error);
+        // On any error, force clean state
+        setUser(null);
+        setUserProfile(null);
         setLoading(false);
       }
     };
 
-    // Initialize session immediately
-    initializeSession();
+    // Initialize secure session immediately
+    initializeSecureSession();
 
-    // Listen for auth state changes with enhanced logging
+    // Listen for auth state changes with strict security
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔐 Auth state change:', event, session?.user?.email);
+      console.log('🔐 Secure auth state change:', event, session?.user?.email);
       
       if (event === 'SIGNED_IN' && session?.user) {
+        console.log('✅ User signed in - establishing secure session');
         setUser(session.user);
         await fetchUserData(session.user);
         
-        // Update backup session data
-        localStorage.setItem('worldbank_session', JSON.stringify({
-          userId: session.user.id,
-          email: session.user.email,
-          timestamp: new Date().toISOString(),
-          sessionHash: btoa(session.user.id + session.user.email)
-        }));
-        localStorage.setItem('worldbank_auth_timestamp', new Date().toISOString());
-        
       } else if (event === 'SIGNED_OUT') {
-        console.log('🔐 User signed out - cleaning session data');
+        console.log('🔐 User signed out - clearing all data');
         setUser(null);
         setUserProfile(null);
-        localStorage.removeItem('worldbank_session');
-        localStorage.removeItem('worldbank_user_profile');
-        localStorage.removeItem('worldbank_auth_timestamp');
+        localStorage.clear();
+        sessionStorage.clear();
         
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        console.log('🔄 Session token refreshed for:', session.user.email);
-        // Update timestamp for token refresh
-        localStorage.setItem('worldbank_auth_timestamp', new Date().toISOString());
+        console.log('🔄 Token refreshed - maintaining secure session');
+        // Keep session active but don't store backup data
+        
+      } else {
+        // Any other event or invalid session - clear everything
+        console.log('🔐 Invalid session state - forcing logout');
+        setUser(null);
+        setUserProfile(null);
+        localStorage.clear();
+        sessionStorage.clear();
       }
       
       setLoading(false);
