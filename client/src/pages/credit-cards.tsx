@@ -1,4 +1,4 @@
-import React from "react";
+import type { User } from "@/lib/schema";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

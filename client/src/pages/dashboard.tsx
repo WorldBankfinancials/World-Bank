@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";
@@ -53,10 +53,10 @@ import { Link } from "wouter";
 // Transfer Section Component
 function TransferSection() {
   const { t } = useLanguage();
-  const [transferAmount, setTransferAmount] = React.useState("");
-  const [recipient, setRecipient] = React.useState("");
-  const [transferType, setTransferType] = React.useState("quick");
-  const [isProcessing, setIsProcessing] = React.useState(false);
+  const [transferAmount, setTransferAmount] = useState("");
+  const [recipient, setRecipient] = useState("");
+  const [transferType, setTransferType] = useState("quick");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleTransfer = async () => {
     if (!transferAmount || !recipient) {

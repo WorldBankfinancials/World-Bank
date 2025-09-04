@@ -1,4 +1,3 @@
-import React from "react";
 import { useEffect, useState } from 'react';
 
 export function Avatar({ size = 48 }: { size?: number }) {

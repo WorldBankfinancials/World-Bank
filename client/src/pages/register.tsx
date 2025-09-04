@@ -1,4 +1,3 @@
-import React from "react";
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useForm } from 'react-hook-form';

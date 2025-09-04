@@ -1,4 +1,3 @@
-import React from "react";
 import { Settings, User, LogOut, Shield, Check, Download, Building2, RotateCcw, TrendingUp, HelpCircle, CreditCard, ArrowUpRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link } from "wouter";

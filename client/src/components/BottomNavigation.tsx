@@ -1,4 +1,3 @@
-import React from "react";
 import { Home, CreditCard, ArrowLeftRight, FileText, User } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
