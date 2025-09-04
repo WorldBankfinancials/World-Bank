@@ -228,7 +228,7 @@ export default function Receive() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {pendingRequests.map((request, index) => (
+              {pendingRequests && pendingRequests.length > 0 ? pendingRequests.map((request, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -248,7 +248,12 @@ export default function Receive() {
                     </Badge>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Wallet className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>No payment requests available</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

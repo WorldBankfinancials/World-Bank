@@ -228,7 +228,7 @@ export default function AddMoney() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentTransactions.map((transaction, index) => (
+              {recentTransactions && recentTransactions.length > 0 ? recentTransactions.map((transaction, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -246,7 +246,12 @@ export default function AddMoney() {
                     </Badge>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Plus className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>No recent deposits available</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
