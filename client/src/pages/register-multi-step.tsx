@@ -1,3 +1,4 @@
+import React from "react";
 import { useState } from 'react';
 import { useLocation } from 'wouter';
 import RegistrationStep1 from './register/step1';

@@ -1,3 +1,4 @@
+import React from "react";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
 import { useLanguage } from "@/contexts/LanguageContext";

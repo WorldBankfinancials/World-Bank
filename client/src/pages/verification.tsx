@@ -1,3 +1,4 @@
+import React from "react";
 import { useState } from 'react';
 import { Link } from 'wouter';
 import { Shield, Check, AlertCircle, Upload, FileText, CreditCard, User, Phone, Mail, Camera, Calendar, Globe, Building2, ArrowLeft, CheckCircle2, Clock, X } from 'lucide-react';
