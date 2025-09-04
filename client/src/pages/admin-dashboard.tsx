@@ -28,8 +28,25 @@ import {
 } from "lucide-react";
 import Header from "@/components/Header";
 import { apiRequest } from "@/lib/queryClient";
+import type { Transaction, User } from "@shared/schema";
 import { useLocation } from "wouter";
 
+
+interface SupportTicket {
+  id: number;
+  userId: number;
+  subject: string;
+  description: string;
+  priority: string;
+  status: string;
+  category?: string;
+  assignedTo?: number;
+  adminNotes?: string;
+  resolution?: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+}
 
 interface PendingTransfer extends Transaction {
   userInfo?: {
@@ -121,11 +138,12 @@ export default function AdminDashboard() {
   // Customer query response mutation
   const respondToQueryMutation = useMutation({
     mutationFn: async ({ ticketId, response }: { ticketId: number; response: string }) => {
-      return apiRequest(`/api/admin/tickets/${ticketId}/respond`, {
+      const resp = await fetch(`/api/admin/tickets/${ticketId}/respond`, {
         method: 'POST',
         body: JSON.stringify({ response }),
         headers: { 'Content-Type': 'application/json' },
       });
+      return resp.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/support-tickets'] });
@@ -135,11 +153,12 @@ export default function AdminDashboard() {
   // Customer verification mutation
   const verifyCustomerMutation = useMutation({
     mutationFn: async ({ userId, verified }: { userId: number; verified: boolean }) => {
-      return apiRequest(`/api/admin/customers/${userId}/verify`, {
+      const response = await fetch(`/api/admin/customers/${userId}/verify`, {
         method: 'POST',
         body: JSON.stringify({ verified }),
         headers: { 'Content-Type': 'application/json' },
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/customers'] });
@@ -268,7 +287,7 @@ export default function AdminDashboard() {
                 <Users className="w-5 h-5 text-blue-600" />
                 <div>
                   <p className="text-sm text-gray-600">Customers</p>
-                  <p className="text-xl font-bold">{adminStats?.totalCustomers || 0}</p>
+                  <p className="text-xl font-bold">{(adminStats as any)?.totalCustomers || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -280,7 +299,7 @@ export default function AdminDashboard() {
                 <CreditCard className="w-5 h-5 text-green-600" />
                 <div>
                   <p className="text-sm text-gray-600">Today's Volume</p>
-                  <p className="text-xl font-bold">${adminStats?.todayVolume || 0}</p>
+                  <p className="text-xl font-bold">${(adminStats as any)?.todayVolume || 0}</p>
                 </div>
               </div>
             </CardContent>

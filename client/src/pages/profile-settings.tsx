@@ -48,9 +48,9 @@ export default function ProfileSettings() {
             <div className="space-y-6">
               {/* Profile Picture Section */}
               <div className="flex items-center space-x-4">
-                {user?.avatarUrl ? (
+                {(user as any)?.avatarUrl ? (
                   <img
-                    src={user.avatarUrl}
+                    src={(user as any)?.avatarUrl}
                     alt="Profile"
                     className="w-20 h-20 rounded-full object-cover border-4 border-blue-200"
                   />
@@ -88,7 +88,7 @@ export default function ProfileSettings() {
                 )}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">{user?.fullName}</h3>
-                  <p className="text-gray-600">{user?.profession}</p>
+                  <p className="text-gray-600">{(user as any)?.profession}</p>
                   <Badge className="bg-green-100 text-green-800 mt-1">
                     <Check className="w-3 h-3 mr-1" />
                     Verified Account
@@ -107,19 +107,19 @@ export default function ProfileSettings() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Phone</label>
-                  <p className="text-gray-900">{user?.phone || 'Not provided'}</p>
+                  <p className="text-gray-900">{(user as any)?.phone || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Profession</label>
-                  <p className="text-gray-900">{user?.profession || 'Not provided'}</p>
+                  <p className="text-gray-900">{(user as any)?.profession || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Nationality</label>
-                  <p className="text-gray-900">{user?.country || 'Not provided'}</p>
+                  <p className="text-gray-900">{(user as any)?.country || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Annual Income</label>
-                  <p className="text-gray-900">{user?.annualIncome || 'Not provided'}</p>
+                  <p className="text-gray-900">{(user as any)?.annualIncome || 'Not provided'}</p>
                 </div>
               </div>
 
@@ -152,7 +152,7 @@ export default function ProfileSettings() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Account ID</label>
-                  <p className="text-gray-900 font-mono">{user?.accountId || 'Not assigned'}</p>
+                  <p className="text-gray-900 font-mono">{(user as any)?.accountId || 'Not assigned'}</p>
                 </div>
               </div>
             </div>
@@ -172,19 +172,19 @@ export default function ProfileSettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Address</label>
-                  <p className="text-gray-900">{user?.address || 'Not provided'}</p>
+                  <p className="text-gray-900">{(user as any)?.address || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">City</label>
-                  <p className="text-gray-900">{user?.city || 'Not provided'}</p>
+                  <p className="text-gray-900">{(user as any)?.city || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Country</label>
-                  <p className="text-gray-900">{user?.country || 'Not provided'}</p>
+                  <p className="text-gray-900">{(user as any)?.country || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Postal Code</label>
-                  <p className="text-gray-900">{user?.postalCode || 'Not provided'}</p>
+                  <p className="text-gray-900">{(user as any)?.postalCode || 'Not provided'}</p>
                 </div>
               </div>
             </div>

@@ -1,4 +1,3 @@
-import type { User } from "@shared/schema";
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -411,7 +410,7 @@ export default function EnhancedAdmin() {
                                 <Button
                                   size="sm"
                                   onClick={() => {
-                                    const notes = (document.getElementById(`notes-${document.id}`) as HTMLTextAreaElement)?.value || '';
+                                    const notes = ((document as any).getElementById(`notes-${document.id}`) as HTMLTextAreaElement)?.value || '';
                                     verifyDocument(document.id, 'approved', notes);
                                   }}
                                   className="flex items-center gap-2"
@@ -423,7 +422,7 @@ export default function EnhancedAdmin() {
                                   size="sm"
                                   variant="destructive"
                                   onClick={() => {
-                                    const notes = (document.getElementById(`notes-${document.id}`) as HTMLTextAreaElement)?.value || '';
+                                    const notes = ((document as any).getElementById(`notes-${document.id}`) as HTMLTextAreaElement)?.value || '';
                                     verifyDocument(document.id, 'rejected', notes);
                                   }}
                                   className="flex items-center gap-2"

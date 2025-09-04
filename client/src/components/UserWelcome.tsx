@@ -2,6 +2,7 @@ import * as React from "react";
 import type { User } from "../lib/schema";
 import { useAuth } from "../contexts/AuthContext";
 import { useState, useEffect } from "react";
+import { CheckCircle } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 
 interface UserWelcomeProps {
@@ -138,13 +139,13 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
               border: '1px solid rgba(34, 197, 94, 0.2)',
               backdropFilter: 'blur(10px)'
             }}>
-              <Shield className="w-4 h-4 text-green-600" />
+              <CheckCircle className="w-4 h-4 text-green-600" />
               <span className="text-green-700 text-sm font-semibold">{t('verified_account')}</span>
             </div>
           )}
 
           <div className="flex items-center space-x-4">
-            {user.isOnline && (
+            {(user as any)?.isOnline && (
               <div className="flex items-center space-x-2 px-3 py-2 rounded-full" style={{
                 background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)',
                 border: '1px solid rgba(59, 130, 246, 0.2)',

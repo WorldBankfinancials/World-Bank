@@ -82,9 +82,10 @@ export default function CustomerManagement() {
   // Verify customer mutation
   const verifyCustomerMutation = useMutation({
     mutationFn: async (customerId: number) => {
-      return apiRequest(`/api/admin/customers/${customerId}/verify`, {
+      const response = await fetch(`/api/admin/customers/${customerId}/verify`, {
         method: "POST"
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
