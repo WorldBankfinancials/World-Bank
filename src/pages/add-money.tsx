@@ -12,7 +12,6 @@ import {
   Building, 
   Smartphone, 
   Plus, 
-  CheckCircle, 
   Shield,
   Clock,
   Wallet,
