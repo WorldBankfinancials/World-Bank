@@ -1,4 +1,4 @@
-import React from "react";
+import { useState } from "react";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -27,12 +27,12 @@ import {
 
 export default function TransferFunds() {
   const { t } = useLanguage();
-  const [transferType, setTransferType] = React.useState("international");
-  const [showLanguageMenu, setShowLanguageMenu] = React.useState(false);
-  const [currentLanguage, setCurrentLanguage] = React.useState("EN");
+  const [transferType, setTransferType] = useState("international");
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState("EN");
   
   // Form state
-  const [formData, setFormData] = React.useState({
+  const [formData, setFormData] = useState({
     amount: "",
     currency: "usd",
     recipientName: "",
@@ -61,8 +61,8 @@ export default function TransferFunds() {
     reference: ""
   });
   
-  const [isProcessing, setIsProcessing] = React.useState(false);
-  const [validationErrors, setValidationErrors] = React.useState<Record<string, string>>({});
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
