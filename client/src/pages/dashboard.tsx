@@ -1,61 +1,19 @@
-import React, { useEffect, useState } from "react";
+import { useState } from "react";
 import BottomNavigation from "@/components/BottomNavigation";
-import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";
-import RealtimeAlerts from "@/components/RealtimeAlerts";
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useAuth } from "@/contexts/AuthContext";
 
-import {
-  Eye,
-  EyeOff,
-  ArrowUpRight,
-  ArrowDownRight,
-  Plus,
-  Send,
-  Download,
-  Bell,
-  Settings,
-  LogOut,
-  CreditCard,
-  Shield,
-  HelpCircle,
-  UserCircle,
-  Globe,
-  Check,
-  Building2,
-  TrendingUp,
-  Wallet,
-  RotateCcw,
-  QrCode,
-  Copy,
-  Clock,
-  CheckCircle,
-} from "lucide-react";
-
-import { Link, useLocation } from "wouter";
-
-/**
- * ✅ Notes on Fixes:
- * - Removed unused imports (`useUserData`, `useAccountData`, `AlertCircle`, `Users`, `Smartphone`, `Banknote`, `Filter`, `Trash2`)
- *   → these caused Vercel build errors (imported but not used).
- * - Strongly typed state to avoid TypeScript complaints.
- * - Made sure `useQuery` is typed with `User | null`.
- * - Changed `setTimeout` calls to proper async handling.
- * - Default fallback for user/account data to prevent crashes if API fails.
- * - Cleaned up event listener usage for `toggleLiveChat`.
- */
+import { Send, Clock, ArrowDownRight, QrCode, Copy, CheckCircle } from "lucide-react";
+import { Link } from "wouter";
 
 /* -------------------------- Transfer Section -------------------------- */
 function TransferSection() {
@@ -71,7 +29,7 @@ function TransferSection() {
       return;
     }
     setIsProcessing(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise((r) => setTimeout(r, 2000));
     alert(`Transfer of $${transferAmount} to ${recipient} initiated successfully!`);
     setTransferAmount("");
     setRecipient("");
@@ -154,6 +112,7 @@ function ReceiveSection() {
       if (!res.ok) return null;
       return res.json();
     },
+    staleTime: 1000 * 60 * 5,
   });
 
   const [requestAmount, setRequestAmount] = useState("");
@@ -167,9 +126,13 @@ function ReceiveSection() {
   };
 
   const handleCopyDetails = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      alert(text);
+    }
   };
 
   const handleRequestMoney = () => {
@@ -187,11 +150,10 @@ function ReceiveSection() {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <ArrowDownRight className="w-5 h-5 text-green-600" />
-            <span>Receive Money</span>
+            <span>{t("receive_money") || "Receive Money"}</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Request form */}
           <div className="flex space-x-2">
             <Input
               type="number"
@@ -205,35 +167,26 @@ function ReceiveSection() {
             </Button>
           </div>
 
-          {/* QR + Copy */}
           <div className="flex space-x-2">
             <Button onClick={() => setShowQR(!showQR)} variant="outline" className="flex-1">
               <QrCode className="w-4 h-4 mr-2" />
               QR Code
             </Button>
-            <Button
-              onClick={() => handleCopyDetails(accountDetails.accountNumber)}
-              variant="outline"
-              className="flex-1"
-            >
+            <Button onClick={() => handleCopyDetails(accountDetails.accountNumber)} variant="outline" className="flex-1">
               {copied ? <CheckCircle className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
               {copied ? "Copied!" : "Copy Details"}
             </Button>
           </div>
 
-          {/* Show QR */}
           {showQR && (
             <div className="text-center p-4 bg-gray-50 rounded-lg">
               <div className="w-32 h-32 bg-gray-200 mx-auto mb-2 rounded-lg flex items-center justify-center">
                 <QrCode className="w-16 h-16 text-gray-400" />
               </div>
-              <p className="text-sm text-gray-600">
-                Scan to send money to {accountDetails.name}
-              </p>
+              <p className="text-sm text-gray-600">Scan to send money to {accountDetails.name}</p>
             </div>
           )}
 
-          {/* Account details */}
           <div className="space-y-2">
             <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
               <span className="text-sm text-gray-600">Account Number</span>
@@ -254,7 +207,6 @@ function ReceiveSection() {
 export default function Dashboard() {
   return (
     <div>
-      {/* ✅ Keep it short here so I don’t overflow your chat window */}
       <h1 className="text-2xl font-bold">Dashboard</h1>
       <TransferSection />
       <ReceiveSection />
