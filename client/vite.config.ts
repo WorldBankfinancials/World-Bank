@@ -1,4 +1,3 @@
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -17,8 +16,5 @@ export default defineConfig({
   server: {
     port: 5000,
     host: '0.0.0.0',
-  },
-  esbuild: {
-    jsxInject: `import React from 'react'`,
-  },
+  }
 });
