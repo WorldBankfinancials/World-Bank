@@ -144,9 +144,9 @@ function ReceiveSection() {
   const [copied, setCopied] = React.useState(false);
 
   const accountDetails = {
-    name: userData?.fullName || "Account Holder",
-    accountNumber: userData?.accountNumber || "Loading...",
-    accountId: userData?.accountId || "Loading..."
+    name: user?.fullName || "Account Holder",
+    accountNumber: user?.accountNumber || "Loading...",
+    accountId: (user as any)?.accountId || "Loading..."
   };
 
   const handleCopyDetails = (text: string) => {
@@ -705,10 +705,10 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">{t('welcome')}, {userData?.fullName || 'Loading...'}</h1>
-                <p className="text-sm text-gray-600">{t('account_number')}: {userData?.accountNumber || 'Loading...'}</p>
-                <p className="text-sm text-gray-600">{t('account_id')}: {userData?.accountId || 'Loading...'}</p>
-                <p className="text-sm text-gray-600">{userData?.profession || 'Loading...'}</p>
+                <h1 className="text-lg font-semibold text-gray-900">{t('welcome')}, {user?.fullName || 'Loading...'}</h1>
+                <p className="text-sm text-gray-600">{t('account_number')}: {user?.accountNumber || 'Loading...'}</p>
+                <p className="text-sm text-gray-600">{t('account_id')}: {(user as any)?.accountId || 'Loading...'}</p>
+                <p className="text-sm text-gray-600">{user?.profession || 'Loading...'}</p>
                 <div className="flex items-center space-x-2 mt-1">
                   <Badge variant="default" className="text-xs bg-green-100 text-green-800 flex items-center space-x-1">
                     <Check className="w-3 h-3" />
@@ -744,7 +744,7 @@ export default function Dashboard() {
                 <p className="text-blue-100 text-sm">{t('total_balance')}</p>
                 <div className="flex items-center space-x-2">
                   <h2 className="text-2xl font-bold">
-                    {showBalance ? `$${userData?.balance?.toLocaleString() || userProfile?.balance?.toLocaleString() || "2,001,382.65"}` : "****"}
+                    {showBalance ? `$${user?.balance?.toLocaleString() || userProfile?.balance?.toLocaleString() || "0.00"}` : "****"}
                   </h2>
                   <button onClick={toggleBalance}>
                     {showBalance ? (

@@ -78,18 +78,18 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
         backgroundClip: 'text',
         textShadow: '0 2px 4px rgba(37, 99, 235, 0.1)'
       }}>
-        {t('welcome')}, LW
+        {t('welcome')}, {freshUserData?.fullName || userProfile?.fullName || 'User'}
       </h1>
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="space-y-2 text-sm text-gray-700">
             <div className="flex items-center space-x-2">
               <span className="text-gray-500">{t('account_number')}:</span>
-              <span className="font-semibold text-gray-900">4789-6523-1087-9234</span>
+              <span className="font-semibold text-gray-900">{freshUserData?.accountNumber || userProfile?.accountNumber || 'Loading...'}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-gray-500">{t('account_id')}:</span>
-              <span className="font-semibold text-gray-900">WB-2024-7829</span>
+              <span className="font-semibold text-gray-900">{freshUserData?.accountId || (userProfile as any)?.accountId || 'Loading...'}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-blue-600 font-medium">{displayProfession}</span>
@@ -116,7 +116,7 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
               fontSize: '40px',
               textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
             }}>
-              LW
+              {(freshUserData?.fullName || userProfile?.fullName || 'User').split(' ').map(n => n[0]).join('')}
             </span>
             <div style={{
               position: 'absolute',
