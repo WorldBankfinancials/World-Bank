@@ -584,7 +584,7 @@ export default function Dashboard() {
     {
       category: "INVESTMENT & WEALTH",
       items: [
-        { icon: TrendingUp, label: "Investment Portfolio", href: "/investment-portfolio" },
+        { icon: TrendingUp, label: "Investment Portfolio", href: "/investment" },
         { icon: Building2, label: "Wealth Management", href: "/wealth-management" },
         { icon: TrendingUp, label: "Investment Trading", href: "/investment-trading" },
         { icon: Building2, label: "Business Banking", href: "/business-banking" }
@@ -922,7 +922,7 @@ export default function Dashboard() {
 
           {/* Investment Portfolio */}
           <div 
-            onClick={() => alert('Investment Portfolio: Total value $320,000 (+2.5% this month)')}
+            onClick={() => setLocation('/investment')}
             className="p-4 bg-white rounded-lg border hover:border-amber-500 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center space-x-3">
