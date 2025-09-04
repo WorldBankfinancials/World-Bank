@@ -135,6 +135,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           console.log('✅ New banking profile created');
           setUserProfile(userProfile);
+          
+          // Store profile data for professional session persistence
+          localStorage.setItem('worldbank_user_profile', JSON.stringify(userProfile));
         }
       } catch (error) {
         console.error('Failed to create banking profile:', error);
@@ -143,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to fetch user data:', error);
       // Set minimal profile from Supabase user
       if (supabaseUser) {
-        setUserProfile({
+        const minimalProfile = {
           id: supabaseUser.id,
           email: supabaseUser.email || '',
           fullName: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
@@ -151,7 +154,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isVerified: true,
           isActive: true,
           isOnline: true
-        });
+        };
+        setUserProfile(minimalProfile);
+        
+        // Store minimal profile for persistence
+        localStorage.setItem('worldbank_user_profile', JSON.stringify(minimalProfile));
       }
     }
   };
@@ -222,32 +229,134 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      // Clear professional banking session data
+      localStorage.removeItem('worldbank_session');
+      localStorage.removeItem('worldbank_user_profile');
+      localStorage.removeItem('worldbank_auth_timestamp');
+      
       await supabase.auth.signOut();
       setUser(null);
       setUserProfile(null);
+      
+      console.log('🔐 Professional logout completed - all session data cleared');
     } catch (error) {
       console.error("Sign out error:", error);
     }
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserData(session.user);
+    const initializeSession = async () => {
+      try {
+        console.log('🏦 Initializing professional banking session...');
+        
+        // Check for existing Supabase session first (most reliable)
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          console.log('✅ Found valid Supabase session for:', session.user.email);
+          setUser(session.user);
+          await fetchUserData(session.user);
+          
+          // Store session backup data with timestamp
+          localStorage.setItem('worldbank_session', JSON.stringify({
+            userId: session.user.id,
+            email: session.user.email,
+            timestamp: new Date().toISOString(),
+            sessionHash: btoa(session.user.id + session.user.email)
+          }));
+          localStorage.setItem('worldbank_auth_timestamp', new Date().toISOString());
+          
+        } else {
+          // Check local storage backup for professional continuity
+          const savedSession = localStorage.getItem('worldbank_session');
+          const savedProfile = localStorage.getItem('worldbank_user_profile');
+          const authTimestamp = localStorage.getItem('worldbank_auth_timestamp');
+          
+          if (savedSession && savedProfile && authTimestamp) {
+            const sessionData = JSON.parse(savedSession);
+            const profileData = JSON.parse(savedProfile);
+            const lastAuth = new Date(authTimestamp);
+            const now = new Date();
+            
+            // Professional banking: allow 24 hour session persistence
+            const hoursSinceAuth = (now.getTime() - lastAuth.getTime()) / (1000 * 60 * 60);
+            
+            if (hoursSinceAuth < 24 && sessionData.userId && profileData.email) {
+              console.log('🔄 Restoring professional banking session from backup');
+              console.log('⏰ Hours since last auth:', Math.round(hoursSinceAuth * 10) / 10);
+              
+              // Create minimal user object for continuity
+              const restoredUser = {
+                id: sessionData.userId,
+                email: sessionData.email,
+                aud: 'authenticated',
+                role: 'authenticated',
+                user_metadata: profileData
+              };
+              
+              setUser(restoredUser as any);
+              setUserProfile(profileData);
+              
+              // Try to refresh the actual Supabase session in the background
+              setTimeout(async () => {
+                try {
+                  await supabase.auth.refreshSession();
+                } catch (error) {
+                  console.log('Background session refresh failed:', error);
+                }
+              }, 1000);
+              
+            } else {
+              console.log('⚠️ Saved session expired or invalid, requiring fresh login');
+              localStorage.removeItem('worldbank_session');
+              localStorage.removeItem('worldbank_user_profile');
+              localStorage.removeItem('worldbank_auth_timestamp');
+            }
+          }
+        }
+        
+        setLoading(false);
+        
+      } catch (error) {
+        console.error('Session initialization error:', error);
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
+    // Initialize session immediately
+    initializeSession();
+
+    // Listen for auth state changes with enhanced logging
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔐 Auth state change:', event, session?.user?.email);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user);
         await fetchUserData(session.user);
-      } else {
+        
+        // Update backup session data
+        localStorage.setItem('worldbank_session', JSON.stringify({
+          userId: session.user.id,
+          email: session.user.email,
+          timestamp: new Date().toISOString(),
+          sessionHash: btoa(session.user.id + session.user.email)
+        }));
+        localStorage.setItem('worldbank_auth_timestamp', new Date().toISOString());
+        
+      } else if (event === 'SIGNED_OUT') {
+        console.log('🔐 User signed out - cleaning session data');
+        setUser(null);
         setUserProfile(null);
+        localStorage.removeItem('worldbank_session');
+        localStorage.removeItem('worldbank_user_profile');
+        localStorage.removeItem('worldbank_auth_timestamp');
+        
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        console.log('🔄 Session token refreshed for:', session.user.email);
+        // Update timestamp for token refresh
+        localStorage.setItem('worldbank_auth_timestamp', new Date().toISOString());
       }
+      
       setLoading(false);
     });
 
