@@ -25,7 +25,7 @@ import {
 import Header from "@/components/Header";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import type { User } from "@shared/schema";
+import type { User, Transaction, SupportTicket } from "@shared/schema";
 
 interface PendingTransfer {
   id: number;

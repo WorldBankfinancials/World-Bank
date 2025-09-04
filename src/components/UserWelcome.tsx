@@ -142,7 +142,7 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
           )}
           
           <div className="flex items-center space-x-4">
-            {user.isOnline && (
+            {(user as any)?.isOnline && (
               <div className="flex items-center space-x-2 px-3 py-2 rounded-full" style={{
                 background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)',
                 border: '1px solid rgba(59, 130, 246, 0.2)',
