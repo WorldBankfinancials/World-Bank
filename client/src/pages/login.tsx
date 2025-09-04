@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import LiveChat from "@/components/LiveChat";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -44,6 +45,7 @@ export default function Login() {
     idNumber: "",
     password: "",
   });
+  const [showLiveChat, setShowLiveChat] = useState(false);
 
   // Fetch user data to get current PIN when PIN verification is shown
   useQuery({
@@ -369,7 +371,7 @@ export default function Login() {
                 Privacy Policy
               </button>
               <button 
-                onClick={() => window.open('https://worldbank.org/contact', '_blank')}
+                onClick={() => setShowLiveChat(true)}
                 className="hover:text-gray-800 transition-colors"
               >
                 Contact Support
@@ -451,6 +453,12 @@ export default function Login() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Live Chat Component */}
+      <LiveChat 
+        isOpen={showLiveChat} 
+        onClose={() => setShowLiveChat(false)} 
+      />
     </div>
   );
 }
