@@ -13,7 +13,7 @@ import BottomNavigation from "@/components/BottomNavigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";
-import type { User, Transaction } from "@/shared/schema";
+import type { User, Transaction } from "@/lib/schema";
 
 interface TransactionFormData {
   amount: string;

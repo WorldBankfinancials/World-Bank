@@ -16,9 +16,10 @@ export interface Transaction {
   fromUserId: number;
   toUserId?: number;
   amount: number;
-  type: 'transfer' | 'deposit' | 'withdrawal';
+  type: 'credit' | 'debit';
   status: 'pending' | 'completed' | 'failed';
   description: string;
+  category?: string;
   createdAt: string;
 }
 

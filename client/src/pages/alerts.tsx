@@ -3,21 +3,20 @@ import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { 
   Bell, 
-  BellRing, 
+  
   Mail, 
-  MessageSquare, 
-  Smartphone, 
-  CreditCard, 
+  
+  
+  
   ArrowUpRight, 
   ArrowDownRight,
   Shield,
-  AlertCircle,
+  
   CheckCircle,
   Clock,
   DollarSign,
@@ -28,7 +27,7 @@ import {
 
 
 export default function Alerts() {
-  const { data: user, isLoading } = useQuery<User>({
+  const { isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
   
