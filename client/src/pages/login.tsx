@@ -100,13 +100,19 @@ export default function Login() {
     }
 
     try {
+      // Determine the correct identifier based on login type
+      let identifier = '';
+      if (loginType === 'email') identifier = loginData.email;
+      else if (loginType === 'mobile') identifier = loginData.mobile;
+      else if (loginType === 'id') identifier = loginData.idNumber;
+      
       const response = await fetch('/api/verify-pin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: 'bankmanagerworld5@gmail.com',
+          username: identifier, // Use the actual logged-in user identifier
           pin: loginPin
         }),
       });
@@ -204,7 +210,7 @@ export default function Login() {
                   </TabsTrigger>
                   <TabsTrigger value="id" className="flex items-center space-x-2 text-xs">
                     <CreditCard className="w-4 h-4" />
-                    <span>ID</span>
+                    <span>Account ID</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -255,17 +261,17 @@ export default function Login() {
                   <TabsContent value="id" className="space-y-4 mt-4">
                     <div className="space-y-3">
                       <Label htmlFor="idNumber" className="text-sm font-semibold text-gray-700">
-                        Government ID
+                        Account ID
                       </Label>
                       <div className="relative">
-                        <User className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
+                        <CreditCard className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
                         <Input
                           id="idNumber"
                           type="text"
                           value={loginData.idNumber}
                           onChange={(e) => setLoginData(prev => ({ ...prev, idNumber: e.target.value }))}
                           className="wb-input pl-12 h-14 text-base"
-                          placeholder="Enter ID number"
+                          placeholder="Enter account ID (e.g. WB-2025-8912)"
                           required={loginType === 'id'}
                         />
                       </div>

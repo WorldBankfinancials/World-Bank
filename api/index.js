@@ -244,41 +244,64 @@ module.exports = async function handler(req, res) {
     if (apiPath === '/verify-pin' && req.method === 'POST') {
       const { pin, username } = req.body;
       
-      console.log(`🔐 PIN verification request: ${username}, PIN: ${pin}`);
+      console.log(`🔐 PIN verification request:`, { username, pin });
       
-      // For Wei Liu account specifically
-      if ((username === 'vaa33053@gmail.com' || username === 'bankmanagerworld5@gmail.com') && pin === '0192') {
-        return res.status(200).json({
-          success: true,
-          verified: true,
-          message: 'PIN verified successfully'
-        });
-      }
-      
-      // Try Supabase verification as fallback
       try {
-        const { data, error } = await supabase
-          .from('bank_users')
-          .select('transfer_pin')
-          .eq('id', 1)
-          .single();
+        // Check the user exists by email, account ID, or mobile
+        let userQuery = supabase.from('bank_users').select('transfer_pin, email, username, account_id');
         
-        if (!error && data && data.transfer_pin === pin) {
+        // Handle different login types
+        if (username.includes('@')) {
+          // Email login
+          userQuery = userQuery.eq('email', username);
+        } else if (username.startsWith('WB-') || username.startsWith('wb-')) {
+          // Account ID login (like WB-2025-8912)
+          userQuery = userQuery.eq('account_id', username);
+        } else if (username.startsWith('+') || /^\d+$/.test(username)) {
+          // Mobile number login
+          userQuery = userQuery.eq('phone', username);
+        } else {
+          // Fallback to username
+          userQuery = userQuery.eq('username', username);
+        }
+        
+        const { data: userData, error } = await userQuery.single();
+        
+        if (error || !userData) {
+          console.log('User not found:', { username, error });
+          return res.status(401).json({
+            success: false,
+            verified: false,
+            message: 'User not found'
+          });
+        }
+        
+        console.log(`Found user PIN: ${userData.transfer_pin}, provided PIN: ${pin}`);
+        
+        if (userData.transfer_pin === pin) {
+          console.log('✅ PIN verification successful');
           return res.status(200).json({
             success: true,
             verified: true,
             message: 'PIN verified successfully'
           });
+        } else {
+          console.log('❌ PIN mismatch');
+          return res.status(401).json({
+            success: false,
+            verified: false,
+            message: 'Invalid PIN'
+          });
         }
+        
       } catch (supabaseError) {
-        console.log('Supabase PIN verification failed:', supabaseError);
+        console.error('PIN verification error:', supabaseError);
+        return res.status(500).json({
+          success: false,
+          verified: false,
+          message: 'Verification failed'
+        });
       }
-      
-      return res.status(400).json({
-        success: false,
-        verified: false,
-        message: 'Invalid PIN'
-      });
     }
 
     // Create transfer
