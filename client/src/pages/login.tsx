@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Lock, Eye, EyeOff, Shield } from "lucide-react";
+import { AlertCircle, Lock, Eye, EyeOff, Shield, Smartphone, CreditCard, Mail, User, Globe } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -36,8 +37,11 @@ export default function Login() {
   const [showPinVerification, setShowPinVerification] = useState(false);
   const [loginPin, setLoginPin] = useState("");
   const [pinError, setPinError] = useState("");
+  const [loginType, setLoginType] = useState<'email' | 'mobile' | 'id'>('email');
   const [loginData, setLoginData] = useState({
     email: "",
+    mobile: "",
+    idNumber: "",
     password: "",
   });
 
@@ -52,7 +56,13 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const result = await signIn(loginData.email, loginData.password);
+      // Use appropriate identifier based on login type
+      let identifier = '';
+      if (loginType === 'email') identifier = loginData.email;
+      else if (loginType === 'mobile') identifier = loginData.mobile;
+      else if (loginType === 'id') identifier = loginData.idNumber;
+      
+      const result = await signIn(identifier, loginData.password);
       
       if (result.error) {
         toast({
@@ -142,124 +152,230 @@ export default function Login() {
           </div>
 
           {/* Centered Bank Logo and Title */}
+          {/* World Bank Professional Header */}
           <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <BankLogo className="w-16 h-16" />
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <BankLogo className="w-20 h-20" />
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                  <Globe className="w-3 h-3 text-white" />
+                </div>
+              </div>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('world_bank')}</h1>
-            <p className="text-gray-600 text-lg">{t('international_banking_solutions')}</p>
+            <h1 className="text-4xl font-bold text-gray-900 mb-3 tracking-tight">
+              WORLD BANK
+            </h1>
+            <p className="text-gray-600 text-xl font-medium mb-2">
+              International Banking Solutions
+            </p>
+            <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
+              <Shield className="w-4 h-4" />
+              <span>Secure • Trusted • Global</span>
+            </div>
           </div>
 
+          {/* Professional Login Card */}
           <Card className="wb-login-card">
-            <CardHeader className="space-y-3 pb-6 pt-8">
-              <CardTitle className="text-2xl font-bold text-center text-gray-900">
-                {t('sign_in')}
-              </CardTitle>
-              <p className="text-center text-gray-600">
-                Access your secure banking portal
-              </p>
-              <div className="flex justify-center">
-                <div className="w-16 h-1 bg-blue-600 rounded-full"></div>
+            <CardHeader className="space-y-4 pb-6 pt-8">
+              <div className="text-center">
+                <CardTitle className="text-2xl font-bold text-gray-900 mb-2">
+                  Sign In
+                </CardTitle>
+                <p className="text-gray-600 text-base">
+                  Access your secure banking portal
+                </p>
+                <div className="flex justify-center mt-3">
+                  <div className="w-16 h-1 bg-blue-600 rounded-full"></div>
+                </div>
               </div>
             </CardHeader>
           
             <CardContent className="space-y-6 px-8 pb-8">
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="space-y-3">
-                  <Label htmlFor="identifier" className="text-sm font-semibold text-gray-700">
-                    {t('user_id_or_email')}
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-4 text-gray-500 font-medium text-base">@/</span>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={loginData.email}
-                      onChange={(e) => setLoginData(prev => ({
-                        ...prev,
-                        email: e.target.value
-                      }))}
-                      className="wb-input pl-12 h-14 text-base"
-                      placeholder="Enter your email address"
-                      required
-                    />
-                  </div>
-                </div>
+              {/* Login Method Tabs */}
+              <Tabs value={loginType} onValueChange={(value) => setLoginType(value as 'email' | 'mobile' | 'id')} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg">
+                  <TabsTrigger value="email" className="flex items-center space-x-2 text-xs">
+                    <Mail className="w-4 h-4" />
+                    <span>Email</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="mobile" className="flex items-center space-x-2 text-xs">
+                    <Smartphone className="w-4 h-4" />
+                    <span>Mobile</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="id" className="flex items-center space-x-2 text-xs">
+                    <CreditCard className="w-4 h-4" />
+                    <span>ID</span>
+                  </TabsTrigger>
+                </TabsList>
 
-                <div className="space-y-3">
-                  <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
-                    {t('password')}
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={loginData.password}
-                      onChange={(e) => setLoginData(prev => ({
-                        ...prev,
-                        password: e.target.value
-                      }))}
-                      className="wb-input pl-12 pr-12 h-14 text-base"
-                      placeholder="Enter your password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors"
+                <form onSubmit={handleLogin} className="space-y-5 mt-6">
+                  {/* Email Login */}
+                  <TabsContent value="email" className="space-y-4 mt-4">
+                    <div className="space-y-3">
+                      <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
+                        User ID or Email
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-4 text-gray-500 font-medium text-base">@/</span>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={loginData.email}
+                          onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
+                          className="wb-input pl-12 h-14 text-base"
+                          placeholder="Enter email address"
+                          required={loginType === 'email'}
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* Mobile Login */}
+                  <TabsContent value="mobile" className="space-y-4 mt-4">
+                    <div className="space-y-3">
+                      <Label htmlFor="mobile" className="text-sm font-semibold text-gray-700">
+                        Mobile Number
+                      </Label>
+                      <div className="relative">
+                        <Smartphone className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
+                        <Input
+                          id="mobile"
+                          type="tel"
+                          value={loginData.mobile}
+                          onChange={(e) => setLoginData(prev => ({ ...prev, mobile: e.target.value }))}
+                          className="wb-input pl-12 h-14 text-base"
+                          placeholder="Enter mobile number"
+                          required={loginType === 'mobile'}
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* ID Login */}
+                  <TabsContent value="id" className="space-y-4 mt-4">
+                    <div className="space-y-3">
+                      <Label htmlFor="idNumber" className="text-sm font-semibold text-gray-700">
+                        Government ID
+                      </Label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
+                        <Input
+                          id="idNumber"
+                          type="text"
+                          value={loginData.idNumber}
+                          onChange={(e) => setLoginData(prev => ({ ...prev, idNumber: e.target.value }))}
+                          className="wb-input pl-12 h-14 text-base"
+                          placeholder="Enter ID number"
+                          required={loginType === 'id'}
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* Password Field (Common for all login types) */}
+                  <div className="space-y-3">
+                    <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
+                      Password
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        value={loginData.password}
+                        onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
+                        className="wb-input pl-12 pr-12 h-14 text-base"
+                        placeholder="Enter your password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Sign In Button */}
+                  <div className="pt-2">
+                    <Button
+                      type="submit"
+                      className="wb-button-primary w-full h-14 text-base font-semibold"
+                      disabled={loading}
                     >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
+                      {loading ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Signing In...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <Shield className="w-5 h-5" />
+                          <span>Sign In</span>
+                        </div>
+                      )}
+                    </Button>
                   </div>
-                </div>
+                </form>
+              </Tabs>
 
-                <div className="pt-2">
-                  <Button
-                    type="submit"
-                    className="wb-button-primary w-full h-14 text-base"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <div className="flex items-center space-x-2">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Signing In...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <Shield className="w-5 h-5" />
-                        <span>{t('sign_in')}</span>
-                      </div>
-                    )}
-                  </Button>
-                </div>
-              </form>
-
+              {/* Create Account Section */}
               <div className="text-center pt-4 border-t border-gray-100">
                 <p className="text-sm text-gray-600">
-                  {t('new_customer')}{" "}
+                  New customer?{" "}
                   <button
                     onClick={() => setLocation("/register-multi")}
                     className="text-blue-600 hover:text-blue-700 font-semibold hover:underline transition-all"
                   >
-                    {t('create_account')}
+                    Create Account
                   </button>
                 </p>
+              </div>
+              
+              {/* About World Bank Link */}
+              <div className="text-center pt-2">
+                <button
+                  onClick={() => setLocation("/about")}
+                  className="text-gray-500 hover:text-gray-700 text-sm underline transition-colors"
+                >
+                  About World Bank
+                </button>
               </div>
             </CardContent>
           </Card>
 
           {/* Professional Footer */}
           <div className="text-center mt-8 space-y-4">
-            <div className="flex justify-center space-x-6 text-gray-600 text-sm">
-              <button className="hover:text-gray-800 transition-colors">{t('security_center')}</button>
-              <button className="hover:text-gray-800 transition-colors">{t('privacy_policy')}</button>
-              <button className="hover:text-gray-800 transition-colors">{t('contact_support')}</button>
+            <div className="flex justify-center space-x-6 text-gray-600 text-sm font-medium">
+              <button 
+                onClick={() => window.open('https://worldbank.org/security', '_blank')}
+                className="hover:text-gray-800 transition-colors flex items-center space-x-1"
+              >
+                <Shield className="w-4 h-4" />
+                <span>Security Center</span>
+              </button>
+              <button 
+                onClick={() => window.open('https://worldbank.org/privacy', '_blank')}
+                className="hover:text-gray-800 transition-colors"
+              >
+                Privacy Policy
+              </button>
+              <button 
+                onClick={() => window.open('https://worldbank.org/contact', '_blank')}
+                className="hover:text-gray-800 transition-colors"
+              >
+                Contact Support
+              </button>
             </div>
             <div className="text-gray-500 text-xs space-y-1">
-              <p>{t('copyright_notice')}</p>
-              <p>{t('secure_trusted_global')}</p>
-              <p>{t('licensed_regulated')}</p>
+              <p>© 2025 World Bank Group. All rights reserved.</p>
+              <p className="flex items-center justify-center space-x-1">
+                <Shield className="w-3 h-3" />
+                <span>Secure • Trusted • Global Financial Institution</span>
+              </p>
+              <p>Licensed and regulated by international banking authorities</p>
             </div>
           </div>
         </div>
