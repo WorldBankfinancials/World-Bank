@@ -1,0 +1,656 @@
+import { 
+  users, 
+  accounts, 
+  transactions,
+  adminActions,
+  supportTickets,
+  type User, 
+  type InsertUser,
+  type Account,
+  type InsertAccount,
+  type Transaction,
+  type InsertTransaction,
+  type AdminAction,
+  type InsertAdminAction,
+  type SupportTicket,
+  type InsertSupportTicket
+} from "@shared/schema";
+
+export interface IStorage {
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
+  updateUserBalance(id: number, amount: number): Promise<User | undefined>;
+  getUserAccounts(userId: number): Promise<Account[]>;
+  getAccount(id: number): Promise<Account | undefined>;
+  createAccount(account: InsertAccount): Promise<Account>;
+  getAccountTransactions(accountId: number, limit?: number): Promise<Transaction[]>;
+  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<Transaction | undefined>;
+  getPendingTransactions(): Promise<Transaction[]>;
+  updateAccount?(id: number, updates: Partial<Account>): Promise<Account | undefined>;
+  createAdminAction(action: InsertAdminAction): Promise<AdminAction>;
+  getAdminActions(adminId?: number): Promise<AdminAction[]>;
+  createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
+  getSupportTickets(userId?: number): Promise<SupportTicket[]>;
+  updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined>;
+  getAllTransactions(): Promise<Transaction[]>;
+}
+
+export class MemStorage implements IStorage {
+  private users: Map<number, User>;
+  private accounts: Map<number, Account>;
+  private transactions: Map<number, Transaction>;
+  private adminActions: Map<number, AdminAction>;
+  private supportTickets: Map<number, SupportTicket>;
+  private currentUserId: number;
+  private currentAccountId: number;
+  private currentTransactionId: number;
+  private currentAdminActionId: number;
+  private currentSupportTicketId: number;
+  private persistenceFile: string;
+
+  constructor() {
+    this.users = new Map();
+    this.accounts = new Map();
+    this.transactions = new Map();
+    this.adminActions = new Map();
+    this.supportTickets = new Map();
+    this.currentUserId = 1;
+    this.currentAccountId = 1;
+    this.currentTransactionId = 1;
+    this.currentAdminActionId = 1;
+    this.currentSupportTicketId = 1;
+    this.persistenceFile = './data-persistence.json';
+    this.loadPersistedData();
+  }
+
+  private generateAccountNumber(): string {
+    return `4789-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
+  private generateAccountId(): string {
+    return `WB-2024-${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
+  private async loadPersistedData() {
+    try {
+      const fs = await import('fs');
+      if (fs.existsSync(this.persistenceFile)) {
+        const data = JSON.parse(fs.readFileSync(this.persistenceFile, 'utf8'));
+        
+        // Restore maps from persisted data
+        this.users = new Map(data.users || []);
+        this.accounts = new Map(data.accounts || []);
+        this.transactions = new Map(data.transactions || []);
+        this.adminActions = new Map(data.adminActions || []);
+        this.supportTickets = new Map(data.supportTickets || []);
+        
+        // Restore counters
+        this.currentUserId = data.currentUserId || 1;
+        this.currentAccountId = data.currentAccountId || 1;
+        this.currentTransactionId = data.currentTransactionId || 1;
+        this.currentAdminActionId = data.currentAdminActionId || 1;
+        this.currentSupportTicketId = data.currentSupportTicketId || 1;
+        
+        console.log('✅ Loaded persisted data successfully');
+        return;
+      }
+    } catch (error) {
+      console.log('⚠️ No persisted data found, initializing fresh data');
+    }
+    
+    // Initialize fresh data if no persistence found
+    this.initializeData();
+  }
+
+  private async savePersistedData() {
+    try {
+      const fs = await import('fs');
+      const data = {
+        users: Array.from(this.users.entries()),
+        accounts: Array.from(this.accounts.entries()),
+        transactions: Array.from(this.transactions.entries()),
+        adminActions: Array.from(this.adminActions.entries()),
+        supportTickets: Array.from(this.supportTickets.entries()),
+        currentUserId: this.currentUserId,
+        currentAccountId: this.currentAccountId,
+        currentTransactionId: this.currentTransactionId,
+        currentAdminActionId: this.currentAdminActionId,
+        currentSupportTicketId: this.currentSupportTicketId,
+        lastSaved: new Date().toISOString()
+      };
+      
+      fs.writeFileSync(this.persistenceFile, JSON.stringify(data, null, 2));
+      console.log('💾 Data persisted successfully to', this.persistenceFile);
+      console.log('📊 Persisted accounts:', data.accounts.length, 'transactions:', data.transactions.length);
+    } catch (error) {
+      console.error('❌ Failed to persist data:', error);
+    }
+  }
+
+  private async initializeData() {
+    // Skip initialization - all data comes from Supabase now
+    console.log('🏦 Storage initialization skipped - using 100% Supabase data');
+    return;
+  }
+
+  generateAccountNumber(): string {
+    return `4789-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
+  generateAccountId(): string {
+    return `WB-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
+  async getUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
+  async createUser(userData: Partial<User>): Promise<User> {
+    const id = this.currentUserId++;
+    const user: User = {
+      id,
+      username: userData.username || '',
+      password: userData.password || '',
+      fullName: userData.fullName || '',
+      email: userData.email || '',
+      phone: userData.phone || '',
+      accountNumber: userData.accountNumber || this.generateAccountNumber(),
+      accountId: userData.accountId || this.generateAccountId(),
+      profession: userData.profession || '',
+      dateOfBirth: userData.dateOfBirth || '',
+      address: userData.address || '',
+      city: userData.city || '',
+      state: userData.state || '',
+      country: userData.country || '',
+      postalCode: userData.postalCode || '',
+      nationality: userData.nationality || '',
+      annualIncome: userData.annualIncome || '',
+      idType: userData.idType || '',
+      idNumber: userData.idNumber || '',
+      transferPin: userData.transferPin || '',
+      role: userData.role || 'customer',
+      isVerified: userData.isVerified || false,
+      isOnline: userData.isOnline || false,
+      isActive: userData.isActive || false,
+      avatarUrl: userData.avatarUrl || null,
+      balance: userData.balance || 0,
+      supabaseUserId: userData.supabaseUserId || null,
+      lastLogin: userData.lastLogin || null,
+      createdByAdmin: userData.createdByAdmin || null,
+      modifiedByAdmin: userData.modifiedByAdmin || null,
+      adminNotes: userData.adminNotes || null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    this.users.set(id, user);
+    await this.savePersistedData();
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.email === email);
+  }
+
+  async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
+    });
+
+    const pendingUser2 = await this.createUser({
+      username: "ahmed.hassan",
+      password: "temp456",
+      fullName: "Ahmed Hassan",
+      email: "ahmed.hassan@email.com",
+      phone: "+971-50-123-4567",
+      accountNumber: this.generateAccountNumber(),
+      accountId: this.generateAccountId(),
+      profession: "Business Analyst",
+      dateOfBirth: "1988-09-22",
+      address: "456 Business Ave",
+      city: "Dubai",
+      state: "Dubai",
+      country: "United Arab Emirates",
+      postalCode: "00000",
+      annualIncome: "$95,000",
+      idType: "Passport",
+      idNumber: "P876543210",
+      transferPin: "9012",
+      role: "customer",
+      isVerified: false,
+      isOnline: false,
+      isActive: false, // Pending approval
+      avatarUrl: null,
+      balance: 0,
+      supabaseUserId: "uuid-789-012",
+      lastLogin: null,
+      createdByAdmin: null,
+      modifiedByAdmin: null,
+      adminNotes: "Pending admin approval"
+    });
+
+    // Create admin user
+    const adminUser = await this.createUser({
+      username: "admin",
+      password: "admin123",
+      fullName: "System Administrator",
+      email: "admin@worldbank.org",
+      phone: "+1 202 473 1000",
+      accountNumber: "ADMIN-0000-0000-0001",
+      accountId: "WB-ADMIN-0001",
+      profession: "Bank Administrator",
+      dateOfBirth: "1980-01-01",
+      address: "1818 H Street NW",
+      city: "Washington",
+      state: "DC",
+      country: "United States",
+      postalCode: "20433",
+      annualIncome: "$150,000",
+      idType: "Employee ID",
+      idNumber: "WB-ADMIN-001",
+      transferPin: "0000",
+      role: "admin",
+      isVerified: true,
+      isOnline: true,
+      isActive: true,
+      avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=120&h=120",
+      supabaseUserId: null,
+      lastLogin: null,
+      createdByAdmin: null,
+      modifiedByAdmin: null,
+      adminNotes: null
+    });
+
+    // Create accounts
+    await this.createAccount({
+      userId: user.id,
+      accountNumber: "4789-6523-1087-9234",
+      accountType: "checking",
+      accountName: "Primary Checking",
+      balance: "1527482.40",
+      currency: "USD"
+    });
+
+    await this.createAccount({
+      userId: user.id,
+      accountNumber: "4789-6523-1087-9235",
+      accountType: "savings",
+      accountName: "Savings Account",
+      balance: "125000.00",
+      currency: "USD"
+    });
+
+    await this.createAccount({
+      userId: user.id,
+      accountNumber: "4789-6523-1087-9236",
+      accountType: "investment",
+      accountName: "Investment Portfolio",
+      balance: "348900.25",
+      currency: "USD"
+    });
+
+    // Create sample transactions
+    const checkingAccount = Array.from(this.accounts.values()).find(a => a.accountType === "checking");
+    const investmentAccount = Array.from(this.accounts.values()).find(a => a.accountType === "investment");
+
+    if (checkingAccount) {
+      await this.createTransaction({
+        accountId: checkingAccount.id,
+        type: "credit",
+        amount: "125000.00",
+        description: "Wire Transfer Received",
+        category: "transfer",
+        date: new Date("2024-12-15T10:30:00"),
+        status: "completed"
+      });
+
+      await this.createTransaction({
+        accountId: checkingAccount.id,
+        type: "debit",
+        amount: "89500.00",
+        description: "International Transfer",
+        category: "transfer",
+        date: new Date("2024-12-13T16:45:00"),
+        status: "completed"
+      });
+    }
+
+    if (investmentAccount) {
+      await this.createTransaction({
+        accountId: investmentAccount.id,
+        type: "credit",
+        amount: "45230.78",
+        description: "Investment Dividend",
+        category: "dividend",
+        date: new Date("2024-12-14T14:15:00"),
+        status: "completed"
+      });
+    }
+  }
+
+  async getUser(id: number): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (user) {
+      // Calculate total balance from all user accounts
+      const userAccounts = Array.from(this.accounts.values()).filter(account => account.userId === id);
+      const totalBalance = userAccounts.reduce((sum, account) => sum + parseFloat(account.balance), 0);
+      
+      // Update user balance with calculated total
+      user.balance = totalBalance;
+      this.users.set(id, user);
+      
+      console.log(`Storage: Retrieved user ${id}: balance: ${user.balance}, avatarUrl: ${user.avatarUrl}`);
+    } else {
+      console.log(`Storage: User ${id} not found`);
+    }
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username,
+    );
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const id = this.currentUserId++;
+    const now = new Date();
+    const user: User = { 
+      ...insertUser, 
+      id,
+      supabaseUserId: insertUser.supabaseUserId || null,
+      email: insertUser.email || null,
+      phone: insertUser.phone || null,
+      profession: insertUser.profession || null,
+      dateOfBirth: insertUser.dateOfBirth || null,
+      address: insertUser.address || null,
+      city: insertUser.city || null,
+      state: insertUser.state || null,
+      country: insertUser.country || null,
+      postalCode: insertUser.postalCode || null,
+      nationality: insertUser.nationality || null,
+      annualIncome: insertUser.annualIncome || null,
+      idType: insertUser.idType || null,
+      idNumber: insertUser.idNumber || null,
+      transferPin: insertUser.transferPin || null,
+      role: insertUser.role || null,
+      isVerified: insertUser.isVerified || null,
+      isOnline: insertUser.isOnline || null,
+      isActive: insertUser.isActive || null,
+      avatarUrl: insertUser.avatarUrl || null,
+      balance: insertUser.balance || null,
+      lastLogin: insertUser.lastLogin || null,
+      createdByAdmin: insertUser.createdByAdmin || null,
+      modifiedByAdmin: insertUser.modifiedByAdmin || null,
+      adminNotes: insertUser.adminNotes || null,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.users.set(id, user);
+    return user;
+  }
+
+  async getUserAccounts(userId: number): Promise<Account[]> {
+    return Array.from(this.accounts.values()).filter(
+      (account) => account.userId === userId
+    );
+  }
+
+  async getAccount(id: number): Promise<Account | undefined> {
+    return this.accounts.get(id);
+  }
+
+  async createAccount(insertAccount: InsertAccount): Promise<Account> {
+    const id = this.currentAccountId++;
+    const account: Account = { 
+      ...insertAccount, 
+      id,
+      isActive: insertAccount.isActive ?? true,
+      balance: insertAccount.balance || "0.00",
+      createdAt: insertAccount.createdAt || new Date(),
+      updatedAt: insertAccount.updatedAt || new Date(),
+      accountName: insertAccount.accountName || null,
+      currency: insertAccount.currency || null,
+      interestRate: insertAccount.interestRate || null,
+      minimumBalance: insertAccount.minimumBalance || null
+    };
+    this.accounts.set(id, account);
+    return account;
+  }
+
+  async getAccountTransactions(accountId: number, limit = 10): Promise<Transaction[]> {
+    return Array.from(this.transactions.values())
+      .filter((transaction) => transaction.accountId === accountId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, limit);
+  }
+
+  async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
+    const id = this.currentTransactionId++;
+    const now = new Date();
+    const transaction: Transaction = { 
+      ...insertTransaction, 
+      id,
+      adminNotes: insertTransaction.adminNotes || null,
+      status: insertTransaction.status || null,
+      category: insertTransaction.category || null,
+      recipientName: insertTransaction.recipientName || null,
+      recipientCountry: insertTransaction.recipientCountry || null,
+      recipientAddress: insertTransaction.recipientAddress || null,
+      bankName: insertTransaction.bankName || null,
+      swiftCode: insertTransaction.swiftCode || null,
+      transferPurpose: insertTransaction.transferPurpose || null,
+      approvedBy: insertTransaction.approvedBy || null,
+      approvedAt: insertTransaction.approvedAt || null,
+      rejectedBy: insertTransaction.rejectedBy || null,
+      rejectedAt: insertTransaction.rejectedAt || null,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.transactions.set(id, transaction);
+    await this.savePersistedData(); // Persist changes
+    return transaction;
+  }
+
+  async updateUser(id: number, user: Partial<User>): Promise<User | undefined> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) return undefined;
+    
+    const updatedUser = { 
+      ...existingUser, 
+      ...user, 
+      updatedAt: new Date() 
+    };
+    this.users.set(id, updatedUser);
+    await this.savePersistedData(); // Persist changes
+    console.log(`Storage: Updated user ${id}:`, JSON.stringify(updatedUser, null, 2));
+    return updatedUser;
+  }
+
+  async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
+    const existingUser = this.users.get(id);
+    if (!existingUser) {
+      console.log(`Storage: User ${id} not found for balance update`);
+      return undefined;
+    }
+    
+    // Get user's accounts to update individual account balances
+    const userAccounts = Array.from(this.accounts.values()).filter(account => account.userId === id);
+    console.log(`Storage: Found ${userAccounts.length} accounts for user ${id}`);
+    
+    if (userAccounts.length > 0) {
+      // Update the primary checking account balance (first account)
+      const primaryAccount = userAccounts[0];
+      const oldAccountBalance = parseFloat(primaryAccount.balance);
+      const newAccountBalance = oldAccountBalance + amount;
+      
+      // Update the account balance directly
+      const updatedAccount = {
+        ...primaryAccount,
+        balance: newAccountBalance.toFixed(2),
+        updatedAt: new Date()
+      };
+      this.accounts.set(primaryAccount.id, updatedAccount);
+      console.log(`Storage: Updated account ${primaryAccount.id} balance: ${oldAccountBalance} + ${amount} = ${newAccountBalance}`);
+      
+      // Recalculate total balance from all accounts
+      const allUserAccounts = Array.from(this.accounts.values()).filter(account => account.userId === id);
+      const totalAccountBalance = allUserAccounts.reduce((sum, account) => sum + parseFloat(account.balance), 0);
+      
+      const updatedUser = { 
+        ...existingUser, 
+        balance: totalAccountBalance,
+        updatedAt: new Date() 
+      };
+      this.users.set(id, updatedUser);
+      console.log(`Storage: Updated user ${id} total balance from accounts: ${totalAccountBalance}`);
+      return updatedUser;
+    } else {
+      // Fallback: update user balance only if no accounts found
+      const oldBalance = existingUser.balance || 0;
+      const newBalance = oldBalance + amount;
+      
+      const updatedUser = { 
+        ...existingUser, 
+        balance: newBalance,
+        updatedAt: new Date() 
+      };
+      this.users.set(id, updatedUser);
+      console.log(`Storage: Updated user ${id} balance (no accounts): ${oldBalance} + ${amount} = ${newBalance}`);
+      return updatedUser;
+    }
+  }
+
+  async updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<Transaction | undefined> {
+    const transaction = this.transactions.get(id);
+    if (!transaction) return undefined;
+
+    const now = new Date();
+    const updatedTransaction = {
+      ...transaction,
+      status,
+      adminNotes: notes || transaction.adminNotes,
+      updatedAt: now,
+      ...(status === 'approved' && { approvedBy: adminId.toString(), approvedAt: now }),
+      ...(status === 'rejected' && { rejectedBy: adminId.toString(), rejectedAt: now })
+    };
+
+    this.transactions.set(id, updatedTransaction);
+    
+    // Log admin action
+    await this.createAdminAction({
+      adminId,
+      actionType: status === 'approved' ? 'approve_transfer' : 'reject_transfer',
+      targetId: id.toString(),
+      targetType: 'transaction',
+      description: `${status.charAt(0).toUpperCase() + status.slice(1)} transfer #${id}`,
+      metadata: notes ? JSON.stringify({ notes }) : null
+    });
+
+    return updatedTransaction;
+  }
+
+  async getPendingTransactions(): Promise<Transaction[]> {
+    return Array.from(this.transactions.values())
+      .filter(transaction => transaction.status === 'pending')
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }
+
+  async createAdminAction(action: InsertAdminAction): Promise<AdminAction> {
+    const id = this.currentAdminActionId++;
+    const adminAction: AdminAction = {
+      id,
+      description: action.description,
+      adminId: action.adminId,
+      actionType: action.actionType,
+      targetId: action.targetId,
+      targetType: action.targetType,
+      metadata: action.metadata || null,
+      createdAt: new Date()
+    };
+    this.adminActions.set(id, adminAction);
+    return adminAction;
+  }
+
+  async getAdminActions(adminId?: number): Promise<AdminAction[]> {
+    let actions = Array.from(this.adminActions.values());
+    if (adminId) {
+      actions = actions.filter(action => action.adminId === adminId);
+    }
+    return actions.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }
+
+  async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> {
+    const id = this.currentSupportTicketId++;
+    const now = new Date();
+    const supportTicket: SupportTicket = {
+      id,
+      userId: ticket.userId,
+      subject: ticket.subject,
+      description: ticket.description,
+      adminNotes: ticket.adminNotes || null,
+      category: ticket.category || null,
+      status: ticket.status || "open",
+      priority: ticket.priority || "medium",
+      assignedTo: ticket.assignedTo || null,
+      resolution: ticket.resolution || null,
+      createdAt: now,
+      updatedAt: now,
+      resolvedAt: null
+    };
+    this.supportTickets.set(id, supportTicket);
+    return supportTicket;
+  }
+
+  async getSupportTickets(userId?: number): Promise<SupportTicket[]> {
+    let tickets = Array.from(this.supportTickets.values());
+    if (userId) {
+      tickets = tickets.filter(ticket => ticket.userId === userId);
+    }
+    return tickets.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }
+
+  async updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
+    const ticket = this.supportTickets.get(id);
+    if (!ticket) return undefined;
+
+    const now = new Date();
+    const updatedTicket = {
+      ...ticket,
+      ...updates,
+      updatedAt: now,
+      ...(updates.status === 'resolved' && !ticket.resolvedAt && { resolvedAt: now })
+    };
+
+    this.supportTickets.set(id, updatedTicket);
+    return updatedTicket;
+  }
+
+  async updateAccount(id: number, updates: Partial<Account>): Promise<Account | undefined> {
+    const account = this.accounts.get(id);
+    if (account) {
+      const updatedAccount = { ...account, ...updates, updatedAt: new Date() };
+      this.accounts.set(id, updatedAccount);
+      await this.savePersistedData(); // Persist changes
+      return updatedAccount;
+    }
+    return undefined;
+  }
+
+  async getAllTransactions(): Promise<Transaction[]> {
+    return Array.from(this.transactions.values()).sort((a, b) => 
+      (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0)
+    );
+  }
+}
+
+import { SupabaseStorage } from './supabase-storage';
+
+// Use hybrid approach - Supabase Auth with in-memory storage for stability
+export const storage = new MemStorage();

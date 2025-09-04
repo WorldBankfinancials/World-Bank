@@ -311,15 +311,55 @@ const translations = {
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
+// Auto-detect user's region and language
+function detectUserLanguage(): Language {
+  // Check URL parameter first
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlLang = urlParams.get('lang');
+  if (urlLang === 'zh' || urlLang === 'en') {
+    return urlLang as Language;
+  }
+
+  // Check localStorage
+  const savedLang = localStorage.getItem('worldbank_language');
+  if (savedLang === 'zh' || savedLang === 'en') {
+    return savedLang as Language;
+  }
+
+  // Auto-detect based on browser/timezone/IP
+  const browserLang = navigator.language.toLowerCase();
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
+  // China regions and Chinese language detection
+  if (browserLang.includes('zh') || 
+      timezone.includes('Shanghai') || 
+      timezone.includes('Beijing') || 
+      timezone.includes('Chongqing') ||
+      timezone.includes('Hong_Kong') ||
+      timezone.includes('Macau') ||
+      timezone.includes('Asia/Shanghai') ||
+      timezone.includes('Asia/Hong_Kong')) {
+    return 'zh';
+  }
+  
+  // Default to English for other regions
+  return 'en';
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>(() => detectUserLanguage());
+  
+  const changeLanguage = (newLang: Language) => {
+    setLanguage(newLang);
+    localStorage.setItem('worldbank_language', newLang);
+  };
   
   const t = (key: string): string => {
     return (translations[language] as any)[key] || key;
   };
   
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage: changeLanguage, t }}>
       {children}
     </LanguageContext.Provider>
   );

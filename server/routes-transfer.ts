@@ -19,9 +19,11 @@ export function setupTransferRoutes(app: Express) {
         transferPin
       } = req.body;
 
-      // Validate PIN
-      if (transferPin !== "0192") {
-        return res.status(400).json({ message: "Invalid PIN. Please try PIN: 0192" });
+      // Validate PIN against real user data from Supabase
+      const users = await storage.getUsers();
+      const user = users.find(u => u.id === 1); // TODO: Get actual user ID from session
+      if (!user || transferPin !== user.transferPin) {
+        return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
       }
 
       // Validate required fields
@@ -57,9 +59,11 @@ export function setupTransferRoutes(app: Express) {
         transferPin
       } = req.body;
 
-      // Validate PIN
-      if (transferPin !== "0192") {
-        return res.status(400).json({ message: "Invalid PIN. Please try PIN: 0192" });
+      // Validate PIN against real user data from Supabase
+      const users = await storage.getUsers();
+      const user = users.find(u => u.id === 1); // TODO: Get actual user ID from session
+      if (!user || transferPin !== user.transferPin) {
+        return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
       }
 
       // Validate required fields
