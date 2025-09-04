@@ -1,4 +1,3 @@
-import React, { useEffect, useRef, useState } from "react";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";

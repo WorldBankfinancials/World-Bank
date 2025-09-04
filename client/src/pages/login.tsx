@@ -42,7 +42,7 @@ export default function Login() {
   });
 
   // Fetch user data to get current PIN when PIN verification is shown
-  const { data: userData } = useQuery({
+  useQuery({
     queryKey: ['/api/user'],
     enabled: showPinVerification, // Only fetch when PIN verification is needed
   });

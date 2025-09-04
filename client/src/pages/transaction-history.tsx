@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Download, ArrowUpRight, ArrowDownRight, Calendar, FileText, TrendingUp, RefreshCw, Plus, DollarSign, Clock, CheckCircle, AlertCircle, XCircle } from "lucide-react";
+import { Search, Download, ArrowUpRight, ArrowDownRight, Calendar, FileText, TrendingUp, RefreshCw, Plus } from "lucide-react";
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
