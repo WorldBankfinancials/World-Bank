@@ -17,13 +17,12 @@ import {
   ArrowRightLeft,
   FileText,
   Briefcase,
-  PiggyBank,
   Zap,
   CheckCircle,
   Star,
   DollarSign,
   Phone
-, DollarSign } from "lucide-react";
+} from "lucide-react";
 
 
 export default function BusinessBanking() {

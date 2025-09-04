@@ -7,13 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Download, ArrowUpRight, ArrowDownRight, Calendar, FileText, TrendingUp, RefreshCw, Plus, DollarSign } from "lucide-react";
+import { Search, Download, ArrowUpRight, ArrowDownRight, Calendar, FileText, TrendingUp, RefreshCw, Plus, DollarSign, CheckCircle, Clock, XCircle, AlertCircle } from "lucide-react";
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";
-import type { User, Transaction } from "@/lib/schema";
+import type { User, Transaction } from "@/shared/schema";
 
 interface TransactionFormData {
   amount: string;
@@ -109,7 +109,7 @@ export default function TransactionHistory() {
         `"${t.description || ''}"`,
         t.category || 'General',
         t.type === 'credit' ? 'Credit' : 'Debit',
-        t.amount || '0',
+        String(t.amount || '0'),
         t.status || 'pending'
       ].join(','))
     ].join('\n');
@@ -168,8 +168,8 @@ export default function TransactionHistory() {
   };
 
   const calculateTotals = () => {
-    const credits = filteredTransactions.filter(t => t.type === 'credit').reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
-    const debits = filteredTransactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + parseFloat(t.amount || '0'), 0);
+    const credits = filteredTransactions.filter(t => t.type === 'credit').reduce((sum, t) => sum + parseFloat(String(t.amount || '0')), 0);
+    const debits = filteredTransactions.filter(t => t.type === 'debit').reduce((sum, t) => sum + parseFloat(String(t.amount || '0')), 0);
     return { credits, debits, net: credits - debits };
   };
 
