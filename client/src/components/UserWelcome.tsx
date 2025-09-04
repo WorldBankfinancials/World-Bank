@@ -1,4 +1,4 @@
-import { Shield } from "lucide-react";
+import * as React from "react";
 import type { User } from '@/lib/schema';
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";

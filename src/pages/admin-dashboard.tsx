@@ -32,6 +32,10 @@ interface PendingTransfer {
   amount: string;
   description: string;
   recipientName: string;
+  recipientCountry?: string;
+  bankName?: string;
+  swiftCode?: string;
+  transferPurpose?: string;
   status: string;
   date: Date;
   userInfo?: {
@@ -121,14 +125,13 @@ export default function AdminDashboard() {
   });
 
   // Customer query response mutation (currently unused but ready for implementation)
-  // const respondToQueryMutation = useMutation({
+  /* const respondToQueryMutation = useMutation({
     mutationFn: async ({ ticketId, response }: { ticketId: number; response: string }) => {
-      const responseObj = await fetch(`/api/admin/tickets/${ticketId}/respond`, {
+      return apiRequest(`/api/admin/tickets/${ticketId}/respond`, {
         method: 'POST',
         body: JSON.stringify({ response }),
         headers: { 'Content-Type': 'application/json' },
       });
-      return responseObj.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/support-tickets'] });
