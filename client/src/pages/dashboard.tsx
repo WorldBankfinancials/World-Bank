@@ -50,7 +50,7 @@ import {
   Filter,
   Trash2
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 // Transfer Section Component
 function TransferSection() {
@@ -141,6 +141,7 @@ function TransferSection() {
 
 // Receive Section Component
 function ReceiveSection() {
+  const { t } = useLanguage();
   const { data: user } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -150,8 +151,8 @@ function ReceiveSection() {
 
   const accountDetails = {
     name: user?.fullName || "Account Holder",
-    accountNumber: user?.accountNumber || "Loading...",
-    accountId: (user as any)?.accountId || "Loading..."
+    accountNumber: user?.accountNumber || t('loading'),
+    accountId: (user as any)?.accountId || t('loading')
   };
 
   const handleCopyDetails = (text: string) => {
@@ -474,6 +475,7 @@ function AlertsSection() {
 export default function Dashboard() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
+  const [, setLocation] = useLocation();
   const [showBalance, setShowBalance] = React.useState(true);
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [isChatOpen, setIsChatOpen] = React.useState(false);
@@ -693,10 +695,10 @@ export default function Dashboard() {
                   {/* Account Info Footer */}
                   <div className="p-4 border-t border-gray-100 bg-gray-50">
                     <div className="text-xs text-gray-500">
-                      Account ID: {userProfile?.accountId || 'Loading...'}
+                      Account ID: {userProfile?.accountId || t('loading')}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Last Login: {(userProfile as any)?.lastLogin ? new Date((userProfile as any).lastLogin).toLocaleDateString() : 'Loading...'}
+                      Last Login: {(userProfile as any)?.lastLogin ? new Date((userProfile as any).lastLogin).toLocaleDateString() : t('loading')}
                     </div>
                   </div>
                 </div>
@@ -710,10 +712,10 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">{t('welcome')}, {userProfile?.fullName || 'Loading...'}</h1>
-                <p className="text-sm text-gray-600">{t('account_number')}: {userProfile?.accountNumber || 'Loading...'}</p>
-                <p className="text-sm text-gray-600">{t('account_id')}: {(userProfile as any)?.accountId || 'Loading...'}</p>
-                <p className="text-sm text-gray-600">{userProfile?.profession || 'Loading...'}</p>
+                <h1 className="text-lg font-semibold text-gray-900">{t('welcome')}, {userProfile?.fullName || t('loading')}</h1>
+                <p className="text-sm text-gray-600">{t('account_number')}: {userProfile?.accountNumber || t('loading')}</p>
+                <p className="text-sm text-gray-600">{t('account_id')}: {(userProfile as any)?.accountId || t('loading')}</p>
+                <p className="text-sm text-gray-600">{userProfile?.profession || t('loading')}</p>
                 <div className="flex items-center space-x-2 mt-1">
                   <Badge variant="default" className="text-xs bg-green-100 text-green-800 flex items-center space-x-1">
                     <Check className="w-3 h-3" />

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useState } from "react";
 import { 
   QrCode, 
@@ -17,11 +18,13 @@ import {
   Download,
   Users,
   Smartphone,
-  Mail
+  Mail,
+  Wallet
 } from "lucide-react";
 
 
 export default function Receive() {
+  const { t } = useLanguage();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -34,15 +37,15 @@ export default function Receive() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-600">{t('loading')}</div>
       </div>
     );
   }
 
   const accountDetails = {
     name: user?.fullName || "Account Holder",
-    accountNumber: user?.accountNumber || "Loading...",
-    accountId: (user as any)?.accountId || "Loading...",
+    accountNumber: user?.accountNumber || t('loading'),
+    accountId: (user as any)?.accountId || t('loading'),
     bankName: "World Bank Group",
     swiftCode: "WBGLUS33"
   };
@@ -228,7 +231,7 @@ export default function Receive() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {pendingRequests && pendingRequests.length > 0 ? pendingRequests.map((request, index) => (
+              {pendingRequests && Array.isArray(pendingRequests) && pendingRequests.length > 0 ? pendingRequests.map((request: any, index: number) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
