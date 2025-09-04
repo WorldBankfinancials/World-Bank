@@ -23,7 +23,7 @@ import {
   Star,
   DollarSign,
   Phone
-} from "lucide-react";
+, DollarSign } from "lucide-react";
 
 
 export default function BusinessBanking() {

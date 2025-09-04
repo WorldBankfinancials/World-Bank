@@ -18,7 +18,7 @@ import {
   Search,
   Calendar,
   CreditCard
-} from "lucide-react";
+, DollarSign } from "lucide-react";
 
 interface Transaction {
   id: string;

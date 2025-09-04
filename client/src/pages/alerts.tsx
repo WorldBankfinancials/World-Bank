@@ -24,7 +24,7 @@ import {
   Settings,
   Filter,
   Trash2
-} from "lucide-react";
+, DollarSign } from "lucide-react";
 
 
 export default function Alerts() {
