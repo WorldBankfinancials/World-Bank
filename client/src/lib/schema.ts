@@ -1,6 +1,7 @@
 // Client-side schema types for the World Bank app
+
 export interface User {
-  id: number;
+  id: string; // UUID in Supabase
   username: string;
   email: string;
   fullName: string;
@@ -12,9 +13,9 @@ export interface User {
 }
 
 export interface Transaction {
-  id: number;
-  fromUserId: number;
-  toUserId?: number;
+  id: string;
+  fromUserId: string;
+  toUserId?: string;
   amount: number;
   type: 'credit' | 'debit';
   status: 'pending' | 'completed' | 'failed';
@@ -24,7 +25,7 @@ export interface Transaction {
 }
 
 export interface PendingTransfer {
-  id: number;
+  id: string;
   amount: number;
   recipientName: string;
   recipientCountry: string;
@@ -33,4 +34,24 @@ export interface PendingTransfer {
   transferPurpose: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
+}
+
+export interface Message {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderRole: 'admin' | 'customer';
+  message: string;
+  createdAt: string;
+  isRead: boolean;
+}
+
+export interface Alert {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'success' | 'warning' | 'error' | 'info';
+  createdAt: string;
+  isRead: boolean;
 }
