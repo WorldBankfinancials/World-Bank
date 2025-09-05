@@ -5,7 +5,7 @@ import type { User as UserType } from "@/lib/schema";
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge"; // ✅ fixed import
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { User, Shield, MapPin, Check, Lock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -13,7 +13,7 @@ import { supabase } from "@/lib/supabase";
 export default function ProfileSettings() {
   const [, setLocation] = useLocation();
 
-  // ✅ fetch logged-in user's profile securely
+  // fetch logged-in user's profile securely
   const { data: user, isLoading, error } = useQuery<UserType>({
     queryKey: ["user-profile"],
     queryFn: async () => {
@@ -26,11 +26,22 @@ export default function ProfileSettings() {
       const { data, error } = await supabase
         .from("users")
         .select("*")
-        .eq("id", user.id) // ✅ only fetch logged-in user's profile
+        .eq("id", user.id)
         .single();
 
       if (error) throw error;
-      return data as UserType;
+
+      // normalize fields in case schema uses snake_case
+      return {
+        ...data,
+        fullName: data.fullName ?? data.full_name,
+        accountId: data.accountId ?? data.account_id,
+        accountNumber: data.accountNumber ?? data.account_number,
+        annualIncome: data.annualIncome ?? data.annual_income,
+        twoFA: data.twoFA ?? data.two_fa,
+        sessionActive: data.sessionActive ?? data.session_active,
+        avatarUrl: data.avatarUrl ?? data.avatar_url,
+      } as UserType;
     },
   });
 
@@ -81,7 +92,10 @@ export default function ProfileSettings() {
                 />
               ) : (
                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-900 border-4 border-blue-100 flex items-center justify-center text-white font-bold relative">
-                  {user?.fullName?.split(" ").map((n) => n[0]).join("") || "LW"}
+                  {(user?.fullName || "LW")
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
                   <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
                 </div>
               )}
@@ -198,8 +212,16 @@ export default function ProfileSettings() {
   );
 }
 
-// ✅ Small helper component for info rows
-function Info({ label, value, mono = false }: { label: string; value?: string | null; mono?: boolean }) {
+// Helper components
+function Info({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value?: string | null;
+  mono?: boolean;
+}) {
   return (
     <div>
       <label className="text-sm font-medium text-gray-500">{label}</label>
@@ -210,8 +232,15 @@ function Info({ label, value, mono = false }: { label: string; value?: string | 
   );
 }
 
-// ✅ Helper for settings rows
-function Setting({ title, desc, value }: { title: string; desc: string; value: string }) {
+function Setting({
+  title,
+  desc,
+  value,
+}: {
+  title: string;
+  desc: string;
+  value: string;
+}) {
   return (
     <div className="flex items-center justify-between p-3 border-t first:border-0 bg-gray-50 rounded-lg">
       <div>
