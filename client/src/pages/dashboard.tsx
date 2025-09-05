@@ -1,265 +1,176 @@
-// src/pages/Dashboard.tsx
-import React, { useState } from "react";
+// client/src/pages/dashboard.tsx
+import { useEffect, useState } from "react";
 import BottomNavigation from "@/components/BottomNavigation";
+import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import RealtimeAlerts from "@/components/RealtimeAlerts";
+import { useUser, useAccount, useTransactions, useRealtimeAccount } from "@/hooks/useSupabase";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Send,
-  ArrowDownRight,
-  Clock,
-  QrCode,
-  Copy,
-  CheckCircle,
-} from "lucide-react";
+import { Eye, EyeOff, ArrowUpRight, ArrowDownRight, Plus, Send, Download, Bell, Check } from "lucide-react";
+import { Link, useLocation } from "wouter";
 
-import { useUser, useAccount, useRealtimeAccount } from "@/hooks/useSupabase";
-import { supabase } from "@/lib/supabaseClient";
-
-/* -------------------------- Transfer Section -------------------------- */
-function TransferSection({ userId }: { userId?: string }) {
-  const [transferAmount, setTransferAmount] = useState("");
-  const [recipient, setRecipient] = useState("");
-  const [transferType, setTransferType] = useState("quick");
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const handleTransfer = async () => {
-    if (!transferAmount || !recipient) {
-      alert("Please enter amount and recipient");
-      return;
-    }
-    setIsProcessing(true);
-
-    const { error } = await supabase.from("transactions").insert([
-      {
-        sender_id: userId,
-        recipient,
-        amount: Number(transferAmount),
-        type: transferType,
-        status: "pending",
-      },
-    ]);
-
-    if (error) {
-      alert("Transfer failed: " + error.message);
-    } else {
-      alert(`Transfer of $${transferAmount} to ${recipient} created!`);
-    }
-
-    setTransferAmount("");
-    setRecipient("");
-    setIsProcessing(false);
-  };
-
-  return (
-    <div className="px-4 mb-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Send className="w-5 h-5 text-blue-600" />
-            <span>Transfer Money</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="transfer-amount">Amount</Label>
-            <Input
-              id="transfer-amount"
-              type="number"
-              placeholder="0.00"
-              value={transferAmount}
-              onChange={(e) => setTransferAmount(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="recipient">Recipient</Label>
-            <Input
-              id="recipient"
-              placeholder="email / phone / account ID"
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="transfer-type">Transfer Type</Label>
-            <Select value={transferType} onValueChange={setTransferType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select transfer type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="quick">Quick Send</SelectItem>
-                <SelectItem value="international">International</SelectItem>
-                <SelectItem value="bank">Bank Transfer</SelectItem>
-                <SelectItem value="mobile">Mobile Money</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            onClick={handleTransfer}
-            disabled={!transferAmount || !recipient || isProcessing}
-            className="w-full bg-blue-600 text-white"
-          >
-            {isProcessing ? (
-              <>
-                <Clock className="w-4 h-4 mr-2 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4 mr-2" />
-                Send ${transferAmount || "0.00"}
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-/* -------------------------- Receive Section -------------------------- */
-function ReceiveSection({ userId }: { userId?: string }) {
+export default function Dashboard() {
+  const { data: authUser } = useUser();
+  const userId = authUser?.id ?? null;
   const { data: account } = useAccount(userId);
-  const [requestAmount, setRequestAmount] = useState("");
-  const [showQR, setShowQR] = useState(false);
-  const [copied, setCopied] = useState(false);
-
+  const { data: transactions = [] } = useTransactions(userId);
   useRealtimeAccount(userId);
 
-  const handleCopyDetails = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const [showBalance, setShowBalance] = useState(true);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [, setLocation] = useLocation();
 
-  const handleRequestMoney = async () => {
-    if (!requestAmount) {
-      alert("Please enter an amount");
-      return;
-    }
-
-    const { error } = await supabase.from("payment_requests").insert([
-      {
-        user_id: userId,
-        amount: Number(requestAmount),
-        status: "pending",
-      },
-    ]);
-
-    if (error) {
-      alert("Failed to create request: " + error.message);
-    } else {
-      alert(`Payment request for $${requestAmount} created!`);
-    }
-
-    setRequestAmount("");
-  };
+  useEffect(() => {
+    const onToggle = () => setIsChatOpen((s) => !s);
+    window.addEventListener("toggleLiveChat", onToggle);
+    return () => window.removeEventListener("toggleLiveChat", onToggle);
+  }, []);
 
   return (
-    <div className="px-4 mb-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <ArrowDownRight className="w-5 h-5 text-green-600" />
-            <span>Receive Money</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex space-x-2">
-            <Input
-              type="number"
-              placeholder="Request amount"
-              value={requestAmount}
-              onChange={(e) => setRequestAmount(e.target.value)}
-              className="flex-1"
-            />
-            <Button
-              onClick={handleRequestMoney}
-              className="bg-green-600 text-white"
-            >
-              Request
-            </Button>
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="bg-white px-4 py-3 shadow-sm relative">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <img src="/world-bank-logo.jpeg" alt="World Bank Logo" className="w-8 h-8 object-contain" />
+            <div>
+              <div className="text-gray-900 font-semibold text-sm">WORLD BANK</div>
+              <div className="text-xs text-gray-500">International Banking</div>
+            </div>
           </div>
 
-          <div className="flex space-x-2">
-            <Button
-              onClick={() => setShowQR(!showQR)}
-              variant="outline"
-              className="flex-1"
-            >
-              <QrCode className="w-4 h-4 mr-2" />
-              QR Code
-            </Button>
-            <Button
-              onClick={() => handleCopyDetails(account?.account_number ?? "")}
-              variant="outline"
-              className="flex-1"
-            >
-              {copied ? (
-                <CheckCircle className="w-4 h-4 mr-2" />
-              ) : (
-                <Copy className="w-4 h-4 mr-2" />
+          <div className="flex items-center space-x-3">
+            <RealtimeAlerts /> {/* Keep your RealtimeAlerts component */}
+            <div className="relative">
+              <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100">
+                <Avatar size={40} />
+              </button>
+
+              {showProfileMenu && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="p-4 border-b border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <Avatar size={64} />
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900">{authUser?.user_metadata?.full_name ?? authUser?.email ?? "User"}</div>
+                        <div className="text-sm text-gray-600">{authUser?.email}</div>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Badge className="text-xs bg-green-100 text-green-800 flex items-center space-x-1">
+                            <Check className="w-3 h-3" />
+                            <span>Verified Account</span>
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 border-t border-gray-100 bg-gray-50">
+                    <div className="text-xs text-gray-500">Account ID: {account?.id ?? "-"}</div>
+                    <div className="text-xs text-gray-500">Last Login: {authUser ? new Date().toLocaleDateString() : "-"}</div>
+                  </div>
+                </div>
               )}
-              {copied ? "Copied!" : "Copy Details"}
-            </Button>
+            </div>
           </div>
+        </div>
 
-          {showQR && (
-            <div className="text-center p-4 bg-gray-50 rounded-lg">
-              <div className="w-32 h-32 bg-gray-200 mx-auto mb-2 rounded-lg flex items-center justify-center">
-                <QrCode className="w-16 h-16 text-gray-400" />
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">Welcome, {authUser?.user_metadata?.full_name ?? authUser?.email ?? "Guest"}</h1>
+                <p className="text-sm text-gray-600">Account: {account?.account_number ?? "—"}</p>
               </div>
-              <p className="text-sm text-gray-600">
-                Scan to send money to account {account?.account_number ?? "—"}
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
-              <span className="text-sm text-gray-600">Account Number</span>
-              <span className="text-sm font-medium">
-                {account?.account_number ?? "—"}
-              </span>
-            </div>
-            <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
-              <span className="text-sm text-gray-600">Balance</span>
-              <span className="text-sm font-medium">
-                ${account?.balance ?? "0.00"}
-              </span>
+              <Avatar size={80} />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      <div className="p-4">
+        <Card className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 text-white shadow-2xl border-0">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-blue-100 text-sm">Total balance</p>
+                <div className="flex items-center space-x-2">
+                  <h2 className="text-2xl font-bold">{showBalance ? `$${(account?.balance ?? 0).toLocaleString()}` : "****"}</h2>
+                  <button onClick={() => setShowBalance((s) => !s)}>{showBalance ? <EyeOff className="w-5 h-5 text-blue-100" /> : <Eye className="w-5 h-5 text-blue-100" />}</button>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-blue-100 text-sm">Account</p>
+                <p className="text-sm font-medium">{account?.account_number ? `****${(account.account_number as string).slice(-4)}` : "****0000"}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-1"><ArrowUpRight className="w-4 h-4 text-green-300" /><span className="text-sm">+2.5%</span></div>
+              <span className="text-blue-100 text-sm">vs last month</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="px-4 mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">My accounts</h3>
+        <div className="space-y-3">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <WalletIcon />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Primary Account</h4>
+                    <p className="text-sm text-gray-500">{account?.account_number ?? "****0000"}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-lg">{showBalance ? `$${(account?.balance ?? 0).toLocaleString()}` : "****"}</p>
+                  <p className="text-xs text-gray-500">Available</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <div className="px-4">
+        <Card>
+          <CardHeader><CardTitle className="text-lg">Recent Transactions</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {transactions.length === 0 && <div className="text-sm text-gray-500">No recent transactions.</div>}
+              {transactions.slice(0, 10).map((tx: any) => (
+                <div key={tx.id} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <ArrowDownRight className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{tx.description ?? (tx.type === "credit" ? "Credit" : "Debit")}</p>
+                      <p className="text-sm text-gray-500">{new Date(tx.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <span className={tx.type === "credit" ? "font-medium text-green-600" : "font-medium text-red-600"}>{tx.type === "credit" ? "+" : "-"}${Number(tx.amount).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <BottomNavigation />
+      <LiveChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 }
 
-/* -------------------------- Dashboard (main export) -------------------------- */
-export default function Dashboard() {
-  const { data: user } = useUser();
-
-  return (
-    <div>
-      <h1 className="text-2xl font-bold px-4 py-2">Dashboard</h1>
-      <TransferSection userId={user?.id} />
-      <ReceiveSection userId={user?.id} />
-      <BottomNavigation />
-      <LiveChat />
-    </div>
-  );
+/** tiny placeholder for missing icon component import in your repo — replace with your wallet icon */
+function WalletIcon() {
+  return <svg className="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="none"><path d="M3 7h18v10H3z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 }
