@@ -1,57 +1,53 @@
-// Client-side schema types for the World Bank app
-
+// client/src/lib/schema.ts
 export interface User {
-  id: string; // UUID in Supabase
-  username: string;
-  email: string;
-  fullName: string;
-  accountNumber: string;
-  balance: number;
-  isVerified: boolean;
-  role: 'user' | 'admin';
-  createdAt: string;
+  id: string; // UUID from Supabase auth
+  username?: string;
+  email?: string;
+  fullName?: string;
+  accountNumber?: string;
+  balance?: number;
+  isVerified?: boolean;
+  role?: 'user' | 'admin';
+  createdAt?: string;
 }
 
 export interface Transaction {
   id: string;
-  fromUserId: string;
-  toUserId?: string;
+  from_user_id?: string;
+  to_user_id?: string;
   amount: number;
   type: 'credit' | 'debit';
   status: 'pending' | 'completed' | 'failed';
-  description: string;
+  description?: string;
   category?: string;
-  createdAt: string;
+  created_at?: string;
 }
 
 export interface PendingTransfer {
   id: string;
   amount: number;
-  recipientName: string;
-  recipientCountry: string;
-  bankName: string;
-  swiftCode: string;
-  transferPurpose: string;
+  recipient_name: string;
+  recipient_country: string;
+  bank_name: string;
+  swift_code: string;
+  transfer_purpose?: string;
   status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
+  created_at?: string;
 }
 
 export interface Message {
   id: string;
-  senderId: string;
-  senderName: string;
-  senderRole: 'admin' | 'customer';
-  message: string;
-  createdAt: string;
-  isRead: boolean;
+  user_id: string;
+  role?: 'user' | 'admin';
+  content: string;
+  created_at?: string;
 }
 
 export interface Alert {
   id: string;
-  userId: string;
+  user_id: string;
   title: string;
   message: string;
-  type: 'success' | 'warning' | 'error' | 'info';
-  createdAt: string;
-  isRead: boolean;
+  read?: boolean;
+  created_at?: string;
 }
