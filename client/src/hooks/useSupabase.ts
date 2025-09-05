@@ -1,7 +1,7 @@
 // client/src/hooks/useSupabase.ts
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabaseClient";
 
 /**
  * Returns authenticated user (from supabase.auth)
@@ -11,7 +11,7 @@ export function useUser() {
     queryKey: ["user"],
     queryFn: async () => {
       const { data, error } = await supabase.auth.getUser();
-      if (error) throw error;
+      if (error) return null;
       return data.user ?? null;
     },
     staleTime: 1000 * 60 * 2,
@@ -32,7 +32,7 @@ export function useProfile() {
         .select("*")
         .eq("id", userQ.data!.id)
         .single();
-      if (error) throw error;
+      if (error) return null;
       return data ?? null;
     },
   });
@@ -52,7 +52,7 @@ export function useAccount(userId?: string | null) {
         .eq("user_id", userId)
         .order("created_at", { ascending: true })
         .limit(1);
-      if (error) throw error;
+      if (error) return null;
       return Array.isArray(data) && data.length ? data[0] : null;
     },
     staleTime: 1000 * 30,
@@ -74,7 +74,7 @@ export function useTransactions(userId?: string | null) {
         .or(orFilter)
         .order("created_at", { ascending: false })
         .limit(200);
-      if (error) throw error;
+      if (error) return [];
       return data ?? [];
     },
     staleTime: 1000 * 30,
@@ -95,7 +95,7 @@ export function useAlerts(userId?: string | null) {
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(100);
-      if (error) throw error;
+      if (error) return [];
       return data ?? [];
     },
     staleTime: 1000 * 30,
@@ -158,10 +158,11 @@ export function useMessages() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("messages")
+        // ⚠️ requires a foreign key relation in Supabase
         .select("*, users(username, email)")
         .order("created_at", { ascending: true })
         .limit(200);
-      if (error) throw error;
+      if (error) return [];
       return data ?? [];
     },
     staleTime: 1000 * 10,
@@ -173,10 +174,15 @@ export function useRealtimeMessages() {
   useEffect(() => {
     const channel = supabase
       .channel("messages")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () =>
-        qc.invalidateQueries({ queryKey: ["messages"] })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        () => qc.invalidateQueries({ queryKey: ["messages"] })
       )
       .subscribe();
-    return () => supabase.removeChannel(channel);
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [qc]);
 }
