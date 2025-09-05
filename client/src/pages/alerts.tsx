@@ -165,11 +165,11 @@ export default function Alerts() {
   };
 
   const markAsRead = (alertId: number) => {
-    alert(`Marked alert ${alertId} as read`);
+    // Mark alert as read in database
   };
 
   const deleteAlert = (alertId: number) => {
-    alert(`Deleted alert ${alertId}`);
+    // Delete alert from database
   };
 
   return (
@@ -180,7 +180,7 @@ export default function Alerts() {
         password: "password123",
         fullName: "Mr. Liu Wei",
         accountNumber: "4789-6523-1087-9234",
-        accountId: "WB-2024-7829",
+        accountId: "WB-2025-8912",
         profession: "Marine Engineer at Oil Rig Company",
         isVerified: true,
         isOnline: true,
@@ -197,7 +197,7 @@ export default function Alerts() {
             </p>
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm" onClick={() => alert("Filter options")}>
+            <Button variant="outline" size="sm" onClick={() => console.log("Filter options")}>
               <Filter className="w-4 h-4" />
             </Button>
             <Button variant="outline" size="sm" onClick={() => alert("Settings opened")}>

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   Shield, 
   Lock, 
@@ -26,6 +27,7 @@ import {
 
 
 export default function SecurityCenter() {
+  const { t } = useLanguage();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -33,7 +35,7 @@ export default function SecurityCenter() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-wb-gray flex items-center justify-center">
-        <div className="text-wb-dark">Loading...</div>
+        <div className="text-wb-dark">{t('loading')}</div>
       </div>
     );
   }

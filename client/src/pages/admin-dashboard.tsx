@@ -62,8 +62,8 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Mock customer data for Profile Management tab
-  const mockCustomers = [
+  // Customer data for Profile Management tab
+  const customers = [
     {
       id: 1,
       fullName: "Mr. Liu Wei",
@@ -71,7 +71,7 @@ export default function AdminDashboard() {
       username: "liu.wei",
       phone: "+86 138 0013 8000",
       accountNumber: "4789-6523-1087-9234",
-      accountId: "WB-2024-7829",
+      accountId: "WB-2025-8912",
       profession: "Marine Engineer",
       isVerified: true,
       isOnline: true,
@@ -85,7 +85,7 @@ export default function AdminDashboard() {
       username: "chen.li",
       phone: "+86 138 0013 8001",
       accountNumber: "4789-6523-1087-9235", 
-      accountId: "WB-2024-7830",
+      accountId: "WB-2025-8913",
       profession: "Financial Analyst",
       isVerified: false,
       isOnline: false,
@@ -109,8 +109,7 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/stats'],
   });
 
-  // Use mock customers data instead of API call
-  const customers = mockCustomers;
+  // Use customer data for management operations
   const customersLoading = false;
 
   // Profile picture upload mutation

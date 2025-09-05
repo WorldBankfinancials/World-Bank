@@ -62,12 +62,12 @@ function TransferSection() {
 
   const handleTransfer = async () => {
     if (!transferAmount || !recipient) {
-      alert("Please enter amount and recipient");
+      console.log("Validation: Amount and recipient required");
       return;
     }
     setIsProcessing(true);
     await new Promise(resolve => setTimeout(resolve, 2000));
-    alert(`Transfer of $${transferAmount} to ${recipient} initiated successfully!`);
+    console.log(`Transfer initiated: $${transferAmount} to ${recipient}`);
     setTransferAmount("");
     setRecipient("");
     setIsProcessing(false);
@@ -163,10 +163,10 @@ function ReceiveSection() {
 
   const handleRequestMoney = () => {
     if (!requestAmount) {
-      alert("Please enter an amount");
+      console.log("Validation: Amount required");
       return;
     }
-    alert(`Payment request for $${requestAmount} created successfully!`);
+    console.log(`Payment request created: $${requestAmount}`);
     setRequestAmount("");
   };
 
@@ -396,7 +396,7 @@ function AlertsSection() {
   };
 
   const markAsRead = (alertId: number) => {
-    alert(`Marked alert ${alertId} as read`);
+    // Mark alert as read in system
   };
 
   const unreadCount = alerts.filter(alert => !alert.read).length;

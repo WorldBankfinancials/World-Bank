@@ -38,7 +38,7 @@ export default function DigitalWallet() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-600">{t('loading')}</div>
       </div>
     );
   }
@@ -106,7 +106,7 @@ export default function DigitalWallet() {
                 {showBalance ? `$${walletBalance.toLocaleString()}` : "••••••"}
               </div>
               <div className="flex items-center space-x-4 text-blue-100">
-                <span>Account: {user?.accountNumber || 'Loading...'}</span>
+                <span>Account: {user?.accountNumber || t('loading')}</span>
                 <Badge className="bg-green-500 text-white">{(user as any)?.isActive ? 'Active' : 'Inactive'}</Badge>
               </div>
             </div>

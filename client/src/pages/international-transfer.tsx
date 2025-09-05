@@ -1,4 +1,4 @@
-import type { User } from "@/lib/schema";
+import type { User } from "@shared/schema";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -27,9 +27,11 @@ import {
   Star
 } from "lucide-react";
 import { useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 
 export default function InternationalTransfer() {
+  const { t } = useLanguage();
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [transferAmount, setTransferAmount] = useState('1000');
   const [fromCurrency, setFromCurrency] = useState('USD');
@@ -46,7 +48,7 @@ export default function InternationalTransfer() {
   };
 
   const handlePinSubmit = async () => {
-    console.log('PIN submitted:', transferPin);
+    // PIN verification process
     
     // Validate PIN first
     if (!transferPin || transferPin.length !== 4) {
@@ -74,7 +76,7 @@ export default function InternationalTransfer() {
         transferPin: transferPin
       };
       
-      console.log('Sending transfer data:', transferData);
+      // Sending transfer data
 
       const response = await fetch('/api/international-transfers', {
         method: 'POST',
@@ -82,16 +84,16 @@ export default function InternationalTransfer() {
         body: JSON.stringify(transferData)
       });
 
-      console.log('Response status:', response.status);
+      // Processing response
       
       if (!response.ok) {
-        console.error('HTTP Error:', response.status, response.statusText);
+        // HTTP Error handling
         setPinError(`Transfer failed. Server error: ${response.status}`);
         return;
       }
 
       const result = await response.json();
-      console.log('Transfer result:', result);
+      // Transfer completed
       
       setShowPinModal(false);
       setTransferPin('');
@@ -99,7 +101,7 @@ export default function InternationalTransfer() {
       setShowProcessingPage(true);
       
     } catch (error) {
-      console.error('International transfer error:', error);
+      // Network error handling
       setPinError("Network connection error. Check your internet and try again.");
     } finally {
       setIsProcessing(false);
@@ -113,7 +115,7 @@ export default function InternationalTransfer() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-600">{t('loading')}</div>
       </div>
     );
   }

@@ -4,7 +4,8 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
-import type { User } from "@/lib/schema";
+import { useLanguage } from "@/contexts/LanguageContext";
+import type { User } from "@shared/schema";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -22,6 +23,7 @@ import {
 
 
 export default function InvestmentTrading() {
+  const { t } = useLanguage();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -29,7 +31,7 @@ export default function InvestmentTrading() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-600">{t('loading')}</div>
       </div>
     );
   }

@@ -57,7 +57,7 @@ export default function Transfer() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-600">{t('loading')}</div>
       </div>
     );
   }
@@ -77,7 +77,7 @@ export default function Transfer() {
 
   const handleTransfer = () => {
     if (!amount || !recipientDetails.fullName || !recipientDetails.accountNumber) {
-      alert("Please complete all required transfer details");
+      console.log("Validation: Transfer details required");
       return;
     }
 

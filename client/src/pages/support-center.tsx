@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Search, Phone, MessageCircle, FileText, Clock } from "lucide-react";
 
 
 export default function SupportCenter() {
+  const { t } = useLanguage();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -16,7 +18,7 @@ export default function SupportCenter() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-wb-gray flex items-center justify-center">
-        <div className="text-wb-dark">Loading...</div>
+        <div className="text-wb-dark">{t('loading')}</div>
       </div>
     );
   }

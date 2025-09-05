@@ -39,10 +39,10 @@ export default function CreditCards() {
   });
 
   const quickActions = [
-    { icon: Lock, label: t('lock_card'), action: () => alert("Card locked successfully") },
-    { icon: Smartphone, label: t('mobile_pay'), action: () => alert("Mobile pay activated") },
-    { icon: DollarSign, label: t('pay_bill'), action: () => alert("Redirecting to payment") },
-    { icon: Settings, label: t('settings'), action: () => alert("Card settings opened") }
+    { icon: Lock, label: t('lock_card'), action: () => console.log("Card locked") },
+    { icon: Smartphone, label: t('mobile_pay'), action: () => console.log("Mobile pay activated") },
+    { icon: DollarSign, label: t('pay_bill'), action: () => console.log("Redirecting to payment") },
+    { icon: Settings, label: t('settings'), action: () => console.log("Card settings opened") }
   ];
 
   return (

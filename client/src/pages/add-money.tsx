@@ -87,7 +87,7 @@ export default function AddMoney() {
 
   const handleAddMoney = async () => {
     if (!selectedMethod || !amount) {
-      alert("Please select a method and enter an amount");
+      console.log("Validation: Method and amount required");
       return;
     }
 
@@ -95,11 +95,11 @@ export default function AddMoney() {
     
     try {
       await new Promise(resolve => setTimeout(resolve, 2000));
-      alert(`Successfully added $${amount} via ${selectedMethod}`);
+      console.log(`Money added: $${amount} via ${selectedMethod}`);
       setAmount("");
       setSelectedMethod("");
     } catch (error) {
-      alert("Add money failed. Please try again.");
+      console.log("Add money operation failed");
     } finally {
       setLoading(false);
     }
@@ -228,7 +228,7 @@ export default function AddMoney() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentTransactions && recentTransactions.length > 0 ? recentTransactions.map((transaction, index) => (
+              {recentTransactions && Array.isArray(recentTransactions) && recentTransactions.length > 0 ? recentTransactions.map((transaction: any, index: number) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">

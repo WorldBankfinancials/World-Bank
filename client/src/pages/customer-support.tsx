@@ -1,4 +1,4 @@
-import type { User } from "@/lib/schema";
+import type { User } from "@shared/schema";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Send, MessageSquare, Users, AlertCircle } from "lucide-react";
 
 
 export default function CustomerSupport() {
+  const { t } = useLanguage();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -18,7 +20,7 @@ export default function CustomerSupport() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-wb-gray flex items-center justify-center">
-        <div className="text-wb-dark">Loading...</div>
+        <div className="text-wb-dark">{t('loading')}</div>
       </div>
     );
   }

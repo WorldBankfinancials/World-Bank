@@ -66,15 +66,15 @@ export default function Receive() {
 
   const handleCopyDetails = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert("Copied to clipboard");
+    // Copied to clipboard notification
   };
 
   const handleRequestMoney = () => {
     if (!requestAmount) {
-      alert("Please enter an amount");
+      console.log("Validation: Amount required");
       return;
     }
-    alert(`Payment request for $${requestAmount} created successfully!`);
+    console.log(`Payment request created: $${requestAmount}`);
     setRequestAmount("");
     setMessage("");
   };
@@ -110,7 +110,7 @@ export default function Receive() {
                 Scan this QR code to send money to Mr. Liu Wei
               </p>
               <div className="flex space-x-2 justify-center">
-                <Button variant="outline" onClick={() => alert("QR code downloaded")}>
+                <Button variant="outline" onClick={() => console.log("QR code download")}>
                   <Download className="w-4 h-4 mr-1" />
                   Download
                 </Button>
