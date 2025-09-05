@@ -1,3 +1,4 @@
+// client/src/lib/supabase.ts
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -5,7 +6,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
-    "❌ Missing Supabase credentials. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file."
+    "❌ Missing Supabase credentials. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env / Vercel env."
   );
 }
 
@@ -26,35 +27,17 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 supabase.auth.onAuthStateChange((event, session) => {
-  console.log("Supabase Auth Event:", event, session?.user?.email);
-
-  if (event === "SIGNED_IN" && session) {
-    console.log("✅ User signed in:", session.user.email);
-  }
-
-  if (event === "SIGNED_OUT") {
-    console.log("✅ User signed out");
-  }
+  console.log("Supabase Auth Event:", event, session?.user?.email ?? null);
 });
 
 const testConnection = async () => {
   try {
-    console.log("🔍 Testing Supabase connection...");
-    const { data, error } = await supabase.auth.getSession();
-
-    if (error) throw error;
-
-    console.log("✅ Supabase is connected.");
-    if (data?.session?.user?.email) {
-      console.log("👤 Active session:", data.session.user.email);
-    } else {
-      console.log("ℹ️ No active session found.");
-    }
+    const { data } = await supabase.auth.getSession();
+    console.log("✅ Supabase connection OK. Active session:", data?.session?.user?.email ?? "none");
     return true;
-  } catch (error) {
-    console.error("❌ Supabase connection failed:", error);
+  } catch (e) {
+    console.error("❌ Supabase testConnection failed", e);
     return false;
   }
 };
-
 testConnection();
