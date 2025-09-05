@@ -7,15 +7,17 @@ import RealtimeAlerts from "@/components/RealtimeAlerts";
 import { useUser, useAccount, useTransactions, useRealtimeAccount } from "@/hooks/useSupabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, ArrowUpRight, ArrowDownRight, Plus, Send, Download, Bell, Check } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { Eye, EyeOff, ArrowUpRight, ArrowDownRight, Check } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function Dashboard() {
   const { data: authUser } = useUser();
   const userId = authUser?.id ?? null;
+
   const { data: account } = useAccount(userId);
   const { data: transactions = [] } = useTransactions(userId);
+
+  // Realtime subscription for account balance
   useRealtimeAccount(userId);
 
   const [showBalance, setShowBalance] = useState(true);
@@ -31,8 +33,10 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
+      {/* Top Header */}
       <div className="bg-white px-4 py-3 shadow-sm relative">
         <div className="flex items-center justify-between">
+          {/* Logo */}
           <div className="flex items-center space-x-2">
             <img src="/world-bank-logo.jpeg" alt="World Bank Logo" className="w-8 h-8 object-contain" />
             <div>
@@ -41,10 +45,14 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* Alerts + Profile */}
           <div className="flex items-center space-x-3">
-            <RealtimeAlerts /> {/* Keep your RealtimeAlerts component */}
+            <RealtimeAlerts />
             <div className="relative">
-              <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100">
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100"
+              >
                 <Avatar size={40} />
               </button>
 
@@ -54,7 +62,9 @@ export default function Dashboard() {
                     <div className="flex items-center space-x-3">
                       <Avatar size={64} />
                       <div className="flex-1">
-                        <div className="font-semibold text-gray-900">{authUser?.user_metadata?.full_name ?? authUser?.email ?? "User"}</div>
+                        <div className="font-semibold text-gray-900">
+                          {authUser?.user_metadata?.full_name ?? authUser?.email ?? "User"}
+                        </div>
                         <div className="text-sm text-gray-600">{authUser?.email}</div>
                         <div className="flex items-center space-x-2 mt-1">
                           <Badge className="text-xs bg-green-100 text-green-800 flex items-center space-x-1">
@@ -76,11 +86,14 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Welcome Section */}
         <div className="mt-4 pt-4 border-t border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Welcome, {authUser?.user_metadata?.full_name ?? authUser?.email ?? "Guest"}</h1>
+                <h1 className="text-lg font-semibold text-gray-900">
+                  Welcome, {authUser?.user_metadata?.full_name ?? authUser?.email ?? "Guest"}
+                </h1>
                 <p className="text-sm text-gray-600">Account: {account?.account_number ?? "—"}</p>
               </div>
               <Avatar size={80} />
@@ -89,6 +102,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Balance Card */}
       <div className="p-4">
         <Card className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 text-white shadow-2xl border-0">
           <CardContent className="p-8">
@@ -96,24 +110,38 @@ export default function Dashboard() {
               <div>
                 <p className="text-blue-100 text-sm">Total balance</p>
                 <div className="flex items-center space-x-2">
-                  <h2 className="text-2xl font-bold">{showBalance ? `$${(account?.balance ?? 0).toLocaleString()}` : "****"}</h2>
-                  <button onClick={() => setShowBalance((s) => !s)}>{showBalance ? <EyeOff className="w-5 h-5 text-blue-100" /> : <Eye className="w-5 h-5 text-blue-100" />}</button>
+                  <h2 className="text-2xl font-bold">
+                    {showBalance ? `$${Number(account?.balance ?? 0).toLocaleString()}` : "****"}
+                  </h2>
+                  <button onClick={() => setShowBalance((s) => !s)}>
+                    {showBalance ? (
+                      <EyeOff className="w-5 h-5 text-blue-100" />
+                    ) : (
+                      <Eye className="w-5 h-5 text-blue-100" />
+                    )}
+                  </button>
                 </div>
               </div>
               <div className="text-right">
                 <p className="text-blue-100 text-sm">Account</p>
-                <p className="text-sm font-medium">{account?.account_number ? `****${(account.account_number as string).slice(-4)}` : "****0000"}</p>
+                <p className="text-sm font-medium">
+                  {account?.account_number ? `****${(account.account_number as string).slice(-4)}` : "****0000"}
+                </p>
               </div>
             </div>
 
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-1"><ArrowUpRight className="w-4 h-4 text-green-300" /><span className="text-sm">+2.5%</span></div>
+              <div className="flex items-center space-x-1">
+                <ArrowUpRight className="w-4 h-4 text-green-300" />
+                <span className="text-sm">+2.5%</span>
+              </div>
               <span className="text-blue-100 text-sm">vs last month</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Accounts List */}
       <div className="px-4 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">My accounts</h3>
         <div className="space-y-3">
@@ -130,7 +158,9 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-lg">{showBalance ? `$${(account?.balance ?? 0).toLocaleString()}` : "****"}</p>
+                  <p className="font-semibold text-lg">
+                    {showBalance ? `$${Number(account?.balance ?? 0).toLocaleString()}` : "****"}
+                  </p>
                   <p className="text-xs text-gray-500">Available</p>
                 </div>
               </div>
@@ -139,24 +169,41 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Transactions */}
       <div className="px-4">
         <Card>
-          <CardHeader><CardTitle className="text-lg">Recent Transactions</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-lg">Recent Transactions</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {transactions.length === 0 && <div className="text-sm text-gray-500">No recent transactions.</div>}
-              {transactions.slice(0, 10).map((tx: any) => (
+              {transactions.length === 0 && (
+                <div className="text-sm text-gray-500">No recent transactions.</div>
+              )}
+              {transactions.slice(0, 10).map((tx) => (
                 <div key={tx.id} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                       <ArrowDownRight className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
-                      <p className="font-medium">{tx.description ?? (tx.type === "credit" ? "Credit" : "Debit")}</p>
-                      <p className="text-sm text-gray-500">{new Date(tx.created_at).toLocaleDateString()}</p>
+                      <p className="font-medium">
+                        {tx.description ?? (tx.type === "credit" ? "Credit" : "Debit")}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {new Date(tx.created_at).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
-                  <span className={tx.type === "credit" ? "font-medium text-green-600" : "font-medium text-red-600"}>{tx.type === "credit" ? "+" : "-"}${Number(tx.amount).toFixed(2)}</span>
+                  <span
+                    className={
+                      tx.type === "credit"
+                        ? "font-medium text-green-600"
+                        : "font-medium text-red-600"
+                    }
+                  >
+                    {tx.type === "credit" ? "+" : "-"}${Number(tx.amount).toFixed(2)}
+                  </span>
                 </div>
               ))}
             </div>
@@ -164,13 +211,28 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Navigation + Chat */}
       <BottomNavigation />
       <LiveChat isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 }
 
-/** tiny placeholder for missing icon component import in your repo — replace with your wallet icon */
+/** Placeholder Wallet icon (replace with your component if exists) */
 function WalletIcon() {
-  return <svg className="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="none"><path d="M3 7h18v10H3z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+  return (
+    <svg
+      className="w-6 h-6 text-blue-600"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <path
+        d="M3 7h18v10H3z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
