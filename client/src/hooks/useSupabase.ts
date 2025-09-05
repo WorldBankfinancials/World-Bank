@@ -3,10 +3,12 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
-// -------------------- Auth & Profile --------------------
-export function useAuthUser() {
+/**
+ * Returns authenticated user (from supabase.auth)
+ */
+export function useUser() {
   return useQuery({
-    queryKey: ["auth", "user"],
+    queryKey: ["user"],
     queryFn: async () => {
       const { data, error } = await supabase.auth.getUser();
       if (error) throw error;
@@ -16,24 +18,29 @@ export function useAuthUser() {
   });
 }
 
+/**
+ * Profile row (from users table) if you keep a separate users table.
+ */
 export function useProfile() {
-  const auth = useAuthUser();
+  const userQ = useUser();
   return useQuery({
-    queryKey: ["profile", auth.data?.id],
-    enabled: !!auth.data,
+    queryKey: ["profile", userQ.data?.id],
+    enabled: !!userQ.data,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("users")
         .select("*")
-        .eq("id", auth.data!.id)
+        .eq("id", userQ.data!.id)
         .single();
       if (error) throw error;
-      return data;
+      return data ?? null;
     },
   });
 }
 
-// -------------------- User Data Queries --------------------
+/**
+ * Returns single account for a user (if you model one account per user).
+ */
 export function useAccount(userId?: string | null) {
   return useQuery({
     queryKey: ["account", userId],
@@ -52,6 +59,9 @@ export function useAccount(userId?: string | null) {
   });
 }
 
+/**
+ * Transactions involving this user
+ */
 export function useTransactions(userId?: string | null) {
   return useQuery({
     queryKey: ["transactions", userId],
@@ -71,6 +81,9 @@ export function useTransactions(userId?: string | null) {
   });
 }
 
+/**
+ * Alerts (notifications) for a user
+ */
 export function useAlerts(userId?: string | null) {
   return useQuery({
     queryKey: ["alerts", userId],
@@ -80,13 +93,65 @@ export function useAlerts(userId?: string | null) {
         .from("alerts")
         .select("*")
         .eq("user_id", userId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100);
       if (error) throw error;
       return data ?? [];
     },
+    staleTime: 1000 * 30,
   });
 }
 
+/**
+ * Realtime: listen for account updates and invalidate queries
+ */
+export function useRealtimeAccount(userId?: string | null) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`account-updates-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "accounts", filter: `user_id=eq.${userId}` },
+        () => {
+          qc.invalidateQueries({ queryKey: ["account", userId] });
+          qc.invalidateQueries({ queryKey: ["transactions", userId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, qc]);
+}
+
+/**
+ * Realtime alerts subscription
+ */
+export function useRealtimeAlerts(userId?: string | null) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`alerts-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "alerts", filter: `user_id=eq.${userId}` },
+        () => qc.invalidateQueries({ queryKey: ["alerts", userId] })
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, qc]);
+}
+
+/**
+ * Messages and realtime subscription for global chat
+ */
 export function useMessages() {
   return useQuery({
     queryKey: ["messages"],
@@ -99,54 +164,19 @@ export function useMessages() {
       if (error) throw error;
       return data ?? [];
     },
+    staleTime: 1000 * 10,
   });
 }
 
-// -------------------- Unified Realtime --------------------
-export function useRealtimeUserData(userId?: string | null) {
-  const queryClient = useQueryClient();
-
+export function useRealtimeMessages() {
+  const qc = useQueryClient();
   useEffect(() => {
-    if (!userId) return;
-
-    const channel = supabase.channel(`user-data-${userId}`);
-
-    const tables = [
-      { table: "accounts", events: ["INSERT", "UPDATE", "DELETE"] },
-      { table: "transactions", events: ["INSERT", "UPDATE", "DELETE"], filter: `from_user_id=eq.${userId},to_user_id=eq.${userId}` },
-      { table: "alerts", events: ["INSERT"], filter: `user_id=eq.${userId}` },
-      { table: "messages", events: ["INSERT"] }
-    ];
-
-    tables.forEach(({ table, events, filter }) => {
-      events.forEach(event => {
-        channel.on(
-          "postgres_changes",
-          { event, schema: "public", table, filter },
-          () => {
-            // Invalidate relevant queries
-            switch (table) {
-              case "accounts":
-                queryClient.invalidateQueries({ queryKey: ["account", userId] });
-                queryClient.invalidateQueries({ queryKey: ["transactions", userId] });
-                break;
-              case "transactions":
-                queryClient.invalidateQueries({ queryKey: ["transactions", userId] });
-                break;
-              case "alerts":
-                queryClient.invalidateQueries({ queryKey: ["alerts", userId] });
-                break;
-              case "messages":
-                queryClient.invalidateQueries({ queryKey: ["messages"] });
-                break;
-            }
-          }
-        );
-      });
-    });
-
-    channel.subscribe();
-
+    const channel = supabase
+      .channel("messages")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () =>
+        qc.invalidateQueries({ queryKey: ["messages"] })
+      )
+      .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [userId, queryClient]);
+  }, [qc]);
 }
