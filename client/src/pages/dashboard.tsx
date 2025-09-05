@@ -4,7 +4,13 @@ import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";
 import RealtimeAlerts from "@/components/RealtimeAlerts";
-import { useUser, useAccount, useTransactions, useRealtimeAccount } from "@/hooks/useSupabase";
+import { 
+  useUser, 
+  useAccount, 
+  useTransactions, 
+  useRealtimeAccount, 
+  useRealtimeTransactions 
+} from "@/hooks/useSupabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Eye, EyeOff, ArrowUpRight, ArrowDownRight, Check } from "lucide-react";
@@ -17,8 +23,9 @@ export default function Dashboard() {
   const { data: account } = useAccount(userId);
   const { data: transactions = [] } = useTransactions(userId);
 
-  // Realtime subscription for account balance
+  // Live sync for account + transactions
   useRealtimeAccount(userId);
+  useRealtimeTransactions(userId);
 
   const [showBalance, setShowBalance] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -125,7 +132,9 @@ export default function Dashboard() {
               <div className="text-right">
                 <p className="text-blue-100 text-sm">Account</p>
                 <p className="text-sm font-medium">
-                  {account?.account_number ? `****${(account.account_number as string).slice(-4)}` : "****0000"}
+                  {account?.account_number 
+                    ? `****${String(account.account_number).slice(-4)}` 
+                    : "****0000"}
                 </p>
               </div>
             </div>
@@ -218,7 +227,7 @@ export default function Dashboard() {
   );
 }
 
-/** Placeholder Wallet icon (replace with your component if exists) */
+/** Placeholder Wallet icon (replace if you have your own) */
 function WalletIcon() {
   return (
     <svg
