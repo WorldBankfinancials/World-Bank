@@ -13,35 +13,21 @@ import { supabase } from "@/lib/supabase";
 export default function ProfileSettings() {
   const [, setLocation] = useLocation();
 
-  // fetch logged-in user's profile securely
   const { data: user, isLoading, error } = useQuery<UserType>({
     queryKey: ["user-profile"],
     queryFn: async () => {
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-      if (authError || !user) throw new Error("Not logged in");
+      const { data: authData } = await supabase.auth.getUser();
+      const userFromAuth = authData?.user;
+      if (!userFromAuth) throw new Error("Not logged in");
 
       const { data, error } = await supabase
         .from("users")
         .select("*")
-        .eq("id", user.id)
+        .eq("id", userFromAuth.id)
         .single();
 
       if (error) throw error;
-
-      // normalize fields in case schema uses snake_case
-      return {
-        ...data,
-        fullName: data.fullName ?? data.full_name,
-        accountId: data.accountId ?? data.account_id,
-        accountNumber: data.accountNumber ?? data.account_number,
-        annualIncome: data.annualIncome ?? data.annual_income,
-        twoFA: data.twoFA ?? data.two_fa,
-        sessionActive: data.sessionActive ?? data.session_active,
-        avatarUrl: data.avatarUrl ?? data.avatar_url,
-      } as UserType;
+      return data as UserType;
     },
   });
 
@@ -66,15 +52,11 @@ export default function ProfileSettings() {
       <Header user={user} />
 
       <div className="px-4 py-6 pb-20">
-        {/* Page Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
-          <p className="text-gray-600 mt-1">
-            View your profile information and account details
-          </p>
+          <p className="text-gray-600 mt-1">View your profile information and account details</p>
         </div>
 
-        {/* Profile Overview */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -85,24 +67,15 @@ export default function ProfileSettings() {
           <CardContent>
             <div className="flex items-center space-x-4 mb-4">
               {user?.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt="Profile"
-                  className="w-20 h-20 rounded-full object-cover border-4 border-blue-200"
-                />
+                <img src={user.avatarUrl} alt="Profile" className="w-20 h-20 rounded-full object-cover border-4 border-blue-200" />
               ) : (
                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-900 border-4 border-blue-100 flex items-center justify-center text-white font-bold relative">
-                  {(user?.fullName || "LW")
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
+                  {user?.fullName?.split(" ").map((n) => n[0]).join("") || "LW"}
                   <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
                 </div>
               )}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {user?.fullName}
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900">{user?.fullName}</h3>
                 <p className="text-gray-600">{user?.profession}</p>
                 <Badge className="bg-green-100 text-green-800 mt-1">
                   <Check className="w-3 h-3 mr-1" />
@@ -111,19 +84,17 @@ export default function ProfileSettings() {
               </div>
             </div>
 
-            {/* Profile Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Info label="Full Name" value={user?.fullName} />
               <Info label="Email" value={user?.email} />
-              <Info label="Phone" value={user?.phone} />
+              <Info label="Phone" value={(user as any)?.phone} />
               <Info label="Profession" value={user?.profession} />
               <Info label="Nationality" value={user?.country} />
-              <Info label="Annual Income" value={user?.annualIncome} />
+              <Info label="Annual Income" value={(user as any)?.annualIncome} />
             </div>
           </CardContent>
         </Card>
 
-        {/* Account Information */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -133,13 +104,12 @@ export default function ProfileSettings() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Info label="Account Number" value={user?.accountNumber} mono />
-              <Info label="Account ID" value={user?.accountId} mono />
+              <Info label="Account Number" value={(user as any)?.accountNumber} mono />
+              <Info label="Account ID" value={(user as any)?.accountId} mono />
             </div>
           </CardContent>
         </Card>
 
-        {/* Address Information */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -149,15 +119,14 @@ export default function ProfileSettings() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Info label="Address" value={user?.address} />
-              <Info label="City" value={user?.city} />
-              <Info label="Country" value={user?.country} />
-              <Info label="Postal Code" value={user?.postalCode} />
+              <Info label="Address" value={(user as any)?.address} />
+              <Info label="City" value={(user as any)?.city} />
+              <Info label="Country" value={(user as any)?.country} />
+              <Info label="Postal Code" value={(user as any)?.postalCode} />
             </div>
           </CardContent>
         </Card>
 
-        {/* Security Settings */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -167,41 +136,18 @@ export default function ProfileSettings() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <Setting
-                title="Transfer PIN Settings"
-                desc="Contact customer support to request PIN changes"
-                value="Admin Only"
-              />
-              <Setting
-                title="Two-Factor Authentication"
-                desc="Extra layer of security"
-                value={user?.twoFA ? "Enabled" : "Disabled"}
-              />
-              <Setting
-                title="Session Security"
-                desc="Automatic logout and session management"
-                value={user?.sessionActive ? "Active" : "Inactive"}
-              />
+              <Setting title="Transfer PIN Settings" desc="Contact customer support to request PIN changes" value="Admin Only" />
+              <Setting title="Two-Factor Authentication" desc="Extra layer of security" value={(user as any)?.twoFA ? "Enabled" : "Disabled"} />
+              <Setting title="Session Security" desc="Automatic logout and session management" value={(user as any)?.sessionActive ? "Active" : "Inactive"} />
             </div>
           </CardContent>
         </Card>
 
-        {/* Account Actions */}
         <Card>
-          <CardHeader>
-            <CardTitle>Account Actions</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Account Actions</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  setLocation("/login");
-                }}
-              >
-                Sign Out
-              </Button>
+              <Button variant="outline" onClick={async () => { await supabase.auth.signOut(); setLocation("/login"); }}>Sign Out</Button>
             </div>
           </CardContent>
         </Card>
@@ -212,35 +158,16 @@ export default function ProfileSettings() {
   );
 }
 
-// Helper components
-function Info({
-  label,
-  value,
-  mono = false,
-}: {
-  label: string;
-  value?: string | null;
-  mono?: boolean;
-}) {
+function Info({ label, value, mono = false }: { label: string; value?: string | null; mono?: boolean }) {
   return (
     <div>
       <label className="text-sm font-medium text-gray-500">{label}</label>
-      <p className={`text-gray-900 ${mono ? "font-mono" : "font-medium"}`}>
-        {value || "Not provided"}
-      </p>
+      <p className={`text-gray-900 ${mono ? "font-mono" : "font-medium"}`}>{value || "Not provided"}</p>
     </div>
   );
 }
 
-function Setting({
-  title,
-  desc,
-  value,
-}: {
-  title: string;
-  desc: string;
-  value: string;
-}) {
+function Setting({ title, desc, value }: { title: string; desc: string; value: string }) {
   return (
     <div className="flex items-center justify-between p-3 border-t first:border-0 bg-gray-50 rounded-lg">
       <div>
