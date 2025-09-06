@@ -23,7 +23,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 supabase.auth.onAuthStateChange((event, session) => {
-  // Helpful logs (no secrets)
   console.log("Supabase auth event:", event, session?.user?.email ?? null);
 
   if (event === "SIGNED_IN" && session) {
