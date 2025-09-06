@@ -1,24 +1,16 @@
 // client/src/lib/supabase.ts
 import { createClient } from "@supabase/supabase-js";
 
-// ✅ Environment variables only
-// Add these in your `.env` file (and in Vercel → Project Settings → Environment Variables)
-// VITE_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
-// VITE_SUPABASE_ANON_KEY=your-anon-key
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("❌ Missing Supabase credentials. Check your .env file.");
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    "Missing Supabase credentials. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env"
+  );
 }
 
-console.log("🔧 Supabase Configuration Loaded");
-console.log("📍 URL:", supabaseUrl);
-console.log("🔑 Key Prefix:", supabaseAnonKey.substring(0, 10) + "...");
-
-// ✅ Create Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -30,10 +22,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// ✅ Authentication event logging
 supabase.auth.onAuthStateChange((event, session) => {
-  console.log("Supabase Auth Event:", event, session?.user?.email);
-
+  // Helpful logs (no secrets)
+  console.log("Supabase auth event:", event, session?.user?.email ?? null);
+});
   if (event === "SIGNED_IN" && session) {
     console.log("✅ Signed in:", session.user.email);
   }
@@ -43,20 +35,3 @@ supabase.auth.onAuthStateChange((event, session) => {
   }
 });
 
-// ✅ Connection tester
-const testConnection = async () => {
-  try {
-    console.log("🔍 Testing Supabase connection...");
-    const { data, error } = await supabase.auth.getSession();
-    if (error) throw error;
-
-    console.log("✅ Supabase connected.");
-    if (data?.session?.user?.email) {
-      console.log("👤 Active session:", data.session.user.email);
-    }
-  } catch (error) {
-    console.error("❌ Supabase connection failed:", error);
-  }
-};
-
-testConnection();
