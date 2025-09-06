@@ -18,7 +18,6 @@ export default function Transfer() {
   const userId = authUser?.id ?? null;
   const { data: account } = useAccount(userId);
   useRealtimeAccount(userId);
-
   const qc = useQueryClient();
 
   const [amount, setAmount] = useState("");
@@ -37,10 +36,10 @@ export default function Transfer() {
   });
 
   const quickTransferOptions = [
-    { icon: Globe, label: "International Wire", description: "SWIFT transfers worldwide", action: () => setTransferType("international") },
-    { icon: Building, label: "Cross-Border Bank", description: "Bank to bank transfers", action: () => setTransferType("bank") },
-    { icon: Smartphone, label: "Global Mobile Money", description: "190+ countries coverage", action: () => setTransferType("mobile") },
-    { icon: Send, label: "Express Transfer", description: "Fast international delivery", action: () => setTransferType("express") }
+    { icon: Globe, label: "International Wire", action: () => setTransferType("international") },
+    { icon: Building, label: "Cross-Border Bank", action: () => setTransferType("bank") },
+    { icon: Smartphone, label: "Global Mobile Money", action: () => setTransferType("mobile") },
+    { icon: Send, label: "Express Transfer", action: () => setTransferType("express") }
   ];
 
   const recentContacts = [
@@ -65,7 +64,6 @@ export default function Transfer() {
     setPinError("");
 
     try {
-      // verify PIN in accounts table
       const { data: acc, error: pinErr } = await supabase.from("accounts").select("pin").eq("user_id", userId).single();
       if (pinErr || !acc) {
         setPinError("PIN not found");
@@ -78,7 +76,6 @@ export default function Transfer() {
         return;
       }
 
-      // create transfer row
       const transferData = {
         user_id: userId,
         amount: parseFloat(amount),
@@ -88,24 +85,20 @@ export default function Transfer() {
         bank_name: recipientDetails.bankName,
         swift_code: recipientDetails.swiftCode,
         purpose: recipientDetails.purpose,
-        status: "pending_approval",
+        status: "pending",
         requires_approval: parseFloat(amount) >= 10000
       };
 
       const { data, error } = await supabase.from("transfers").insert([transferData]).select().single();
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       setTransferReference(data.id ?? `WB-${Date.now()}`);
       setShowPinVerification(false);
       setShowPendingStatus(true);
 
-      // optionally invalidate queries
       qc.invalidateQueries({ queryKey: ["transactions", userId] });
       qc.invalidateQueries({ queryKey: ["account", userId] });
 
-      // reset form
       setAmount("");
       setRecipientDetails({
         fullName: "", address: "", city: "", state: "", country: "", postalCode: "",
@@ -184,7 +177,7 @@ export default function Transfer() {
               {quickTransferOptions.map((option, index) => (
                 <Button key={index} variant="outline" onClick={option.action} className={`h-20 flex flex-col items-center space-y-2 ${transferType === option.label.toLowerCase().replace(" ", "") ? 'border-blue-500 bg-blue-50' : ''}`}>
                   <option.icon className="w-6 h-6" />
-                  <div className="text-center"><div className="text-xs font-medium">{option.label}</div><div className="text-xs text-gray-500">{option.description}</div></div>
+                  <div className="text-center"><div className="text-xs font-medium">{option.label}</div></div>
                 </Button>
               ))}
             </div>
@@ -200,38 +193,43 @@ export default function Transfer() {
               <p className="text-sm text-gray-600 mt-1">Exchange rate: 1 USD = 1.00 USD • Fee: $15.00</p>
             </div>
 
-            <div><h3 className="font-semibold text-lg mb-3 text-gray-800">Recipient Information</h3>
+            {/* Recipient Information */}
+            <div>
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">Recipient Information</h3>
               <div className="grid grid-cols-1 gap-4">
                 <div><Label htmlFor="fullName">Full Name *</Label><Input id="fullName" placeholder="John Smith" value={recipientDetails.fullName} onChange={(e) => setRecipientDetails(prev => ({ ...prev, fullName: e.target.value }))} /></div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><Label htmlFor="country">Country *</Label><Select value={recipientDetails.country} onValueChange={(value) => setRecipientDetails(prev => ({ ...prev, country: value }))}><SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger><SelectContent><SelectItem value="US">United States</SelectItem><SelectItem value="CA">Canada</SelectItem><SelectItem value="GB">United Kingdom</SelectItem><SelectItem value="CN">China</SelectItem><SelectItem value="JP">Japan</SelectItem><SelectItem value="AU">Australia</SelectItem><SelectItem value="DE">Germany</SelectItem><SelectItem value="IN">India</SelectItem></SelectContent></Select></div>
+                  <div><Label htmlFor="country">Country *</Label><Select value={recipientDetails.country} onValueChange={(value) => setRecipientDetails(prev => ({ ...prev, country: value }))}><SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger><SelectContent><SelectItem value="US">United States</SelectItem><SelectItem value="CA">Canada</SelectItem><SelectItem value="GB">United Kingdom</SelectItem></SelectContent></Select></div>
                   <div><Label htmlFor="phoneNumber">Phone Number</Label><Input id="phoneNumber" placeholder="+1 555 123 4567" value={recipientDetails.phoneNumber} onChange={(e) => setRecipientDetails(prev => ({ ...prev, phoneNumber: e.target.value }))} /></div>
                 </div>
               </div>
             </div>
 
-            <div><h3 className="font-semibold text-lg mb-3 text-gray-800">Bank Information</h3>
+            {/* Bank Info */}
+            <div>
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">Bank Information</h3>
               <div className="grid grid-cols-1 gap-4">
                 <div><Label htmlFor="bankName">Bank Name</Label><Input id="bankName" placeholder="JPMorgan Chase Bank" value={recipientDetails.bankName} onChange={(e) => setRecipientDetails(prev => ({ ...prev, bankName: e.target.value }))} /></div>
-                <div><Label htmlFor="bankAddress">Bank Address</Label><Input id="bankAddress" placeholder="270 Park Avenue, New York, NY 10017" value={recipientDetails.bankAddress} onChange={(e) => setRecipientDetails(prev => ({ ...prev, bankAddress: e.target.value }))} /></div>
-                <div className="grid grid-cols-2 gap-3"><div><Label htmlFor="swiftCode">SWIFT/BIC Code</Label><Input id="swiftCode" placeholder="CHASUS33" value={recipientDetails.swiftCode} onChange={(e) => setRecipientDetails(prev => ({ ...prev, swiftCode: e.target.value }))} /></div><div><Label htmlFor="iban">IBAN (if applicable)</Label><Input id="iban" placeholder="GB82 WEST 1234 5698 7654 32" value={recipientDetails.iban} onChange={(e) => setRecipientDetails(prev => ({ ...prev, iban: e.target.value }))} /></div></div>
                 <div className="grid grid-cols-2 gap-3"><div><Label htmlFor="accountNumber">Account Number</Label><Input id="accountNumber" placeholder="123456789" value={recipientDetails.accountNumber} onChange={(e) => setRecipientDetails(prev => ({ ...prev, accountNumber: e.target.value }))} /></div><div><Label htmlFor="routingNumber">Routing Number (US)</Label><Input id="routingNumber" placeholder="021000021" value={recipientDetails.routingNumber} onChange={(e) => setRecipientDetails(prev => ({ ...prev, routingNumber: e.target.value }))} /></div></div>
+                <div className="grid grid-cols-2 gap-3"><div><Label htmlFor="swiftCode">SWIFT/BIC Code</Label><Input id="swiftCode" placeholder="CHASUS33" value={recipientDetails.swiftCode} onChange={(e) => setRecipientDetails(prev => ({ ...prev, swiftCode: e.target.value }))} /></div><div><Label htmlFor="iban">IBAN (if applicable)</Label><Input id="iban" placeholder="GB82 WEST 1234 5698 7654 32" value={recipientDetails.iban} onChange={(e) => setRecipientDetails(prev => ({ ...prev, iban: e.target.value }))} /></div></div>
               </div>
             </div>
 
-            <div><h3 className="font-semibold text-lg mb-3 text-gray-800">Transfer Purpose</h3>
+            {/* Purpose */}
+            <div>
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">Transfer Purpose</h3>
               <div className="grid grid-cols-1 gap-4">
-                <div><Label htmlFor="purpose">Purpose of Transfer</Label><Select value={recipientDetails.purpose} onValueChange={(value) => setRecipientDetails(prev => ({ ...prev, purpose: value }))}><SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger><SelectContent><SelectItem value="family_support">Family Support</SelectItem><SelectItem value="education">Education Expenses</SelectItem><SelectItem value="medical">Medical Expenses</SelectItem><SelectItem value="business">Business Payment</SelectItem><SelectItem value="investment">Investment</SelectItem><SelectItem value="property">Property Purchase</SelectItem><SelectItem value="gift">Gift</SelectItem><SelectItem value="loan_repayment">Loan Repayment</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select></div>
-                <div><Label htmlFor="relationship">Relationship to Recipient</Label><Select value={recipientDetails.relationship} onValueChange={(value) => setRecipientDetails(prev => ({ ...prev, relationship: value }))}><SelectTrigger><SelectValue placeholder="Select relationship" /></SelectTrigger><SelectContent><SelectItem value="family">Family Member</SelectItem><SelectItem value="friend">Friend</SelectItem><SelectItem value="business_partner">Business Partner</SelectItem><SelectItem value="employee">Employee</SelectItem><SelectItem value="service_provider">Service Provider</SelectItem><SelectItem value="myself">Myself</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select></div>
+                <div><Label htmlFor="purpose">Purpose of Transfer</Label><Select value={recipientDetails.purpose} onValueChange={(value) => setRecipientDetails(prev => ({ ...prev, purpose: value }))}><SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger><SelectContent><SelectItem value="family_support">Family Support</SelectItem><SelectItem value="education">Education Expenses</SelectItem><SelectItem value="business">Business Payment</SelectItem><SelectItem value="other">Other</SelectItem></SelectContent></Select></div>
+                <div><Label htmlFor="relationship">Relationship to Recipient</Label><Select value={recipientDetails.relationship} onValueChange={(value) => setRecipientDetails(prev => ({ ...prev, relationship: value }))}><SelectTrigger><SelectValue placeholder="Select relationship" /></SelectTrigger><SelectContent><SelectItem value="family">Family Member</SelectItem><SelectItem value="friend">Friend</SelectItem><SelectItem value="business_partner">Business Partner</SelectItem></SelectContent></Select></div>
               </div>
             </div>
 
+            {/* Summary */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="font-semibold text-lg mb-3">Transfer Summary</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between"><span>Transfer Amount:</span><span className="font-medium">${amount || "0.00"} USD</span></div>
                 <div className="flex justify-between"><span>Transfer Fee:</span><span className="font-medium">$15.00 USD</span></div>
-                <div className="flex justify-between"><span>Exchange Rate:</span><span className="font-medium">1.0000</span></div>
                 <div className="flex justify-between border-t pt-2 font-semibold"><span>Total Debit:</span><span>${amount ? (parseFloat(amount) + 15).toFixed(2) : "15.00"} USD</span></div>
                 <div className="flex justify-between font-semibold text-green-600"><span>Recipient Receives:</span><span>${amount || "0.00"} USD</span></div>
               </div>
