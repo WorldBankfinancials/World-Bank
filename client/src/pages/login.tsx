@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
+import { realtimeChat } from "@/lib/supabase-realtime";
 import {
   Card,
   CardContent,
@@ -83,16 +84,6 @@ export default function Login() {
     setLoading(true);
 
     try {
-      if (loginType !== "email") {
-        toast({
-          title: "Login",
-          description: "Please use email login for now",
-          duration: 3000,
-        });
-        setLoading(false);
-        return;
-      }
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email: loginData.email,
         password: loginData.password,
@@ -199,10 +190,6 @@ export default function Login() {
             <p className="text-gray-600 text-xl font-medium mb-2">
               International Banking Solutions
             </p>
-            <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-              <Shield className="w-4 h-4" />
-              <span>Secure • Trusted • Global</span>
-            </div>
           </div>
 
           {/* Login Card */}
@@ -212,38 +199,21 @@ export default function Login() {
                 <CardTitle className="text-2xl font-bold text-gray-900 mb-2">
                   Sign In
                 </CardTitle>
-                <p className="text-gray-600 text-base">
-                  Access your secure banking portal
-                </p>
-                <div className="flex justify-center mt-3">
-                  <div className="w-16 h-1 bg-blue-600 rounded-full"></div>
-                </div>
               </div>
             </CardHeader>
 
             <CardContent className="space-y-6 px-8 pb-8">
               <Tabs value={loginType} onValueChange={(v) => setLoginType(v as any)}>
                 <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg">
-                  <TabsTrigger value="email" className="flex items-center space-x-2 text-xs">
-                    <Mail className="w-4 h-4" />
-                    <span>Email</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="mobile" className="flex items-center space-x-2 text-xs">
-                    <Smartphone className="w-4 h-4" />
-                    <span>Mobile</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="id" className="flex items-center space-x-2 text-xs">
-                    <CreditCard className="w-4 h-4" />
-                    <span>Account ID</span>
-                  </TabsTrigger>
+                  <TabsTrigger value="email">Email</TabsTrigger>
+                  <TabsTrigger value="mobile">Mobile</TabsTrigger>
+                  <TabsTrigger value="id">Account ID</TabsTrigger>
                 </TabsList>
 
                 <form onSubmit={handleLogin} className="space-y-5 mt-6">
                   {/* Email */}
-                  <TabsContent value="email" className="space-y-4 mt-4">
-                    <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
-                      Email
-                    </Label>
+                  <TabsContent value="email">
+                    <Label htmlFor="email">Email</Label>
                     <Input
                       id="email"
                       value={loginData.email}
@@ -252,112 +222,46 @@ export default function Login() {
                       }
                       placeholder="Enter email"
                       required={loginType === "email"}
-                      className="h-12"
-                    />
-                  </TabsContent>
-
-                  {/* Mobile */}
-                  <TabsContent value="mobile" className="space-y-4 mt-4">
-                    <Label htmlFor="mobile" className="text-sm font-semibold text-gray-700">
-                      Mobile Number
-                    </Label>
-                    <Input
-                      id="mobile"
-                      type="tel"
-                      value={loginData.mobile}
-                      onChange={(e) =>
-                        setLoginData((prev) => ({ ...prev, mobile: e.target.value }))
-                      }
-                      placeholder="Enter mobile number"
-                      required={loginType === "mobile"}
-                      className="h-12"
-                    />
-                  </TabsContent>
-
-                  {/* ID */}
-                  <TabsContent value="id" className="space-y-4 mt-4">
-                    <Label htmlFor="idNumber" className="text-sm font-semibold text-gray-700">
-                      Account ID
-                    </Label>
-                    <Input
-                      id="idNumber"
-                      value={loginData.idNumber}
-                      onChange={(e) =>
-                        setLoginData((prev) => ({ ...prev, idNumber: e.target.value }))
-                      }
-                      placeholder="Enter account ID"
-                      required={loginType === "id"}
-                      className="h-12"
                     />
                   </TabsContent>
 
                   {/* Password */}
                   <div className="space-y-3">
-                    <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        value={loginData.password}
-                        onChange={(e) =>
-                          setLoginData((prev) => ({
-                            ...prev,
-                            password: e.target.value,
-                          }))
-                        }
-                        placeholder="Enter your password"
-                        required
-                        className="pl-12 pr-12 h-12"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-3 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? <EyeOff /> : <Eye />}
-                      </button>
-                    </div>
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={loginData.password}
+                      onChange={(e) =>
+                        setLoginData((prev) => ({ ...prev, password: e.target.value }))
+                      }
+                      placeholder="Enter your password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff /> : <Eye />}
+                    </button>
                   </div>
 
-                  {/* Submit */}
-                  <Button
-                    type="submit"
-                    className="w-full h-12"
-                    disabled={loading}
-                  >
+                  <Button type="submit" disabled={loading}>
                     {loading ? "Signing in..." : "Sign In"}
                   </Button>
                 </form>
               </Tabs>
-
-              <div className="text-center pt-4 border-t border-gray-100">
-                <p className="text-sm text-gray-600">
-                  New customer?{" "}
-                  <button
-                    onClick={() => setLocation("/register-multi")}
-                    className="text-blue-600 hover:underline"
-                  >
-                    Create Account
-                  </button>
-                </p>
-              </div>
             </CardContent>
           </Card>
 
-          {/* Footer */}
-          <div className="text-center mt-8 space-y-4">
+          {/* Live Chat Trigger */}
+          <div className="text-center mt-8">
             <button
               onClick={() => setShowLiveChat(true)}
-              className="text-gray-600 hover:underline text-sm"
+              className="text-blue-600 hover:underline"
             >
               Contact Support
             </button>
-            <div className="text-gray-500 text-xs">
-              © 2025 World Bank Group. All rights reserved.
-            </div>
           </div>
         </div>
       </div>
@@ -374,24 +278,16 @@ export default function Login() {
               id="pin"
               type="password"
               value={loginPin}
-              onChange={(e) => {
-                setPinError("");
-                setLoginPin(e.target.value);
-              }}
+              onChange={(e) => setLoginPin(e.target.value)}
               maxLength={4}
-              className="text-center text-lg tracking-widest"
               onKeyDown={(e) => {
-                if (e.key === "Enter" && loginPin.length === 4) {
-                  handlePinVerification();
-                }
+                if (e.key === "Enter" && loginPin.length === 4) handlePinVerification();
               }}
             />
-            {pinError && <div className="text-sm text-red-600">{pinError}</div>}
-
+            {pinError && <div className="text-red-600">{pinError}</div>}
             <div className="flex space-x-3">
               <Button
                 variant="outline"
-                className="flex-1"
                 onClick={() => {
                   setShowPinVerification(false);
                   setLoginPin("");
@@ -400,11 +296,7 @@ export default function Login() {
               >
                 Cancel
               </Button>
-              <Button
-                className="flex-1"
-                onClick={handlePinVerification}
-                disabled={loginPin.length !== 4}
-              >
+              <Button onClick={handlePinVerification} disabled={loginPin.length !== 4}>
                 Verify
               </Button>
             </div>
@@ -412,6 +304,7 @@ export default function Login() {
         </DialogContent>
       </Dialog>
 
+      {/* Live Chat Component */}
       <LiveChat isOpen={showLiveChat} onClose={() => setShowLiveChat(false)} />
     </div>
   );
