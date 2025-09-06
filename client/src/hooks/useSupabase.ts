@@ -4,33 +4,33 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
 /**
- * Returns authenticated user (from supabase.auth)
+ * Returns authenticated Supabase user (or null)
  */
 export function useUser() {
   return useQuery({
-    queryKey: ["user"],
+    queryKey: ["authUser"],
     queryFn: async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) throw error;
-      return data.user ?? null;
+      const { data } = await supabase.auth.getUser();
+      return data?.user ?? null;
     },
     staleTime: 1000 * 60 * 2,
   });
 }
 
 /**
- * Profile row (from users table)
+ * Profile row (optional separate users/profiles table)
  */
 export function useProfile() {
   const userQ = useUser();
   return useQuery({
-    queryKey: ["profile", userQ.data?.id],
-    enabled: !!userQ.data,
+    queryKey: ["profile", userQ.data?.id ?? null],
+    enabled: !!userQ.data?.id,
     queryFn: async () => {
+      const userId = userQ.data!.id;
       const { data, error } = await supabase
         .from("users")
         .select("*")
-        .eq("id", userQ.data!.id)
+        .eq("id", userId)
         .single();
       if (error) throw error;
       return data ?? null;
@@ -39,11 +39,11 @@ export function useProfile() {
 }
 
 /**
- * Returns single account for a user
+ * Single account for the user (assumes `accounts.user_id` is UUID string)
  */
 export function useAccount(userId?: string | null) {
   return useQuery({
-    queryKey: ["account", userId],
+    queryKey: ["account", userId ?? null],
     enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -53,18 +53,20 @@ export function useAccount(userId?: string | null) {
         .order("created_at", { ascending: true })
         .limit(1);
       if (error) throw error;
-      return Array.isArray(data) && data.length ? data[0] : null;
+      // Supabase returns array when not `single()`, handle that shape
+      if (Array.isArray(data)) return data[0] ?? null;
+      return data ?? null;
     },
     staleTime: 1000 * 30,
   });
 }
 
 /**
- * Transactions involving this user
+ * Transactions involving this user (from/to)
  */
 export function useTransactions(userId?: string | null) {
   return useQuery({
-    queryKey: ["transactions", userId],
+    queryKey: ["transactions", userId ?? null],
     enabled: !!userId,
     queryFn: async () => {
       const orFilter = `from_user_id.eq.${userId},to_user_id.eq.${userId}`;
@@ -82,11 +84,11 @@ export function useTransactions(userId?: string | null) {
 }
 
 /**
- * Alerts (notifications) for a user
+ * Alerts query
  */
 export function useAlerts(userId?: string | null) {
   return useQuery({
-    queryKey: ["alerts", userId],
+    queryKey: ["alerts", userId ?? null],
     enabled: !!userId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -103,12 +105,14 @@ export function useAlerts(userId?: string | null) {
 }
 
 /**
- * Realtime: listen for account updates and invalidate queries
+ * Realtime: subscribe to account changes and invalidate react-query caches.
  */
 export function useRealtimeAccount(userId?: string | null) {
   const qc = useQueryClient();
+
   useEffect(() => {
     if (!userId) return;
+
     const channel = supabase
       .channel(`account-updates-${userId}`)
       .on(
@@ -128,7 +132,7 @@ export function useRealtimeAccount(userId?: string | null) {
 }
 
 /**
- * Realtime alerts subscription
+ * Realtime alerts subscription invalidates alerts
  */
 export function useRealtimeAlerts(userId?: string | null) {
   const qc = useQueryClient();
@@ -150,7 +154,7 @@ export function useRealtimeAlerts(userId?: string | null) {
 }
 
 /**
- * Messages and realtime subscription for global chat
+ * Messages query
  */
 export function useMessages() {
   return useQuery({
@@ -158,7 +162,7 @@ export function useMessages() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("messages")
-        .select("*, users(id, username, email)")
+        .select("*")
         .order("created_at", { ascending: true })
         .limit(200);
       if (error) throw error;
@@ -168,6 +172,9 @@ export function useMessages() {
   });
 }
 
+/**
+ * Realtime messages subscription
+ */
 export function useRealtimeMessages() {
   const qc = useQueryClient();
   useEffect(() => {
@@ -177,6 +184,7 @@ export function useRealtimeMessages() {
         qc.invalidateQueries({ queryKey: ["messages"] })
       )
       .subscribe();
+
     return () => supabase.removeChannel(channel);
   }, [qc]);
 }
