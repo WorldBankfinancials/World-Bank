@@ -1,460 +1,350 @@
-// Vercel serverless function for World Bank API with real Supabase integration
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
+import bcrypt from 'bcryptjs';
+import {
+  type User,
+  type InsertUser,
+  type Account,
+  type InsertAccount,
+  type Transaction,
+  type InsertTransaction,
+  type AdminAction,
+  type InsertAdminAction,
+  type SupportTicket,
+  type InsertSupportTicket
+} from "@shared/schema";
+import { IStorage } from "./storage";
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 
-// Initialize Supabase client
+const databaseUrl = process.env.DATABASE_URL!;
+if (!databaseUrl) throw new Error('Missing DATABASE_URL environment variable');
+
+const connection = postgres(databaseUrl);
+const db = drizzle(connection);
+
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Missing Supabase environment variables');
-}
-
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-module.exports = async function handler(req, res) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+export class SupabaseStorage implements IStorage {
+  // --- Secure User Lookup ---
+  async getUser(id: number): Promise<User | undefined> {
+    const { data, error } = await supabase
+      .from('bank_users')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error || !data) return undefined;
+    return this.mapSafeUser(data);
   }
 
-  // Extract the API path from the request
-  const { url } = req;
-  const apiPath = url.replace('/api', '').split('?')[0];
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const { data, error } = await supabase
+      .from('bank_users')
+      .select('*')
+      .eq('username', username)
+      .single();
+    if (error || !data) return undefined;
+    return this.mapSafeUser(data);
+  }
 
-  console.log(`🔗 Vercel API Request: ${req.method} ${apiPath}`);
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const { data, error } = await supabase
+      .from('bank_users')
+      .select('*')
+      .eq('email', email)
+      .single();
+    if (error || !data) return undefined;
+    return this.mapSafeUser(data);
+  }
 
-  try {
-    // Health check endpoint
-    if (apiPath === '/health') {
-      return res.status(200).json({ 
-        status: 'ok', 
-        message: 'World Bank API is running on Vercel with real Supabase integration',
-        timestamp: new Date().toISOString(),
-        supabase: supabaseUrl ? 'Connected' : 'Not configured',
-        environment: {
-          hasSupabaseUrl: !!supabaseUrl,
-          hasSupabaseKey: !!supabaseServiceKey,
-          urlPrefix: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'missing',
-          keyPrefix: supabaseServiceKey ? supabaseServiceKey.substring(0, 20) + '...' : 'missing'
-        }
-      });
+  async getAllUsers(): Promise<User[]> {
+    const { data, error } = await supabase
+      .from('bank_users')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error || !data) return [];
+    return data.map(user => this.mapSafeUser(user));
+  }
+
+  // --- Secure User Creation ---
+  async createUser(user: InsertUser): Promise<User> {
+    let transferPinHash = '';
+    if (user.transferPin) {
+      transferPinHash = await bcrypt.hash(user.transferPin, 10);
     }
+    const { data, error } = await supabase
+      .from('bank_users')
+      .insert({
+        username: user.username,
+        password_hash: user.password,
+        full_name: user.fullName,
+        email: user.email,
+        phone: user.phone,
+        account_number: user.accountNumber,
+        account_id: user.accountId,
+        profession: user.profession,
+        date_of_birth: user.dateOfBirth,
+        address: user.address,
+        city: user.city,
+        state: user.state,
+        country: user.country,
+        postal_code: user.postalCode,
+        nationality: user.nationality,
+        annual_income: user.annualIncome,
+        id_type: user.idType,
+        id_number: user.idNumber,
+        transferPinHash, // Store hash only!
+        role: user.role || 'customer',
+        is_verified: user.isVerified || false,
+        is_online: user.isOnline || false,
+        is_active: user.isActive ?? true,
+        avatar_url: user.avatarUrl,
+        balance: user.balance?.toString() || '0.00',
+        supabase_user_id: user.supabaseUserId
+      })
+      .select()
+      .single();
+    if (error) throw new Error(`Failed to create user: ${error.message}`);
+    return this.mapSafeUser(data);
+  }
 
-    // Test Supabase connection
-    if (apiPath === '/test-supabase-connection') {
-      try {
-        const { data, error } = await supabase
-          .from('bank_users')
-          .select('id, full_name, email, balance')
-          .limit(5);
-        
-        if (error) {
-          return res.status(500).json({
-            connected: false,
-            message: 'Banking tables not found in Supabase',
-            error: error.message,
-            action: 'Please check your Supabase configuration'
-          });
-        }
-        
-        return res.status(200).json({
-          connected: true,
-          message: `Banking tables working! Found ${data?.length || 0} users`,
-          users: data,
-          details: 'International banking system ready with realtime synchronization'
-        });
-      } catch (error) {
-        return res.status(500).json({ 
-          error: 'Connection test failed', 
-          details: error.message 
-        });
-      }
+  async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
+    const updateData: any = { ...updates };
+    if (updates.transferPin) {
+      updateData.transferPinHash = await bcrypt.hash(updates.transferPin, 10);
+      delete updateData.transferPin;
     }
+    const { data, error } = await supabase
+      .from('bank_users')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error || !data) return undefined;
+    return this.mapSafeUser(data);
+  }
 
-    // Get user by Supabase user ID
-    if (apiPath.startsWith('/users/supabase/') && req.method === 'GET') {
-      const supabaseUserId = apiPath.split('/')[3];
-      
-      const { data, error } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('supabase_user_id', supabaseUserId)
-        .single();
-      
-      if (error || !data) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      
-      return res.status(200).json(data);
-    }
+  async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
+    const { data, error } = await supabase
+      .from('bank_users')
+      .update({ balance: amount.toString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error || !data) return undefined;
+    return this.mapSafeUser(data);
+  }
 
-    // Create Supabase user profile
-    if (apiPath === '/users/create-supabase' && req.method === 'POST') {
-      const { supabaseUserId, email } = req.body;
-      
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('supabase_user_id', supabaseUserId)
-        .single();
-      
-      if (existingUser) {
-        return res.status(200).json(existingUser);
-      }
-      
-      // Create new Wei Liu profile with real banking data
-      const newUser = {
-        supabase_user_id: supabaseUserId,
-        username: email?.split('@')[0] || 'user',
-        password: 'supabase_auth',
-        full_name: 'Wei Liu',
-        email: email || 'vaa33053@gmail.com',
-        phone: '+1 (234) 567-8900',
-        account_number: '4789-5532-1098-7654',
-        account_id: 'WB-2025-8912',
-        profession: 'Software Engineer',
-        date_of_birth: '1990-05-15',
-        address: '123 Tech Street, Suite 100',
-        city: 'San Francisco',
-        state: 'California',
-        country: 'United States',
-        postal_code: '94102',
-        nationality: 'American',
-        annual_income: '$75,000-$100,000',
-        id_type: 'Passport',
-        id_number: 'P123456789',
-        transfer_pin: '0192',
-        role: 'customer',
-        is_verified: true,
-        is_online: true,
-        is_active: true,
-        avatar_url: null,
-        balance: 15750.5,
-        created_by_admin: false,
-        modified_by_admin: false,
-        admin_notes: null
-      };
-      
-      const { data: createdUser, error } = await supabase
-        .from('bank_users')
-        .insert(newUser)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Failed to create user profile:', error);
-        return res.status(500).json({ error: 'Failed to create user profile' });
-      }
-      
-      return res.status(201).json(createdUser);
-    }
+  // --- Secure PIN Verification ---
+  async verifyPin(email: string, pin: string): Promise<boolean> {
+    const { data: user, error } = await supabase
+      .from('bank_users')
+      .select('transferPinHash')
+      .eq('email', email)
+      .single();
+    if (error || !user || !user.transferPinHash) return false;
+    return await bcrypt.compare(pin, user.transferPinHash);
+  }
 
-    // Get user profile (legacy endpoint)
-    if (apiPath === '/user' && req.method === 'GET') {
-      // Return the Wei Liu profile from Supabase
-      const { data, error } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('id', 1)
-        .single();
-      
-      if (error || !data) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      
-      // Convert snake_case to camelCase for frontend compatibility
-      const user = {
-        id: data.id,
-        username: data.username,
-        password: data.password,
-        fullName: data.full_name,
-        email: data.email,
-        phone: data.phone,
-        accountNumber: data.account_number,
-        accountId: data.account_id,
-        profession: data.profession,
-        dateOfBirth: data.date_of_birth,
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        country: data.country,
-        postalCode: data.postal_code,
-        nationality: data.nationality,
-        annualIncome: data.annual_income,
-        idType: data.id_type,
-        idNumber: data.id_number,
-        transferPin: data.transfer_pin,
-        role: data.role,
-        isVerified: data.is_verified,
-        isOnline: data.is_online,
-        isActive: data.is_active,
-        avatarUrl: data.avatar_url,
-        balance: data.balance,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-        supabaseUserId: data.supabase_user_id,
-        lastLogin: data.last_login,
-        createdByAdmin: data.created_by_admin,
-        modifiedByAdmin: data.modified_by_admin,
-        adminNotes: data.admin_notes
-      };
-      
-      return res.status(200).json(user);
-    }
+  // --- Secure Account & Transaction Methods ---
+  async getUserAccounts(userId: number): Promise<Account[]> {
+    const { data, error } = await supabase
+      .from('bank_accounts')
+      .select('*')
+      .eq('user_id', userId);
+    if (error || !data) return [];
+    return data.map(account => this.mapAccount(account));
+  }
 
-    // Get bank accounts
-    if (apiPath === '/accounts' && req.method === 'GET') {
-      const { data, error } = await supabase
-        .from('bank_accounts')
-        .select('*')
-        .eq('user_id', 1)
-        .eq('is_active', true);
-      
-      if (error) {
-        return res.status(500).json({ error: 'Failed to fetch accounts' });
-      }
-      
-      // Convert to frontend format
-      const accounts = (data || []).map(account => ({
-        id: account.id,
-        userId: account.user_id,
-        accountNumber: account.account_number,
-        accountType: account.account_type,
-        accountName: account.account_name,
+  async getAccount(id: number): Promise<Account | undefined> {
+    const { data, error } = await supabase
+      .from('bank_accounts')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error || !data) return undefined;
+    return this.mapAccount(data);
+  }
+
+  async createAccount(account: InsertAccount): Promise<Account> {
+    const { data, error } = await supabase
+      .from('bank_accounts')
+      .insert({
+        user_id: account.userId,
+        account_number: account.accountNumber,
+        account_type: account.accountType,
         balance: account.balance.toString(),
-        currency: account.currency,
-        isActive: account.is_active,
-        createdAt: account.created_at,
-        updatedAt: account.updated_at,
-        interestRate: account.interest_rate?.toString() || null,
-        minimumBalance: account.minimum_balance?.toString() || null
-      }));
-      
-      return res.status(200).json(accounts);
-    }
-
-    // PIN verification
-    if (apiPath === '/verify-pin' && req.method === 'POST') {
-      const { pin, username } = req.body;
-      
-      console.log(`🔐 PIN verification request:`, { username, pin });
-      
-      try {
-        // Check the user exists by email, account ID, or mobile
-        let userQuery = supabase.from('bank_users').select('transfer_pin, email, username, account_id');
-        
-        // Handle different login types
-        if (username.includes('@')) {
-          // Email login
-          userQuery = userQuery.eq('email', username);
-        } else if (username.startsWith('WB-') || username.startsWith('wb-')) {
-          // Account ID login (like WB-2025-8912)
-          userQuery = userQuery.eq('account_id', username);
-        } else if (username.startsWith('+') || /^\d+$/.test(username)) {
-          // Mobile number login
-          userQuery = userQuery.eq('phone', username);
-        } else {
-          // Fallback to username
-          userQuery = userQuery.eq('username', username);
-        }
-        
-        const { data: userData, error } = await userQuery.single();
-        
-        if (error || !userData) {
-          console.log('User not found:', { username, error });
-          return res.status(401).json({
-            success: false,
-            verified: false,
-            message: 'User not found'
-          });
-        }
-        
-        console.log(`Found user PIN: ${userData.transfer_pin}, provided PIN: ${pin}`);
-        
-        if (userData.transfer_pin === pin) {
-          console.log('✅ PIN verification successful');
-          return res.status(200).json({
-            success: true,
-            verified: true,
-            message: 'PIN verified successfully'
-          });
-        } else {
-          console.log('❌ PIN mismatch');
-          return res.status(401).json({
-            success: false,
-            verified: false,
-            message: 'Invalid PIN'
-          });
-        }
-        
-      } catch (supabaseError) {
-        console.error('PIN verification error:', supabaseError);
-        return res.status(500).json({
-          success: false,
-          verified: false,
-          message: 'Verification failed'
-        });
-      }
-    }
-
-    // Create transfer
-    if (apiPath === '/transfers' && req.method === 'POST') {
-      const { fromAccountId, toAccountNumber, amount, description, recipientName } = req.body;
-      
-      const newTransaction = {
-        account_id: fromAccountId,
-        type: 'debit',
-        amount: amount.toString(),
-        description: description,
-        category: 'transfer',
-        date: new Date().toISOString(),
-        status: 'pending',
-        recipient_name: recipientName,
-        admin_notes: null
-      };
-      
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert(newTransaction)
-        .select()
-        .single();
-      
-      if (error) {
-        return res.status(500).json({ error: 'Failed to create transfer' });
-      }
-      
-      return res.status(201).json({
-        id: data.id,
-        accountId: data.account_id,
-        type: data.type,
-        amount: data.amount,
-        description: data.description,
-        status: data.status,
-        createdAt: data.created_at
-      });
-    }
-
-    // Get transactions for account
-    if (apiPath.match(/^\/accounts\/\d+\/transactions$/) && req.method === 'GET') {
-      const accountId = parseInt(apiPath.split('/')[2]);
-      
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('account_id', accountId)
-        .order('date', { ascending: false })
-        .limit(10);
-      
-      if (error) {
-        return res.status(500).json({ error: 'Failed to fetch transactions' });
-      }
-      
-      const transactions = (data || []).map(tx => ({
-        id: tx.id,
-        accountId: tx.account_id,
-        type: tx.type,
-        amount: tx.amount,
-        description: tx.description,
-        category: tx.category,
-        date: tx.date,
-        status: tx.status,
-        createdAt: tx.created_at
-      }));
-      
-      return res.status(200).json(transactions);
-    }
-
-    // Get user cards
-    if (apiPath === '/cards' && req.method === 'GET') {
-      const { data, error } = await supabase
-        .from('cards')
-        .select('*')
-        .eq('user_id', 1)
-        .eq('is_active', true);
-      
-      if (error) {
-        return res.status(500).json({ error: 'Failed to fetch cards' });
-      }
-      
-      const cards = (data || []).map(card => ({
-        id: card.id,
-        name: card.card_name,
-        number: card.card_number.replace(/(\d{4})/g, '•••• ').trim().replace(/•{4}$/, card.card_number.slice(-4)),
-        type: card.card_type,
-        balance: parseFloat(card.balance),
-        limit: parseFloat(card.credit_limit),
-        expiry: card.expiry_date,
-        color: card.card_type === 'Platinum' ? 'bg-gradient-to-r from-gray-800 to-gray-900' : 'bg-gradient-to-r from-blue-600 to-blue-800',
-        isLocked: card.is_locked,
-        dailyLimit: parseFloat(card.daily_limit),
-        contactlessEnabled: card.contactless_enabled
-      }));
-      
-      return res.status(200).json(cards);
-    }
-    
-    // Update card lock status
-    if (apiPath === '/cards/lock' && req.method === 'POST') {
-      const { cardId, isLocked } = req.body;
-      
-      const { data, error } = await supabase
-        .from('cards')
-        .update({ is_locked: isLocked })
-        .eq('id', cardId)
-        .eq('user_id', 1)
-        .select()
-        .single();
-      
-      if (error) {
-        return res.status(500).json({ error: 'Failed to update card' });
-      }
-      
-      return res.status(200).json({ success: true, card: data });
-    }
-    
-    // Update card settings
-    if (apiPath === '/cards/settings' && req.method === 'POST') {
-      const { cardId, dailyLimit, contactlessEnabled } = req.body;
-      
-      const { data, error } = await supabase
-        .from('cards')
-        .update({ 
-          daily_limit: dailyLimit,
-          contactless_enabled: contactlessEnabled 
-        })
-        .eq('id', cardId)
-        .eq('user_id', 1)
-        .select()
-        .single();
-      
-      if (error) {
-        return res.status(500).json({ error: 'Failed to update card settings' });
-      }
-      
-      return res.status(200).json({ success: true, card: data });
-    }
-
-    // Default response for unimplemented endpoints
-    return res.status(404).json({ 
-      error: 'API endpoint not found',
-      endpoint: apiPath,
-      method: req.method,
-      message: 'This endpoint is not implemented in the serverless function'
-    });
-
-  } catch (error) {
-    console.error('❌ Serverless function error:', error);
-    return res.status(500).json({
-      error: 'Internal server error',
-      message: error.message,
-      details: 'Check Vercel function logs for more details'
-    });
+        currency: account.currency || 'USD',
+        is_active: account.isActive ?? true
+      })
+      .select()
+      .single();
+    if (error) throw new Error(`Failed to create account: ${error.message}`);
+    return this.mapAccount(data);
   }
-};
+
+  async getAccountTransactions(accountId: number, limit = 50): Promise<Transaction[]> {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error || !data) return [];
+    return data.map(tx => this.mapTransaction(tx));
+  }
+
+  async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert({
+        transaction_id: transaction.transactionId,
+        from_user_id: transaction.fromUserId,
+        to_user_id: transaction.toUserId,
+        from_account_id: transaction.fromAccountId,
+        to_account_id: transaction.toAccountId,
+        amount: transaction.amount.toString(),
+        currency: transaction.currency || 'USD',
+        transaction_type: transaction.transactionType,
+        status: transaction.status,
+        description: transaction.description,
+        recipient_name: transaction.recipientName,
+        recipient_account: transaction.recipientAccount,
+        reference_number: transaction.referenceNumber,
+        fee: transaction.fee?.toString() || '0.00',
+        exchange_rate: transaction.exchangeRate?.toString(),
+        country_code: transaction.countryCode,
+        bank_name: transaction.bankName,
+        swift_code: transaction.swiftCode,
+        admin_notes: transaction.adminNotes
+      })
+      .select()
+      .single();
+    if (error) throw new Error(`Failed to create transaction: ${error.message}`);
+    return this.mapTransaction(data);
+  }
+
+  async updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<Transaction | undefined> {
+    const { data, error } = await supabase
+      .from('transactions')
+      .update({
+        status,
+        admin_notes: notes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error || !data) return undefined;
+    return this.mapTransaction(data);
+  }
+
+  async getPendingTransactions(): Promise<Transaction[]> {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    if (error || !data) return [];
+    return data.map(tx => this.mapTransaction(tx));
+  }
+
+  async getAllTransactions(): Promise<Transaction[]> {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error || !data) return [];
+    return data.map(tx => this.mapTransaction(tx));
+  }
+
+  async updateAccount(id: number, updates: Partial<Account>): Promise<Account | undefined> {
+    const { data, error } = await supabase
+      .from('bank_accounts')
+      .update({
+        balance: updates.balance?.toString(),
+        is_active: updates.isActive,
+        account_type: updates.accountType
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error || !data) return undefined;
+    return this.mapAccount(data);
+  }
+
+  // --- Safe Mappers ---
+  private mapSafeUser(data: any): User {
+    return {
+      id: data.id,
+      username: data.username,
+      fullName: data.full_name,
+      email: data.email,
+      phone: data.phone,
+      accountNumber: data.account_number,
+      accountId: data.account_id,
+      profession: data.profession,
+      dateOfBirth: data.date_of_birth,
+      address: data.address,
+      city: data.city,
+      state: data.state,
+      country: data.country,
+      postalCode: data.postal_code,
+      nationality: data.nationality,
+      annualIncome: data.annual_income,
+      idType: data.id_type,
+      idNumber: data.id_number,
+      role: data.role,
+      isVerified: data.is_verified,
+      isOnline: data.is_online,
+      isActive: data.is_active,
+      avatarUrl: data.avatar_url,
+      balance: parseFloat(data.balance || '0'),
+      createdAt: data.created_at,
+      supabaseUserId: data.supabase_user_id
+      // EXCLUDES: password_hash, transfer_pin, transferPinHash
+    };
+  }
+
+  private mapAccount(data: any): Account {
+    return {
+      id: data.id,
+      userId: data.user_id,
+      accountNumber: data.account_number,
+      accountType: data.account_type,
+      balance: parseFloat(data.balance),
+      currency: data.currency,
+      isActive: data.is_active,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+  }
+
+  private mapTransaction(data: any): Transaction {
+    return {
+      id: data.id,
+      transactionId: data.transaction_id,
+      fromUserId: data.from_user_id,
+      toUserId: data.to_user_id,
+      fromAccountId: data.from_account_id,
+      toAccountId: data.to_account_id,
+      amount: parseFloat(data.amount),
+      currency: data.currency,
+      transactionType: data.transaction_type,
+      status: data.status,
+      description: data.description,
+      recipientName: data.recipient_name,
+      recipientAccount: data.recipient_account,
+      referenceNumber: data.reference_number,
+      fee: data.fee ? parseFloat(data.fee) : 0,
+      exchangeRate: data.exchange_rate ? parseFloat(data.exchange_rate) : undefined,
+      countryCode: data.country_code,
+      bankName: data.bank_name,
+      swiftCode: data.swift_code,
+      adminNotes: data.admin_notes,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+  }
+}
