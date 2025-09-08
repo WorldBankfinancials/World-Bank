@@ -1,44 +1,19 @@
-import type { Express, Request, Response } from "express";
-import { createServer, type Server } from "http";
+import express, { Request, Response, NextFunction } from "express";
+import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { storage } from "./storage-factory";
-import { setupTransferRoutes } from './routes-transfer';
-import { ObjectStorageService } from './objectStorage';
+import { supabase } from "./supabase-public-storage";
+import bcrypt from "bcryptjs";
 
-// Supabase imports (live)
-import { createClient } from "@supabase/supabase-js";
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
-);
+// Ensure body-parser middleware is used in your main server file
+// Example: app.use(express.json());
 
-// Utility functions for generating account details
-function generateAccountNumber(): string {
-  return `${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
-}
-
-function generateAccountId(): string {
-  return `WB-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-}
-
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Supabase health check endpoint
-  app.get('/api/health', async (req: Request, res: Response) => {
-    try {
-      const { error } = await supabase
-        .from('bank_users')
-        .select('id')
-        .limit(1);
-      if (error) {
-        return res.status(500).json({ status: "error", error: error.message });
-      }
-      res.json({ status: 'OK', timestamp: new Date() });
-    } catch (err: any) {
-      res.status(500).json({ status: "error", error: err.message });
-    }
+export function setupRoutes(app: express.Express) {
+  // Health check endpoint
+  app.get('/api/health', (req: Request, res: Response) => {
+    res.json({ status: 'OK', timestamp: new Date() });
   });
 
-  // Test Supabase connection and live table status
+  // Test Supabase connection and verify tables exist
   app.get('/test-supabase-connection', async (req: Request, res: Response) => {
     try {
       const { data, error } = await supabase
@@ -46,7 +21,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select('id, full_name, email, balance')
         .limit(5);
       if (error) {
-        res.json({
+        console.error('❌ Supabase table test failed:', error);
+        return res.json({
           connected: false,
           message: 'Banking tables not found in Supabase',
           error: error.message,
@@ -65,66 +41,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get user by Supabase ID
-  app.get('/api/users/supabase/:supabaseId', async (req: Request, res: Response) => {
+  // Get user by Supabase ID (requires authentication)
+  app.get('/api/users/supabase/:supabaseId', authenticate, async (req: Request, res: Response) => {
     try {
       const { supabaseId } = req.params;
       const { data, error } = await supabase
         .from('bank_users')
         .select('*')
-        .eq('supabaseUserId', supabaseId)
+        .eq('id', supabaseId)
         .single();
       if (error || !data) {
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: "User not found" });
       }
       res.json(data);
     } catch (error: any) {
-      res.status(500).json({ error: 'Failed to fetch user', details: error.message });
+      res.status(500).json({ error: 'Failed to get user', details: error.message });
     }
   });
 
-  // Create new Supabase-linked user with PENDING status
-  app.post('/api/users/create-supabase', async (req: Request, res: Response) => {
-    try {
-      const { supabaseUserId, email, fullName } = req.body;
-      const { error } = await supabase
-        .from('bank_users')
-        .insert([{
-          supabaseUserId,
-          email,
-          fullName: fullName || 'New Banking Customer',
-          phone: 'Pending Admin Update',
-          accountNumber: generateAccountNumber(),
-          accountId: generateAccountId(),
-          profession: 'Pending Admin Update',
-          dateOfBirth: '1990-01-01',
-          address: 'Pending Admin Update',
-          city: 'Pending Admin Update',
-          state: 'Pending Admin Update',
-          country: 'Pending Admin Update',
-          postalCode: '00000',
-          annualIncome: 'Pending Admin Update',
-          idType: 'Pending Admin Update',
-          idNumber: 'Pending Admin Update',
-          transferPin: '1234',
-          role: 'customer',
-          isVerified: false,
-          isOnline: false,
-          isActive: false,
-          balance: 0.00,
-          adminNotes: 'New Supabase registration - requires full admin verification and setup'
-        }]);
-      if (error) {
-        return res.status(400).json({ error: error.message });
-      }
-      res.json({ success: true, supabaseUserId, email, fullName });
-    } catch (error: any) {
-      res.status(500).json({ error: 'Failed to create user', details: error.message });
-    }
-  });
-
-  // Get pending Supabase registrations for admin approval
-  app.get('/api/admin/pending-registrations', async (req: Request, res: Response) => {
+  // Get pending registrations for admin approval (requires admin)
+  app.get('/api/admin/pending-registrations', authenticateAdmin, async (req: Request, res: Response) => {
     try {
       const { data, error } = await supabase
         .from('bank_users')
@@ -140,8 +76,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Approve Supabase registration
-  app.post('/api/admin/approve-registration/:id', async (req: Request, res: Response) => {
+  // Approve registration (requires admin)
+  app.post('/api/admin/approve-registration/:id', authenticateAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const {
@@ -153,27 +89,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         city,
         state,
         country,
-        avatarUrl
       } = req.body;
-      // Update user
+
       const { error } = await supabase
         .from('bank_users')
         .update({
           isVerified: true,
           isActive: true,
-          isOnline: true,
-          phone: phone || 'Admin Updated',
-          profession: profession || 'Banking Customer',
-          address: address || 'Admin Updated Address',
-          city: city || 'Admin Updated City',
-          state: state || 'Admin Updated State',
-          country: country || 'Admin Updated Country',
-          balance: parseFloat(initialDeposit) || 5000.00,
-          avatarUrl: avatarUrl || null,
-          adminNotes: approvalNotes || 'Approved by admin',
-          modifiedByAdmin: "1"
+          adminNotes: approvalNotes,
+          balance: initialDeposit,
+          phone,
+          profession,
+          address,
+          city,
+          state,
+          country,
+          modifiedByAdmin: req.user?.id || "admin",
         })
         .eq('id', id);
+
       if (error) {
         return res.status(500).json({ error: error.message });
       }
@@ -183,8 +117,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reject Supabase registration
-  app.post('/api/admin/reject-registration/:id', async (req: Request, res: Response) => {
+  // Reject registration (requires admin)
+  app.post('/api/admin/reject-registration/:id', authenticateAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const { rejectionReason } = req.body;
@@ -194,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isVerified: false,
           isActive: false,
           adminNotes: `REJECTED: ${rejectionReason}`,
-          modifiedByAdmin: "1"
+          modifiedByAdmin: req.user?.id || "admin"
         })
         .eq('id', id);
       if (error) {
@@ -206,132 +140,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Demo: Get user by email (for compatibility with frontend)
-  app.post('/api/accounts/user', async (req: Request, res: Response) => {
-    try {
-      const { email } = req.body;
-      if (!email) return res.status(400).json({ message: 'Email required' });
-      const { data, error } = await supabase
-        .from('bank_users')
-        .select('id')
-        .eq('email', email)
-        .single();
-      if (error || !data) return res.status(404).json({ message: 'User not found' });
-      const { data: accounts, error: accError } = await supabase
-        .from('bank_accounts')
-        .select('*')
-        .eq('userId', data.id);
-      if (accError) return res.status(500).json({ message: 'Error fetching accounts' });
-      res.json(accounts);
-    } catch (error: any) {
-      res.status(500).json({ error: 'Failed to get user accounts', details: error.message });
-    }
-  });
-
-  // Get all accounts for a user (demo: always user id 1)
-  app.get('/api/accounts', async (req: Request, res: Response) => {
-    try {
-      const { data, error } = await supabase
-        .from('bank_accounts')
-        .select('*')
-        .eq('userId', 1); // Replace with session logic
-      if (error) return res.status(500).json({ error: error.message });
-      res.json(data);
-    } catch (error: any) {
-      res.status(500).json({ error: 'Failed to get accounts', details: error.message });
-    }
-  });
-
-  // Get transactions for a specific account
-  app.get('/api/accounts/:id/transactions', async (req: Request, res: Response) => {
-    try {
-      const accountId = parseInt(req.params.id, 10);
-      if (isNaN(accountId)) return res.status(400).json({ error: 'Invalid account ID' });
-      const { data, error } = await supabase
-        .from('bank_transactions')
-        .select('*')
-        .eq('accountId', accountId)
-        .order('date', { ascending: false });
-      if (error) return res.status(500).json({ error: error.message });
-      res.json(data);
-    } catch (error: any) {
-      res.status(500).json({ error: 'Failed to get transactions', details: error.message });
-    }
-  });
-
-  // International Transfer API
-  app.post("/api/international-transfers", async (req: Request, res: Response) => {
-    try {
-      const userId = req.session?.userId || 1; // Default to user ID 1 for demo
-      const {
-        amount,
-        recipientName,
-        recipientCountry,
-        bankName,
-        swiftCode,
-        accountNumber,
-        transferPurpose,
-        transferPin
-      } = req.body;
-
-      // Required field validation
-      if (
-        !amount || !recipientName || !recipientCountry ||
-        !bankName || !swiftCode || !accountNumber || !transferPurpose || !transferPin
-      ) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      // Get user and validate PIN
-      const { data: user, error: userError } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      if (userError || !user) return res.status(404).json({ error: 'User not found' });
-      if (user.transferPin !== transferPin) {
-        return res.status(401).json({ error: "Invalid transfer PIN" });
-      }
-
-      // Get first account for user
-      const { data: accounts, error: accError } = await supabase
-        .from('bank_accounts')
-        .select('*')
-        .eq('userId', userId);
-      if (accError || !accounts || accounts.length === 0) {
-        return res.status(400).json({ error: "No account found" });
-      }
-      const fromAccount = accounts[0];
-
-      // Create international transfer transaction (pending approval)
-      const { error: txnError } = await supabase
-        .from('bank_transactions')
-        .insert([{
-          accountId: fromAccount.id,
-          type: "international_transfer",
-          amount: amount.toString(),
-          description: `International transfer to ${recipientName} in ${recipientCountry}`,
-          recipientName,
-          recipientCountry,
-          bankName,
-          swiftCode,
-          accountNumber,
-          transferPurpose,
-          status: "pending_approval",
-          date: new Date().toISOString()
-        }]);
-      if (txnError) return res.status(500).json({ error: txnError.message });
-
-      res.json({
-        success: true,
-        message: "International transfer submitted for approval"
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: "Failed to process international transfer", details: error.message });
-    }
-  });
-  // Admin: Update balance for a customer
-  app.post("/api/admin/customers/:id/balance", async (req: Request, res: Response) => {
+  // Admin: Update balance for a customer (requires admin)
+  app.post("/api/admin/customers/:id/balance", authenticateAdmin, async (req: Request, res: Response) => {
     try {
       const customerId = parseInt(req.params.id, 10);
       const { amount, description } = req.body;
@@ -357,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       // Log transaction
       await supabase.from('bank_transactions').insert([{
-        accountId: customerId, // If you have accountId, use accountId
+        accountId: customerId,
         type: "admin",
         amount: amount.toString(),
         description: description || "Admin balance update",
@@ -375,8 +185,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: Get all transactions
-  app.get('/api/admin/transactions', async (req: Request, res: Response) => {
+  // Admin: Get all transactions (requires admin)
+  app.get('/api/admin/transactions', authenticateAdmin, async (req: Request, res: Response) => {
     try {
       const { data, error } = await supabase
         .from('bank_transactions')
@@ -389,40 +199,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PIN verification (used for transfers)
-  app.post('/api/verify-pin', async (req: Request, res: Response) => {
+  // PIN verification: compare hashed PIN, never store/compare plaintext
+  app.post('/api/verify-pin', authenticate, async (req: Request, res: Response) => {
     try {
       const { username, pin } = req.body;
       if (!username || !pin) return res.status(400).json({ message: "Username and PIN required" });
       const { data: user, error } = await supabase
         .from('bank_users')
-        .select('transferPin')
+        .select('transferPinHash')
         .eq('email', username)
         .single();
       if (error || !user) return res.status(404).json({ message: "User not found", verified: false });
-      if (user.transferPin !== pin) return res.status(401).json({ message: "Invalid PIN", verified: false });
+      const valid = await bcrypt.compare(pin, user.transferPinHash);
+      if (!valid) return res.status(401).json({ message: "Invalid PIN", verified: false });
       res.json({ success: true, verified: true });
     } catch (error: any) {
       res.status(500).json({ error: "Failed to verify PIN", verified: false });
     }
   });
 
-  // PIN management: change PIN for logged-in user
-  app.post('/api/user/change-pin', async (req: Request, res: Response) => {
+  // PIN management: change PIN (hash before storing)
+  app.post('/api/user/change-pin', authenticate, async (req: Request, res: Response) => {
     try {
       const { currentPin, newPin } = req.body;
-      // For demo, always userId = 1, replace with session
-      const userId = 1;
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
       const { data: user, error: userError } = await supabase
         .from('bank_users')
-        .select('transferPin')
+        .select('transferPinHash')
         .eq('id', userId)
         .single();
       if (userError || !user) return res.status(404).json({ message: "User not found" });
-      if (user.transferPin !== currentPin) return res.status(401).json({ message: "Current PIN is incorrect" });
+      const valid = await bcrypt.compare(currentPin, user.transferPinHash);
+      if (!valid) return res.status(401).json({ message: "Current PIN is incorrect" });
+      const newHash = await bcrypt.hash(newPin, 10);
       const { error: updateError } = await supabase
         .from('bank_users')
-        .update({ transferPin: newPin })
+        .update({ transferPinHash: newHash })
         .eq('id', userId);
       if (updateError) return res.status(500).json({ error: updateError.message });
       res.json({ success: true, message: "PIN updated successfully" });
@@ -432,7 +245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Transfer endpoint (internal & international, live Supabase)
-  app.post('/api/transfer', async (req: Request, res: Response) => {
+  app.post('/api/transfer', authenticate, async (req: Request, res: Response) => {
     try {
       const {
         fromUserId,
@@ -444,14 +257,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description,
         pin
       } = req.body;
-      // Get user and validate PIN
+
+      // Confirm user is authenticated and matches fromUserId
+      if (req.user?.id !== fromUserId) return res.status(403).json({ error: "Forbidden" });
+
+      // Get user and validate hashed PIN
       const { data: user, error: userError } = await supabase
         .from('bank_users')
-        .select('transferPin')
+        .select('transferPinHash')
         .eq('id', fromUserId)
         .single();
       if (userError || !user) return res.status(404).json({ error: "User not found" });
-      if (user.transferPin !== pin) return res.status(401).json({ error: "Invalid PIN" });
+      const validPin = await bcrypt.compare(pin, user.transferPinHash);
+      if (!validPin) return res.status(401).json({ error: "Invalid PIN" });
+
       // Get sender's account
       const { data: accounts, error: accError } = await supabase
         .from('bank_accounts')
@@ -485,89 +304,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Setup transfer routes (custom logic)
-  setupTransferRoutes(app);
-
-   // WebSocket server for live chat
-  const httpServer = createServer(app);
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-
-  // Store connected clients (for chat)
-  const clients = new Map<string, { ws: WebSocket; userId: string; role: 'admin' | 'customer' }>();
-
-  wss.on('connection', (ws: WebSocket) => {
-    ws.on('message', (message: string) => {
-      try {
-        const data = JSON.parse(message);
-        if (data.type === 'auth') {
-          clients.set(data.userId, {
-            ws,
-            userId: data.userId,
-            role: data.role || 'customer'
-          });
-          ws.send(JSON.stringify({ type: 'auth_success', userId: data.userId, role: data.role || 'customer' }));
-        } else if (data.type === 'chat_message') {
-          // Broadcast chat message to all clients except sender
-          clients.forEach((client, id) => {
-            if (id !== data.userId && client.ws.readyState === WebSocket.OPEN) {
-              client.ws.send(JSON.stringify({
-                type: 'chat_message',
-                ...data
-              }));
-            }
-          });
-        } else if (data.type === 'typing') {
-          // Broadcast typing event
-          clients.forEach((client, id) => {
-            if (id !== data.userId && client.ws.readyState === WebSocket.OPEN) {
-              client.ws.send(JSON.stringify({
-                type: 'typing',
-                senderId: data.userId,
-                isTyping: data.isTyping
-              }));
-            }
-          });
-        }
-      } catch (error) {
-        console.error('WebSocket message error:', error);
-      }
-    });
-
-    ws.on('close', () => {
-      clients.forEach((client, userId) => {
-        if (client.ws === ws) {
-          clients.delete(userId);
-        }
-      });
-      console.log('WebSocket client disconnected');
-    });
-
-    ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
-    });
-
-    ws.send(JSON.stringify({
-      type: 'auth_request',
-      message: 'Please authenticate'
-    }));
-  });
-
-  // Object Storage Routes for ID Card Uploads
-  app.post('/api/objects/upload', async (req: Request, res: Response) => {
-    try {
-      const objectStorageService = new ObjectStorageService();
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      res.json({ uploadURL });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to generate upload URL' });
-    }
-  });
+  // ... WebSocket/chat and object storage routes would be handled here, with authentication required.
 
   // Catch-all for non-existent routes
   app.use((req: Request, res: Response) => {
     res.status(404).json({ error: "Route not found" });
   });
+}
 
-  return httpServer;
-} 
-  
+// --- MIDDLEWARE EXAMPLES ---
+
+// Simple authentication middleware stub. Replace with your actual auth/session logic.
+function authenticate(req: Request, res: Response, next: NextFunction) {
+  // Example: attach req.user if session/token valid
+  if (req.headers.authorization) {
+    // Validate token/session and attach req.user
+    req.user = { id: "replace-with-real-user-id" }; // Replace with real session logic
+    return next();
+  }
+  res.status(401).json({ error: "Unauthorized" });
+}
+
+// Admin authentication middleware stub
+function authenticateAdmin(req: Request, res: Response, next: NextFunction) {
+  // Example: check req.user.role === 'admin'
+  if (req.headers.authorization && req.user?.role === "admin") {
+    return next();
+  }
+  res.status(403).json({ error: "Forbidden - admin only" });
+}
+
+// Add type to Request for user property
+declare global {
+  namespace Express {
+    interface Request {
+      user?: { id: string; role?: string };
+    }
+  }
+}
