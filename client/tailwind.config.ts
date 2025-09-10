@@ -1,13 +1,14 @@
-
 import type { Config } from "tailwindcss";
 
 const config: Config = {
   darkMode: ["class"],
   content: [
-    './pages/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-    './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
+    "./index.html",                   // if Vite HTML entry
+    "./src/**/*.{ts,tsx}",            // your client app
+    "./pages/**/*.{ts,tsx}",          // if using Next.js–style pages
+    "./components/**/*.{ts,tsx}",     // shadcn components
+    "./app/**/*.{ts,tsx}",            // optional app dir
+    "../shared/**/*.{ts,tsx}",        // shared package
   ],
   prefix: "",
   theme: {
@@ -75,7 +76,10 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"), // shadcn animations
+    require("@tailwindcss/typography"), // prose
+  ],
 } satisfies Config;
 
 export default config;
