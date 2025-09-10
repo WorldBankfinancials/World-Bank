@@ -1,80 +1,63 @@
-// client/src/pages/add-money.tsx
-import { useState } from "react";
-import { useUser, useAccount } from "@/hooks/useSupabase";
-import { supabase } from "@/lib/supabase";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { useQueryClient } from "@tanstack/react-query";
+import React, { useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { useSupabase } from "../lib/useSupabase";
 
-export default function AddMoneyPage() {
-  const { data: authUser } = useUser();
-  const userId = authUser?.id ?? null;
-  const { data: account } = useAccount(userId);
-  const qc = useQueryClient();
+const AddMoneyPage: React.FC = () => {
+  const { userProfile } = useAuth();
+  const supabase = useSupabase();
 
-  const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState("debit_card");
+  const [amount, setAmount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [message, setMessage] = useState<string>("");
 
-  const handleAdd = async () => {
-    setMsg(null);
-    if (!userId) return setMsg("Sign in first");
-    const amt = Number(amount);
-    if (!amt || amt <= 0) return setMsg("Enter valid amount");
+  const handleAddMoney = async () => {
+    if (!userProfile) return;
+    if (amount <= 0) {
+      setMessage("Enter a valid amount");
+      return;
+    }
 
     setLoading(true);
     try {
-      await supabase.from("transactions").insert([{
-        from_user_id: null,
-        to_user_id: userId,
-        amount: amt,
-        type: "credit",
-        status: "completed",
-        description: `Add money via ${method}`
-      }]);
+      const { data, error } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: userProfile.id,
+          amount,
+          type: "credit",
+          status: "pending",
+          created_at: new Date(),
+        })
+        .select();
 
-      const newBalance = (account?.balance ?? 0) + amt;
-      await supabase.from("accounts").update({ balance: newBalance }).eq("id", account?.id);
-
-      qc.invalidateQueries({ queryKey: ["account", userId] });
-      qc.invalidateQueries({ queryKey: ["transactions", userId] });
-
-      setMsg(`Added $${amt.toFixed(2)} to your account.`);
-      setAmount("");
+      if (error) {
+        setMessage(error.message);
+      } else {
+        setMessage("Transaction initiated successfully");
+      }
     } catch (err: any) {
-      setMsg(err.message || "Failed to add money");
+      setMessage(err.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="p-4">
-      <Card>
-        <CardHeader><CardTitle>Add Money</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label>Amount</Label>
-            <Input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" />
-          </div>
-
-          <div>
-            <Label>Method</Label>
-            <select value={method} onChange={(e) => setMethod(e.target.value)} className="w-full p-2 border rounded">
-              <option value="debit_card">Debit Card</option>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="mobile_money">Mobile Money</option>
-            </select>
-          </div>
-
-          {msg && <div className="text-sm text-gray-700">{msg}</div>}
-
-          <Button onClick={handleAdd} disabled={loading} className="w-full">{loading ? "Processing..." : "Add Money"}</Button>
-        </CardContent>
-      </Card>
+    <div className="add-money-page">
+      <h1>Add Money</h1>
+      <p>Current Balance: {userProfile?.balance || 0}</p>
+      <input
+        type="number"
+        placeholder="Amount"
+        value={amount}
+        onChange={(e) => setAmount(Number(e.target.value))}
+      />
+      <button onClick={handleAddMoney} disabled={loading}>
+        {loading ? "Processing..." : "Add Money"}
+      </button>
+      {message && <p>{message}</p>}
     </div>
   );
-}
+};
+
+export default AddMoneyPage;
