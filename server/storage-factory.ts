@@ -14,24 +14,21 @@ export function createStorage(): IStorage {
   console.log(`🔐 Auth Source: ${config.getAuthSource()}`);
   console.log('');
   
-  // Check if we have Supabase database URL to use Supabase public schema
-  if (process.env.SUPABASE_DATABASE_URL) {
-    console.log('Using Supabase public schema with realtime synchronization');
+  // ✅ Fix: check for Supabase credentials
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+    console.log('✅ Using Supabase public schema with realtime synchronization');
     return new SupabasePublicStorage();
   }
   
-  // Use PostgreSQL database when available
+  // ✅ PostgreSQL
   if (process.env.DATABASE_URL) {
-    console.log('Using PostgreSQL database storage');
+    console.log('✅ Using PostgreSQL database storage');
     return new PostgresStorage();
   }
   
-  switch (dataSource) {
-    case 'memory':
-    default:
-      console.log('Using in-memory storage for development');
-      return new MemStorage();
-  }
+  // ✅ Memory (development fallback)
+  console.log('⚠️ Using in-memory storage (development mode)');
+  return new MemStorage();
 }
 
 // Export singleton storage instance
