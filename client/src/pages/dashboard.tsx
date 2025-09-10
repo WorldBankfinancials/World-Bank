@@ -101,17 +101,22 @@ export default function Dashboard() {
                 <p className="text-blue-100 text-sm">Total balance</p>
                 <div className="flex items-center space-x-2">
                   <h2 className="text-2xl font-bold">{showBalance ? `$${Number(account?.balance ?? 0).toLocaleString()}` : "****"}</h2>
-                  <button onClick={() => setShowBalance(s => !s)}>{showBalance ? <EyeOff className="w-5 h-5 text-blue-100" /> : <Eye className="w-5 h-5 text-blue-100" />}</button>
+                  <button onClick={() => setShowBalance(s => !s)}>
+                    {showBalance ? <EyeOff className="w-5 h-5 text-blue-100" /> : <Eye className="w-5 h-5 text-blue-100" />}
+                  </button>
                 </div>
               </div>
               <div className="text-right">
                 <p className="text-blue-100 text-sm">Account</p>
-                <p className="text-sm font-medium">{account?.account_number ? `****${(account.account_number as string).slice(-4)}` : "****0000"}</p>
+                <p className="text-sm font-medium">{account?.account_number ? `****${account.account_number.slice(-4)}` : "****0000"}</p>
               </div>
             </div>
 
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-1"><ArrowUpRight className="w-4 h-4 text-green-300" /><span className="text-sm">+2.5%</span></div>
+              <div className="flex items-center space-x-1">
+                <ArrowUpRight className="w-4 h-4 text-green-300" />
+                <span className="text-sm">+2.5%</span>
+              </div>
               <span className="text-blue-100 text-sm">vs last month</span>
             </div>
           </CardContent>
@@ -127,7 +132,6 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    {/* lightweight inline wallet icon */}
                     <svg className="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="none"><path d="M3 7h18v10H3z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </div>
                   <div>
@@ -145,10 +149,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Txns */}
+      {/* Recent Transactions */}
       <div className="px-4">
         <Card>
-          <CardHeader><CardTitle className="text-lg">Recent Transactions</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-lg">Recent Transactions</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {transactions.length === 0 && <div className="text-sm text-gray-500">No recent transactions.</div>}
