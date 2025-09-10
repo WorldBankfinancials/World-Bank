@@ -17,6 +17,7 @@ import {
   EyeOff,
   Save
 } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient'; // make sure this points to your Supabase client
 
 export default function AccountPreferences() {
   const { user } = useAuth();
@@ -45,11 +46,6 @@ export default function AccountPreferences() {
       autoLogout: true
     }
   });
-
-  const handleSave = () => {
-    // Save preferences logic
-    alert(t('preferences_saved') || 'Preferences saved successfully');
-  };
 
   const togglePreference = (category: 'notifications' | 'privacy' | 'security', key: string) => {
     setPreferences(prev => {
@@ -80,6 +76,25 @@ export default function AccountPreferences() {
       }
       return prev;
     });
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: user.id,
+          preferences
+        }, { onConflict: ['user_id'] });
+
+      if (error) throw error;
+
+      alert(t('preferences_saved') || 'Preferences saved successfully');
+    } catch (err: any) {
+      alert(err.message || 'Failed to save preferences');
+    }
   };
 
   return (
