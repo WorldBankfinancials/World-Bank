@@ -1,151 +1,167 @@
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
-import {
-  type User,
-  type InsertUser,
-  type Account,
-  type InsertAccount,
-  type Transaction,
-  type InsertTransaction
+import type {
+  User,
+  InsertUser,
+  Account,
+  InsertAccount,
+  Transaction,
+  InsertTransaction,
+  AdminAction,
+  InsertAdminAction,
+  SupportTicket,
+  InsertSupportTicket
 } from '@shared/schema';
 import { IStorage } from './storage';
 
-// ---------------- Supabase setup ----------------
-const supabaseUrl = process.env.SUPABASE_URL || 'https://icbsxmrmorkdgxtumamu.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+// ---------------- Supabase Setup ----------------
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-if (!supabaseKey) {
-  throw new Error('Missing SUPABASE key. Set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY.');
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('Supabase URL or Service Role Key missing in environment');
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey, {
+const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { persistSession: false },
   db: { schema: 'public' }
 });
 
-console.log('🔗 Connected to Supabase public schema');
-console.log('📊 Using ' + (process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Service Role Key' : 'Anon Key'));
+console.log('🔗 Connected to Supabase public schema with realtime synchronization');
 
-// ---------------- SupabasePublicStorage ----------------
+// ---------------- Storage Class ----------------
 export class SupabasePublicStorage implements IStorage {
 
-  // -------- User Methods --------
+  // ---------------- Users ----------------
   async getUser(id: number): Promise<User | undefined> {
-    const { data, error } = await supabase
-      .from('bank_users')
-      .select('*')
-      .eq('id', id)
-      .single();
-    if (error || !data) return undefined;
-    return this.mapUser(data);
+    try {
+      const { data: user, error } = await supabase.from('bank_users').select('*').eq('id', id).single();
+      if (error || !user) return undefined;
+      return this.mapUser(user);
+    } catch (err) {
+      console.error('Error getting user:', err);
+      return undefined;
+    }
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const { data, error } = await supabase
-      .from('bank_users')
-      .select('*')
-      .eq('email', email)
-      .single();
-    if (error || !data) return undefined;
-    return this.mapUser(data);
+    try {
+      const { data: user, error } = await supabase.from('bank_users').select('*').eq('email', email).single();
+      if (error || !user) return undefined;
+      return this.mapUser(user);
+    } catch (err) {
+      console.error('Error getting user by email:', err);
+      return undefined;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const { data, error } = await supabase
-      .from('bank_users')
-      .select('*')
-      .eq('username', username)
-      .single();
-    if (error || !data) return undefined;
-    return this.mapUser(data);
+    try {
+      const { data: user, error } = await supabase.from('bank_users').select('*').eq('username', username).single();
+      if (error || !user) return undefined;
+      return this.mapUser(user);
+    } catch (err) {
+      console.error('Error getting user by username:', err);
+      return undefined;
+    }
   }
 
   async createUser(data: InsertUser): Promise<User> {
-    const passwordHash = await bcrypt.hash(data.password, 10);
-    let transferPinHash = '';
-    if (data.transferPin) {
-      transferPinHash = await bcrypt.hash(data.transferPin, 10);
+    try {
+      const transferPinHash = data.transferPin ? await bcrypt.hash(data.transferPin, 10) : '';
+      const { data: user, error } = await supabase
+        .from('bank_users')
+        .insert({
+          username: data.username,
+          password_hash: data.password,
+          full_name: data.fullName,
+          email: data.email,
+          phone: data.phone,
+          account_number: data.accountNumber,
+          account_id: data.accountId,
+          profession: data.profession,
+          date_of_birth: data.dateOfBirth,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          country: data.country,
+          postal_code: data.postalCode,
+          nationality: data.nationality,
+          annual_income: data.annualIncome,
+          id_type: data.idType,
+          id_number: data.idNumber,
+          transferPinHash,
+          role: data.role || 'customer',
+          is_verified: data.isVerified || false,
+          is_online: data.isOnline || false,
+          is_active: data.isActive || false,
+          balance: data.balance || 0,
+          supabase_user_id: data.supabaseUserId,
+          admin_notes: data.adminNotes
+        })
+        .select()
+        .single();
+      if (error || !user) throw error || new Error('Failed to create user');
+      return this.mapUser(user);
+    } catch (err) {
+      console.error('Error creating user:', err);
+      throw err;
     }
-
-    const { data: user, error } = await supabase
-      .from('bank_users')
-      .insert({
-        username: data.username,
-        password_hash: passwordHash,
-        full_name: data.fullName,
-        email: data.email,
-        phone: data.phone,
-        account_number: data.accountNumber,
-        account_id: data.accountId,
-        profession: data.profession,
-        date_of_birth: data.dateOfBirth,
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        country: data.country,
-        postal_code: data.postalCode,
-        nationality: data.nationality,
-        annual_income: data.annualIncome,
-        id_type: data.idType,
-        id_number: data.idNumber,
-        transferPinHash,
-        role: data.role || 'customer',
-        is_verified: data.isVerified || false,
-        is_online: data.isOnline || false,
-        is_active: data.isActive || false,
-        balance: data.balance || 0,
-        supabase_user_id: data.supabaseUserId,
-        admin_notes: data.adminNotes
-      })
-      .select()
-      .single();
-
-    if (error || !user) throw error || new Error('Failed to create user');
-    return this.mapUser(user);
   }
 
   async updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined> {
-    const updateData: any = { ...updates, updated_at: new Date().toISOString() };
-    if (updates.transferPin) {
-      updateData.transferPinHash = await bcrypt.hash(updates.transferPin, 10);
-      delete updateData.transferPin;
+    try {
+      const updateData: any = { ...updates, updated_at: new Date().toISOString() };
+      if (updates.transferPin) {
+        updateData.transferPinHash = await bcrypt.hash(updates.transferPin, 10);
+        delete updateData.transferPin;
+      }
+      const { data: user, error } = await supabase.from('bank_users').update(updateData).eq('id', id).select().single();
+      if (error || !user) return undefined;
+      return this.mapUser(user);
+    } catch (err) {
+      console.error('Error updating user:', err);
+      return undefined;
     }
-    if (updates.password) {
-      updateData.password_hash = await bcrypt.hash(updates.password, 10);
-      delete updateData.password;
+  }
+
+  async verifyPin(email: string, pin: string): Promise<boolean> {
+    try {
+      const { data: user, error } = await supabase.from('bank_users').select('transferPinHash').eq('email', email).single();
+      if (error || !user || !user.transferPinHash) return false;
+      return await bcrypt.compare(pin, user.transferPinHash);
+    } catch (err) {
+      console.error('Error verifying PIN:', err);
+      return false;
     }
-    const { data, error } = await supabase
-      .from('bank_users')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-    if (error || !data) return undefined;
-    return this.mapUser(data);
   }
 
   async getAllUsers(): Promise<User[]> {
-    const { data, error } = await supabase.from('bank_users').select('*');
-    if (error || !data) return [];
-    return data.map(this.mapUser);
+    try {
+      const { data: users, error } = await supabase.from('bank_users').select('*');
+      if (error || !users) return [];
+      return users.map(this.mapUser);
+    } catch (err) {
+      console.error('Error getting all users:', err);
+      return [];
+    }
   }
 
-  // -------- Account Methods --------
+  // ---------------- Accounts ----------------
   async getUserAccounts(userId: number): Promise<Account[]> {
-    const { data, error } = await supabase
-      .from('bank_accounts')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order('id');
-    if (error || !data) return [];
-    return data.map(this.mapAccount);
+    try {
+      const { data: accounts, error } = await supabase.from('bank_accounts').select('*').eq('user_id', userId).eq('is_active', true);
+      if (error || !accounts) return [];
+      return accounts.map(this.mapAccount);
+    } catch (err) {
+      console.error('Error fetching accounts:', err);
+      return [];
+    }
   }
 
   async createAccount(data: InsertAccount): Promise<Account> {
-    const { data: account, error } = await supabase
-      .from('bank_accounts')
-      .insert({
+    try {
+      const { data: account, error } = await supabase.from('bank_accounts').insert({
         user_id: data.userId,
         account_number: data.accountNumber,
         account_type: data.accountType,
@@ -153,50 +169,116 @@ export class SupabasePublicStorage implements IStorage {
         balance: data.balance,
         currency: data.currency || 'USD',
         is_active: data.isActive !== false
-      })
-      .select()
-      .single();
-    if (error || !account) throw error || new Error('Failed to create account');
-    return this.mapAccount(account);
+      }).select().single();
+      if (error || !account) throw error || new Error('Failed to create account');
+      return this.mapAccount(account);
+    } catch (err) {
+      console.error('Error creating account:', err);
+      throw err;
+    }
   }
 
-  // -------- Transaction Methods --------
-  async createTransaction(data: InsertTransaction): Promise<Transaction> {
-    const { data: txn, error } = await supabase
-      .from('transactions')
-      .insert({
+  async getAccount(id: number): Promise<Account | undefined> {
+    try {
+      const { data: account, error } = await supabase.from('bank_accounts').select('*').eq('id', id).single();
+      if (error || !account) return undefined;
+      return this.mapAccount(account);
+    } catch (err) {
+      console.error('Error fetching account:', err);
+      return undefined;
+    }
+  }
+
+  // ---------------- Transactions ----------------
+  async createTransaction(data: {
+    accountId: number;
+    type: string;
+    amount: string;
+    currency?: string;
+    description?: string;
+    recipientName?: string;
+    recipientCountry?: string;
+    bankName?: string;
+    swiftCode?: string;
+    status?: 'pending' | 'approved' | 'rejected';
+    date?: Date;
+  }): Promise<Transaction> {
+    try {
+      const { data: transaction, error } = await supabase.from('transactions').insert({
         account_id: data.accountId,
         type: data.type,
         amount: data.amount,
-        description: data.description,
-        category: data.category,
+        currency: data.currency || 'USD',
+        description: data.description || '',
+        recipient_name: data.recipientName || null,
+        recipient_country: data.recipientCountry || null,
+        bank_name: data.bankName || null,
+        swift_code: data.swiftCode || null,
         status: data.status || 'pending',
-        date: data.date || new Date().toISOString(),
-        admin_notes: data.adminNotes
-      })
-      .select()
-      .single();
-    if (error || !txn) throw error || new Error('Failed to create transaction');
-    return this.mapTransaction(txn);
+        created_at: data.date ? data.date.toISOString() : new Date().toISOString()
+      }).select().single();
+      if (error || !transaction) throw error || new Error('Failed to create transaction');
+      return this.mapTransaction(transaction);
+    } catch (err) {
+      console.error('Error creating transaction:', err);
+      throw err;
+    }
   }
 
-  async getTransactions(accountId?: number): Promise<Transaction[]> {
-    let query = supabase.from('transactions').select('*').order('date', { ascending: false });
-    if (accountId) query = query.eq('account_id', accountId);
-    const { data, error } = await query;
-    if (error || !data) return [];
-    return data.map(this.mapTransaction);
+  async updateTransactionStatus(
+    transactionId: number,
+    status: 'pending' | 'approved' | 'rejected',
+    adminId: number,
+    notes?: string
+  ): Promise<Transaction | undefined> {
+    try {
+      const { data: transaction, error } = await supabase.from('transactions')
+        .update({ status, updated_by_admin: adminId, admin_notes: notes })
+        .eq('id', transactionId).select().single();
+      if (error || !transaction) return undefined;
+      return this.mapTransaction(transaction);
+    } catch (err) {
+      console.error('Error updating transaction status:', err);
+      return undefined;
+    }
   }
 
-  // -------- PIN verification --------
-  async verifyPin(email: string, pin: string): Promise<boolean> {
-    const { data: user, error } = await supabase
-      .from('bank_users')
-      .select('transferPinHash')
-      .eq('email', email)
-      .single();
-    if (error || !user || !user.transferPinHash) return false;
-    return bcrypt.compare(pin, user.transferPinHash);
+  async getPendingTransactions(): Promise<Transaction[]> {
+    try {
+      const { data: transactions, error } = await supabase.from('transactions')
+        .select('*').eq('status', 'pending').order('created_at', { ascending: false });
+      if (error || !transactions) return [];
+      return transactions.map(this.mapTransaction);
+    } catch (err) {
+      console.error('Error fetching pending transactions:', err);
+      return [];
+    }
+  }
+
+  // ---------------- Admin Actions ----------------
+  async createAdminAction(data: InsertAdminAction): Promise<AdminAction> {
+    try {
+      const { data: action, error } = await supabase.from('admin_actions')
+        .insert(data).select().single();
+      if (error || !action) throw error || new Error('Failed to create admin action');
+      return action;
+    } catch (err) {
+      console.error('Error creating admin action:', err);
+      throw err;
+    }
+  }
+
+  // ---------------- Support Tickets ----------------
+  async createSupportTicket(data: InsertSupportTicket): Promise<SupportTicket> {
+    try {
+      const { data: ticket, error } = await supabase.from('support_tickets')
+        .insert(data).select().single();
+      if (error || !ticket) throw error || new Error('Failed to create support ticket');
+      return ticket;
+    } catch (err) {
+      console.error('Error creating support ticket:', err);
+      throw err;
+    }
   }
 
   // ---------------- Mappers ----------------
@@ -224,13 +306,15 @@ export class SupabasePublicStorage implements IStorage {
       isVerified: user.is_verified,
       isOnline: user.is_online,
       isActive: user.is_active,
+      avatarUrl: user.avatar_url,
       balance: parseFloat(user.balance || '0'),
       createdAt: user.created_at,
       supabaseUserId: user.supabase_user_id,
+      lastLogin: user.last_login,
+      createdByAdmin: user.created_by_admin,
+      modifiedByAdmin: user.modified_by_admin,
       adminNotes: user.admin_notes,
-      updatedAt: user.updated_at,
-      avatarUrl: user.avatar_url,
-      lastLogin: user.last_login
+      updatedAt: user.updated_at
     };
   }
 
@@ -252,16 +336,18 @@ export class SupabasePublicStorage implements IStorage {
   private mapTransaction(transaction: any): Transaction {
     return {
       id: transaction.id,
-      accountId: transaction.account_id,
+      fromAccountId: transaction.account_id,
       amount: parseFloat(transaction.amount),
-      type: transaction.type,
+      currency: transaction.currency,
       description: transaction.description,
-      category: transaction.category,
+      transactionType: transaction.type,
       status: transaction.status,
-      adminNotes: transaction.admin_notes,
-      createdAt: transaction.date,
+      recipientName: transaction.recipient_name,
+      recipientCountry: transaction.recipient_country,
+      bankName: transaction.bank_name,
+      swiftCode: transaction.swift_code,
+      createdAt: transaction.created_at,
       updatedAt: transaction.updated_at
     };
   }
-
 }
