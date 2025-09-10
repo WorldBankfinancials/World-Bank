@@ -42,7 +42,7 @@
     "@types/passport-local": "^1.0.38",
     "@typescript-eslint/eslint-plugin": "^8.42.0",
     "@typescript-eslint/parser": "^8.42.0",
-    "@vitejs/plugin-react": "4.3.2",
+    "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "10.4.20",
     "drizzle-kit": "^0.18.1",
     "esbuild": "0.19.12",
@@ -53,7 +53,7 @@
     "tailwindcss": "3.4.17",
     "tsx": "^4.19.1",
     "typescript": "5.6.3",
-    "vite": "5.4.10"
+    "vite": "^7.1.5"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
