@@ -1,22 +1,21 @@
-import { useState } from "react";
-
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit, Trash2, ArrowLeft } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
 
 interface Account {
   id: number;
-  userId: number;
-  accountNumber: string;
-  accountType: 'checking' | 'savings' | 'investment';
-  accountName: string;
+  user_id: number;
+  account_number: string;
+  account_type: 'checking' | 'savings' | 'investment';
+  account_name: string;
   balance: string;
   currency: string;
-  isActive: boolean;
+  is_active: boolean;
 }
 
 interface AccountManagementProps {
@@ -28,9 +27,9 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [formData, setFormData] = useState({
-    userId: 1, // Liu Wei's user ID
-    accountType: 'checking' as 'checking' | 'savings' | 'investment',
-    accountName: '',
+    user_id: 1, // Example user ID
+    account_type: 'checking' as 'checking' | 'savings' | 'investment',
+    account_name: '',
     balance: '0.00',
     currency: 'USD'
   });
@@ -40,15 +39,16 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
   }, []);
 
   const fetchAccounts = async () => {
-    try {
-      const response = await fetch('/api/accounts');
-      if (response.ok) {
-        const accountsData = await response.json();
-        setAccounts(accountsData);
-      }
-    } catch (error) {
-      // console.error('Error fetching accounts:', error);
+    const { data, error } = await supabase
+      .from<Account>('accounts')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) {
+      alert('Failed to fetch accounts');
+      return;
     }
+    setAccounts(data || []);
   };
 
   const generateAccountNumber = () => {
@@ -58,81 +58,74 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
   };
 
   const handleCreateAccount = async () => {
-    try {
-      const accountData = {
-        ...formData,
-        accountNumber: generateAccountNumber(),
-        isActive: true
-      };
+    const accountData = {
+      ...formData,
+      account_number: generateAccountNumber(),
+      is_active: true
+    };
 
-      const response = await fetch('/api/admin/accounts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(accountData)
-      });
+    const { data, error } = await supabase
+      .from('accounts')
+      .insert([accountData])
+      .select()
+      .single();
 
-      if (response.ok) {
-        const newAccount = await response.json();
-        setAccounts(prev => [...prev, newAccount]);
-        setShowCreateForm(false);
-        setFormData({
-          userId: 1,
-          accountType: 'checking',
-          accountName: '',
-          balance: '0.00',
-          currency: 'USD'
-        });
-        alert('Account created successfully!');
-      }
-    } catch (error) {
-      // console.error('Error creating account:', error);
+    if (error) {
       alert('Failed to create account');
+      return;
     }
+
+    setAccounts(prev => [...prev, data]);
+    setShowCreateForm(false);
+    setFormData({
+      user_id: 1,
+      account_type: 'checking',
+      account_name: '',
+      balance: '0.00',
+      currency: 'USD'
+    });
+    alert('Account created successfully!');
   };
 
   const handleEditAccount = async () => {
     if (!editingAccount) return;
 
-    try {
-      const response = await fetch(`/api/admin/accounts/${editingAccount.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          accountName: editingAccount.accountName,
-          balance: editingAccount.balance,
-          isActive: editingAccount.isActive
-        })
-      });
+    const { data, error } = await supabase
+      .from('accounts')
+      .update({
+        account_name: editingAccount.account_name,
+        balance: editingAccount.balance,
+        is_active: editingAccount.is_active
+      })
+      .eq('id', editingAccount.id)
+      .select()
+      .single();
 
-      if (response.ok) {
-        setAccounts(prev => prev.map(acc => 
-          acc.id === editingAccount.id ? editingAccount : acc
-        ));
-        setEditingAccount(null);
-        alert('Account updated successfully!');
-      }
-    } catch (error) {
-      // console.error('Error updating account:', error);
+    if (error) {
       alert('Failed to update account');
+      return;
     }
+
+    setAccounts(prev => prev.map(acc => acc.id === editingAccount.id ? data : acc));
+    setEditingAccount(null);
+    alert('Account updated successfully!');
   };
 
   const handleDeleteAccount = async (accountId: number) => {
     if (!confirm('Are you sure you want to delete this account?')) return;
 
-    try {
-      const response = await fetch(`/api/admin/accounts/${accountId}`, {
-        method: 'DELETE'
-      });
+    const { error } = await supabase
+      .from('accounts')
+      .delete()
+      .eq('id', accountId);
 
-      if (response.ok) {
-        setAccounts(prev => prev.filter(acc => acc.id !== accountId));
-        alert('Account deleted successfully!');
-      }
-    } catch (error) {
-      // console.error('Error deleting account:', error);
+    if (error) {
       alert('Failed to delete account');
+      return;
     }
+
+    setAccounts(prev => prev.filter(acc => acc.id !== accountId));
+    alert('Account deleted successfully!');
   };
 
   return (
@@ -160,17 +153,17 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="font-semibold">{account.accountName}</h3>
+                  <h3 className="font-semibold">{account.account_name}</h3>
                   <p className="text-sm text-gray-600">
-                    {account.accountNumber} • {account.accountType.toUpperCase()}
+                    {account.account_number} • {account.account_type.toUpperCase()}
                   </p>
                   <p className="text-lg font-bold text-green-600">
                     {account.currency} {parseFloat(account.balance).toLocaleString()}
                   </p>
                   <span className={`text-xs px-2 py-1 rounded ${
-                    account.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    account.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}>
-                    {account.isActive ? 'Active' : 'Inactive'}
+                    {account.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -206,8 +199,8 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
             <CardContent className="space-y-4">
               <div>
                 <Label>Account Type</Label>
-                <Select value={formData.accountType} onValueChange={(value: any) => 
-                  setFormData(prev => ({ ...prev, accountType: value }))
+                <Select value={formData.account_type} onValueChange={(value: any) => 
+                  setFormData(prev => ({ ...prev, account_type: value }))
                 }>
                   <SelectTrigger>
                     <SelectValue />
@@ -223,8 +216,8 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
               <div>
                 <Label>Account Name</Label>
                 <Input
-                  value={formData.accountName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, accountName: e.target.value }))}
+                  value={formData.account_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, account_name: e.target.value }))}
                   placeholder="e.g., Primary Checking"
                 />
               </div>
@@ -263,9 +256,9 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
               <div>
                 <Label>Account Name</Label>
                 <Input
-                  value={editingAccount.accountName}
+                  value={editingAccount.account_name}
                   onChange={(e) => setEditingAccount(prev => prev ? 
-                    { ...prev, accountName: e.target.value } : null
+                    { ...prev, account_name: e.target.value } : null
                   )}
                 />
               </div>
@@ -285,9 +278,9 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
               <div>
                 <Label>Status</Label>
                 <Select 
-                  value={editingAccount.isActive ? 'active' : 'inactive'} 
+                  value={editingAccount.is_active ? 'active' : 'inactive'} 
                   onValueChange={(value) => setEditingAccount(prev => prev ? 
-                    { ...prev, isActive: value === 'active' } : null
+                    { ...prev, is_active: value === 'active' } : null
                   )}
                 >
                   <SelectTrigger>
