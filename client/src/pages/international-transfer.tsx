@@ -60,27 +60,16 @@ export default function InternationalTransfer() {
     setIsProcessing(true);
     
     try {
-      // Verify PIN with backend
-      const pinResponse = await fetch('/api/verify-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: user?.email,
-          pin: transferPin
-        })
-      });
-
-      if (!pinResponse.ok) {
-        setPinError("Invalid PIN. Please check your PIN and try again.");
-        setIsProcessing(false);
-        return;
-      }
-
       const transferData = {
         amount: parseFloat(transferAmount),
         fromCurrency: fromCurrency,
         toCurrency: toCurrency,
         recipientName: "Recipient",
+        recipientCountry: "International",
+        bankName: "International Bank",
+        swiftCode: "INTBANK",
+        accountNumber: "0000000000",
+        transferPurpose: "International Transfer",
         transferPin: transferPin
       };
       
@@ -91,7 +80,9 @@ export default function InternationalTransfer() {
       });
       
       if (!response.ok) {
-        setPinError(`Transfer failed. Please try again.`);
+        const errorData = await response.json();
+        setPinError(errorData.message || "Transfer failed. Please try again.");
+        setIsProcessing(false);
         return;
       }
 

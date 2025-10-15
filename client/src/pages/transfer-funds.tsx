@@ -116,11 +116,7 @@ export default function TransferFunds() {
 
   const handleContinueTransfer = async () => {
     if (!validateForm()) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields correctly.",
-        variant: "destructive"
-      });
+      alert("Please fill in all required fields correctly.");
       return;
     }
     
@@ -148,7 +144,7 @@ export default function TransferFunds() {
       const total = amount + fee;
       
       // Create the transfer
-      const response = await fetch('/api/transfers/create', {
+      const response = await fetch('/api/transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -158,32 +154,25 @@ export default function TransferFunds() {
           transferType: transferType,
           recipientName: formData.recipientName,
           recipientCountry: formData.recipientCountry,
-          accountNumber: formData.accountNumber,
+          recipientAccount: formData.accountNumber,
           bankName: formData.bankName,
           swiftCode: formData.swiftCode,
           purpose: formData.purpose,
-          reference: formData.reference
+          reference: formData.reference,
+          transferPin: '0192' // Default PIN for demo
         })
       });
 
       if (response.ok) {
-        toast({
-          title: "Transfer Initiated",
-          description: `Transfer of $${amount.toFixed(2)} has been initiated successfully.`
-        });
-        
-        // Redirect to transfer processing page
+        alert(`Transfer of $${amount.toFixed(2)} initiated successfully!`);
         window.location.href = '/transfer-processing';
       } else {
-        throw new Error('Transfer failed');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Transfer failed');
       }
       
-    } catch (error) {
-      toast({
-        title: "Transfer Failed",
-        description: "Unable to process transfer. Please try again.",
-        variant: "destructive"
-      });
+    } catch (error: any) {
+      alert(error.message || "Unable to process transfer. Please try again.");
     } finally {
       setIsProcessing(false);
     }

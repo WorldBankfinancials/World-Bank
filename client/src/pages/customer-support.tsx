@@ -1,4 +1,5 @@
 import type { User } from "@shared/schema";
+import { useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,49 @@ export default function CustomerSupport() {
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
+  
+  const [subject, setSubject] = useState('');
+  const [category, setCategory] = useState('');
+  const [priority, setPriority] = useState('');
+  const [description, setDescription] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmitTicket = async () => {
+    if (!subject || !category || !priority || !description) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/support-tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id || 1,
+          subject,
+          category,
+          priority,
+          description,
+          status: 'open'
+        })
+      });
+
+      if (response.ok) {
+        alert('Support ticket submitted successfully! Our team will contact you soon.');
+        setSubject('');
+        setCategory('');
+        setPriority('');
+        setDescription('');
+      } else {
+        throw new Error('Failed to submit ticket');
+      }
+    } catch (error) {
+      alert('Failed to submit support ticket. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -46,12 +90,17 @@ export default function CustomerSupport() {
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium wb-dark">Subject</label>
-                <Input placeholder="Brief description of your issue" className="mt-1" />
+                <Input 
+                  placeholder="Brief description of your issue" 
+                  className="mt-1"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                />
               </div>
               
               <div>
                 <label className="text-sm font-medium wb-dark">Category</label>
-                <Select>
+                <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select issue category" />
                   </SelectTrigger>
@@ -67,7 +116,7 @@ export default function CustomerSupport() {
 
               <div>
                 <label className="text-sm font-medium wb-dark">Priority</label>
-                <Select>
+                <Select value={priority} onValueChange={setPriority}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Select priority level" />
                   </SelectTrigger>
@@ -85,12 +134,18 @@ export default function CustomerSupport() {
                 <Textarea 
                   placeholder="Please provide detailed information about your issue..."
                   className="mt-1 min-h-[120px]"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
 
-              <Button className="bg-wb-blue text-white w-full">
+              <Button 
+                className="bg-wb-blue text-white w-full"
+                onClick={handleSubmitTicket}
+                disabled={isSubmitting}
+              >
                 <Send className="w-4 h-4 mr-2" />
-                Submit Request
+                {isSubmitting ? 'Submitting...' : 'Submit Request'}
               </Button>
             </CardContent>
           </Card>

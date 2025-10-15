@@ -17,6 +17,12 @@ export default function ProfileSettings() {
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
 
+  // For now, we are directly using the `user` object for display.
+  // In a real-world scenario, you might have a separate state for display data
+  // that gets updated after fetching, or derived from the `user` object.
+  const displayUser = user;
+
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -48,9 +54,9 @@ export default function ProfileSettings() {
             <div className="space-y-6">
               {/* Profile Picture Section */}
               <div className="flex items-center space-x-4">
-                {(user as any)?.avatarUrl ? (
+                {(displayUser as any)?.avatarUrl ? (
                   <img
-                    src={(user as any)?.avatarUrl}
+                    src={(displayUser as any)?.avatarUrl}
                     alt="Profile"
                     className="w-20 h-20 rounded-full object-cover border-4 border-blue-200"
                   />
@@ -71,7 +77,7 @@ export default function ProfileSettings() {
                       position: 'relative'
                     }}
                   >
-                    {user?.fullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                    {displayUser?.fullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                     <div 
                       style={{
                         position: 'absolute',
@@ -87,11 +93,11 @@ export default function ProfileSettings() {
                   </div>
                 )}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{user?.fullName || 'User'}</h3>
-                  <p className="text-gray-600">{(user as any)?.profession || 'Customer'}</p>
+                  <h3 className="text-lg font-semibold text-gray-900">{displayUser?.fullName || 'User'}</h3>
+                  <p className="text-gray-600">{(displayUser as any)?.profession || 'Customer'}</p>
                   <Badge className="bg-green-100 text-green-800 mt-1">
                     <Check className="w-3 h-3 mr-1" />
-                    {(user as any)?.isVerified ? t('verified_account') : 'Account'}
+                    {(displayUser as any)?.isVerified ? t('verified_account') : 'Account'}
                   </Badge>
                 </div>
               </div>
@@ -99,27 +105,27 @@ export default function ProfileSettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('full_name')}</label>
-                  <p className="text-gray-900 font-medium">{user?.fullName || 'Not provided'}</p>
+                  <p className="text-gray-900 font-medium">{displayUser?.fullName || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('email_address')}</label>
-                  <p className="text-gray-900">{user?.email || 'Not provided'}</p>
+                  <p className="text-gray-900">{displayUser?.email || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('phone')}</label>
-                  <p className="text-gray-900">{(user as any)?.phone || 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.phone || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('profession')}</label>
-                  <p className="text-gray-900">{(user as any)?.profession || 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.profession || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('nationality')}</label>
-                  <p className="text-gray-900">{(user as any)?.nationality || (user as any)?.country || 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.nationality || (displayUser as any)?.country || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('annual_income')}</label>
-                  <p className="text-gray-900">{(user as any)?.annualIncome || 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.annualIncome || 'Not provided'}</p>
                 </div>
               </div>
 
@@ -148,11 +154,11 @@ export default function ProfileSettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Account Number</label>
-                  <p className="text-gray-900 font-mono">{user?.accountNumber || 'Not assigned'}</p>
+                  <p className="text-gray-900 font-mono">{displayUser?.accountNumber || 'Not assigned'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Account ID</label>
-                  <p className="text-gray-900 font-mono">{(user as any)?.accountId || 'Not assigned'}</p>
+                  <p className="text-gray-900 font-mono">{(displayUser as any)?.accountId || 'Not assigned'}</p>
                 </div>
               </div>
             </div>
@@ -172,19 +178,19 @@ export default function ProfileSettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Address</label>
-                  <p className="text-gray-900">{(user as any)?.address || 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.address || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">City</label>
-                  <p className="text-gray-900">{(user as any)?.city || 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.city || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Country</label>
-                  <p className="text-gray-900">{(user as any)?.country || 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.country || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Postal Code</label>
-                  <p className="text-gray-900">{(user as any)?.postalCode || 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.postalCode || 'Not provided'}</p>
                 </div>
               </div>
             </div>
