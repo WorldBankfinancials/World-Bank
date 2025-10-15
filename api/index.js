@@ -2,9 +2,9 @@
 // Vercel serverless function for World Bank API with real Supabase integration
 const { createClient } = require('@supabase/supabase-js');
 
-// Initialize Supabase client with new credentials
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://icbsxmrmorkdgxtumamu.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYnN4bXJtb3JrZGd4dHVtYW11Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDc1OTEwOSwiZXhwIjoyMDcwMzM1MTA5fQ.flfRMxdMFOQXqfdjGxSUWKSHsimTM0FSy-b2ZZda5HU';
+// Initialize Supabase client - NEVER hardcode service role key
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error('❌ Missing Supabase environment variables');
@@ -464,6 +464,30 @@ module.exports = async function handler(req, res) {
       }));
       
       return res.status(200).json(deposits);
+    }
+
+    // Create support ticket
+    if (apiPath === '/support-tickets' && req.method === 'POST') {
+      const { userId, subject, category, priority, description } = req.body;
+      
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .insert({
+          user_id: userId,
+          subject,
+          category,
+          priority,
+          description,
+          status: 'open'
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        return res.status(500).json({ error: 'Failed to create support ticket' });
+      }
+      
+      return res.status(201).json(data);
     }
 
     // Default response for unimplemented endpoints
