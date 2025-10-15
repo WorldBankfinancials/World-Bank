@@ -4,7 +4,7 @@ import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";
 import RealtimeAlerts from "@/components/RealtimeAlerts";
 import { useUserData, useAccountData } from "@/hooks/useUserData";
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User } from '@shared/schema';
 
 
@@ -63,12 +63,12 @@ function TransferSection() {
 
   const handleTransfer = async () => {
     if (!transferAmount || !recipient) {
-      
+
       return;
     }
     setIsProcessing(true);
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     setTransferAmount("");
     setRecipient("");
     setIsProcessing(false);
@@ -164,10 +164,10 @@ function ReceiveSection() {
 
   const handleRequestMoney = () => {
     if (!requestAmount) {
-      
+
       return;
     }
-    
+
     setRequestAmount("");
   };
 
@@ -193,7 +193,7 @@ function ReceiveSection() {
               Request
             </Button>
           </div>
-          
+
           <div className="flex space-x-2">
             <Button onClick={() => setShowQR(!showQR)} variant="outline" className="flex-1">
               <QrCode className="w-4 h-4 mr-2" />
@@ -281,7 +281,7 @@ function AddMoneySection() {
               onChange={(e) => setAddAmount(e.target.value)}
             />
           </div>
-          
+
           <div className="grid grid-cols-5 gap-2">
             {quickAmounts.map((amount) => (
               <Button
@@ -482,6 +482,7 @@ export default function Dashboard() {
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const [showNotifications] = React.useState(false);
   const [userData, setUserData] = React.useState<any>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -489,16 +490,16 @@ export default function Dashboard() {
         const response = await fetch(`/api/user?t=${Date.now()}`);
         if (response.ok) {
           const data = await response.json();
-          
+
           setUserData(data);
         } else {
-          
+
         }
       } catch (error) {
-        
+
       }
     };
-    
+
     fetchUserData();
   }, []);
 
@@ -518,7 +519,7 @@ export default function Dashboard() {
     icon: any;
     id: number;
   }>>([]);
-  
+
   // Fetch accounts on mount
   React.useEffect(() => {
     const fetchAccounts = async () => {
@@ -526,7 +527,7 @@ export default function Dashboard() {
         const response = await fetch('/api/accounts?t=' + Date.now());
         if (response.ok) {
           const accountsData = await response.json();
-          
+
           if (Array.isArray(accountsData) && accountsData.length > 0) {
             const formattedAccounts = accountsData.map((account: any) => ({
               type: account.accountType ? account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1) : 'Account',
@@ -543,50 +544,47 @@ export default function Dashboard() {
         console.error('Failed to fetch accounts:', error);
       }
     };
-    
+
     fetchAccounts();
   }, []);
 
-  // Real-time subscription for admin changes
+  // Real-time subscription for transactions and admin changes
   React.useEffect(() => {
     import('@/lib/supabase').then(({ supabase }) => {
-      const channel = supabase
-        .channel('account_changes')
+      // Subscribe to transaction changes
+      const transactionChannel = supabase
+        .channel('transaction_realtime_changes')
         .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'bank_accounts' },
+          { event: '*', schema: 'public', table: 'transactions' },
           (payload: any) => {
-            // Refresh accounts when admin makes changes
-            const fetchAccounts = async () => {
-              try {
-                const response = await fetch('/api/accounts?t=' + Date.now());
-                if (response.ok) {
-                  const accountsData = await response.json();
-                  if (Array.isArray(accountsData) && accountsData.length > 0) {
-                    const formattedAccounts = accountsData.map((account: any) => ({
-                      type: account.accountType ? account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1) : 'Account',
-                      number: account.accountNumber ? `****${account.accountNumber.slice(-4)}` : '****0000',
-                      balance: account.balance ? parseFloat(account.balance.toString()) : 0,
-                      icon: account.accountType === 'checking' ? Wallet : 
-                            account.accountType === 'savings' ? Building2 : TrendingUp,
-                      id: account.id || 0
-                    }));
-                    setAccounts(formattedAccounts);
-                  }
-                }
-              } catch (error) {
-                console.error('Failed to refresh accounts:', error);
-              }
-            };
-            fetchAccounts();
+            console.log('Transaction change detected:', payload);
+            // Refetch user data and accounts to update balances
+            queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/transactions/recent'] });
           }
         )
         .subscribe();
-      
+
+      // Subscribe to account balance changes
+      const accountChannel = supabase
+        .channel('account_balance_changes')
+        .on('postgres_changes', 
+          { event: 'UPDATE', schema: 'public', table: 'bank_accounts' },
+          (payload: any) => {
+            console.log('Account balance updated by admin:', payload);
+            queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+          }
+        )
+        .subscribe();
+
       return () => {
-        supabase.removeChannel(channel);
+        supabase.removeChannel(transactionChannel);
+        supabase.removeChannel(accountChannel);
       };
     });
-  }, []);
+  }, [queryClient]);
 
   const profileMenuItems = [
     { 
@@ -658,7 +656,7 @@ export default function Dashboard() {
               <div className="text-xs text-gray-500">International Banking</div>
             </div>
           </div>
-          
+
           {/* Profile Section */}
           <div className="flex items-center space-x-3">
             {/* Profile Icon with Dropdown */}
@@ -746,7 +744,7 @@ export default function Dashboard() {
                   <Badge variant="outline" className="text-xs bg-orange-50 text-orange-600 border-orange-200">{t('authenticated')}</Badge>
                 </div>
               </div>
-              
+
               <Avatar size={80} />
             </div>
           </div>
@@ -788,7 +786,7 @@ export default function Dashboard() {
                 <p className="text-sm font-medium">****1234</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-1">
                 <ArrowUpRight className="w-4 h-4 text-green-300" />
@@ -972,7 +970,7 @@ export default function Dashboard() {
           <CardContent>
             {(() => {
               const [recentTransactions, setRecentTransactions] = React.useState<any[]>([]);
-              
+
               React.useEffect(() => {
                 const fetchRecentTransactions = async () => {
                   try {
@@ -990,7 +988,7 @@ export default function Dashboard() {
                 const interval = setInterval(fetchRecentTransactions, 30000);
                 return () => clearInterval(interval);
               }, []);
-              
+
               return (
                 <div className="space-y-4">
                   {recentTransactions.length > 0 ? (
