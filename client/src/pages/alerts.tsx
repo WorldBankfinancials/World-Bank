@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   Bell, 
   
@@ -27,6 +28,7 @@ import {
 
 
 export default function Alerts() {
+  const { t } = useLanguage();
   const { isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -44,7 +46,7 @@ export default function Alerts() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-600">{t('loading')}</div>
       </div>
     );
   }

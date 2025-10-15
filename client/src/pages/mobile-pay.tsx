@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   Smartphone, 
   QrCode, 
@@ -23,6 +24,7 @@ import {
 
 
 export default function MobilePay() {
+  const { t } = useLanguage();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -30,7 +32,7 @@ export default function MobilePay() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-wb-gray flex items-center justify-center">
-        <div className="text-wb-dark">Loading...</div>
+        <div className="text-wb-dark">{t('loading')}</div>
       </div>
     );
   }
@@ -135,7 +137,7 @@ export default function MobilePay() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentPayments.map((payment, index) => (
+                  {recentPayments && Array.isArray(recentPayments) && recentPayments.length > 0 ? recentPayments.map((payment: any, index: number) => (
                     <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                       <div className="flex items-center space-x-4">
                         <div className="w-12 h-12 bg-wb-blue-light rounded-full flex items-center justify-center">
@@ -151,7 +153,11 @@ export default function MobilePay() {
                         <Badge variant="secondary" className="text-xs">{payment.method}</Badge>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No recent payments available</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

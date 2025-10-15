@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   CreditCard, 
   Banknote, 
@@ -22,7 +23,8 @@ import {
 
 
 export default function AddMoney() {
-  const { data: user, isLoading } = useQuery<User>({
+  const { t } = useLanguage();
+  const { data: user, isLoading} = useQuery<User>({
     queryKey: ['/api/user'],
   });
   
@@ -33,7 +35,7 @@ export default function AddMoney() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-600">{t('loading')}</div>
       </div>
     );
   }
