@@ -20,8 +20,7 @@ export function setupTransferRoutes(app: Express) {
       } = req.body;
 
       // Validate PIN against real user data from Supabase
-      const users = await storage.getUsers();
-      const user = users.find(u => u.id === 1); // TODO: Get actual user ID from session
+      const user = await storage.getUser(1); // TODO: Get actual user ID from session
       if (!user || transferPin !== user.transferPin) {
         return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
       }
@@ -60,8 +59,7 @@ export function setupTransferRoutes(app: Express) {
       } = req.body;
 
       // Validate PIN against real user data from Supabase
-      const users = await storage.getUsers();
-      const user = users.find(u => u.id === 1); // TODO: Get actual user ID from session
+      const user = await storage.getUser(1); // TODO: Get actual user ID from session
       if (!user || transferPin !== user.transferPin) {
         return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
       }
