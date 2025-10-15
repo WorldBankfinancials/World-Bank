@@ -48,48 +48,6 @@ import {
   Smartphone,
   Banknote,
 
-  // Real-time subscription for admin changes
-  React.useEffect(() => {
-    const { supabase } = require('@/lib/supabase');
-    
-    const channel = supabase
-      .channel('account_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'bank_accounts' },
-        (payload: any) => {
-          console.log('Account updated:', payload);
-          // Refresh accounts when admin makes changes
-          const fetchAccounts = async () => {
-            try {
-              const response = await fetch('/api/accounts?t=' + Date.now());
-              if (response.ok) {
-                const accountsData = await response.json();
-                if (Array.isArray(accountsData) && accountsData.length > 0) {
-                  const formattedAccounts = accountsData.map((account: any) => ({
-                    type: account.accountType ? account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1) : 'Account',
-                    number: account.accountNumber ? `****${account.accountNumber.slice(-4)}` : '****0000',
-                    balance: account.balance ? parseFloat(account.balance.toString()) : 0,
-                    icon: account.accountType === 'checking' ? Wallet : 
-                          account.accountType === 'savings' ? Building2 : TrendingUp,
-                    id: account.id || 0
-                  }));
-                  setAccounts(formattedAccounts);
-                }
-              }
-            } catch (error) {
-              console.error('Failed to refresh accounts:', error);
-            }
-          };
-          fetchAccounts();
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
   Filter,
   Trash2
 } from "lucide-react";
@@ -561,13 +519,13 @@ export default function Dashboard() {
     id: number;
   }>>([]);
   
+  // Fetch accounts on mount
   React.useEffect(() => {
     const fetchAccounts = async () => {
       try {
         const response = await fetch('/api/accounts?t=' + Date.now());
         if (response.ok) {
           const accountsData = await response.json();
-          // 
           
           if (Array.isArray(accountsData) && accountsData.length > 0) {
             const formattedAccounts = accountsData.map((account: any) => ({
@@ -579,31 +537,56 @@ export default function Dashboard() {
               id: account.id || 0
             }));
             setAccounts(formattedAccounts);
-          } else {
-            // console.warn('No accounts data received or invalid format');
-            // Set default accounts if API returns empty
-            setAccounts([
-              { type: 'Checking', number: '****9234', balance: 49332.15, icon: Wallet, id: 1 },
-              { type: 'Savings', number: '****5678', balance: 125000.00, icon: Building2, id: 2 },
-              { type: 'Investment', number: '****9012', balance: 348900.25, icon: TrendingUp, id: 3 }
-            ]);
           }
-        } else {
-          // console.error('Failed to fetch accounts - HTTP status:', response.status);
         }
       } catch (error) {
-        // console.error('Failed to fetch accounts:', error);
-        // Set default accounts on error
-        setAccounts([
-          { type: 'Checking', number: '****9234', balance: 49332.15, icon: Wallet, id: 1 },
-          { type: 'Savings', number: '****5678', balance: 125000.00, icon: Building2, id: 2 },
-          { type: 'Investment', number: '****9012', balance: 348900.25, icon: TrendingUp, id: 3 }
-        ]);
+        console.error('Failed to fetch accounts:', error);
       }
     };
     
     fetchAccounts();
-    // Removed auto-refresh to prevent profile reset issues
+  }, []);
+
+  // Real-time subscription for admin changes
+  React.useEffect(() => {
+    const { supabase } = require('@/lib/supabase');
+    
+    const channel = supabase
+      .channel('account_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'bank_accounts' },
+        (payload: any) => {
+          console.log('Account updated:', payload);
+          // Refresh accounts when admin makes changes
+          const fetchAccounts = async () => {
+            try {
+              const response = await fetch('/api/accounts?t=' + Date.now());
+              if (response.ok) {
+                const accountsData = await response.json();
+                if (Array.isArray(accountsData) && accountsData.length > 0) {
+                  const formattedAccounts = accountsData.map((account: any) => ({
+                    type: account.accountType ? account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1) : 'Account',
+                    number: account.accountNumber ? `****${account.accountNumber.slice(-4)}` : '****0000',
+                    balance: account.balance ? parseFloat(account.balance.toString()) : 0,
+                    icon: account.accountType === 'checking' ? Wallet : 
+                          account.accountType === 'savings' ? Building2 : TrendingUp,
+                    id: account.id || 0
+                  }));
+                  setAccounts(formattedAccounts);
+                }
+              }
+            } catch (error) {
+              console.error('Failed to refresh accounts:', error);
+            }
+          };
+          fetchAccounts();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const profileMenuItems = [
@@ -679,10 +662,6 @@ export default function Dashboard() {
           
           {/* Profile Section */}
           <div className="flex items-center space-x-3">
-            {/* Real-time Alerts */}
-            <RealtimeAlerts />
-
-
             {/* Profile Icon with Dropdown */}
             <div className="relative">
               <button
