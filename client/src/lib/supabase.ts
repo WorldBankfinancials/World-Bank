@@ -1,10 +1,9 @@
-
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://icbsxmrmorkdgxtumamu.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYnN4bXJtb3JrZGd4dHVtYW11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NTkxMDksImV4cCI6MjA3MDMzNTEwOX0.GDBjj7flp-6sLjfHh3mil31zPq_97Tvfw47Oz5KxKqk';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -18,7 +17,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-supabase.auth.onAuthStateChange((event, session) => {
+supabaseClient.auth.onAuthStateChange((event, session) => {
   console.log('Supabase auth event:', event, session?.user?.email);
   if (event === 'SIGNED_IN' && session) {
     console.log('✅ Successfully signed in:', session.user.email);
@@ -32,8 +31,8 @@ const testConnection = async () => {
   try {
     console.log('🔍 Testing Supabase connection...');
     console.log('📍 Project URL:', supabaseUrl);
-    
-    await supabase.auth.getSession();
+
+    await supabaseClient.auth.getSession();
     console.log('✅ Supabase connection restored successfully');
     console.log('🔐 Auth system ready for real authentication');
     return true;
@@ -44,3 +43,9 @@ const testConnection = async () => {
 };
 
 testConnection();
+
+// Export the singleton client
+export const supabase = supabaseClient;
+
+// Also export as default for dynamic imports
+export default supabaseClient;

@@ -160,49 +160,32 @@ export default function Login() {
           </div>
 
           {/* Professional World Bank Header */}
-          <div className="text-center mb-10">
-            <div className="flex justify-center mb-6">
-              <div className="relative p-4 bg-white rounded-full shadow-lg">
-                <BankLogo className="w-24 h-24" />
-                <div className="absolute top-0 right-0 w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-800 rounded-full flex items-center justify-center shadow-md">
-                  <Globe className="w-4 h-4 text-white" />
-                </div>
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-5">
+              <div className="relative">
+                <BankLogo className="w-16 h-16" />
               </div>
             </div>
-            <div className="space-y-3">
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-800 to-blue-600 bg-clip-text text-transparent tracking-tight">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
                 WORLD BANK
               </h1>
-              <p className="text-gray-600 text-xl font-semibold">
-                International Banking Solutions
+              <p className="text-gray-600 text-sm">
+                Secure Banking Portal
               </p>
-              <div className="flex items-center justify-center space-x-4 text-sm">
-                <div className="flex items-center space-x-1 text-green-600">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="font-medium">Online Banking</span>
-                </div>
-                <span className="text-gray-300">|</span>
-                <div className="flex items-center space-x-1 text-gray-600">
-                  <Shield className="w-4 h-4" />
-                  <span className="font-medium">256-bit SSL Encrypted</span>
-                </div>
-              </div>
             </div>
           </div>
 
           {/* Professional Login Card */}
           <Card className="wb-login-card shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
-            <CardHeader className="space-y-4 pb-6 pt-10">
+            <CardHeader className="space-y-3 pb-6 pt-8">
               <div className="text-center">
-                <CardTitle className="text-3xl font-bold text-gray-900 mb-3">
-                  Secure Sign In
+                <CardTitle className="text-2xl font-semibold text-gray-900 mb-2">
+                  Sign In
                 </CardTitle>
-                <p className="text-gray-600 text-base">
-                  Access your private banking portal
+                <p className="text-gray-600 text-sm">
+                  Access your account
                 </p>
-                <div className="flex justify-center mt-4">
-                  <div className="w-20 h-1 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></div>
-                </div>
               </div>
             </CardHeader>
           
@@ -363,48 +346,25 @@ export default function Login() {
           </Card>
 
           {/* Professional Footer */}
-          <div className="text-center mt-10 space-y-5">
-            <div className="flex justify-center space-x-6 text-gray-600 text-sm font-medium">
-              <button 
-                onClick={() => window.open('https://worldbank.org/security', '_blank')}
-                className="hover:text-blue-600 transition-colors flex items-center space-x-1"
-              >
-                <Shield className="w-4 h-4" />
-                <span>Security</span>
-              </button>
-              <span className="text-gray-300">|</span>
-              <button 
-                onClick={() => window.open('https://worldbank.org/privacy', '_blank')}
-                className="hover:text-blue-600 transition-colors"
-              >
-                Privacy
-              </button>
-              <span className="text-gray-300">|</span>
+          <div className="text-center mt-8 space-y-4">
+            <div className="flex justify-center space-x-6 text-gray-500 text-sm">
               <button 
                 onClick={() => setShowLiveChat(true)}
                 className="hover:text-blue-600 transition-colors"
               >
                 Support
               </button>
-            </div>
-            
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 space-y-2">
-              <div className="flex items-center justify-center space-x-2 text-xs text-gray-600">
-                <Shield className="w-3 h-3 text-blue-600" />
-                <span className="font-medium">Regulated by International Banking Authorities</span>
-              </div>
-              <div className="flex items-center justify-center space-x-3 text-xs text-gray-500">
-                <span>FDIC Insured</span>
-                <span>•</span>
-                <span>PCI DSS Compliant</span>
-                <span>•</span>
-                <span>ISO 27001 Certified</span>
-              </div>
+              <span className="text-gray-300">|</span>
+              <button 
+                onClick={() => window.open('https://worldbank.org/security', '_blank')}
+                className="hover:text-blue-600 transition-colors"
+              >
+                Security
+              </button>
             </div>
 
-            <div className="text-gray-500 text-xs space-y-1">
-              <p className="font-medium">© 2025 World Bank Group. All rights reserved.</p>
-              <p className="text-gray-400">Member of Federal Reserve System • Equal Housing Lender</p>
+            <div className="text-gray-500 text-xs">
+              <p>© 2025 World Bank Group. All rights reserved.</p>
             </div>
           </div>
         </div>

@@ -549,44 +549,43 @@ export default function Dashboard() {
 
   // Real-time subscription for admin changes
   React.useEffect(() => {
-    const { supabase } = require('@/lib/supabase');
-    
-    const channel = supabase
-      .channel('account_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'bank_accounts' },
-        (payload: any) => {
-          console.log('Account updated:', payload);
-          // Refresh accounts when admin makes changes
-          const fetchAccounts = async () => {
-            try {
-              const response = await fetch('/api/accounts?t=' + Date.now());
-              if (response.ok) {
-                const accountsData = await response.json();
-                if (Array.isArray(accountsData) && accountsData.length > 0) {
-                  const formattedAccounts = accountsData.map((account: any) => ({
-                    type: account.accountType ? account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1) : 'Account',
-                    number: account.accountNumber ? `****${account.accountNumber.slice(-4)}` : '****0000',
-                    balance: account.balance ? parseFloat(account.balance.toString()) : 0,
-                    icon: account.accountType === 'checking' ? Wallet : 
-                          account.accountType === 'savings' ? Building2 : TrendingUp,
-                    id: account.id || 0
-                  }));
-                  setAccounts(formattedAccounts);
+    import('@/lib/supabase').then(({ supabase }) => {
+      const channel = supabase
+        .channel('account_changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'bank_accounts' },
+          (payload: any) => {
+            // Refresh accounts when admin makes changes
+            const fetchAccounts = async () => {
+              try {
+                const response = await fetch('/api/accounts?t=' + Date.now());
+                if (response.ok) {
+                  const accountsData = await response.json();
+                  if (Array.isArray(accountsData) && accountsData.length > 0) {
+                    const formattedAccounts = accountsData.map((account: any) => ({
+                      type: account.accountType ? account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1) : 'Account',
+                      number: account.accountNumber ? `****${account.accountNumber.slice(-4)}` : '****0000',
+                      balance: account.balance ? parseFloat(account.balance.toString()) : 0,
+                      icon: account.accountType === 'checking' ? Wallet : 
+                            account.accountType === 'savings' ? Building2 : TrendingUp,
+                      id: account.id || 0
+                    }));
+                    setAccounts(formattedAccounts);
+                  }
                 }
+              } catch (error) {
+                console.error('Failed to refresh accounts:', error);
               }
-            } catch (error) {
-              console.error('Failed to refresh accounts:', error);
-            }
-          };
-          fetchAccounts();
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
+            };
+            fetchAccounts();
+          }
+        )
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    });
   }, []);
 
   const profileMenuItems = [
