@@ -1,9 +1,10 @@
+
 // Vercel serverless function for World Bank API with real Supabase integration
 const { createClient } = require('@supabase/supabase-js');
 
-// Initialize Supabase client
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Initialize Supabase client with new credentials
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://icbsxmrmorkdgxtumamu.supabase.co';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYnN4bXJtb3JrZGd4dHVtYW11Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDc1OTEwOSwiZXhwIjoyMDcwMzM1MTA5fQ.flfRMxdMFOQXqfdjGxSUWKSHsimTM0FSy-b2ZZda5HU';
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error('❌ Missing Supabase environment variables');
@@ -113,7 +114,7 @@ module.exports = async function handler(req, res) {
       const newUser = {
         supabase_user_id: supabaseUserId,
         username: email?.split('@')[0] || 'user',
-        password: 'supabase_auth',
+        password_hash: 'supabase_auth',
         full_name: 'Wei Liu',
         email: email || 'vaa33053@gmail.com',
         phone: '+1 (234) 567-8900',
@@ -173,7 +174,7 @@ module.exports = async function handler(req, res) {
       const user = {
         id: data.id,
         username: data.username,
-        password: data.password,
+        password: data.password_hash,
         fullName: data.full_name,
         email: data.email,
         phone: data.phone,
@@ -439,6 +440,30 @@ module.exports = async function handler(req, res) {
       }
       
       return res.status(200).json({ success: true, card: data });
+    }
+
+    // Get recent deposits for add-money page
+    if (apiPath === '/recent-deposits' && req.method === 'GET') {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('type', 'credit')
+        .eq('category', 'deposit')
+        .order('date', { ascending: false })
+        .limit(5);
+      
+      if (error) {
+        return res.status(500).json({ error: 'Failed to fetch recent deposits' });
+      }
+      
+      const deposits = (data || []).map(tx => ({
+        method: tx.description || 'Bank Transfer',
+        amount: `$${parseFloat(tx.amount).toLocaleString()}`,
+        time: new Date(tx.date).toLocaleString(),
+        status: tx.status === 'completed' ? 'Completed' : 'Pending'
+      }));
+      
+      return res.status(200).json(deposits);
     }
 
     // Default response for unimplemented endpoints
