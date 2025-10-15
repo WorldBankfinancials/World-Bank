@@ -1,3 +1,178 @@
+
+import React, { useState, useEffect } from 'react';
+import { RefreshCw, TrendingUp, TrendingDown, ArrowUpDown, Calculator, Clock, Globe } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+
+export default function Exchange() {
+  const { userProfile } = useAuth();
+  const { t } = useLanguage();
+  const [fromCurrency, setFromCurrency] = useState('USD');
+  const [toCurrency, setToCurrency] = useState('EUR');
+  const [amount, setAmount] = useState('1000');
+  const [convertedAmount, setConvertedAmount] = useState(0);
+
+  const exchangeRates = {
+    USD: 1.0,
+    EUR: 0.92,
+    GBP: 0.79,
+    JPY: 149.50,
+    CNY: 7.23,
+    CHF: 0.91,
+    CAD: 1.36,
+    AUD: 1.52
+  };
+
+  useEffect(() => {
+    const fromRate = exchangeRates[fromCurrency] || 1;
+    const toRate = exchangeRates[toCurrency] || 1;
+    const converted = (parseFloat(amount) / fromRate) * toRate;
+    setConvertedAmount(converted);
+  }, [fromCurrency, toCurrency, amount]);
+
+  const currencies = [
+    { code: 'USD', name: 'US Dollar', flag: '🇺🇸' },
+    { code: 'EUR', name: 'Euro', flag: '🇪🇺' },
+    { code: 'GBP', name: 'British Pound', flag: '🇬🇧' },
+    { code: 'JPY', name: 'Japanese Yen', flag: '🇯🇵' },
+    { code: 'CHF', name: 'Swiss Franc', flag: '🇨🇭' },
+    { code: 'CAD', name: 'Canadian Dollar', flag: '🇨🇦' },
+    { code: 'AUD', name: 'Australian Dollar', flag: '🇦🇺' },
+    { code: 'CNY', name: 'Chinese Yuan', flag: '🇨🇳' }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header user={userProfile} />
+      
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Currency Exchange</h1>
+          <p className="text-xl text-gray-600">Real-time exchange rates with competitive pricing</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Calculator className="w-5 h-5 text-blue-600" />
+                  <span>Currency Calculator</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <Label>You Send</Label>
+                  <div className="flex space-x-2 mt-2">
+                    <Input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      className="flex-1 text-xl"
+                    />
+                    <Select value={fromCurrency} onValueChange={setFromCurrency}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currencies.map(c => (
+                          <SelectItem key={c.code} value={c.code}>
+                            {c.flag} {c.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <Button variant="outline" size="sm" className="rounded-full">
+                    <ArrowUpDown className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div>
+                  <Label>You Get</Label>
+                  <div className="flex space-x-2 mt-2">
+                    <Input
+                      type="text"
+                      value={convertedAmount.toFixed(2)}
+                      disabled
+                      className="flex-1 text-xl bg-gray-50"
+                    />
+                    <Select value={toCurrency} onValueChange={setToCurrency}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {currencies.map(c => (
+                          <SelectItem key={c.code} value={c.code}>
+                            {c.flag} {c.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-sm text-blue-800 mb-2">
+                    1 {fromCurrency} = {(convertedAmount / parseFloat(amount || '1')).toFixed(4)} {toCurrency}
+                  </div>
+                  <div className="flex items-center text-xs text-gray-600">
+                    <Clock className="w-3 h-3 mr-1" />
+                    Live rates updated every minute
+                  </div>
+                </div>
+
+                <Button className="w-full bg-blue-600 text-white">
+                  Exchange Now
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Globe className="w-5 h-5 text-green-600" />
+                  <span>Live Rates</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {Object.entries(exchangeRates).filter(([code]) => code !== 'USD').map(([code, rate]) => (
+                    <div key={code} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <div className="font-medium">USD/{code}</div>
+                        <div className="text-sm text-gray-500">{currencies.find(c => c.code === code)?.name}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">{rate.toFixed(4)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      <Footer />
+    </div>
+  );
+}
+
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, TrendingUp, TrendingDown, ArrowUpDown, Calculator, Clock, Globe } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

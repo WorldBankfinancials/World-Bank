@@ -32,7 +32,7 @@ const translations = {
     'security_center': 'Security Center',
     'new_customer': 'New customer?',
     'create_account': 'Create Account',
-    
+
     // Dashboard
     'dashboard': 'Dashboard',
     'dashboard.title': 'Dashboard',
@@ -55,7 +55,7 @@ const translations = {
     'pay_bill': 'Pay Bill',
     'recent_activity': 'Recent Activity',
     'view_all': 'View All',
-    
+
     // Transfer
     'transfer': 'Transfer',
     'transfer.title': 'Transfer Money',
@@ -105,7 +105,7 @@ const translations = {
     'completed': 'Successfully Completed',
     'pending': 'Awaiting Approval',
     'failed': 'Transaction Declined',
-    
+
     // Navigation
     'nav.home': 'Home',
     'nav.transfer': 'Transfer',
@@ -117,7 +117,7 @@ const translations = {
     'profile': 'Profile',
     'support': 'Support',
     'history': 'History',
-    
+
     // Cards
     'my_cards': 'My Cards',
     'manage_cards': 'Manage your credit and debit cards',
@@ -127,7 +127,7 @@ const translations = {
     'unlock_card': 'Unlock Card',
     'view_details': 'View Details',
     'manage': 'Manage',
-    
+
     // Common
     'loading': 'Loading...',
     'common.loading': 'Loading...',
@@ -157,7 +157,7 @@ const translations = {
     'success': 'Success',
     'warning': 'Warning',
     'info': 'Information',
-    
+
     // International Banking
     'international_banking': 'International Banking',
     'international_transfers': 'International Transfers',
@@ -176,7 +176,7 @@ const translations = {
     'know_your_customer': 'Know Your Customer (KYC)',
     'sanctions_screening': 'Sanctions Screening',
     'regulatory_reporting': 'Regulatory Reporting',
-    
+
     // Missing translations
     'verified_account': 'Verified Account',
     'online': 'Online',
@@ -217,7 +217,96 @@ const translations = {
     'contact_support': 'Contact Support',
     'full_name': 'Full Name',
     'nationality': 'Nationality',
-    'annual_income': 'Annual Income'
+    'annual_income': 'Annual Income',
+
+    // Verification Center
+    'identity_verification': 'Identity Verification',
+    'government_issued_id_verification': 'Government-issued ID verification',
+    'submitted_documents': 'Submitted Documents',
+    'last_updated': 'Last Updated',
+    'email_verification': 'Email Verification',
+    'confirm_email_address': 'Confirm your email address',
+    'phone_verification': 'Phone Verification',
+    'verify_mobile_number': 'Verify your mobile number',
+    'address_verification': 'Address Verification',
+    'proof_of_residence_verification': 'Proof of residence verification',
+    'income_verification': 'Income Verification',
+    'employment_and_income_proof': 'Employment and income proof',
+    'enhanced_due_diligence': 'Enhanced Due Diligence',
+    'additional_verification_high_value': 'Additional verification for high-value transactions',
+    'biometric_verification': 'Biometric Verification',
+    'facial_recognition_fingerprint': 'Facial recognition and fingerprint',
+    'tax_compliance': 'Tax Compliance',
+    'tax_residency_status': 'Tax residency status verification',
+    'under_review': 'Under Review',
+    'upload_documents': 'Upload Documents',
+    'regulatory_compliance': 'Regulatory Compliance',
+    'verification_compliance_description': 'World Bank adheres to international banking regulations and compliance standards',
+    'know_your_customer_kyc': 'Know Your Customer (KYC)',
+    'anti_money_laundering_aml': 'Anti-Money Laundering (AML)',
+    'combating_financing_terrorism_cft': 'Combating the Financing of Terrorism (CFT)',
+    'international_banking_regulations': 'International Banking Regulations',
+    'manage_account_verification_status': 'Manage your account verification status and documents',
+    'account_security_level': 'Account Security Level',
+    'fully_verified': 'Fully Verified',
+    'total_verifications': 'Total Verifications',
+    'verified': 'Verified',
+    'awaiting_approval': 'Awaiting Approval',
+    'action_required': 'Action Required',
+    'all_verifications': 'All Verifications',
+
+    // Investment
+    'investment_portfolio': 'Investment Portfolio',
+    'manage_investments': 'Manage your investments and track performance',
+    'invest_now': 'Invest Now',
+    'total_portfolio_value': 'Total Portfolio Value',
+    'last_30_days': 'Last 30 Days',
+    'market_overview': 'Market Overview',
+    'stocks': 'Stocks',
+    'bonds': 'Bonds',
+    'crypto': 'Cryptocurrency',
+    'forex': 'Forex',
+    'investment_actions': 'Investment Actions',
+    'buy_stocks': 'Buy Stocks',
+    'portfolio_review': 'Portfolio Review',
+    'market_analysis': 'Market Analysis',
+    'rebalance': 'Rebalance',
+
+    // Support
+    'help_center': 'Help Center',
+    'contact_us': 'Contact Us',
+    'privacy_policy': 'Privacy Policy',
+    'copyright': '© 2025 World Bank',
+    'terms_of_service': 'Terms of Service',
+    'connect': 'Connect With Us',
+    'secure_trusted_global': 'Secure • Trusted • Global',
+    'banking_services': 'Banking Services',
+    'personal_banking': 'Personal Banking',
+    'business_banking': 'Business Banking',
+    'investment_services': 'Investment Services',
+    'loans_credit': 'Loans & Credit',
+    'submit_support_request': 'Submit Support Request',
+    'subject': 'Subject',
+    'category': 'Category',
+    'select_issue_category': 'Select issue category',
+    'priority': 'Priority',
+    'select_priority_level': 'Select priority level',
+    'description': 'Description',
+    'submit_request': 'Submit Request',
+    'contact_information': 'Contact Information',
+    'phone_support': 'Phone Support',
+    'email_support': 'Email Support',
+    'response_within_24_hours': 'Response within 24 hours',
+    'emergency_services': 'Emergency Services',
+    'report_lost_stolen_card': 'Report Lost/Stolen Card',
+    'dispute_transaction': 'Dispute Transaction',
+    'freeze_account': 'Freeze Account',
+    'submit_support_ticket': 'Submit Support Ticket',
+    'exchange_page_not_found': 'Exchange Page Not Found',
+    'the_exchange_page_is_currently_unavailable': 'The exchange page is currently unavailable. Please try again later.',
+    'go_to_dashboard': 'Go to Dashboard',
+    'support_ticket_submission_failed': 'Support Ticket Submission Failed',
+    'your_support_ticket_could_not_be_submitted': 'Your support ticket could not be submitted. Please try again or contact us directly.'
   },
   zh: {
     // Login & Auth
@@ -242,7 +331,7 @@ const translations = {
     'security_center': '安全中心',
     'new_customer': '新客户？',
     'create_account': '创建账户',
-    
+
     // Dashboard
     'dashboard': '仪表板',
     'dashboard.title': '仪表板',
@@ -263,7 +352,7 @@ const translations = {
     'pay_bill': '缴费',
     'recent_activity': '最近活动',
     'view_all': '查看全部',
-    
+
     // Transfer
     'transfer': '转账',
     'transfer.title': '转账',
@@ -281,7 +370,7 @@ const translations = {
     'completed': '已完成',
     'pending': '待处理',
     'failed': '失败',
-    
+
     // Navigation
     'nav.home': '首页',
     'nav.transfer': '转账',
@@ -293,7 +382,7 @@ const translations = {
     'profile': '个人资料',
     'support': '客服',
     'history': '历史记录',
-    
+
     // Cards
     'my_cards': '我的卡片',
     'manage_cards': '管理您的信用卡和借记卡',
@@ -303,7 +392,7 @@ const translations = {
     'unlock_card': '解锁卡片',
     'view_details': '查看详情',
     'manage': '管理',
-    
+
     // Common
     'loading': '加载中...',
     'common.loading': '加载中...',
@@ -329,7 +418,7 @@ const translations = {
     'success': '成功',
     'warning': '警告',
     'info': '信息',
-    
+
     // International Banking (Chinese)
     'international_banking': '国际银行',
     'international_transfers': '国际转账',
@@ -348,8 +437,8 @@ const translations = {
     'know_your_customer': '了解您的客户 (KYC)',
     'sanctions_screening': '制裁筛查',
     'regulatory_reporting': '监管报告',
-    
-    // Missing translations Chinese
+
+    // Missing translations
     'verified_account': '已验证账户',
     'online': '在线',
     'authenticated': '已认证',
@@ -388,7 +477,96 @@ const translations = {
     'contact_support': '联系支持',
     'full_name': '全名',
     'nationality': '国籍',
-    'annual_income': '年收入'
+    'annual_income': '年收入',
+
+    // Verification Center (Chinese)
+    'identity_verification': '身份验证',
+    'government_issued_id_verification': '政府签发身份证件验证',
+    'submitted_documents': '已提交文件',
+    'last_updated': '最后更新',
+    'email_verification': '邮箱验证',
+    'confirm_email_address': '确认您的邮箱地址',
+    'phone_verification': '手机验证',
+    'verify_mobile_number': '验证您的手机号码',
+    'address_verification': '地址验证',
+    'proof_of_residence_verification': '居住证明验证',
+    'income_verification': '收入验证',
+    'employment_and_income_proof': '就业和收入证明',
+    'enhanced_due_diligence': '增强尽职调查',
+    'additional_verification_high_value': '高价值交易的额外验证',
+    'biometric_verification': '生物识别验证',
+    'facial_recognition_fingerprint': '面部识别和指纹',
+    'tax_compliance': '税务合规',
+    'tax_residency_status': '税务居民身份验证',
+    'under_review': '审核中',
+    'upload_documents': '上传文件',
+    'regulatory_compliance': '监管合规',
+    'verification_compliance_description': '世界银行遵守国际银行法规和合规标准',
+    'know_your_customer_kyc': '了解您的客户 (KYC)',
+    'anti_money_laundering_aml': '反洗钱 (AML)',
+    'combating_financing_terrorism_cft': '反恐怖主义融资 (CFT)',
+    'international_banking_regulations': '国际银行法规',
+    'manage_account_verification_status': '管理您的账户验证状态和文件',
+    'account_security_level': '账户安全级别',
+    'fully_verified': '完全验证',
+    'total_verifications': '总验证次数',
+    'verified': '已验证',
+    'awaiting_approval': '待批准',
+    'action_required': '需要操作',
+    'all_verifications': '所有验证',
+
+    // Investment (Chinese)
+    'investment_portfolio': '投资组合',
+    'manage_investments': '管理您的投资并跟踪绩效',
+    'invest_now': '立即投资',
+    'total_portfolio_value': '投资组合总价值',
+    'last_30_days': '过去30天',
+    'market_overview': '市场概览',
+    'stocks': '股票',
+    'bonds': '债券',
+    'crypto': '加密货币',
+    'forex': '外汇',
+    'investment_actions': '投资操作',
+    'buy_stocks': '购买股票',
+    'portfolio_review': '投资组合回顾',
+    'market_analysis': '市场分析',
+    'rebalance': '重新平衡',
+
+    // Support (Chinese)
+    'help_center': '帮助中心',
+    'contact_us': '联系我们',
+    'privacy_policy': '隐私政策',
+    'copyright': '© 2025 世界银行',
+    'terms_of_service': '服务条款',
+    'connect': '与我们联系',
+    'secure_trusted_global': '安全 • 可信 • 全球',
+    'banking_services': '银行服务',
+    'personal_banking': '个人银行业务',
+    'business_banking': '企业银行业务',
+    'investment_services': '投资服务',
+    'loans_credit': '贷款与信贷',
+    'submit_support_request': '提交支持请求',
+    'subject': '主题',
+    'category': '类别',
+    'select_issue_category': '选择问题类别',
+    'priority': '优先级',
+    'select_priority_level': '选择优先级级别',
+    'description': '描述',
+    'submit_request': '提交请求',
+    'contact_information': '联系信息',
+    'phone_support': '电话支持',
+    'email_support': '邮件支持',
+    'response_within_24_hours': '24小时内回复',
+    'emergency_services': '紧急服务',
+    'report_lost_stolen_card': '报告卡片丢失/被盗',
+    'dispute_transaction': '交易争议',
+    'freeze_account': '冻结账户',
+    'submit_support_ticket': '提交支持工单',
+    'exchange_page_not_found': '未找到兑换页面',
+    'the_exchange_page_is_currently_unavailable': '兑换页面目前不可用。请稍后再试。',
+    'go_to_dashboard': '转到仪表板',
+    'support_ticket_submission_failed': '支持工单提交失败',
+    'your_support_ticket_could_not_be_submitted': '您的支持工单未能提交。请重试或直接联系我们。'
   }
 };
 
@@ -412,7 +590,7 @@ function detectUserLanguage(): Language {
   // Auto-detect based on browser/timezone/IP
   const browserLang = navigator.language.toLowerCase();
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  
+
   // China regions and Chinese language detection
   if (browserLang.includes('zh') || 
       timezone.includes('Shanghai') || 
@@ -424,23 +602,23 @@ function detectUserLanguage(): Language {
       timezone.includes('Asia/Hong_Kong')) {
     return 'zh';
   }
-  
+
   // Default to English for other regions
   return 'en';
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>(() => detectUserLanguage());
-  
+
   const changeLanguage = (newLang: Language) => {
     setLanguage(newLang);
     localStorage.setItem('worldbank_language', newLang);
   };
-  
+
   const t = (key: string): string => {
     return (translations[language] as any)[key] || key;
   };
-  
+
   return (
     <LanguageContext.Provider value={{ language, setLanguage: changeLanguage, t }}>
       {children}

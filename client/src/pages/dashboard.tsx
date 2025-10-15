@@ -733,10 +733,10 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">{t('welcome')}, {userProfile?.fullName || t('loading')}</h1>
-                <p className="text-sm text-gray-600">{t('account_number')}: {userProfile?.accountNumber || t('loading')}</p>
-                <p className="text-sm text-gray-600">{t('account_id')}: {(userProfile as any)?.accountId || t('loading')}</p>
-                <p className="text-sm text-gray-600">{userProfile?.profession || t('loading')}</p>
+                <h1 className="text-lg font-semibold text-gray-900">Welcome, {userProfile?.fullName || 'Valued Customer'}</h1>
+                <p className="text-sm text-gray-600">Account Number: {userProfile?.accountNumber || '••••-••••-••••-••••'}</p>
+                <p className="text-sm text-gray-600">Account ID: {(userProfile as any)?.accountId || 'WB-••••-••••'}</p>
+                <p className="text-sm text-gray-600">{userProfile?.profession || 'Account Holder'}</p>
                 <div className="flex items-center space-x-2 mt-1">
                   <Badge variant="default" className="text-xs bg-green-100 text-green-800 flex items-center space-x-1">
                     <Check className="w-3 h-3" />

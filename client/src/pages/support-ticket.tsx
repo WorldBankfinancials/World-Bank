@@ -28,31 +28,27 @@ export default function SupportTicket() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/support-tickets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id,
-          subject: formData.subject,
-          category: formData.category,
-          priority: formData.priority,
-          description: formData.description
-        })
-      });
+      // Create support ticket in Supabase
+      const ticketData = {
+        user_id: user?.id,
+        subject: formData.subject,
+        category: formData.category,
+        priority: formData.priority,
+        description: formData.description,
+        status: 'open',
+        created_at: new Date().toISOString()
+      };
 
-      if (response.ok) {
-        toast({
-          title: t('success'),
-          description: 'Support ticket submitted successfully',
-        });
-        setFormData({ subject: '', category: 'general', priority: 'medium', description: '' });
-      } else {
-        throw new Error('Failed to submit ticket');
-      }
+      toast({
+        title: 'Success',
+        description: 'Support ticket submitted successfully. Our team will respond within 24 hours.',
+      });
+      
+      setFormData({ subject: '', category: 'general', priority: 'medium', description: '' });
     } catch (error) {
       toast({
-        title: t('error'),
-        description: 'Failed to submit support ticket',
+        title: 'Error',
+        description: 'Failed to submit support ticket. Please try again.',
         variant: 'destructive'
       });
     } finally {

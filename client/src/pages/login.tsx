@@ -161,17 +161,17 @@ export default function Login() {
 
           {/* Professional World Bank Header */}
           <div className="text-center mb-8">
-            <div className="flex justify-center mb-5">
+            <div className="flex justify-center mb-6">
               <div className="relative">
-                <BankLogo className="w-16 h-16" />
+                <BankLogo className="w-20 h-20" />
               </div>
             </div>
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            <div className="space-y-3">
+              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
                 WORLD BANK
               </h1>
-              <p className="text-gray-600 text-sm">
-                Secure Banking Portal
+              <p className="text-gray-600 text-base">
+                International Digital Banking
               </p>
             </div>
           </div>
