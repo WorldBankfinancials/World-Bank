@@ -159,11 +159,13 @@ export default function TransactionHistory() {
   };
 
   const formatAmount = (amount: string | number, type: string) => {
-    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : (amount || 0);
     const formatted = new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
-    }).format(numAmount || 0);
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(Math.abs(numAmount));
     return type === 'credit' ? `+${formatted}` : `-${formatted}`;
   };
 

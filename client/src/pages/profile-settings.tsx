@@ -71,7 +71,7 @@ export default function ProfileSettings() {
                       position: 'relative'
                     }}
                   >
-                    LW
+                    {user?.fullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                     <div 
                       style={{
                         position: 'absolute',
@@ -87,38 +87,38 @@ export default function ProfileSettings() {
                   </div>
                 )}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{user?.fullName}</h3>
-                  <p className="text-gray-600">{(user as any)?.profession}</p>
+                  <h3 className="text-lg font-semibold text-gray-900">{user?.fullName || 'User'}</h3>
+                  <p className="text-gray-600">{(user as any)?.profession || 'Customer'}</p>
                   <Badge className="bg-green-100 text-green-800 mt-1">
                     <Check className="w-3 h-3 mr-1" />
-                    Verified Account
+                    {(user as any)?.isVerified ? t('verified_account') : 'Account'}
                   </Badge>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Full Name</label>
+                  <label className="text-sm font-medium text-gray-500">{t('full_name')}</label>
                   <p className="text-gray-900 font-medium">{user?.fullName || 'Not provided'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Email</label>
+                  <label className="text-sm font-medium text-gray-500">{t('email_address')}</label>
                   <p className="text-gray-900">{user?.email || 'Not provided'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Phone</label>
+                  <label className="text-sm font-medium text-gray-500">{t('phone')}</label>
                   <p className="text-gray-900">{(user as any)?.phone || 'Not provided'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Profession</label>
+                  <label className="text-sm font-medium text-gray-500">{t('profession')}</label>
                   <p className="text-gray-900">{(user as any)?.profession || 'Not provided'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Nationality</label>
-                  <p className="text-gray-900">{(user as any)?.country || 'Not provided'}</p>
+                  <label className="text-sm font-medium text-gray-500">{t('nationality')}</label>
+                  <p className="text-gray-900">{(user as any)?.nationality || (user as any)?.country || 'Not provided'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Annual Income</label>
+                  <label className="text-sm font-medium text-gray-500">{t('annual_income')}</label>
                   <p className="text-gray-900">{(user as any)?.annualIncome || 'Not provided'}</p>
                 </div>
               </div>

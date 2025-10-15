@@ -56,44 +56,46 @@ export default function InternationalTransfer() {
       return;
     }
 
-    if (transferPin !== "0192") {
-      setPinError("Invalid PIN. Use PIN: 0192");
-      return;
-    }
-
     setPinError("");
     setIsProcessing(true);
     
     try {
+      // Verify PIN with backend
+      const pinResponse = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: user?.email,
+          pin: transferPin
+        })
+      });
+
+      if (!pinResponse.ok) {
+        setPinError("Invalid PIN. Please check your PIN and try again.");
+        setIsProcessing(false);
+        return;
+      }
+
       const transferData = {
         amount: parseFloat(transferAmount),
-        recipientName: "John Smith",
-        recipientCountry: "China",
-        bankName: "Bank of China",
-        swiftCode: "BKCHCNBJ",
-        accountNumber: "1234567890",
-        transferPurpose: "Family Support",
+        fromCurrency: fromCurrency,
+        toCurrency: toCurrency,
+        recipientName: "Recipient",
         transferPin: transferPin
       };
       
-      // Sending transfer data
-
       const response = await fetch('/api/international-transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(transferData)
       });
-
-      // Processing response
       
       if (!response.ok) {
-        // HTTP Error handling
-        setPinError(`Transfer failed. Server error: ${response.status}`);
+        setPinError(`Transfer failed. Please try again.`);
         return;
       }
 
       const result = await response.json();
-      // Transfer completed
       
       setShowPinModal(false);
       setTransferPin('');
@@ -101,8 +103,7 @@ export default function InternationalTransfer() {
       setShowProcessingPage(true);
       
     } catch (error) {
-      // Network error handling
-      setPinError("Network connection error. Check your internet and try again.");
+      setPinError("Network error. Please check your connection and try again.");
     } finally {
       setIsProcessing(false);
     }

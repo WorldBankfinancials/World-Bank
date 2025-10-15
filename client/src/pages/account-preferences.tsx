@@ -46,9 +46,26 @@ export default function AccountPreferences() {
     }
   });
 
-  const handleSave = () => {
-    // Save preferences logic
-    alert(t('preferences_saved') || 'Preferences saved successfully');
+  const handleSave = async () => {
+    try {
+      const response = await fetch('/api/user/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(preferences)
+      });
+
+      if (response.ok) {
+        // Save to localStorage as backup
+        localStorage.setItem('user_preferences', JSON.stringify(preferences));
+        
+        alert(t('preferences_saved') || 'Preferences saved successfully');
+      } else {
+        alert('Failed to save preferences. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+      alert('Error saving preferences. Please try again.');
+    }
   };
 
   const togglePreference = (category: 'notifications' | 'privacy' | 'security', key: string) => {

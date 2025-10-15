@@ -30,10 +30,22 @@ export default function Cards() {
   const [accountNumber, setAccountNumber] = useState('');
 
   const queryClient = useQueryClient();
-  const { data: creditCards, isLoading: cardsLoading } = useQuery({
+  const { data: creditCards, isLoading: cardsLoading, error: cardsError } = useQuery({
     queryKey: ['/api/cards'],
-    staleTime: 30000
+    staleTime: 30000,
+    retry: 3
   });
+
+  // Show error message if cards fail to load
+  useEffect(() => {
+    if (cardsError) {
+      toast({
+        title: t('error') || 'Error',
+        description: 'Failed to load cards. Please refresh the page.',
+        variant: 'destructive'
+      });
+    }
+  }, [cardsError]);
   
   const handleLockCard = async () => {
     if (!selectedCard) return;

@@ -116,16 +116,17 @@ export default function TransferFunds() {
 
   const handleContinueTransfer = async () => {
     if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields correctly.",
+        variant: "destructive"
+      });
       return;
     }
     
     setIsProcessing(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Calculate fees
       const amount = parseFloat(formData.amount);
       let fee = 0;
       
@@ -146,40 +147,43 @@ export default function TransferFunds() {
       
       const total = amount + fee;
       
-      alert(`Transfer initiated successfully!\n\nAmount: $${amount.toFixed(2)}\nFee: $${fee.toFixed(2)}\nTotal: $${total.toFixed(2)}\n\nRecipient: ${formData.recipientName}\nReference: TR-${Date.now()}`);
-      
-      // Reset form
-      setFormData({
-        amount: "",
-        currency: "usd",
-        recipientName: "",
-        recipientCountry: "",
-        recipientAddress: "",
-        recipientCity: "",
-        recipientState: "",
-        recipientPostalCode: "",
-        recipientEmail: "",
-        recipientPhone: "",
-        bankName: "",
-        bankAddress: "",
-        bankCity: "",
-        bankState: "",
-        bankPostalCode: "",
-        bankCountry: "",
-        swiftCode: "",
-        ibanNumber: "",
-        accountNumber: "",
-        routingNumber: "",
-        branchCode: "",
-        cardNumber: "",
-        mobileNumber: "",
-        mobileProvider: "",
-        purpose: "",
-        reference: ""
+      // Create the transfer
+      const response = await fetch('/api/transfers/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amount,
+          fee: fee,
+          total: total,
+          transferType: transferType,
+          recipientName: formData.recipientName,
+          recipientCountry: formData.recipientCountry,
+          accountNumber: formData.accountNumber,
+          bankName: formData.bankName,
+          swiftCode: formData.swiftCode,
+          purpose: formData.purpose,
+          reference: formData.reference
+        })
       });
+
+      if (response.ok) {
+        toast({
+          title: "Transfer Initiated",
+          description: `Transfer of $${amount.toFixed(2)} has been initiated successfully.`
+        });
+        
+        // Redirect to transfer processing page
+        window.location.href = '/transfer-processing';
+      } else {
+        throw new Error('Transfer failed');
+      }
       
     } catch (error) {
-      alert("Transfer failed. Please try again.");
+      toast({
+        title: "Transfer Failed",
+        description: "Unable to process transfer. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsProcessing(false);
     }
