@@ -64,7 +64,6 @@ export default function MultiStepRegisterPage() {
     
     try {
       const completeData = { ...registrationData, ...data };
-      console.log('Registration data:', completeData);
       
       // Upload ID card first if provided
       let idCardUrl = null;
@@ -90,11 +89,9 @@ export default function MultiStepRegisterPage() {
             
             if (uploadFileResponse.ok) {
               idCardUrl = uploadURL.split('?')[0]; // Remove query params to get file URL
-              console.log('ID card uploaded successfully:', idCardUrl);
             }
           }
         } catch (error) {
-          console.error('Failed to upload ID card:', error);
           toast({
             title: 'Upload Warning',
             description: 'ID card upload failed, but registration will continue',
@@ -143,7 +140,6 @@ export default function MultiStepRegisterPage() {
       setLocation('/login?status=pending');
 
     } catch (error) {
-      console.error('Registration error:', error);
       toast({
         title: 'Registration Failed',
         description: error instanceof Error ? error.message : 'An unexpected error occurred',

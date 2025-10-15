@@ -79,7 +79,7 @@ export default function Transfer() {
 
   const handleTransfer = () => {
     if (!amount || !recipientDetails.fullName || !recipientDetails.accountNumber) {
-      console.log("Validation: Transfer details required");
+      
       return;
     }
 
@@ -88,7 +88,7 @@ export default function Transfer() {
   };
 
   const verifyPinAndTransfer = async () => {
-    console.log('Regular transfer PIN submitted:', transferPin);
+    
     
     if (!transferPin || transferPin.length !== 4) {
       setPinError("Please enter a 4-digit PIN");
@@ -134,7 +134,7 @@ export default function Transfer() {
         requiresApproval: parseFloat(amount) >= 10000 // Transfers over $10k require admin approval
       };
       
-      console.log('Sending regular transfer data:', transferData);
+      
 
       const response = await fetch('/api/transfers', {
         method: 'POST',
@@ -142,11 +142,11 @@ export default function Transfer() {
         body: JSON.stringify(transferData)
       });
 
-      console.log('Regular transfer response status:', response.status);
+      
       
       if (response.ok) {
         const result = await response.json();
-        console.log('Transfer successful:', result);
+        
         setShowPinVerification(false);
         setTransferPin("");
         setTransferReference(result.transactionId || result.id || `WB-${Date.now()}`);
@@ -176,11 +176,11 @@ export default function Transfer() {
         });
       } else {
         const error = await response.json();
-        console.error('Transfer error:', error);
+        
         setPinError(error.message || "Invalid PIN. Please try PIN: 0192");
       }
     } catch (error) {
-      console.error('Regular transfer error:', error);
+      
       setPinError("Network connection error. Check your internet and try again.");
     } finally {
       setIsProcessing(false);

@@ -71,10 +71,10 @@ export default function Receive() {
 
   const handleRequestMoney = () => {
     if (!requestAmount) {
-      console.log("Validation: Amount required");
+      
       return;
     }
-    console.log(`Payment request created: $${requestAmount}`);
+    
     setRequestAmount("");
     setMessage("");
   };

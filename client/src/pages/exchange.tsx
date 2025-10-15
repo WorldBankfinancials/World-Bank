@@ -69,7 +69,7 @@ export default function Exchange() {
         queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       }
     } catch (error) {
-      console.error('Exchange failed:', error);
+      
       alert('Exchange failed. Please try again.');
     }
   };

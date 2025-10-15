@@ -62,12 +62,12 @@ function TransferSection() {
 
   const handleTransfer = async () => {
     if (!transferAmount || !recipient) {
-      console.log("Validation: Amount and recipient required");
+      
       return;
     }
     setIsProcessing(true);
     await new Promise(resolve => setTimeout(resolve, 2000));
-    console.log(`Transfer initiated: $${transferAmount} to ${recipient}`);
+    
     setTransferAmount("");
     setRecipient("");
     setIsProcessing(false);
@@ -163,10 +163,10 @@ function ReceiveSection() {
 
   const handleRequestMoney = () => {
     if (!requestAmount) {
-      console.log("Validation: Amount required");
+      
       return;
     }
-    console.log(`Payment request created: $${requestAmount}`);
+    
     setRequestAmount("");
   };
 
@@ -488,13 +488,13 @@ export default function Dashboard() {
         const response = await fetch(`/api/user?t=${Date.now()}`);
         if (response.ok) {
           const data = await response.json();
-          console.log('✅ Dashboard - Loaded user data:', data);
+          
           setUserData(data);
         } else {
-          console.log('⚠️ API response not OK, using default data');
+          
         }
       } catch (error) {
-        console.log('⚠️ API fetch failed, using default data:', error);
+        
       }
     };
     
@@ -524,7 +524,7 @@ export default function Dashboard() {
         const response = await fetch('/api/accounts');
         if (response.ok) {
           const accountsData = await response.json();
-          // console.log('Accounts API Response:', accountsData);
+          // 
           
           if (Array.isArray(accountsData) && accountsData.length > 0) {
             const formattedAccounts = accountsData.map((account: any) => ({

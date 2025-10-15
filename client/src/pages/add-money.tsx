@@ -87,7 +87,7 @@ export default function AddMoney() {
 
   const handleAddMoney = async () => {
     if (!selectedMethod || !amount) {
-      console.log("Validation: Method and amount required");
+      
       return;
     }
 
@@ -95,11 +95,11 @@ export default function AddMoney() {
     
     try {
       await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log(`Money added: $${amount} via ${selectedMethod}`);
+      
       setAmount("");
       setSelectedMethod("");
     } catch (error) {
-      console.log("Add money operation failed");
+      
     } finally {
       setLoading(false);
     }
