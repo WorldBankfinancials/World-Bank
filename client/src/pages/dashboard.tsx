@@ -47,6 +47,49 @@ import {
   Users,
   Smartphone,
   Banknote,
+
+  // Real-time subscription for admin changes
+  React.useEffect(() => {
+    const { supabase } = require('@/lib/supabase');
+    
+    const channel = supabase
+      .channel('account_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'bank_accounts' },
+        (payload: any) => {
+          console.log('Account updated:', payload);
+          // Refresh accounts when admin makes changes
+          const fetchAccounts = async () => {
+            try {
+              const response = await fetch('/api/accounts?t=' + Date.now());
+              if (response.ok) {
+                const accountsData = await response.json();
+                if (Array.isArray(accountsData) && accountsData.length > 0) {
+                  const formattedAccounts = accountsData.map((account: any) => ({
+                    type: account.accountType ? account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1) : 'Account',
+                    number: account.accountNumber ? `****${account.accountNumber.slice(-4)}` : '****0000',
+                    balance: account.balance ? parseFloat(account.balance.toString()) : 0,
+                    icon: account.accountType === 'checking' ? Wallet : 
+                          account.accountType === 'savings' ? Building2 : TrendingUp,
+                    id: account.id || 0
+                  }));
+                  setAccounts(formattedAccounts);
+                }
+              }
+            } catch (error) {
+              console.error('Failed to refresh accounts:', error);
+            }
+          };
+          fetchAccounts();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   Filter,
   Trash2
 } from "lucide-react";
@@ -521,7 +564,7 @@ export default function Dashboard() {
   React.useEffect(() => {
     const fetchAccounts = async () => {
       try {
-        const response = await fetch('/api/accounts');
+        const response = await fetch('/api/accounts?t=' + Date.now());
         if (response.ok) {
           const accountsData = await response.json();
           // 
@@ -942,53 +985,63 @@ export default function Dashboard() {
 
       </div>
 
-      {/* Recent Transactions */}
+      {/* Recent Transactions - REAL DATA FROM DATABASE */}
       <div className="px-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Recent Transactions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <ArrowDownRight className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Salary Payment</p>
-                    <p className="text-sm text-gray-500">Dec 15, 2024</p>
-                  </div>
-                </div>
-                <span className="font-medium text-green-600">+$5,250.00</span>
-              </div>
+            {(() => {
+              const [recentTransactions, setRecentTransactions] = React.useState<any[]>([]);
               
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                    <ArrowUpRight className="w-5 h-5 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Grocery Store</p>
-                    <p className="text-sm text-gray-500">Dec 14, 2024</p>
-                  </div>
-                </div>
-                <span className="font-medium text-red-600">-$156.78</span>
-              </div>
+              React.useEffect(() => {
+                const fetchRecentTransactions = async () => {
+                  try {
+                    const response = await fetch('/api/accounts/1/transactions');
+                    if (response.ok) {
+                      const data = await response.json();
+                      setRecentTransactions(data.slice(0, 5));
+                    }
+                  } catch (error) {
+                    console.error('Failed to fetch transactions:', error);
+                  }
+                };
+                fetchRecentTransactions();
+                // Refresh every 30 seconds
+                const interval = setInterval(fetchRecentTransactions, 30000);
+                return () => clearInterval(interval);
+              }, []);
               
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <ArrowUpRight className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Investment Return</p>
-                    <p className="text-sm text-gray-500">Dec 13, 2024</p>
-                  </div>
+              return (
+                <div className="space-y-4">
+                  {recentTransactions.length > 0 ? (
+                    recentTransactions.map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-10 h-10 ${tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center`}>
+                            {tx.type === 'credit' ? (
+                              <ArrowDownRight className="w-5 h-5 text-green-600" />
+                            ) : (
+                              <ArrowUpRight className="w-5 h-5 text-red-600" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium">{tx.description}</p>
+                            <p className="text-sm text-gray-500">{new Date(tx.date || tx.created_at).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <span className={`font-medium ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                          {tx.type === 'credit' ? '+' : '-'}${parseFloat(tx.amount).toFixed(2)}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">No recent transactions</div>
+                  )}
                 </div>
-                <span className="font-medium text-green-600">+$1,250.00</span>
-              </div>
-            </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>

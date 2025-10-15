@@ -451,6 +451,69 @@ CREATE POLICY "Users can view own statements" ON public.account_statements
     );
 
 -- ================================================================
+-- STEP 11: Cards table (MISSING - CRITICAL FIX)
+-- ================================================================
+
+CREATE TABLE public.cards (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES public.bank_users(id) ON DELETE CASCADE,
+    card_number VARCHAR(20) NOT NULL,
+    card_name VARCHAR(100) NOT NULL,
+    card_type VARCHAR(20) NOT NULL CHECK (card_type IN ('Visa', 'Mastercard', 'Platinum', 'Gold', 'Business')),
+    balance DECIMAL(15,2) DEFAULT 0.00,
+    credit_limit DECIMAL(15,2) DEFAULT 0.00,
+    expiry_date VARCHAR(7) NOT NULL,
+    cvv VARCHAR(4) NOT NULL,
+    is_locked BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    daily_limit DECIMAL(15,2) DEFAULT 5000.00,
+    contactless_enabled BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Insert Wei Liu's cards
+INSERT INTO public.cards (user_id, card_number, card_name, card_type, balance, credit_limit, expiry_date, cvv, is_locked, daily_limit, contactless_enabled)
+SELECT 
+    bu.id,
+    card_data.card_number,
+    card_data.card_name,
+    card_data.card_type,
+    card_data.balance,
+    card_data.credit_limit,
+    card_data.expiry_date,
+    card_data.cvv,
+    card_data.is_locked,
+    card_data.daily_limit,
+    card_data.contactless_enabled
+FROM public.bank_users bu
+CROSS JOIN (
+    VALUES 
+        ('4532789012345678', 'World Bank Platinum', 'Platinum', 2500.00, 50000.00, '12/2028', '123', false, 10000.00, true),
+        ('5412345678901234', 'Business Corporate', 'Business', 1200.00, 100000.00, '06/2027', '456', false, 25000.00, true),
+        ('4916338506082832', 'Travel Rewards', 'Gold', 3400.00, 30000.00, '09/2029', '789', false, 7500.00, true)
+) AS card_data(card_number, card_name, card_type, balance, credit_limit, expiry_date, cvv, is_locked, daily_limit, contactless_enabled)
+WHERE bu.email = 'vaa33053@gmail.com';
+
+-- RLS for cards
+ALTER TABLE public.cards ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own cards" ON public.cards
+    FOR SELECT TO authenticated
+    USING (user_id = (SELECT id FROM public.bank_users WHERE supabase_user_id = auth.uid()));
+
+CREATE POLICY "Users can update own cards" ON public.cards
+    FOR UPDATE TO authenticated
+    USING (user_id = (SELECT id FROM public.bank_users WHERE supabase_user_id = auth.uid()));
+
+CREATE POLICY "Service role full access cards" ON public.cards 
+    FOR ALL USING (auth.role() = 'service_role');
+
+-- Cards indexes
+CREATE INDEX idx_cards_user_id ON public.cards(user_id);
+CREATE INDEX idx_cards_active ON public.cards(is_active);
+
+-- ================================================================
 -- STEP 7: Admin/Service Role policies (full access)
 -- ================================================================
 

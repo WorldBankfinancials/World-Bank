@@ -372,33 +372,47 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(transactions);
     }
 
-    // Get user cards
+    // Get user cards - REAL DATABASE
     if (apiPath === '/cards' && req.method === 'GET') {
-      const { data, error } = await supabase
-        .from('cards')
-        .select('*')
-        .eq('user_id', 1)
-        .eq('is_active', true);
-      
-      if (error) {
-        return res.status(500).json({ error: 'Failed to fetch cards' });
+      try {
+        const { data, error } = await supabase
+          .from('cards')
+          .select('*')
+          .eq('user_id', 1)
+          .eq('is_active', true);
+        
+        if (error) {
+          console.error('Cards fetch error:', error);
+          return res.status(500).json({ error: 'Failed to fetch cards', details: error.message });
+        }
+        
+        if (!data || data.length === 0) {
+          console.log('No cards found for user');
+          return res.status(200).json([]);
+        }
+        
+        const cards = data.map(card => ({
+          id: card.id,
+          name: card.card_name,
+          number: `•••• •••• •••• ${card.card_number.slice(-4)}`,
+          type: card.card_type,
+          balance: parseFloat(card.balance || 0),
+          limit: parseFloat(card.credit_limit || 0),
+          expiry: card.expiry_date,
+          color: card.card_type === 'Platinum' ? 'bg-gradient-to-r from-gray-800 to-gray-900' : 
+                 card.card_type === 'Gold' ? 'bg-gradient-to-r from-yellow-600 to-yellow-800' :
+                 card.card_type === 'Business' ? 'bg-gradient-to-r from-green-600 to-green-800' :
+                 'bg-gradient-to-r from-blue-600 to-blue-800',
+          isLocked: card.is_locked,
+          dailyLimit: parseFloat(card.daily_limit || 5000),
+          contactlessEnabled: card.contactless_enabled
+        }));
+        
+        return res.status(200).json(cards);
+      } catch (error) {
+        console.error('Cards endpoint error:', error);
+        return res.status(500).json({ error: 'Server error', details: error.message });
       }
-      
-      const cards = (data || []).map(card => ({
-        id: card.id,
-        name: card.card_name,
-        number: card.card_number.replace(/(\d{4})/g, '•••• ').trim().replace(/•{4}$/, card.card_number.slice(-4)),
-        type: card.card_type,
-        balance: parseFloat(card.balance),
-        limit: parseFloat(card.credit_limit),
-        expiry: card.expiry_date,
-        color: card.card_type === 'Platinum' ? 'bg-gradient-to-r from-gray-800 to-gray-900' : 'bg-gradient-to-r from-blue-600 to-blue-800',
-        isLocked: card.is_locked,
-        dailyLimit: parseFloat(card.daily_limit),
-        contactlessEnabled: card.contactless_enabled
-      }));
-      
-      return res.status(200).json(cards);
     }
     
     // Update card lock status
