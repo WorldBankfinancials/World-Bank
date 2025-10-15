@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   Wallet, 
   Smartphone, 
@@ -28,6 +29,7 @@ import {
 
 
 export default function DigitalWallet() {
+  const { t } = useLanguage();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -44,7 +46,7 @@ export default function DigitalWallet() {
   }
 
   // Fetch real wallet data from Supabase
-  const { data: walletData } = useQuery({
+  const { data: walletData } = useQuery<{ balance: number }>({
     queryKey: ['/api/wallet-balance'],
     enabled: !!user,
     staleTime: 30000

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   Send, 
   Globe, 
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 
 export default function Transfer() {
+  const { t } = useLanguage();
   const { data: user, isLoading } = useQuery({
     queryKey: ['/api/user'],
   });
