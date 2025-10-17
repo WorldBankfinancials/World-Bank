@@ -27,11 +27,11 @@ interface AccountCardProps {
   onToggleBalance?: () => void;
 }
 
-export default function AccountCard({ 
-  account, 
-  transactions = [], 
-  showBalance = true, 
-  onToggleBalance 
+export default function AccountCard({
+  account,
+  transactions = [],
+  showBalance = true,
+  onToggleBalance,
 }: AccountCardProps) {
   const { userProfile } = useAuth();
   if (!account) {
@@ -46,9 +46,9 @@ export default function AccountCard({
     );
   }
 
-  const formatCurrency = (amount: number, currency: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
+  const formatCurrency = (amount: number, currency = "USD") => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
       currency: currency,
     }).format(amount);
   };
@@ -61,7 +61,9 @@ export default function AccountCard({
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <CreditCard className="w-5 h-5 text-blue-600" />
-            <span>{account.account_name || `${account.account_type} Account`}</span>
+            <span>
+              {account.account_name || `${account.account_type} Account`}
+            </span>
           </div>
           <Badge variant={account.is_active ? "default" : "secondary"}>
             {account.is_active ? "Active" : "Inactive"}
@@ -72,14 +74,21 @@ export default function AccountCard({
         <div className="space-y-4">
           <div>
             <p className="text-sm text-gray-600">Account Number</p>
-            <p className="font-mono text-lg">****{account.account_number.slice(-4)}</p>
+            <p className="font-mono text-lg">
+              ****{account.account_number.slice(-4)}
+            </p>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Available Balance</p>
               <p className="text-2xl font-bold text-green-600">
-                {showBalance ? formatCurrency(userProfile?.balance || account.balance, account.currency) : "••••••"}
+                {showBalance
+                  ? formatCurrency(
+                      userProfile?.balance || account.balance,
+                      account.currency,
+                    )
+                  : "••••••"}
               </p>
             </div>
             {onToggleBalance && (
@@ -87,7 +96,11 @@ export default function AccountCard({
                 onClick={onToggleBalance}
                 className="p-2 hover:bg-gray-100 rounded-full"
               >
-                {showBalance ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showBalance ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
               </button>
             )}
           </div>
@@ -97,10 +110,18 @@ export default function AccountCard({
               <p className="text-sm text-gray-600 mb-2">Recent Transactions</p>
               <div className="space-y-2">
                 {recentTransactions.map((transaction) => (
-                  <div key={transaction.id} className="flex justify-between text-sm">
-                    <span className="text-gray-700">{transaction.description}</span>
-                    <span className={`font-medium ${transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {transaction.amount >= 0 ? '+' : ''}{formatCurrency(Math.abs(transaction.amount))}
+                  <div
+                    key={transaction.id}
+                    className="flex justify-between text-sm"
+                  >
+                    <span className="text-gray-700">
+                      {transaction.description}
+                    </span>
+                    <span
+                      className={`font-medium ${transaction.amount >= 0 ? "text-green-600" : "text-red-600"}`}
+                    >
+                      {transaction.amount >= 0 ? "+" : ""}
+                      {formatCurrency(Math.abs(transaction.amount))}
                     </span>
                   </div>
                 ))}

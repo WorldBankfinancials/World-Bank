@@ -41,7 +41,7 @@ export class ObjectStorageService {
     if (!dir) {
       throw new Error(
         "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
+          "tool and set PRIVATE_OBJECT_DIR env var.",
       );
     }
     return dir;
@@ -53,7 +53,7 @@ export class ObjectStorageService {
     if (!privateObjectDir) {
       throw new Error(
         "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
-          "tool and set PRIVATE_OBJECT_DIR env var."
+          "tool and set PRIVATE_OBJECT_DIR env var.",
       );
     }
 
@@ -72,11 +72,11 @@ export class ObjectStorageService {
   }
 
   // Downloads an object to the response.
-  async downloadObject(file: File, res: Response, cacheTtlSec: number = 3600) {
+  async downloadObject(file: File, res: Response, cacheTtlSec = 3600) {
     try {
       // Get file metadata
       const [metadata] = await file.getMetadata();
-      
+
       // Set appropriate headers
       res.set({
         "Content-Type": metadata.contentType || "application/octet-stream",
@@ -150,12 +150,12 @@ async function signObjectURL({
         "Content-Type": "application/json",
       },
       body: JSON.stringify(request),
-    }
+    },
   );
   if (!response.ok) {
     throw new Error(
       `Failed to sign object URL, errorcode: ${response.status}, ` +
-        `make sure you're running on Replit`
+        `make sure you're running on Replit`,
     );
   }
 
