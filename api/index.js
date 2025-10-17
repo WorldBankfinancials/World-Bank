@@ -39,8 +39,8 @@ module.exports = async function handler(req, res) {
         timestamp: new Date().toISOString(),
         supabase: supabaseUrl ? 'Connected' : 'Not configured',
         environment: {
-          hasSupabaseUrl: !!supabaseUrl,
-          hasSupabaseKey: !!supabaseServiceKey,
+          hasSupabaseUrl: Boolean(supabaseUrl),
+          hasSupabaseKey: Boolean(supabaseServiceKey),
           urlPrefix: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'missing',
           keyPrefix: supabaseServiceKey ? supabaseServiceKey.substring(0, 20) + '...' : 'missing'
         }

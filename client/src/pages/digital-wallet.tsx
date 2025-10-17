@@ -48,13 +48,13 @@ export default function DigitalWallet() {
   // Fetch real wallet data from Supabase
   const { data: walletData } = useQuery<{ balance: number }>({
     queryKey: ['/api/wallet-balance'],
-    enabled: !!user,
+    enabled: Boolean(user),
     staleTime: 30000
   });
 
   const { data: recentTransactions } = useQuery({
     queryKey: ['/api/wallet-transactions'],
-    enabled: !!user,
+    enabled: Boolean(user),
     staleTime: 30000
   });
 
