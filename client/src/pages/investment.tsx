@@ -17,7 +17,7 @@ export default function Investment() {
   // Fetch real investment data from Supabase
   const { data: investmentData, isLoading } = useQuery({
     queryKey: ['/api/investments', userProfile?.id],
-    enabled: !!userProfile?.id,
+    enabled: Boolean(userProfile?.id),
     staleTime: 30000
   });
 
