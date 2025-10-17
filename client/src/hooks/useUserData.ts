@@ -53,7 +53,7 @@ export function useUserData() {
       console.log('✅ Real User Data from Supabase:', userData);
       return userData;
     },
-    enabled: !!user?.email,
+    enabled: Boolean(user?.email),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 3
   });
@@ -81,7 +81,7 @@ export function useAccountData() {
       console.log('✅ Real Account Data from Supabase:', accounts);
       return accounts;
     },
-    enabled: !!user?.email,
+    enabled: Boolean(user?.email),
     staleTime: 5 * 60 * 1000,
     retry: 3
   });
