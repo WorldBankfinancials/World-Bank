@@ -1,11 +1,29 @@
 version = 1
 
+test_patterns = [
+  "test_patterns:",
+  "  - \"tests/**\"",
+  "  - \"**/__tests__/**\"",
+  "  - \"**/*.test.js\"",
+  "  - \"**/*.spec.js\"",
+  "exclude_patterns:",
+  "  - \"node_modules/**\"",
+  "  - \"dist/**\"",
+  "  - \"build/**\"",
+  "  - \".next/**\"",
+  "  - \"*.min.js\"",
+  "  - \"coverage/**\""
+]
+
 [[analyzers]]
 name = "javascript"
 
   [analyzers.meta]
   plugins = ["react"]
-  environment = ["nodejs"]
+  environment = [
+    "nodejs",
+    "browser"
+  ]
 
 [[transformers]]
 name = "prettier"
