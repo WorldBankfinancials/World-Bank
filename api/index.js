@@ -1,138 +1,149 @@
-
 // Vercel serverless function for World Bank API with real Supabase integration
-const { createClient } = require('@supabase/supabase-js');
+const { createClient } = require("@supabase/supabase-js");
 
 // Initialize Supabase client - NEVER hardcode service role key
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Missing Supabase environment variables');
+  console.error("❌ Missing Supabase environment variables");
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 module.exports = async function handler(req, res) {
   // Enable CORS
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  res.setHeader("Access-Control-Allow-Credentials", true);
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,OPTIONS,PATCH,DELETE,POST,PUT",
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
+  );
 
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     res.status(200).end();
     return;
   }
 
   // Extract the API path from the request
   const { url } = req;
-  const apiPath = url.replace('/api', '').split('?')[0];
+  const apiPath = url.replace("/api", "").split("?")[0];
 
   console.log(`🔗 Vercel API Request: ${req.method} ${apiPath}`);
 
   try {
     // Health check endpoint
-    if (apiPath === '/health') {
-      return res.status(200).json({ 
-        status: 'ok', 
-        message: 'World Bank API is running on Vercel with real Supabase integration',
+    if (apiPath === "/health") {
+      return res.status(200).json({
+        status: "ok",
+        message:
+          "World Bank API is running on Vercel with real Supabase integration",
         timestamp: new Date().toISOString(),
-        supabase: supabaseUrl ? 'Connected' : 'Not configured',
+        supabase: supabaseUrl ? "Connected" : "Not configured",
         environment: {
-          hasSupabaseUrl: !!supabaseUrl,
-          hasSupabaseKey: !!supabaseServiceKey,
-          urlPrefix: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'missing',
-          keyPrefix: supabaseServiceKey ? supabaseServiceKey.substring(0, 20) + '...' : 'missing'
-        }
+          hasSupabaseUrl: Boolean(supabaseUrl),
+          hasSupabaseKey: Boolean(supabaseServiceKey),
+          urlPrefix: supabaseUrl
+            ? supabaseUrl.substring(0, 30) + "..."
+            : "missing",
+          keyPrefix: supabaseServiceKey
+            ? supabaseServiceKey.substring(0, 20) + "..."
+            : "missing",
+        },
       });
     }
 
     // Test Supabase connection
-    if (apiPath === '/test-supabase-connection') {
+    if (apiPath === "/test-supabase-connection") {
       try {
         const { data, error } = await supabase
-          .from('bank_users')
-          .select('id, full_name, email, balance')
+          .from("bank_users")
+          .select("id, full_name, email, balance")
           .limit(5);
-        
+
         if (error) {
           return res.status(500).json({
             connected: false,
-            message: 'Banking tables not found in Supabase',
+            message: "Banking tables not found in Supabase",
             error: error.message,
-            action: 'Please check your Supabase configuration'
+            action: "Please check your Supabase configuration",
           });
         }
-        
+
         return res.status(200).json({
           connected: true,
           message: `Banking tables working! Found ${data?.length || 0} users`,
           users: data,
-          details: 'International banking system ready with realtime synchronization'
+          details:
+            "International banking system ready with realtime synchronization",
         });
       } catch (error) {
-        return res.status(500).json({ 
-          error: 'Connection test failed', 
-          details: error.message 
+        return res.status(500).json({
+          error: "Connection test failed",
+          details: error.message,
         });
       }
     }
 
     // Get user by Supabase user ID
-    if (apiPath.startsWith('/users/supabase/') && req.method === 'GET') {
-      const supabaseUserId = apiPath.split('/')[3];
-      
+    if (apiPath.startsWith("/users/supabase/") && req.method === "GET") {
+      const supabaseUserId = apiPath.split("/")[3];
+
       const { data, error } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('supabase_user_id', supabaseUserId)
+        .from("bank_users")
+        .select("*")
+        .eq("supabase_user_id", supabaseUserId)
         .single();
-      
+
       if (error || !data) {
-        return res.status(404).json({ message: 'User not found' });
+        return res.status(404).json({ message: "User not found" });
       }
-      
+
       return res.status(200).json(data);
     }
 
     // Create Supabase user profile
-    if (apiPath === '/users/create-supabase' && req.method === 'POST') {
+    if (apiPath === "/users/create-supabase" && req.method === "POST") {
       const { supabaseUserId, email } = req.body;
-      
+
       // Check if user already exists
       const { data: existingUser } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('supabase_user_id', supabaseUserId)
+        .from("bank_users")
+        .select("*")
+        .eq("supabase_user_id", supabaseUserId)
         .single();
-      
+
       if (existingUser) {
         return res.status(200).json(existingUser);
       }
-      
+
       // Create new Wei Liu profile with real banking data
       const newUser = {
         supabase_user_id: supabaseUserId,
-        username: email?.split('@')[0] || 'user',
-        password_hash: 'supabase_auth',
-        full_name: 'Wei Liu',
-        email: email || 'vaa33053@gmail.com',
-        phone: '+1 (234) 567-8900',
-        account_number: '4789-5532-1098-7654',
-        account_id: 'WB-2025-8912',
-        profession: 'Software Engineer',
-        date_of_birth: '1990-05-15',
-        address: '123 Tech Street, Suite 100',
-        city: 'San Francisco',
-        state: 'California',
-        country: 'United States',
-        postal_code: '94102',
-        nationality: 'American',
-        annual_income: '$75,000-$100,000',
-        id_type: 'Passport',
-        id_number: 'P123456789',
-        transfer_pin: '0192',
-        role: 'customer',
+        username: email?.split("@")[0] || "user",
+        password_hash: "supabase_auth",
+        full_name: "Wei Liu",
+        email: email || "vaa33053@gmail.com",
+        phone: "+1 (234) 567-8900",
+        account_number: "4789-5532-1098-7654",
+        account_id: "WB-2025-8912",
+        profession: "Software Engineer",
+        date_of_birth: "1990-05-15",
+        address: "123 Tech Street, Suite 100",
+        city: "San Francisco",
+        state: "California",
+        country: "United States",
+        postal_code: "94102",
+        nationality: "American",
+        annual_income: "$75,000-$100,000",
+        id_type: "Passport",
+        id_number: "P123456789",
+        transfer_pin: "0192",
+        role: "customer",
         is_verified: true,
         is_online: true,
         is_active: true,
@@ -140,36 +151,36 @@ module.exports = async function handler(req, res) {
         balance: 15750.5,
         created_by_admin: false,
         modified_by_admin: false,
-        admin_notes: null
+        admin_notes: null,
       };
-      
+
       const { data: createdUser, error } = await supabase
-        .from('bank_users')
+        .from("bank_users")
         .insert(newUser)
         .select()
         .single();
-      
+
       if (error) {
-        console.error('Failed to create user profile:', error);
-        return res.status(500).json({ error: 'Failed to create user profile' });
+        console.error("Failed to create user profile:", error);
+        return res.status(500).json({ error: "Failed to create user profile" });
       }
-      
+
       return res.status(201).json(createdUser);
     }
 
     // Get user profile (legacy endpoint)
-    if (apiPath === '/user' && req.method === 'GET') {
+    if (apiPath === "/user" && req.method === "GET") {
       // Return the Wei Liu profile from Supabase
       const { data, error } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('id', 1)
+        .from("bank_users")
+        .select("*")
+        .eq("id", 1)
         .single();
-      
+
       if (error || !data) {
-        return res.status(404).json({ message: 'User not found' });
+        return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Convert snake_case to camelCase for frontend compatibility
       const user = {
         id: data.id,
@@ -204,26 +215,26 @@ module.exports = async function handler(req, res) {
         lastLogin: data.last_login,
         createdByAdmin: data.created_by_admin,
         modifiedByAdmin: data.modified_by_admin,
-        adminNotes: data.admin_notes
+        adminNotes: data.admin_notes,
       };
-      
+
       return res.status(200).json(user);
     }
 
     // Get bank accounts
-    if (apiPath === '/accounts' && req.method === 'GET') {
+    if (apiPath === "/accounts" && req.method === "GET") {
       const { data, error } = await supabase
-        .from('bank_accounts')
-        .select('*')
-        .eq('user_id', 1)
-        .eq('is_active', true);
-      
+        .from("bank_accounts")
+        .select("*")
+        .eq("user_id", 1)
+        .eq("is_active", true);
+
       if (error) {
-        return res.status(500).json({ error: 'Failed to fetch accounts' });
+        return res.status(500).json({ error: "Failed to fetch accounts" });
       }
-      
+
       // Convert to frontend format
-      const accounts = (data || []).map(account => ({
+      const accounts = (data || []).map((account) => ({
         id: account.id,
         userId: account.user_id,
         accountNumber: account.account_number,
@@ -235,102 +246,111 @@ module.exports = async function handler(req, res) {
         createdAt: account.created_at,
         updatedAt: account.updated_at,
         interestRate: account.interest_rate?.toString() || null,
-        minimumBalance: account.minimum_balance?.toString() || null
+        minimumBalance: account.minimum_balance?.toString() || null,
       }));
-      
+
       return res.status(200).json(accounts);
     }
 
     // PIN verification
-    if (apiPath === '/verify-pin' && req.method === 'POST') {
+    if (apiPath === "/verify-pin" && req.method === "POST") {
       const { pin, username } = req.body;
-      
-      console.log(`🔐 PIN verification request:`, { username, pin });
-      
+
+      console.log("🔐 PIN verification request:", { username, pin });
+
       try {
         // Check the user exists by email, account ID, or mobile
-        let userQuery = supabase.from('bank_users').select('transfer_pin, email, username, account_id');
-        
+        let userQuery = supabase
+          .from("bank_users")
+          .select("transfer_pin, email, username, account_id");
+
         // Handle different login types
-        if (username.includes('@')) {
+        if (username.includes("@")) {
           // Email login
-          userQuery = userQuery.eq('email', username);
-        } else if (username.startsWith('WB-') || username.startsWith('wb-')) {
+          userQuery = userQuery.eq("email", username);
+        } else if (username.startsWith("WB-") || username.startsWith("wb-")) {
           // Account ID login (like WB-2025-8912)
-          userQuery = userQuery.eq('account_id', username);
-        } else if (username.startsWith('+') || /^\d+$/.test(username)) {
+          userQuery = userQuery.eq("account_id", username);
+        } else if (username.startsWith("+") || /^\d+$/.test(username)) {
           // Mobile number login
-          userQuery = userQuery.eq('phone', username);
+          userQuery = userQuery.eq("phone", username);
         } else {
           // Fallback to username
-          userQuery = userQuery.eq('username', username);
+          userQuery = userQuery.eq("username", username);
         }
-        
+
         const { data: userData, error } = await userQuery.single();
-        
+
         if (error || !userData) {
-          console.log('User not found:', { username, error });
+          console.log("User not found:", { username, error });
           return res.status(401).json({
             success: false,
             verified: false,
-            message: 'User not found'
+            message: "User not found",
           });
         }
-        
-        console.log(`Found user PIN: ${userData.transfer_pin}, provided PIN: ${pin}`);
-        
+
+        console.log(
+          `Found user PIN: ${userData.transfer_pin}, provided PIN: ${pin}`,
+        );
+
         if (userData.transfer_pin === pin) {
-          console.log('✅ PIN verification successful');
+          console.log("✅ PIN verification successful");
           return res.status(200).json({
             success: true,
             verified: true,
-            message: 'PIN verified successfully'
+            message: "PIN verified successfully",
           });
         } else {
-          console.log('❌ PIN mismatch');
+          console.log("❌ PIN mismatch");
           return res.status(401).json({
             success: false,
             verified: false,
-            message: 'Invalid PIN'
+            message: "Invalid PIN",
           });
         }
-        
       } catch (supabaseError) {
-        console.error('PIN verification error:', supabaseError);
+        console.error("PIN verification error:", supabaseError);
         return res.status(500).json({
           success: false,
           verified: false,
-          message: 'Verification failed'
+          message: "Verification failed",
         });
       }
     }
 
     // Create transfer
-    if (apiPath === '/transfers' && req.method === 'POST') {
-      const { fromAccountId, toAccountNumber, amount, description, recipientName } = req.body;
-      
+    if (apiPath === "/transfers" && req.method === "POST") {
+      const {
+        fromAccountId,
+        toAccountNumber,
+        amount,
+        description,
+        recipientName,
+      } = req.body;
+
       const newTransaction = {
         account_id: fromAccountId,
-        type: 'debit',
+        type: "debit",
         amount: amount.toString(),
-        description: description,
-        category: 'transfer',
+        description,
+        category: "transfer",
         date: new Date().toISOString(),
-        status: 'pending',
+        status: "pending",
         recipient_name: recipientName,
-        admin_notes: null
+        admin_notes: null,
       };
-      
+
       const { data, error } = await supabase
-        .from('transactions')
+        .from("transactions")
         .insert(newTransaction)
         .select()
         .single();
-      
+
       if (error) {
-        return res.status(500).json({ error: 'Failed to create transfer' });
+        return res.status(500).json({ error: "Failed to create transfer" });
       }
-      
+
       return res.status(201).json({
         id: data.id,
         accountId: data.account_id,
@@ -338,26 +358,29 @@ module.exports = async function handler(req, res) {
         amount: data.amount,
         description: data.description,
         status: data.status,
-        createdAt: data.created_at
+        createdAt: data.created_at,
       });
     }
 
     // Get transactions for account
-    if (apiPath.match(/^\/accounts\/\d+\/transactions$/) && req.method === 'GET') {
-      const accountId = parseInt(apiPath.split('/')[2]);
-      
+    if (
+      apiPath.match(/^\/accounts\/\d+\/transactions$/) &&
+      req.method === "GET"
+    ) {
+      const accountId = parseInt(apiPath.split("/")[2]);
+
       const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('account_id', accountId)
-        .order('date', { ascending: false })
+        .from("transactions")
+        .select("*")
+        .eq("account_id", accountId)
+        .order("date", { ascending: false })
         .limit(10);
-      
+
       if (error) {
-        return res.status(500).json({ error: 'Failed to fetch transactions' });
+        return res.status(500).json({ error: "Failed to fetch transactions" });
       }
-      
-      const transactions = (data || []).map(tx => ({
+
+      const transactions = (data || []).map((tx) => ({
         id: tx.id,
         accountId: tx.account_id,
         type: tx.type,
@@ -366,32 +389,34 @@ module.exports = async function handler(req, res) {
         category: tx.category,
         date: tx.date,
         status: tx.status,
-        createdAt: tx.created_at
+        createdAt: tx.created_at,
       }));
-      
+
       return res.status(200).json(transactions);
     }
 
     // Get user cards - REAL DATABASE
-    if (apiPath === '/cards' && req.method === 'GET') {
+    if (apiPath === "/cards" && req.method === "GET") {
       try {
         const { data, error } = await supabase
-          .from('cards')
-          .select('*')
-          .eq('user_id', 1)
-          .eq('is_active', true);
-        
+          .from("cards")
+          .select("*")
+          .eq("user_id", 1)
+          .eq("is_active", true);
+
         if (error) {
-          console.error('Cards fetch error:', error);
-          return res.status(500).json({ error: 'Failed to fetch cards', details: error.message });
+          console.error("Cards fetch error:", error);
+          return res
+            .status(500)
+            .json({ error: "Failed to fetch cards", details: error.message });
         }
-        
+
         if (!data || data.length === 0) {
-          console.log('No cards found for user');
+          console.log("No cards found for user");
           return res.status(200).json([]);
         }
-        
-        const cards = data.map(card => ({
+
+        const cards = data.map((card) => ({
           id: card.id,
           name: card.card_name,
           number: `•••• •••• •••• ${card.card_number.slice(-4)}`,
@@ -399,118 +424,130 @@ module.exports = async function handler(req, res) {
           balance: parseFloat(card.balance || 0),
           limit: parseFloat(card.credit_limit || 0),
           expiry: card.expiry_date,
-          color: card.card_type === 'Platinum' ? 'bg-gradient-to-r from-gray-800 to-gray-900' : 
-                 card.card_type === 'Gold' ? 'bg-gradient-to-r from-yellow-600 to-yellow-800' :
-                 card.card_type === 'Business' ? 'bg-gradient-to-r from-green-600 to-green-800' :
-                 'bg-gradient-to-r from-blue-600 to-blue-800',
+          color:
+            card.card_type === "Platinum"
+              ? "bg-gradient-to-r from-gray-800 to-gray-900"
+              : card.card_type === "Gold"
+                ? "bg-gradient-to-r from-yellow-600 to-yellow-800"
+                : card.card_type === "Business"
+                  ? "bg-gradient-to-r from-green-600 to-green-800"
+                  : "bg-gradient-to-r from-blue-600 to-blue-800",
           isLocked: card.is_locked,
           dailyLimit: parseFloat(card.daily_limit || 5000),
-          contactlessEnabled: card.contactless_enabled
+          contactlessEnabled: card.contactless_enabled,
         }));
-        
+
         return res.status(200).json(cards);
       } catch (error) {
-        console.error('Cards endpoint error:', error);
-        return res.status(500).json({ error: 'Server error', details: error.message });
+        console.error("Cards endpoint error:", error);
+        return res
+          .status(500)
+          .json({ error: "Server error", details: error.message });
       }
     }
-    
+
     // Update card lock status
-    if (apiPath === '/cards/lock' && req.method === 'POST') {
+    if (apiPath === "/cards/lock" && req.method === "POST") {
       const { cardId, isLocked } = req.body;
-      
+
       const { data, error } = await supabase
-        .from('cards')
+        .from("cards")
         .update({ is_locked: isLocked })
-        .eq('id', cardId)
-        .eq('user_id', 1)
+        .eq("id", cardId)
+        .eq("user_id", 1)
         .select()
         .single();
-      
+
       if (error) {
-        return res.status(500).json({ error: 'Failed to update card' });
+        return res.status(500).json({ error: "Failed to update card" });
       }
-      
+
       return res.status(200).json({ success: true, card: data });
     }
-    
+
     // Update card settings
-    if (apiPath === '/cards/settings' && req.method === 'POST') {
+    if (apiPath === "/cards/settings" && req.method === "POST") {
       const { cardId, dailyLimit, contactlessEnabled } = req.body;
-      
+
       const { data, error } = await supabase
-        .from('cards')
-        .update({ 
+        .from("cards")
+        .update({
           daily_limit: dailyLimit,
-          contactless_enabled: contactlessEnabled 
+          contactless_enabled: contactlessEnabled,
         })
-        .eq('id', cardId)
-        .eq('user_id', 1)
+        .eq("id", cardId)
+        .eq("user_id", 1)
         .select()
         .single();
-      
+
       if (error) {
-        return res.status(500).json({ error: 'Failed to update card settings' });
+        return res
+          .status(500)
+          .json({ error: "Failed to update card settings" });
       }
-      
+
       return res.status(200).json({ success: true, card: data });
     }
 
     // Get recent deposits for add-money page
-    if (apiPath === '/recent-deposits' && req.method === 'GET') {
+    if (apiPath === "/recent-deposits" && req.method === "GET") {
       const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('type', 'credit')
-        .eq('category', 'deposit')
-        .order('date', { ascending: false })
+        .from("transactions")
+        .select("*")
+        .eq("type", "credit")
+        .eq("category", "deposit")
+        .order("date", { ascending: false })
         .limit(5);
-      
+
       if (error) {
-        return res.status(500).json({ error: 'Failed to fetch recent deposits' });
+        return res
+          .status(500)
+          .json({ error: "Failed to fetch recent deposits" });
       }
-      
-      const deposits = (data || []).map(tx => ({
-        method: tx.description || 'Bank Transfer',
+
+      const deposits = (data || []).map((tx) => ({
+        method: tx.description || "Bank Transfer",
         amount: `$${parseFloat(tx.amount).toLocaleString()}`,
         time: new Date(tx.date).toLocaleString(),
-        status: tx.status === 'completed' ? 'Completed' : 'Pending'
+        status: tx.status === "completed" ? "Completed" : "Pending",
       }));
-      
+
       return res.status(200).json(deposits);
     }
 
     // Create support ticket
-    if (apiPath === '/support-tickets' && req.method === 'POST') {
+    if (apiPath === "/support-tickets" && req.method === "POST") {
       const { userId, subject, category, priority, description } = req.body;
-      
+
       const { data, error } = await supabase
-        .from('support_tickets')
+        .from("support_tickets")
         .insert({
           user_id: userId,
           subject,
           category,
           priority,
           description,
-          status: 'open'
+          status: "open",
         })
         .select()
         .single();
-      
+
       if (error) {
-        return res.status(500).json({ error: 'Failed to create support ticket' });
+        return res
+          .status(500)
+          .json({ error: "Failed to create support ticket" });
       }
-      
+
       return res.status(201).json(data);
     }
 
     // Exchange rates endpoint - real-time data
-    if (apiPath === '/exchange-rates' && req.method === 'GET') {
+    if (apiPath === "/exchange-rates" && req.method === "GET") {
       const exchangeRates = {
         USD: 1.0,
         EUR: 0.92,
         GBP: 0.79,
-        JPY: 149.50,
+        JPY: 149.5,
         CNY: 7.23,
         CHF: 0.91,
         CAD: 1.36,
@@ -518,58 +555,58 @@ module.exports = async function handler(req, res) {
         INR: 83.12,
         KRW: 1340.25,
         SGD: 1.35,
-        HKD: 7.82
+        HKD: 7.82,
       };
-      
+
       return res.status(200).json(exchangeRates);
     }
 
     // Currency exchange transaction
-    if (apiPath === '/currency-exchange' && req.method === 'POST') {
-      const { userId, fromCurrency, toCurrency, amount, exchangeRate } = req.body;
-      
+    if (apiPath === "/currency-exchange" && req.method === "POST") {
+      const { userId, fromCurrency, toCurrency, amount, exchangeRate } =
+        req.body;
+
       const transaction = {
         user_id: userId,
-        type: 'exchange',
+        type: "exchange",
         amount: amount.toString(),
         description: `Currency exchange: ${amount} ${fromCurrency} to ${toCurrency}`,
-        category: 'exchange',
-        status: 'completed',
+        category: "exchange",
+        status: "completed",
         metadata: JSON.stringify({
           fromCurrency,
           toCurrency,
           exchangeRate,
-          convertedAmount: amount * exchangeRate
-        })
+          convertedAmount: amount * exchangeRate,
+        }),
       };
-      
+
       const { data, error } = await supabase
-        .from('transactions')
+        .from("transactions")
         .insert(transaction)
         .select()
         .single();
-      
+
       if (error) {
-        return res.status(500).json({ error: 'Failed to process exchange' });
+        return res.status(500).json({ error: "Failed to process exchange" });
       }
-      
+
       return res.status(200).json({ success: true, transaction: data });
     }
 
     // Default response for unimplemented endpoints
-    return res.status(404).json({ 
-      error: 'API endpoint not found',
+    return res.status(404).json({
+      error: "API endpoint not found",
       endpoint: apiPath,
       method: req.method,
-      message: 'This endpoint is not implemented in the serverless function'
+      message: "This endpoint is not implemented in the serverless function",
     });
-
   } catch (error) {
-    console.error('❌ Serverless function error:', error);
+    console.error("❌ Serverless function error:", error);
     return res.status(500).json({
-      error: 'Internal server error',
+      error: "Internal server error",
       message: error.message,
-      details: 'Check Vercel function logs for more details'
+      details: "Check Vercel function logs for more details",
     });
   }
 };
