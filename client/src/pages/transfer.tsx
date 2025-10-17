@@ -713,6 +713,7 @@ export default function Transfer() {
                       className="w-full text-center text-2xl tracking-widest p-4 border border-gray-300 rounded-lg"
                       placeholder="****"
                       maxLength={4}
+                      autoFocus
                     />
                     {pinError && (
                       <p className="text-red-600 text-sm mt-2 text-center">
