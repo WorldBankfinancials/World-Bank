@@ -33,7 +33,7 @@ export default function TransactionHistory() {
   
   const { data: transactions, isLoading: transactionsLoading, refetch: refetchTransactions } = useQuery<Transaction[]>({
     queryKey: ['/api/accounts', '1', 'transactions'],
-    enabled: !!user?.id,
+    enabled: Boolean(user?.id),
   });
   
   const [searchTerm, setSearchTerm] = useState("");

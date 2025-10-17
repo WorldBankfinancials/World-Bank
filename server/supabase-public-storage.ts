@@ -342,7 +342,7 @@ export class SupabasePublicStorage implements IStorage {
         .eq('transfer_pin', pin)
         .single();
       
-      return !error && !!user;
+      return !error && Boolean(user);
     } catch (error) {
       console.error('Error verifying PIN:', error);
       return false;
