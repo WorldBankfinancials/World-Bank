@@ -7,14 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { 
-  Wallet, 
-  Smartphone, 
-  QrCode, 
-  CreditCard, 
-  Shield, 
-  Zap, 
-  Globe, 
+import {
+  Wallet,
+  Smartphone,
+  QrCode,
+  CreditCard,
+  Shield,
+  Zap,
+  Globe,
   Plus,
   Send,
   Download,
@@ -24,61 +24,81 @@ import {
   Settings,
   ArrowUpRight,
   ArrowDownRight,
-  Scan
+  Scan,
 } from "lucide-react";
-
 
 export default function DigitalWallet() {
   const { t } = useLanguage();
   const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user'],
+    queryKey: ["/api/user"],
   });
-  
+
   const [showBalance, setShowBalance] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">{t('loading')}</div>
+        <div className="text-gray-600">{t("loading")}</div>
       </div>
     );
   }
 
   // Fetch real wallet data from Supabase
   const { data: walletData } = useQuery<{ balance: number }>({
-    queryKey: ['/api/wallet-balance'],
+    queryKey: ["/api/wallet-balance"],
     enabled: Boolean(user),
-    staleTime: 30000
+    staleTime: 30000,
   });
 
   const { data: recentTransactions } = useQuery({
-    queryKey: ['/api/wallet-transactions'],
+    queryKey: ["/api/wallet-transactions"],
     enabled: Boolean(user),
-    staleTime: 30000
+    staleTime: 30000,
   });
 
   const walletBalance = walletData?.balance || (user as any)?.balance || 0;
 
   const quickActions = [
-    { icon: Send, label: "Send Money", action: () => window.location.href = "/transfer" },
-    { icon: QrCode, label: "QR Pay", action: () => window.location.href = "/mobile-pay" },
-    { icon: Plus, label: "Add Funds", action: () => window.location.href = "/add-money" },
-    { icon: History, label: "History", action: () => window.location.href = "/history" }
+    {
+      icon: Send,
+      label: "Send Money",
+      action: () => (window.location.href = "/transfer"),
+    },
+    {
+      icon: QrCode,
+      label: "QR Pay",
+      action: () => (window.location.href = "/mobile-pay"),
+    },
+    {
+      icon: Plus,
+      label: "Add Funds",
+      action: () => (window.location.href = "/add-money"),
+    },
+    {
+      icon: History,
+      label: "History",
+      action: () => (window.location.href = "/history"),
+    },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <div className="px-4 py-6 pb-20">
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Digital Wallet</h1>
+            <h1 className="text-xl font-semibold text-gray-900">
+              Digital Wallet
+            </h1>
             <p className="text-sm text-gray-600">Secure digital payments</p>
           </div>
-          <Button onClick={() => alert("Add funds feature")} className="bg-blue-600 text-white">
+          <Button
+            onClick={() => alert("Add funds feature")}
+            className="bg-blue-600 text-white"
+          >
             <Plus className="w-4 h-4 mr-1" />
             Add Funds
           </Button>
@@ -89,16 +109,22 @@ export default function DigitalWallet() {
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle className="text-xl mb-2">World Bank Digital Wallet</CardTitle>
+                <CardTitle className="text-xl mb-2">
+                  World Bank Digital Wallet
+                </CardTitle>
                 <p className="text-blue-100">Available Balance</p>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowBalance(!showBalance)}
                 className="text-white hover:bg-blue-700"
               >
-                {showBalance ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showBalance ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
               </Button>
             </div>
           </CardHeader>
@@ -108,8 +134,10 @@ export default function DigitalWallet() {
                 {showBalance ? `$${walletBalance.toLocaleString()}` : "••••••"}
               </div>
               <div className="flex items-center space-x-4 text-blue-100">
-                <span>Account: {user?.accountNumber || t('loading')}</span>
-                <Badge className="bg-green-500 text-white">{(user as any)?.isActive ? 'Active' : 'Inactive'}</Badge>
+                <span>Account: {user?.accountNumber || t("loading")}</span>
+                <Badge className="bg-green-500 text-white">
+                  {(user as any)?.isActive ? "Active" : "Inactive"}
+                </Badge>
               </div>
             </div>
           </CardContent>
@@ -144,32 +172,49 @@ export default function DigitalWallet() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {(recentTransactions as any[])?.map((transaction: any, index: number) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      transaction.type === 'received' ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
-                      {transaction.type === 'received' ? (
-                        <ArrowDownRight className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <ArrowUpRight className="w-5 h-5 text-red-600" />
-                      )}
+              {(recentTransactions as any[])?.map(
+                (transaction: any, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          transaction.type === "received"
+                            ? "bg-green-100"
+                            : "bg-red-100"
+                        }`}
+                      >
+                        {transaction.type === "received" ? (
+                          <ArrowDownRight className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <ArrowUpRight className="w-5 h-5 text-red-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {transaction.type === "received"
+                            ? `From ${transaction.from}`
+                            : `To ${transaction.to}`}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {transaction.time}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">
-                        {transaction.type === 'received' ? `From ${transaction.from}` : `To ${transaction.to}`}
-                      </p>
-                      <p className="text-xs text-gray-500">{transaction.time}</p>
-                    </div>
+                    <span
+                      className={`font-medium ${
+                        transaction.type === "received"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {transaction.amount}
+                    </span>
                   </div>
-                  <span className={`font-medium ${
-                    transaction.type === 'received' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {transaction.amount}
-                  </span>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </CardContent>
         </Card>
@@ -186,10 +231,16 @@ export default function DigitalWallet() {
                   <QrCode className="w-6 h-6 text-blue-600" />
                   <div>
                     <p className="font-medium">QR Code Payments</p>
-                    <p className="text-sm text-gray-600">Scan to pay instantly</p>
+                    <p className="text-sm text-gray-600">
+                      Scan to pay instantly
+                    </p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => alert("QR scanner opened")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => alert("QR scanner opened")}
+                >
                   <Scan className="w-4 h-4 mr-1" />
                   Scan
                 </Button>
@@ -199,10 +250,16 @@ export default function DigitalWallet() {
                   <Smartphone className="w-6 h-6 text-green-600" />
                   <div>
                     <p className="font-medium">Mobile Transfers</p>
-                    <p className="text-sm text-gray-600">Send to phone numbers</p>
+                    <p className="text-sm text-gray-600">
+                      Send to phone numbers
+                    </p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => alert("Mobile transfer opened")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => alert("Mobile transfer opened")}
+                >
                   Send
                 </Button>
               </div>
@@ -211,10 +268,16 @@ export default function DigitalWallet() {
                   <Globe className="w-6 h-6 text-purple-600" />
                   <div>
                     <p className="font-medium">International Payments</p>
-                    <p className="text-sm text-gray-600">Send money worldwide</p>
+                    <p className="text-sm text-gray-600">
+                      Send money worldwide
+                    </p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => alert("International transfer opened")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => alert("International transfer opened")}
+                >
                   Transfer
                 </Button>
               </div>
@@ -222,7 +285,7 @@ export default function DigitalWallet() {
           </CardContent>
         </Card>
       </div>
-      
+
       <BottomNavigation />
     </div>
   );

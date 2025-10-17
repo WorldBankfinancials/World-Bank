@@ -1,7 +1,6 @@
-
-import { createClient } from '@supabase/supabase-js';
-import { 
-  type User, 
+import { createClient } from "@supabase/supabase-js";
+import {
+  type User,
   type InsertUser,
   type Account,
   type InsertAccount,
@@ -10,34 +9,38 @@ import {
   type AdminAction,
   type InsertAdminAction,
   type SupportTicket,
-  type InsertSupportTicket
+  type InsertSupportTicket,
 } from "@shared/schema";
 import { IStorage } from "./storage";
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://icbsxmrmorkdgxtumamu.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYnN4bXJtb3JrZGd4dHVtYW11Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDc1OTEwOSwiZXhwIjoyMDcwMzM1MTA5fQ.flfRMxdMFOQXqfdjGxSUWKSHsimTM0FSy-b2ZZda5HU';
+const supabaseUrl =
+  process.env.VITE_SUPABASE_URL || "https://icbsxmrmorkdgxtumamu.supabase.co";
+const supabaseServiceKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYnN4bXJtb3JrZGd4dHVtYW11Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDc1OTEwOSwiZXhwIjoyMDcwMzM1MTA5fQ.flfRMxdMFOQXqfdjGxSUWKSHsimTM0FSy-b2ZZda5HU";
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { persistSession: false },
-  db: { schema: 'public' }
+  db: { schema: "public" },
 });
 
-console.log('🔗 Connected to Supabase public schema with realtime synchronization');
-console.log('📊 Database URL:', supabaseUrl);
-console.log('🔐 Using service role for admin operations');
+console.log(
+  "🔗 Connected to Supabase public schema with realtime synchronization",
+);
+console.log("📊 Database URL:", supabaseUrl);
+console.log("🔐 Using service role for admin operations");
 
 export class SupabasePublicStorage implements IStorage {
-  
   async getUser(id: number): Promise<User | undefined> {
     try {
       const { data: user, error } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('id', id)
+        .from("bank_users")
+        .select("*")
+        .eq("id", id)
         .single();
-      
+
       if (error || !user) return undefined;
-      
+
       return {
         id: user.id,
         username: user.username,
@@ -64,17 +67,17 @@ export class SupabasePublicStorage implements IStorage {
         isOnline: user.is_online,
         isActive: user.is_active,
         avatarUrl: user.avatar_url,
-        balance: parseFloat(user.balance || '0'),
+        balance: parseFloat(user.balance || "0"),
         createdAt: user.created_at,
         supabaseUserId: user.supabase_user_id,
         lastLogin: user.last_login,
         createdByAdmin: user.created_by_admin,
         modifiedByAdmin: user.modified_by_admin,
         adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
+        updatedAt: user.updated_at,
       };
     } catch (error) {
-      console.error('Error getting user:', error);
+      console.error("Error getting user:", error);
       return undefined;
     }
   }
@@ -82,13 +85,13 @@ export class SupabasePublicStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
       const { data: user, error } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('email', email)
+        .from("bank_users")
+        .select("*")
+        .eq("email", email)
         .single();
-      
+
       if (error || !user) return undefined;
-      
+
       return {
         id: user.id,
         username: user.username,
@@ -115,17 +118,17 @@ export class SupabasePublicStorage implements IStorage {
         isOnline: user.is_online,
         isActive: user.is_active,
         avatarUrl: user.avatar_url,
-        balance: parseFloat(user.balance || '0'),
+        balance: parseFloat(user.balance || "0"),
         createdAt: user.created_at,
         supabaseUserId: user.supabase_user_id,
         lastLogin: user.last_login,
         createdByAdmin: user.created_by_admin,
         modifiedByAdmin: user.modified_by_admin,
         adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
+        updatedAt: user.updated_at,
       };
     } catch (error) {
-      console.error('Error getting user by email:', error);
+      console.error("Error getting user by email:", error);
       return undefined;
     }
   }
@@ -133,13 +136,13 @@ export class SupabasePublicStorage implements IStorage {
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
     try {
       const { data: user, error } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('supabase_user_id', supabaseUserId)
+        .from("bank_users")
+        .select("*")
+        .eq("supabase_user_id", supabaseUserId)
         .single();
-      
+
       if (error || !user) return undefined;
-      
+
       return {
         id: user.id,
         username: user.username,
@@ -166,43 +169,43 @@ export class SupabasePublicStorage implements IStorage {
         isOnline: user.is_online,
         isActive: user.is_active,
         avatarUrl: user.avatar_url,
-        balance: parseFloat(user.balance || '0'),
+        balance: parseFloat(user.balance || "0"),
         createdAt: user.created_at,
         supabaseUserId: user.supabase_user_id,
         lastLogin: user.last_login,
         createdByAdmin: user.created_by_admin,
         modifiedByAdmin: user.modified_by_admin,
         adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
+        updatedAt: user.updated_at,
       };
     } catch (error) {
-      console.error('Error getting user by Supabase ID:', error);
+      console.error("Error getting user by Supabase ID:", error);
       return undefined;
     }
   }
 
   async getUserAccounts(userId: number): Promise<Account[]> {
-    console.log('🏦 Fetching accounts for user ID:', userId);
+    console.log("🏦 Fetching accounts for user ID:", userId);
     try {
       const { data: accounts, error } = await supabase
-        .from('bank_accounts')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .order('id');
-      
+        .from("bank_accounts")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .order("id");
+
       if (error) {
-        console.error('❌ Supabase error fetching accounts:', error);
+        console.error("❌ Supabase error fetching accounts:", error);
         return [];
       }
-      
+
       if (!accounts || accounts.length === 0) {
-        console.log('❌ No accounts found for user ID:', userId);
+        console.log("❌ No accounts found for user ID:", userId);
         return [];
       }
-      
-      console.log('✅ Found accounts in Supabase:', accounts);
-      return accounts.map(account => ({
+
+      console.log("✅ Found accounts in Supabase:", accounts);
+      return accounts.map((account) => ({
         id: account.id,
         userId: account.user_id,
         accountNumber: account.account_number,
@@ -214,30 +217,33 @@ export class SupabasePublicStorage implements IStorage {
         createdAt: account.created_at,
         updatedAt: account.updated_at,
         interestRate: account.interest_rate?.toString() || null,
-        minimumBalance: account.minimum_balance?.toString() || null
+        minimumBalance: account.minimum_balance?.toString() || null,
       }));
     } catch (error) {
-      console.error('❌ Error fetching accounts:', error);
+      console.error("❌ Error fetching accounts:", error);
       return [];
     }
   }
 
   async getAccounts(userId?: number): Promise<Account[]> {
     try {
-      let query = supabase.from('bank_accounts').select('*').eq('is_active', true);
-      
+      let query = supabase
+        .from("bank_accounts")
+        .select("*")
+        .eq("is_active", true);
+
       if (userId) {
-        query = query.eq('user_id', userId);
+        query = query.eq("user_id", userId);
       }
-      
-      const { data: accounts, error } = await query.order('id');
-      
+
+      const { data: accounts, error } = await query.order("id");
+
       if (error) {
-        console.error('Error getting accounts:', error);
+        console.error("Error getting accounts:", error);
         return [];
       }
-      
-      return (accounts || []).map(account => ({
+
+      return (accounts || []).map((account) => ({
         id: account.id,
         userId: account.user_id,
         accountNumber: account.account_number,
@@ -249,10 +255,10 @@ export class SupabasePublicStorage implements IStorage {
         createdAt: account.created_at,
         updatedAt: account.updated_at,
         interestRate: account.interest_rate?.toString() || null,
-        minimumBalance: account.minimum_balance?.toString() || null
+        minimumBalance: account.minimum_balance?.toString() || null,
       }));
     } catch (error) {
-      console.error('Error getting accounts:', error);
+      console.error("Error getting accounts:", error);
       return [];
     }
   }
@@ -260,22 +266,22 @@ export class SupabasePublicStorage implements IStorage {
   async createTransaction(data: InsertTransaction): Promise<Transaction> {
     try {
       const { data: transaction, error } = await supabase
-        .from('transactions')
+        .from("transactions")
         .insert({
           account_id: data.accountId,
           type: data.type,
           amount: data.amount,
           description: data.description,
           category: data.category,
-          status: data.status || 'pending',
+          status: data.status || "pending",
           date: data.date || new Date().toISOString(),
-          admin_notes: data.adminNotes
+          admin_notes: data.adminNotes,
         })
         .select()
         .single();
 
       if (error || !transaction) {
-        throw error || new Error('Failed to create transaction');
+        throw error || new Error("Failed to create transaction");
       }
 
       return {
@@ -290,30 +296,34 @@ export class SupabasePublicStorage implements IStorage {
         transactionType: transaction.transaction_type,
         status: transaction.status,
         createdAt: transaction.created_at,
-        updatedAt: transaction.updated_at
+        updatedAt: transaction.updated_at,
       };
     } catch (error) {
-      console.error('Error creating transaction:', error);
+      console.error("Error creating transaction:", error);
       throw error;
     }
   }
 
   async getTransactions(accountId?: number): Promise<Transaction[]> {
     try {
-      let query = supabase.from('transactions').select('*');
-      
+      let query = supabase.from("transactions").select("*");
+
       if (accountId) {
-        query = query.or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`);
+        query = query.or(
+          `from_account_id.eq.${accountId},to_account_id.eq.${accountId}`,
+        );
       }
-      
-      const { data: transactions, error } = await query.order('created_at', { ascending: false });
-      
+
+      const { data: transactions, error } = await query.order("created_at", {
+        ascending: false,
+      });
+
       if (error) {
-        console.error('Error getting transactions:', error);
+        console.error("Error getting transactions:", error);
         return [];
       }
-      
-      return (transactions || []).map(transaction => ({
+
+      return (transactions || []).map((transaction) => ({
         id: transaction.id,
         fromAccountId: transaction.from_account_id,
         toAccountId: transaction.to_account_id,
@@ -325,10 +335,10 @@ export class SupabasePublicStorage implements IStorage {
         transactionType: transaction.transaction_type,
         status: transaction.status,
         createdAt: transaction.created_at,
-        updatedAt: transaction.updated_at
+        updatedAt: transaction.updated_at,
       }));
     } catch (error) {
-      console.error('Error getting transactions:', error);
+      console.error("Error getting transactions:", error);
       return [];
     }
   }
@@ -336,15 +346,15 @@ export class SupabasePublicStorage implements IStorage {
   async verifyPin(email: string, pin: string): Promise<boolean> {
     try {
       const { data: user, error } = await supabase
-        .from('bank_users')
-        .select('transfer_pin')
-        .eq('email', email)
-        .eq('transfer_pin', pin)
+        .from("bank_users")
+        .select("transfer_pin")
+        .eq("email", email)
+        .eq("transfer_pin", pin)
         .single();
-      
+
       return !error && Boolean(user);
     } catch (error) {
-      console.error('Error verifying PIN:', error);
+      console.error("Error verifying PIN:", error);
       return false;
     }
   }
@@ -352,12 +362,12 @@ export class SupabasePublicStorage implements IStorage {
   async getAllUsers(): Promise<User[]> {
     try {
       const { data: users, error } = await supabase
-        .from('bank_users')
-        .select('*');
-      
+        .from("bank_users")
+        .select("*");
+
       if (error || !users) return [];
-      
-      return users.map(user => ({
+
+      return users.map((user) => ({
         id: user.id,
         username: user.username,
         password: user.password_hash,
@@ -383,17 +393,17 @@ export class SupabasePublicStorage implements IStorage {
         isOnline: user.is_online,
         isActive: user.is_active,
         avatarUrl: user.avatar_url,
-        balance: parseFloat(user.balance || '0'),
+        balance: parseFloat(user.balance || "0"),
         createdAt: user.created_at,
         supabaseUserId: user.supabase_user_id,
         lastLogin: user.last_login,
         createdByAdmin: user.created_by_admin,
         modifiedByAdmin: user.modified_by_admin,
         adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
+        updatedAt: user.updated_at,
       }));
     } catch (error) {
-      console.error('Error getting all users:', error);
+      console.error("Error getting all users:", error);
       return [];
     }
   }
@@ -401,13 +411,13 @@ export class SupabasePublicStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     try {
       const { data: user, error } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('username', username)
+        .from("bank_users")
+        .select("*")
+        .eq("username", username)
         .single();
-      
+
       if (error || !user) return undefined;
-      
+
       return {
         id: user.id,
         username: user.username,
@@ -434,17 +444,17 @@ export class SupabasePublicStorage implements IStorage {
         isOnline: user.is_online,
         isActive: user.is_active,
         avatarUrl: user.avatar_url,
-        balance: parseFloat(user.balance || '0'),
+        balance: parseFloat(user.balance || "0"),
         createdAt: user.created_at,
         supabaseUserId: user.supabase_user_id,
         lastLogin: user.last_login,
         createdByAdmin: user.created_by_admin,
         modifiedByAdmin: user.modified_by_admin,
         adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
+        updatedAt: user.updated_at,
       };
     } catch (error) {
-      console.error('Error getting user by username:', error);
+      console.error("Error getting user by username:", error);
       return undefined;
     }
   }
@@ -452,7 +462,7 @@ export class SupabasePublicStorage implements IStorage {
   async createUser(data: InsertUser): Promise<User> {
     try {
       const { data: user, error } = await supabase
-        .from('bank_users')
+        .from("bank_users")
         .insert({
           username: data.username,
           password_hash: data.password,
@@ -473,19 +483,19 @@ export class SupabasePublicStorage implements IStorage {
           id_type: data.idType,
           id_number: data.idNumber,
           transfer_pin: data.transferPin,
-          role: data.role || 'customer',
+          role: data.role || "customer",
           is_verified: data.isVerified || false,
           is_online: data.isOnline || false,
           is_active: data.isActive || false,
           balance: data.balance || 0,
           supabase_user_id: data.supabaseUserId,
-          admin_notes: data.adminNotes
+          admin_notes: data.adminNotes,
         })
         .select()
         .single();
 
       if (error || !user) {
-        throw error || new Error('Failed to create user');
+        throw error || new Error("Failed to create user");
       }
 
       return {
@@ -514,25 +524,28 @@ export class SupabasePublicStorage implements IStorage {
         isOnline: user.is_online,
         isActive: user.is_active,
         avatarUrl: user.avatar_url,
-        balance: parseFloat(user.balance || '0'),
+        balance: parseFloat(user.balance || "0"),
         createdAt: user.created_at,
         supabaseUserId: user.supabase_user_id,
         lastLogin: user.last_login,
         createdByAdmin: user.created_by_admin,
         modifiedByAdmin: user.modified_by_admin,
         adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
+        updatedAt: user.updated_at,
       };
     } catch (error) {
-      console.error('Error creating user:', error);
+      console.error("Error creating user:", error);
       throw error;
     }
   }
 
-  async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
+  async updateUser(
+    id: number,
+    updates: Partial<User>,
+  ): Promise<User | undefined> {
     try {
       const { data: user, error } = await supabase
-        .from('bank_users')
+        .from("bank_users")
         .update({
           username: updates.username,
           full_name: updates.fullName,
@@ -554,14 +567,14 @@ export class SupabasePublicStorage implements IStorage {
           modified_by_admin: updates.modifiedByAdmin,
           admin_notes: updates.adminNotes,
           transfer_pin: updates.transferPin,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', id)
+        .eq("id", id)
         .select()
         .single();
 
       if (error || !user) return undefined;
-      
+
       return {
         id: user.id,
         username: user.username,
@@ -588,32 +601,35 @@ export class SupabasePublicStorage implements IStorage {
         isOnline: user.is_online,
         isActive: user.is_active,
         avatarUrl: user.avatar_url,
-        balance: parseFloat(user.balance || '0'),
+        balance: parseFloat(user.balance || "0"),
         createdAt: user.created_at,
         supabaseUserId: user.supabase_user_id,
         lastLogin: user.last_login,
         createdByAdmin: user.created_by_admin,
         modifiedByAdmin: user.modified_by_admin,
         adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
+        updatedAt: user.updated_at,
       };
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error("Error updating user:", error);
       return undefined;
     }
   }
 
-  async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
+  async updateUserBalance(
+    id: number,
+    amount: number,
+  ): Promise<User | undefined> {
     try {
       const { data: user, error } = await supabase
-        .from('bank_users')
+        .from("bank_users")
         .update({ balance: amount, updated_at: new Date().toISOString() })
-        .eq('id', id)
+        .eq("id", id)
         .select()
         .single();
 
       if (error || !user) return undefined;
-      
+
       return {
         id: user.id,
         username: user.username,
@@ -640,17 +656,17 @@ export class SupabasePublicStorage implements IStorage {
         isOnline: user.is_online,
         isActive: user.is_active,
         avatarUrl: user.avatar_url,
-        balance: parseFloat(user.balance || '0'),
+        balance: parseFloat(user.balance || "0"),
         createdAt: user.created_at,
         supabaseUserId: user.supabase_user_id,
         lastLogin: user.last_login,
         createdByAdmin: user.created_by_admin,
         modifiedByAdmin: user.modified_by_admin,
         adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
+        updatedAt: user.updated_at,
       };
     } catch (error) {
-      console.error('Error updating user balance:', error);
+      console.error("Error updating user balance:", error);
       return undefined;
     }
   }
@@ -658,13 +674,13 @@ export class SupabasePublicStorage implements IStorage {
   async getAccount(id: number): Promise<Account | undefined> {
     try {
       const { data: account, error } = await supabase
-        .from('bank_accounts')
-        .select('*')
-        .eq('id', id)
+        .from("bank_accounts")
+        .select("*")
+        .eq("id", id)
         .single();
-      
+
       if (error || !account) return undefined;
-      
+
       return {
         id: account.id,
         userId: account.user_id,
@@ -677,10 +693,10 @@ export class SupabasePublicStorage implements IStorage {
         createdAt: account.created_at,
         updatedAt: account.updated_at,
         interestRate: account.interest_rate?.toString() || null,
-        minimumBalance: account.minimum_balance?.toString() || null
+        minimumBalance: account.minimum_balance?.toString() || null,
       };
     } catch (error) {
-      console.error('Error getting account:', error);
+      console.error("Error getting account:", error);
       return undefined;
     }
   }
@@ -688,23 +704,23 @@ export class SupabasePublicStorage implements IStorage {
   async createAccount(data: InsertAccount): Promise<Account> {
     try {
       const { data: account, error } = await supabase
-        .from('bank_accounts')
+        .from("bank_accounts")
         .insert({
           user_id: data.userId,
           account_number: data.accountNumber,
           account_type: data.accountType,
           account_name: data.accountName,
           balance: data.balance,
-          currency: data.currency || 'USD',
+          currency: data.currency || "USD",
           is_active: data.isActive !== undefined ? data.isActive : true,
           interest_rate: data.interestRate,
-          minimum_balance: data.minimumBalance
+          minimum_balance: data.minimumBalance,
         })
         .select()
         .single();
 
       if (error || !account) {
-        throw error || new Error('Failed to create account');
+        throw error || new Error("Failed to create account");
       }
 
       return {
@@ -719,31 +735,34 @@ export class SupabasePublicStorage implements IStorage {
         createdAt: account.created_at,
         updatedAt: account.updated_at,
         interestRate: account.interest_rate?.toString() || null,
-        minimumBalance: account.minimum_balance?.toString() || null
+        minimumBalance: account.minimum_balance?.toString() || null,
       };
     } catch (error) {
-      console.error('Error creating account:', error);
+      console.error("Error creating account:", error);
       throw error;
     }
   }
 
-  async updateAccount(id: number, updates: Partial<Account>): Promise<Account | undefined> {
+  async updateAccount(
+    id: number,
+    updates: Partial<Account>,
+  ): Promise<Account | undefined> {
     try {
       const { data: account, error } = await supabase
-        .from('bank_accounts')
+        .from("bank_accounts")
         .update({
           balance: updates.balance,
           is_active: updates.isActive,
           account_type: updates.accountType,
           account_name: updates.accountName,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', id)
+        .eq("id", id)
         .select()
         .single();
 
       if (error || !account) return undefined;
-      
+
       return {
         id: account.id,
         userId: account.user_id,
@@ -756,29 +775,32 @@ export class SupabasePublicStorage implements IStorage {
         createdAt: account.created_at,
         updatedAt: account.updated_at,
         interestRate: account.interest_rate?.toString() || null,
-        minimumBalance: account.minimum_balance?.toString() || null
+        minimumBalance: account.minimum_balance?.toString() || null,
       };
     } catch (error) {
-      console.error('Error updating account:', error);
+      console.error("Error updating account:", error);
       return undefined;
     }
   }
 
-  async getAccountTransactions(accountId: number, limit = 50): Promise<Transaction[]> {
+  async getAccountTransactions(
+    accountId: number,
+    limit = 50,
+  ): Promise<Transaction[]> {
     try {
       const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select('*')
+        .from("transactions")
+        .select("*")
         .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
-        .order('created_at', { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(limit);
-      
+
       if (error) {
-        console.error('Error getting account transactions:', error);
+        console.error("Error getting account transactions:", error);
         return [];
       }
-      
-      return (transactions || []).map(tx => ({
+
+      return (transactions || []).map((tx) => ({
         id: tx.id,
         fromAccountId: tx.from_account_id,
         toAccountId: tx.to_account_id,
@@ -790,31 +812,36 @@ export class SupabasePublicStorage implements IStorage {
         transactionType: tx.transaction_type,
         status: tx.status,
         createdAt: tx.created_at,
-        updatedAt: tx.updated_at
+        updatedAt: tx.updated_at,
       }));
     } catch (error) {
-      console.error('Error getting account transactions:', error);
+      console.error("Error getting account transactions:", error);
       return [];
     }
   }
 
-  async updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<Transaction | undefined> {
+  async updateTransactionStatus(
+    id: number,
+    status: string,
+    adminId: number,
+    notes?: string,
+  ): Promise<Transaction | undefined> {
     try {
       const { data: transaction, error } = await supabase
-        .from('transactions')
+        .from("transactions")
         .update({
           status,
           admin_notes: notes,
           approved_by: adminId.toString(),
           approved_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', id)
+        .eq("id", id)
         .select()
         .single();
 
       if (error || !transaction) return undefined;
-      
+
       return {
         id: transaction.id,
         fromAccountId: transaction.from_account_id,
@@ -827,10 +854,10 @@ export class SupabasePublicStorage implements IStorage {
         transactionType: transaction.transaction_type,
         status: transaction.status,
         createdAt: transaction.created_at,
-        updatedAt: transaction.updated_at
+        updatedAt: transaction.updated_at,
       };
     } catch (error) {
-      console.error('Error updating transaction status:', error);
+      console.error("Error updating transaction status:", error);
       return undefined;
     }
   }
@@ -838,17 +865,17 @@ export class SupabasePublicStorage implements IStorage {
   async getPendingTransactions(): Promise<Transaction[]> {
     try {
       const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
-      
+        .from("transactions")
+        .select("*")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+
       if (error) {
-        console.error('Error getting pending transactions:', error);
+        console.error("Error getting pending transactions:", error);
         return [];
       }
-      
-      return (transactions || []).map(tx => ({
+
+      return (transactions || []).map((tx) => ({
         id: tx.id,
         fromAccountId: tx.from_account_id,
         toAccountId: tx.to_account_id,
@@ -860,10 +887,10 @@ export class SupabasePublicStorage implements IStorage {
         transactionType: tx.transaction_type,
         status: tx.status,
         createdAt: tx.created_at,
-        updatedAt: tx.updated_at
+        updatedAt: tx.updated_at,
       }));
     } catch (error) {
-      console.error('Error getting pending transactions:', error);
+      console.error("Error getting pending transactions:", error);
       return [];
     }
   }
@@ -871,16 +898,16 @@ export class SupabasePublicStorage implements IStorage {
   async getAllTransactions(): Promise<Transaction[]> {
     try {
       const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
+        .from("transactions")
+        .select("*")
+        .order("created_at", { ascending: false });
+
       if (error) {
-        console.error('Error getting all transactions:', error);
+        console.error("Error getting all transactions:", error);
         return [];
       }
-      
-      return (transactions || []).map(tx => ({
+
+      return (transactions || []).map((tx) => ({
         id: tx.id,
         fromAccountId: tx.from_account_id,
         toAccountId: tx.to_account_id,
@@ -892,31 +919,36 @@ export class SupabasePublicStorage implements IStorage {
         transactionType: tx.transaction_type,
         status: tx.status,
         createdAt: tx.created_at,
-        updatedAt: tx.updated_at
+        updatedAt: tx.updated_at,
       }));
     } catch (error) {
-      console.error('Error getting all transactions:', error);
+      console.error("Error getting all transactions:", error);
       return [];
     }
   }
 
   async createAdminAction(action: InsertAdminAction): Promise<AdminAction> {
-    throw new Error('Admin actions not implemented yet');
+    throw new Error("Admin actions not implemented yet");
   }
 
   async getAdminActions(adminId?: number): Promise<AdminAction[]> {
     return [];
   }
 
-  async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> {
-    throw new Error('Support tickets not implemented yet');
+  async createSupportTicket(
+    ticket: InsertSupportTicket,
+  ): Promise<SupportTicket> {
+    throw new Error("Support tickets not implemented yet");
   }
 
   async getSupportTickets(userId?: number): Promise<SupportTicket[]> {
     return [];
   }
 
-  async updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
+  async updateSupportTicket(
+    id: number,
+    updates: Partial<SupportTicket>,
+  ): Promise<SupportTicket | undefined> {
     return undefined;
   }
 }
