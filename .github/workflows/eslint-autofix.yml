@@ -1,0 +1,41 @@
+name: ESLint Auto Fix
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  eslint-fix:
+    name: Run ESLint and Auto Fix
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run ESLint with auto-fix
+        run: npx eslint . --ext .js,.jsx,.ts,.tsx --fix || true
+
+      - name: Commit and push fixes (if any)
+        run: |
+          if [[ `git status --porcelain` ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "ESLint auto-fix: $(date +'%Y-%m-%d %H:%M:%S')"
+            git push
+          else
+            echo "No ESLint fixes to commit."
+          fi
