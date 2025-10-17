@@ -47,9 +47,13 @@ module.exports = async function handler(req, res) {
         environment: {
           hasSupabaseUrl: !!supabaseUrl,
           hasSupabaseKey: !!supabaseServiceKey,
-          urlPrefix: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'missing',
-          keyPrefix: supabaseServiceKey ? supabaseServiceKey.substring(0, 20) + '...' : 'missing'
-        }
+          urlPrefix: supabaseUrl
+            ? supabaseUrl.substring(0, 30) + "..."
+            : "missing",
+          keyPrefix: supabaseServiceKey
+            ? supabaseServiceKey.substring(0, 20) + "..."
+            : "missing",
+        },
       });
     }
 
