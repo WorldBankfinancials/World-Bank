@@ -2,9 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage-factory";
-import { setupTransferRoutes } from './routes-transfer';
-import { ObjectStorageService } from './objectStorage';
-
+import { setupTransferRoutes } from "./routes-transfer";
+import { ObjectStorageService } from "./objectStorage";
 
 // Utility functions for generating account details
 function generateAccountNumber(): string {
@@ -17,81 +16,82 @@ function generateAccountId(): string {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get user by Supabase ID
-  app.get('/api/users/supabase/:supabaseId', async (req, res) => {
+  app.get("/api/users/supabase/:supabaseId", async (req, res) => {
     try {
       const { supabaseId } = req.params;
       const users = await storage.getAllUsers();
-      const user = users.find(u => u.supabaseUserId === supabaseId);
-      
+      const user = users.find((u) => u.supabaseUserId === supabaseId);
+
       if (user) {
         res.json(user);
       } else {
-        res.status(404).json({ error: 'User not found' });
+        res.status(404).json({ error: "User not found" });
       }
     } catch (error) {
-      console.error('Get Supabase user error:', error);
-      res.status(500).json({ error: 'Failed to fetch user' });
+      console.error("Get Supabase user error:", error);
+      res.status(500).json({ error: "Failed to fetch user" });
     }
   });
 
   // Create new Supabase-linked user with PENDING status
-  app.post('/api/users/create-supabase', async (req, res) => {
+  app.post("/api/users/create-supabase", async (req, res) => {
     try {
       const { supabaseUserId, email, fullName } = req.body;
-      
+
       // Create new user with PENDING status - requires admin approval
       const newUser = await storage.createUser({
         username: email,
-        password: 'supabase_auth', // Password not used for Supabase users
+        password: "supabase_auth", // Password not used for Supabase users
         email,
-        fullName: fullName || 'New Banking Customer',
-        phone: 'Pending Admin Update',
+        fullName: fullName || "New Banking Customer",
+        phone: "Pending Admin Update",
         accountNumber: generateAccountNumber(),
         accountId: generateAccountId(),
-        profession: 'Pending Admin Update',
-        dateOfBirth: '1990-01-01',
-        address: 'Pending Admin Update',
-        city: 'Pending Admin Update',
-        state: 'Pending Admin Update',
-        country: 'Pending Admin Update',
-        postalCode: '00000',
-        annualIncome: 'Pending Admin Update',
-        idType: 'Pending Admin Update',
-        idNumber: 'Pending Admin Update',
-        transferPin: '1234', // Default PIN - admin can change
-        role: 'customer',
+        profession: "Pending Admin Update",
+        dateOfBirth: "1990-01-01",
+        address: "Pending Admin Update",
+        city: "Pending Admin Update",
+        state: "Pending Admin Update",
+        country: "Pending Admin Update",
+        postalCode: "00000",
+        annualIncome: "Pending Admin Update",
+        idType: "Pending Admin Update",
+        idNumber: "Pending Admin Update",
+        transferPin: "1234", // Default PIN - admin can change
+        role: "customer",
         isVerified: false, // REQUIRES ADMIN APPROVAL
         isOnline: false, // INACTIVE until approved
         isActive: false, // INACTIVE until approved
         supabaseUserId,
-        balance: 0.00, // NO BALANCE until admin deposits
-        adminNotes: 'New Supabase registration - requires full admin verification and setup'
+        balance: 0.0, // NO BALANCE until admin deposits
+        adminNotes:
+          "New Supabase registration - requires full admin verification and setup",
       });
 
       // Create empty placeholder accounts - admin will fund these
       await storage.createAccount({
         userId: newUser.id,
         accountNumber: generateAccountNumber(),
-        accountType: 'checking',
-        accountName: 'Primary Checking (Pending Admin Setup)',
+        accountType: "checking",
+        accountName: "Primary Checking (Pending Admin Setup)",
         balance: "0.00", // ZERO until admin deposits
-        currency: 'USD'
+        currency: "USD",
       });
 
       await storage.createAccount({
         userId: newUser.id,
         accountNumber: generateAccountNumber(),
-        accountType: 'savings',
-        accountName: 'Savings Account (Pending Admin Setup)',
+        accountType: "savings",
+        accountName: "Savings Account (Pending Admin Setup)",
         balance: "0.00", // ZERO until admin deposits
-        currency: 'USD'
+        currency: "USD",
       });
 
       // Create admin notification for new registration
       await storage.createAdminAction({
         adminId: 1, // System admin
-        actionType: 'new_registration',
-        targetType: 'user',
+        actionType: "new_registration",
+        targetType: "user",
         targetId: newUser.id.toString(),
         description: `New Supabase user registration: ${email} - requires complete admin approval workflow`,
         metadata: JSON.stringify({
@@ -102,209 +102,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requiresApproval: true,
           requiresVerification: true,
           requiresFunding: true,
-          requiresPhotoUpload: true
-        })
+          requiresPhotoUpload: true,
+        }),
       });
 
       res.json(newUser);
     } catch (error) {
-      console.error('Create Supabase user error:', error);
-      res.status(500).json({ error: 'Failed to create user' });
+      console.error("Create Supabase user error:", error);
+      res.status(500).json({ error: "Failed to create user" });
     }
   });
 
   // Get pending Supabase registrations for admin approval
-  app.get('/api/admin/pending-registrations', async (req, res) => {
+  app.get("/api/admin/pending-registrations", async (req, res) => {
     try {
       const users = await storage.getAllUsers();
-      const pendingUsers = users.filter(user => 
-        user.supabaseUserId && 
-        !user.isVerified && 
-        !user.isActive
+      const pendingUsers = users.filter(
+        (user) => user.supabaseUserId && !user.isVerified && !user.isActive,
       );
 
-      const pendingRegistrations = pendingUsers.map(user => ({
+      const pendingRegistrations = pendingUsers.map((user) => ({
         id: user.id,
         fullName: user.fullName,
         email: user.email,
         supabaseUserId: user.supabaseUserId,
-        registrationDate: user.createdAt?.toISOString() || new Date().toISOString(),
-        phone: user.phone || 'Pending Admin Update',
-        profession: user.profession || 'Pending Admin Update',
+        registrationDate:
+          user.createdAt?.toISOString() || new Date().toISOString(),
+        phone: user.phone || "Pending Admin Update",
+        profession: user.profession || "Pending Admin Update",
         accountNumber: user.accountNumber,
         accountId: user.accountId,
-        status: 'pending',
-        adminNotes: user.adminNotes || '',
+        status: "pending",
+        adminNotes: user.adminNotes || "",
         balance: user.balance || 0,
         requiresApproval: true,
         requiresVerification: true,
         requiresFunding: true,
-        requiresPhotoUpload: true
+        requiresPhotoUpload: true,
       }));
 
       res.json(pendingRegistrations);
     } catch (error) {
-      console.error('Get pending registrations error:', error);
-      res.status(500).json({ error: 'Failed to fetch pending registrations' });
+      console.error("Get pending registrations error:", error);
+      res.status(500).json({ error: "Failed to fetch pending registrations" });
     }
   });
 
   // Approve Supabase registration
-  app.post('/api/admin/approve-registration/:id', async (req, res) => {
+  app.post("/api/admin/approve-registration/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const { 
-        approvalNotes, 
-        initialDeposit, 
-        phone, 
-        profession, 
-        address, 
-        city, 
-        state, 
+      const {
+        approvalNotes,
+        initialDeposit,
+        phone,
+        profession,
+        address,
+        city,
+        state,
         country,
-        avatarUrl
+        avatarUrl,
       } = req.body;
 
       const userId = parseInt(id);
-      
+
       // Update user with admin-approved information
       const updatedUser = await storage.updateUser(userId, {
         isVerified: true,
         isActive: true,
         isOnline: true,
-        phone: phone || 'Admin Updated',
-        profession: profession || 'Banking Customer',
-        address: address || 'Admin Updated Address',
-        city: city || 'Admin Updated City',
-        state: state || 'Admin Updated State',
-        country: country || 'Admin Updated Country',
-        balance: parseFloat(initialDeposit) || 5000.00,
+        phone: phone || "Admin Updated",
+        profession: profession || "Banking Customer",
+        address: address || "Admin Updated Address",
+        city: city || "Admin Updated City",
+        state: state || "Admin Updated State",
+        country: country || "Admin Updated Country",
+        balance: parseFloat(initialDeposit) || 5000.0,
         avatarUrl: avatarUrl || null,
-        adminNotes: approvalNotes || 'Approved by admin',
-        modifiedByAdmin: "1"
+        adminNotes: approvalNotes || "Approved by admin",
+        modifiedByAdmin: "1",
       });
 
       if (updatedUser) {
         // Update user accounts with initial deposits
         const userAccounts = await storage.getUserAccounts(userId);
-        
+
         for (const account of userAccounts) {
-          const accountDeposit = parseFloat(initialDeposit) / userAccounts.length;
-          
+          const accountDeposit =
+            parseFloat(initialDeposit) / userAccounts.length;
+
           // Create initial deposit transaction
           await storage.createTransaction({
             accountId: account.id,
-            type: 'credit',
+            type: "credit",
             amount: accountDeposit.toString(),
-            description: 'Initial Account Funding - Admin Approved Registration',
-            category: 'deposit',
-            status: 'completed',
+            description:
+              "Initial Account Funding - Admin Approved Registration",
+            category: "deposit",
+            status: "completed",
             adminNotes: `Admin approved registration with $${initialDeposit} initial deposit`,
-            date: new Date()
+            date: new Date(),
           });
         }
 
         // Log admin action
         await storage.createAdminAction({
           adminId: 1,
-          actionType: 'approve_registration',
-          targetType: 'user',
+          actionType: "approve_registration",
+          targetType: "user",
           targetId: userId.toString(),
           description: `Approved Supabase registration for ${updatedUser.email} with $${initialDeposit} initial deposit`,
           metadata: JSON.stringify({
             approvalNotes,
             initialDeposit,
-            approvedAt: new Date().toISOString()
-          })
+            approvedAt: new Date().toISOString(),
+          }),
         });
 
         res.json({ success: true, user: updatedUser });
       } else {
-        res.status(404).json({ error: 'User not found' });
+        res.status(404).json({ error: "User not found" });
       }
     } catch (error) {
-      console.error('Approve registration error:', error);
-      res.status(500).json({ error: 'Failed to approve registration' });
+      console.error("Approve registration error:", error);
+      res.status(500).json({ error: "Failed to approve registration" });
     }
   });
 
   // Reject Supabase registration
-  app.post('/api/admin/reject-registration/:id', async (req, res) => {
+  app.post("/api/admin/reject-registration/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const { rejectionReason } = req.body;
 
       const userId = parseInt(id);
-      
+
       // Update user with rejection status
       const updatedUser = await storage.updateUser(userId, {
         isVerified: false,
         isActive: false,
         adminNotes: `REJECTED: ${rejectionReason}`,
-        modifiedByAdmin: "1"
+        modifiedByAdmin: "1",
       });
 
       if (updatedUser) {
         // Log admin action
         await storage.createAdminAction({
           adminId: 1,
-          actionType: 'reject_registration',
-          targetType: 'user',
+          actionType: "reject_registration",
+          targetType: "user",
           targetId: userId.toString(),
           description: `Rejected Supabase registration for ${updatedUser.email}: ${rejectionReason}`,
           metadata: JSON.stringify({
             rejectionReason,
-            rejectedAt: new Date().toISOString()
-          })
+            rejectedAt: new Date().toISOString(),
+          }),
         });
 
         res.json({ success: true, user: updatedUser });
       } else {
-        res.status(404).json({ error: 'User not found' });
+        res.status(404).json({ error: "User not found" });
       }
     } catch (error) {
-      console.error('Reject registration error:', error);
-      res.status(500).json({ error: 'Failed to reject registration' });
+      console.error("Reject registration error:", error);
+      res.status(500).json({ error: "Failed to reject registration" });
     }
   });
 
   // Special handler for Liu Wei account mapping
-  app.get('/api/user', async (req, res) => {
+  app.get("/api/user", async (req, res) => {
     try {
       // Check session or headers for Supabase user info
-      const supabaseEmail = req.headers['x-supabase-email'] as string;
-      
-      if (supabaseEmail === 'bankmanagerworld5@gmail.com') {
+      const supabaseEmail = req.headers["x-supabase-email"] as string;
+
+      if (supabaseEmail === "bankmanagerworld5@gmail.com") {
         // Return Liu Wei's account data for this specific Supabase user
-        const liuWeiUser = await storage.getUserByUsername('liu.wei');
+        const liuWeiUser = await storage.getUserByUsername("liu.wei");
         if (liuWeiUser) {
           res.json(liuWeiUser);
           return;
         }
       }
-      
+
       // Fall back to existing session-based user lookup
       const user = await storage.getUser(1); // Default user for now
       if (user) {
         res.json(user);
       } else {
-        res.status(404).json({ error: 'User not found' });
+        res.status(404).json({ error: "User not found" });
       }
     } catch (error) {
-      console.error('Get user error:', error);
-      res.status(500).json({ error: 'Failed to fetch user' });
+      console.error("Get user error:", error);
+      res.status(500).json({ error: "Failed to fetch user" });
     }
   });
 
   // Registration endpoint (hybrid Supabase + backend)
-  app.post('/api/register', async (req, res) => {
+  app.post("/api/register", async (req, res) => {
     try {
       const userData = req.body;
-      
+
       // Generate unique account details
       const accountNumber = userData.accountNumber || generateAccountNumber();
       const accountId = userData.accountId || generateAccountId();
-      
+
       const newUser = await storage.createUser({
         username: userData.username,
         password: userData.password,
@@ -324,7 +325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         idType: userData.idType,
         idNumber: userData.idNumber,
         supabaseUserId: userData.supabaseUserId,
-        role: 'customer',
+        role: "customer",
         isVerified: false,
         isActive: false,
         balance: 0,
@@ -333,26 +334,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create admin action for new registration
       await storage.createAdminAction({
         adminId: 1, // System admin
-        actionType: 'user_registration',
+        actionType: "user_registration",
         targetId: newUser.id.toString(),
-        targetType: 'user',
+        targetType: "user",
         description: `New user registration: ${userData.fullName} (${userData.email})`,
         metadata: JSON.stringify({
           registrationDate: new Date(),
           email: userData.email,
           profession: userData.profession,
-          country: userData.country
-        })
+          country: userData.country,
+        }),
       });
 
-      res.json({ 
-        success: true, 
-        message: 'Registration submitted for admin approval',
-        userId: newUser.id 
+      res.json({
+        success: true,
+        message: "Registration submitted for admin approval",
+        userId: newUser.id,
       });
     } catch (error: any) {
-      console.error('Registration error:', error);
-      res.status(400).json({ error: error.message || 'Registration failed' });
+      console.error("Registration error:", error);
+      res.status(400).json({ error: error.message || "Registration failed" });
     }
   });
 
@@ -364,17 +365,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       // Ensure balance is calculated from accounts
       const userAccounts = await storage.getUserAccounts(1);
-      const totalBalance = userAccounts.reduce((sum, account) => sum + parseFloat(account.balance), 0);
-      
+      const totalBalance = userAccounts.reduce(
+        (sum, account) => sum + parseFloat(account.balance),
+        0,
+      );
+
       const responseUser = {
         ...user,
-        balance: totalBalance > 0 ? totalBalance : user.balance
+        balance: totalBalance > 0 ? totalBalance : user.balance,
       };
-      
-      console.log("API Response - Dynamic User data:", JSON.stringify(responseUser, null, 2));
+
+      console.log(
+        "API Response - Dynamic User data:",
+        JSON.stringify(responseUser, null, 2),
+      );
       res.json(responseUser);
     } catch (error) {
       console.error("API Error:", error);
@@ -402,7 +409,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      const transactions = await storage.getAccountTransactions(accountId, limit);
+      const transactions = await storage.getAccountTransactions(
+        accountId,
+        limit,
+      );
       res.json(transactions);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch transactions" });
@@ -418,23 +428,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
-      
+
       // Get all accounts for the user
       const accounts = await storage.getUserAccounts(userId);
       const allTransactions = [];
 
       // Get transactions for each account
       for (const account of accounts) {
-        const transactions = await storage.getAccountTransactions(account.id, limit);
+        const transactions = await storage.getAccountTransactions(
+          account.id,
+          limit,
+        );
         allTransactions.push(...transactions);
       }
 
       // Sort by date (newest first)
-      allTransactions.sort((a, b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime());
-      
+      allTransactions.sort(
+        (a, b) =>
+          new Date(b.date || b.createdAt).getTime() -
+          new Date(a.date || a.createdAt).getTime(),
+      );
+
       res.json(allTransactions.slice(0, limit));
     } catch (error) {
-      console.error('Error fetching user transactions:', error);
+      console.error("Error fetching user transactions:", error);
       res.status(500).json({ message: "Failed to fetch user transactions" });
     }
   });
@@ -448,18 +465,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get transactions for each account
       for (const account of accounts) {
-        const transactions = await storage.getAccountTransactions(account.id, 5);
+        const transactions = await storage.getAccountTransactions(
+          account.id,
+          5,
+        );
         // Add account info to each transaction
-        const transactionsWithAccount = transactions.map(t => ({
+        const transactionsWithAccount = transactions.map((t) => ({
           ...t,
           accountName: account.accountName,
-          accountType: account.accountType
+          accountType: account.accountType,
         }));
         allTransactions.push(...transactionsWithAccount);
       }
 
       // Sort by date and return top 10
-      allTransactions.sort((a, b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime());
+      allTransactions.sort(
+        (a, b) =>
+          new Date(b.date || b.createdAt).getTime() -
+          new Date(a.date || a.createdAt).getTime(),
+      );
       res.json(allTransactions.slice(0, 10));
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch recent transactions" });
@@ -475,7 +499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
+      if (!user || user.role !== "admin") {
         return res.status(403).json({ message: "Admin access required" });
       }
 
@@ -495,20 +519,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
+      if (!user || user.role !== "admin") {
         return res.status(403).json({ message: "Admin access required" });
       }
 
       const transferId = parseInt(req.params.id);
       const { notes } = req.body;
 
-      const updatedTransfer = await storage.updateTransactionStatus(transferId, 'approved', userId, notes);
-      
+      const updatedTransfer = await storage.updateTransactionStatus(
+        transferId,
+        "approved",
+        userId,
+        notes,
+      );
+
       if (!updatedTransfer) {
         return res.status(404).json({ message: "Transfer not found" });
       }
 
-      res.json({ message: "Transfer approved successfully", transfer: updatedTransfer });
+      res.json({
+        message: "Transfer approved successfully",
+        transfer: updatedTransfer,
+      });
     } catch (error) {
       console.error("Error approving transfer:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -523,7 +555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
+      if (!user || user.role !== "admin") {
         return res.status(403).json({ message: "Admin access required" });
       }
 
@@ -534,13 +566,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Rejection reason required" });
       }
 
-      const updatedTransfer = await storage.updateTransactionStatus(transferId, 'rejected', userId, notes);
-      
+      const updatedTransfer = await storage.updateTransactionStatus(
+        transferId,
+        "rejected",
+        userId,
+        notes,
+      );
+
       if (!updatedTransfer) {
         return res.status(404).json({ message: "Transfer not found" });
       }
 
-      res.json({ message: "Transfer rejected successfully", transfer: updatedTransfer });
+      res.json({
+        message: "Transfer rejected successfully",
+        transfer: updatedTransfer,
+      });
     } catch (error) {
       console.error("Error rejecting transfer:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -559,7 +599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isVerified: true,
         isActive: true,
         balance: initialBalance || 0,
-        adminNotes: notes
+        adminNotes: notes,
       });
 
       if (!updatedUser) {
@@ -569,20 +609,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create admin action for approval
       await storage.createAdminAction({
         adminId: 1,
-        actionType: 'user_approved',
+        actionType: "user_approved",
         targetId: registrationId.toString(),
-        targetType: 'user',
+        targetType: "user",
         description: `User registration approved: ${updatedUser.fullName}`,
         metadata: JSON.stringify({
           approvalDate: new Date(),
           initialBalance: initialBalance || 0,
-          adminNotes: notes
-        })
+          adminNotes: notes,
+        }),
       });
 
-      res.json({ 
-        message: "Registration approved successfully", 
-        user: updatedUser 
+      res.json({
+        message: "Registration approved successfully",
+        user: updatedUser,
       });
     } catch (error) {
       console.error("Error approving registration:", error);
@@ -598,7 +638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
+      if (!user || user.role !== "admin") {
         return res.status(403).json({ message: "Admin access required" });
       }
 
@@ -614,7 +654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isVerified: false,
         isActive: false,
         modifiedByAdmin: userId,
-        adminNotes: `Registration rejected: ${reason}`
+        adminNotes: `Registration rejected: ${reason}`,
       });
 
       if (!updatedUser) {
@@ -624,19 +664,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create admin action for rejection
       await storage.createAdminAction({
         adminId: 1,
-        actionType: 'user_rejected',
+        actionType: "user_rejected",
         targetId: registrationId.toString(),
-        targetType: 'user',
+        targetType: "user",
         description: `User registration rejected: ${updatedUser.fullName}`,
         metadata: JSON.stringify({
           rejectionDate: new Date(),
-          reason: reason
-        })
+          reason: reason,
+        }),
       });
 
-      res.json({ 
-        message: "Registration rejected successfully", 
-        user: updatedUser 
+      res.json({
+        message: "Registration rejected successfully",
+        user: updatedUser,
       });
     } catch (error) {
       console.error("Error rejecting registration:", error);
@@ -653,7 +693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
+      if (!user || user.role !== "admin") {
         return res.status(403).json({ message: "Admin access required" });
       }
 
@@ -673,7 +713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
+      if (!user || user.role !== "admin") {
         return res.status(403).json({ message: "Admin access required" });
       }
 
@@ -682,14 +722,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedTicket = await storage.updateSupportTicket(ticketId, {
         ...updates,
-        assignedTo: userId
+        assignedTo: userId,
       });
-      
+
       if (!updatedTicket) {
         return res.status(404).json({ message: "Support ticket not found" });
       }
 
-      res.json({ message: "Support ticket updated successfully", ticket: updatedTicket });
+      res.json({
+        message: "Support ticket updated successfully",
+        ticket: updatedTicket,
+      });
     } catch (error) {
       console.error("Error updating support ticket:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -700,7 +743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/transfers", async (req, res) => {
     try {
       const userId = req.session?.userId || 1; // Default to user ID 1 for demo
-      console.log('💳 Transfer Request - User ID:', userId);
+      console.log("💳 Transfer Request - User ID:", userId);
 
       const {
         transactionId,
@@ -713,7 +756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         swiftCode,
         transferType,
         purpose,
-        status = 'pending_approval'
+        status = "pending_approval",
       } = req.body;
 
       // Validate required fields
@@ -741,13 +784,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bankName: bankName || "Unknown Bank",
         swiftCode: swiftCode || "",
         transferPurpose: purpose || "Personal",
-        status: "pending_approval" // All transfers require admin approval
+        status: "pending_approval", // All transfers require admin approval
       });
 
-      res.json({ 
-        message: "Transfer submitted for approval", 
+      res.json({
+        message: "Transfer submitted for approval",
         transaction: transaction,
-        transactionId: transactionId || `WB-${Date.now()}`
+        transactionId: transactionId || `WB-${Date.now()}`,
       });
     } catch (error) {
       console.error("Error creating transfer:", error);
@@ -755,11 +798,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // International Transfer API 
+  // International Transfer API
   app.post("/api/international-transfers", async (req, res) => {
     try {
       const userId = req.session?.userId || 1; // Default to user ID 1 for demo
-      console.log('💳 International Transfer Request - User ID:', userId);
+      console.log("💳 International Transfer Request - User ID:", userId);
 
       const {
         amount,
@@ -769,12 +812,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         swiftCode,
         accountNumber,
         transferPurpose,
-        transferPin
+        transferPin,
       } = req.body;
 
       // Validate required fields
       if (!amount || !recipientName || !recipientCountry) {
-        return res.status(400).json({ message: "Missing required fields: amount, recipient name, and country" });
+        return res.status(400).json({
+          message:
+            "Missing required fields: amount, recipient name, and country",
+        });
       }
 
       // Verify PIN (simplified for demo)
@@ -803,14 +849,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bankName: bankName || "Unknown Bank",
         swiftCode: swiftCode || "",
         transferPurpose: transferPurpose || "Personal",
-        status: "pending_approval" // All international transfers require admin approval
+        status: "pending_approval", // All international transfers require admin approval
       });
 
-      res.json({ 
-        message: "International transfer submitted for approval", 
+      res.json({
+        message: "International transfer submitted for approval",
         transaction: transaction,
         id: `INT-${Date.now()}`,
-        status: "pending_approval"
+        status: "pending_approval",
       });
     } catch (error) {
       console.error("Error creating international transfer:", error);
@@ -826,18 +872,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.getUser(userId);
-      if (!user || user.role !== 'admin') {
+      if (!user || user.role !== "admin") {
         return res.status(403).json({ message: "Admin access required" });
       }
 
       const pendingTransfers = await storage.getPendingTransactions();
       const tickets = await storage.getSupportTickets();
-      
+
       const stats = {
         totalCustomers: 1250,
         todayVolume: "2,847,392",
         pendingTransfers: pendingTransfers.length,
-        openTickets: tickets.filter(t => t.status === 'open').length
+        openTickets: tickets.filter((t) => t.status === "open").length,
       };
 
       res.json(stats);
@@ -857,29 +903,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const users = await storage.getAllUsers();
-      const customers = users.filter(user => user.role !== "admin").map(user => ({
-        id: user.id,
-        username: user.username,
-        fullName: user.fullName,
-        email: user.email || "liu.wei@oilrig.com",
-        phone: user.phone || "+1-555-0123",
-        address: user.address || "123 Marine Drive",
-        city: user.city || "Houston",
-        state: user.state || "Texas",
-        country: user.country || "United States",
-        postalCode: user.postalCode || "77001",
-        profession: user.profession || "Marine Engineer",
-        annualIncome: user.annualIncome || "100k_250k",
-        idType: user.idType || "passport",
-        idNumber: user.idNumber || "US123456789",
-        isVerified: user.isVerified || false,
-        isOnline: user.isOnline || false,
-        accountNumber: "4789-6523-1087-9234",
-        accountId: "WB-2024-7829",
-        balance: 125000,
-        createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
-        updatedAt: user.updatedAt?.toISOString() || new Date().toISOString()
-      }));
+      const customers = users
+        .filter((user) => user.role !== "admin")
+        .map((user) => ({
+          id: user.id,
+          username: user.username,
+          fullName: user.fullName,
+          email: user.email || "liu.wei@oilrig.com",
+          phone: user.phone || "+1-555-0123",
+          address: user.address || "123 Marine Drive",
+          city: user.city || "Houston",
+          state: user.state || "Texas",
+          country: user.country || "United States",
+          postalCode: user.postalCode || "77001",
+          profession: user.profession || "Marine Engineer",
+          annualIncome: user.annualIncome || "100k_250k",
+          idType: user.idType || "passport",
+          idNumber: user.idNumber || "US123456789",
+          isVerified: user.isVerified || false,
+          isOnline: user.isOnline || false,
+          accountNumber: "4789-6523-1087-9234",
+          accountId: "WB-2024-7829",
+          balance: 125000,
+          createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
+          updatedAt: user.updatedAt?.toISOString() || new Date().toISOString(),
+        }));
 
       res.json(customers);
     } catch (error) {
@@ -898,7 +946,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const allUsers = await storage.getAllUsers();
-      const customers = allUsers.filter(user => user.role !== "admin");
+      const customers = allUsers.filter((user) => user.role !== "admin");
 
       res.json(customers);
     } catch (error) {
@@ -915,14 +963,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Admin update request received for customer", customerId);
       const updates = req.body;
 
-      console.log(`Updating customer ${customerId} with:`, JSON.stringify(updates, null, 2));
+      console.log(
+        `Updating customer ${customerId} with:`,
+        JSON.stringify(updates, null, 2),
+      );
 
       const updatedUser = await storage.updateUser(customerId, {
         ...updates,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
-      console.log("Update result:", updatedUser ? 'Success' : 'Failed');
+      console.log("Update result:", updatedUser ? "Success" : "Failed");
 
       if (!updatedUser) {
         return res.status(404).json({ error: "Customer not found" });
@@ -935,10 +986,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetType: "user",
         targetId: customerId.toString(),
         description: `Updated customer information for ${updatedUser.fullName}`,
-        metadata: JSON.stringify(updates)
+        metadata: JSON.stringify(updates),
       });
 
-      res.json({ message: "Customer updated successfully", customer: updatedUser });
+      res.json({
+        message: "Customer updated successfully",
+        customer: updatedUser,
+      });
     } catch (error) {
       console.error("Update customer error:", error);
       res.status(500).json({ error: "Failed to update customer" });
@@ -955,10 +1009,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const customerId = parseInt(req.params.id);
-      
+
       const updatedUser = await storage.updateUser(customerId, {
         isVerified: true,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       if (!updatedUser) {
@@ -972,10 +1026,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetType: "user",
         targetId: customerId.toString(),
         description: `Verified customer ${updatedUser.fullName}`,
-        metadata: null
+        metadata: null,
       });
 
-      res.json({ message: "Customer verified successfully", customer: updatedUser });
+      res.json({
+        message: "Customer verified successfully",
+        customer: updatedUser,
+      });
     } catch (error) {
       console.error("Verify customer error:", error);
       res.status(500).json({ error: "Failed to verify customer" });
@@ -998,7 +1055,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Valid amount required" });
       }
 
-      const updatedUser = await storage.updateUserBalance(customerId, Number(amount));
+      const updatedUser = await storage.updateUserBalance(
+        customerId,
+        Number(amount),
+      );
 
       if (!updatedUser) {
         return res.status(404).json({ error: "Customer not found" });
@@ -1011,10 +1071,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetType: "user",
         targetId: customerId.toString(),
         description: `Updated balance by $${amount} for ${updatedUser.fullName}`,
-        metadata: JSON.stringify({ amount, newBalance: updatedUser.balance })
+        metadata: JSON.stringify({ amount, newBalance: updatedUser.balance }),
       });
 
-      res.json({ message: "Balance updated successfully", customer: updatedUser });
+      res.json({
+        message: "Balance updated successfully",
+        customer: updatedUser,
+      });
     } catch (error) {
       console.error("Update balance error:", error);
       res.status(500).json({ error: "Failed to update balance" });
@@ -1022,43 +1085,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Profile picture upload endpoint (deprecated - now handled by PATCH /api/admin/customers/:id)
-  app.post('/api/admin/customers/:id/profile-picture', async (req: any, res) => {
-    try {
-      const customerId = parseInt(req.params.id);
-      const userId = 2; // Demo admin user
+  app.post(
+    "/api/admin/customers/:id/profile-picture",
+    async (req: any, res) => {
+      try {
+        const customerId = parseInt(req.params.id);
+        const userId = 2; // Demo admin user
 
-      // In a real implementation, you would handle file upload here
-      // For now, we'll simulate storing the profile picture URL
-      const profilePicUrl = `/uploads/profile-${customerId}-${Date.now()}.jpg`;
+        // In a real implementation, you would handle file upload here
+        // For now, we'll simulate storing the profile picture URL
+        const profilePicUrl = `/uploads/profile-${customerId}-${Date.now()}.jpg`;
 
-      const updatedUser = await storage.updateUser(customerId, {
-        avatarUrl: profilePicUrl,
-        updatedAt: new Date()
-      });
+        const updatedUser = await storage.updateUser(customerId, {
+          avatarUrl: profilePicUrl,
+          updatedAt: new Date(),
+        });
 
-      if (!updatedUser) {
-        return res.status(404).json({ error: "Customer not found" });
+        if (!updatedUser) {
+          return res.status(404).json({ error: "Customer not found" });
+        }
+
+        // Log admin action
+        await storage.createAdminAction({
+          adminId: userId,
+          actionType: "profile_picture_update",
+          targetType: "user",
+          targetId: customerId.toString(),
+          description: `Updated profile picture for ${updatedUser.fullName}`,
+          metadata: JSON.stringify({ profilePicUrl }),
+        });
+
+        res.json({
+          message: "Profile picture updated successfully",
+          avatarUrl: profilePicUrl,
+        });
+      } catch (error) {
+        console.error("Profile picture upload error:", error);
+        res.status(500).json({ error: "Failed to upload profile picture" });
       }
-
-      // Log admin action
-      await storage.createAdminAction({
-        adminId: userId,
-        actionType: "profile_picture_update",
-        targetType: "user",
-        targetId: customerId.toString(),
-        description: `Updated profile picture for ${updatedUser.fullName}`,
-        metadata: JSON.stringify({ profilePicUrl })
-      });
-
-      res.json({ message: "Profile picture updated successfully", avatarUrl: profilePicUrl });
-    } catch (error) {
-      console.error("Profile picture upload error:", error);
-      res.status(500).json({ error: "Failed to upload profile picture" });
-    }
-  });
+    },
+  );
 
   // Customer query response endpoint
-  app.post('/api/admin/tickets/:id/respond', async (req: any, res) => {
+  app.post("/api/admin/tickets/:id/respond", async (req: any, res) => {
     try {
       const ticketId = parseInt(req.params.id);
       const { response } = req.body;
@@ -1069,11 +1138,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updatedTicket = await storage.updateSupportTicket(ticketId, {
-        status: 'resolved',
+        status: "resolved",
         adminNotes: response,
         assignedTo: userId,
         resolvedAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       if (!updatedTicket) {
@@ -1087,10 +1156,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetType: "support_ticket",
         targetId: ticketId.toString(),
         description: `Responded to support ticket #${ticketId}`,
-        metadata: JSON.stringify({ response })
+        metadata: JSON.stringify({ response }),
       });
 
-      res.json({ message: "Response sent successfully", ticket: updatedTicket });
+      res.json({
+        message: "Response sent successfully",
+        ticket: updatedTicket,
+      });
     } catch (error) {
       console.error("Ticket response error:", error);
       res.status(500).json({ error: "Failed to send response" });
@@ -1098,7 +1170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Customer verification endpoint
-  app.post('/api/admin/customers/:id/verify', async (req: any, res) => {
+  app.post("/api/admin/customers/:id/verify", async (req: any, res) => {
     try {
       const customerId = parseInt(req.params.id);
       const { verified } = req.body;
@@ -1110,7 +1182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedUser = await storage.updateUser(customerId, {
         isVerified: verified,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       if (!updatedUser) {
@@ -1123,13 +1195,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         actionType: verified ? "customer_verify" : "customer_unverify",
         targetType: "user",
         targetId: customerId.toString(),
-        description: `${verified ? 'Verified' : 'Unverified'} customer ${updatedUser.fullName}`,
-        metadata: null
+        description: `${verified ? "Verified" : "Unverified"} customer ${updatedUser.fullName}`,
+        metadata: null,
       });
 
-      res.json({ 
-        message: `Customer ${verified ? 'verified' : 'unverified'} successfully`, 
-        customer: updatedUser 
+      res.json({
+        message: `Customer ${verified ? "verified" : "unverified"} successfully`,
+        customer: updatedUser,
       });
     } catch (error) {
       console.error("Customer verification error:", error);
@@ -1138,7 +1210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin statistics endpoint
-  app.get('/api/admin/stats', async (req: any, res) => {
+  app.get("/api/admin/stats", async (req: any, res) => {
     try {
       const userId = req.session?.userId;
 
@@ -1153,14 +1225,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stats = {
         totalCustomers: allUsers.length,
         pendingTransfers: allTransactions.length,
-        openTickets: allTickets.filter(t => t.status === 'open').length,
+        openTickets: allTickets.filter((t) => t.status === "open").length,
         todayVolume: allTransactions
-          .filter(t => {
+          .filter((t) => {
             const today = new Date();
             const transactionDate = new Date(t.createdAt || new Date());
             return transactionDate.toDateString() === today.toDateString();
           })
-          .reduce((sum, t) => sum + parseFloat(t.amount), 0)
+          .reduce((sum, t) => sum + parseFloat(t.amount), 0),
       };
 
       res.json(stats);
@@ -1175,7 +1247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.id);
       const { amount } = req.body;
-      
+
       if (!amount || isNaN(amount)) {
         return res.status(400).json({ error: "Valid amount required" });
       }
@@ -1197,7 +1269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.id);
       const updates = req.body;
-      
+
       const updatedUser = await storage.updateUser(userId, updates);
       if (!updatedUser) {
         return res.status(404).json({ error: "User not found" });
@@ -1215,7 +1287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.id);
       const updates = req.body;
-      
+
       const updatedUser = await storage.updateUser(userId, updates);
       if (!updatedUser) {
         return res.status(404).json({ error: "Customer not found" });
@@ -1229,27 +1301,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Fund management endpoints
-  app.post('/api/admin/create-transaction', async (req, res) => {
+  app.post("/api/admin/create-transaction", async (req, res) => {
     try {
-      const { customerId, type, amount, description, category, reference, status } = req.body as any;
-      
+      const {
+        customerId,
+        type,
+        amount,
+        description,
+        category,
+        reference,
+        status,
+      } = req.body as any;
+
       // Get customer's accounts to find the correct accountId
       const customerIdNum = Number(customerId);
       const accounts = await storage.getUserAccounts(customerIdNum);
-      
+
       if (accounts.length === 0) {
-        return res.status(404).json({ error: 'No accounts found for customer' });
+        return res
+          .status(404)
+          .json({ error: "No accounts found for customer" });
       }
-      
+
       const accountId = accounts[0].id; // Use first account
-      
+
       const transaction = await storage.createTransaction({
         accountId: accountId,
         type: type,
         amount: amount.toString(),
         description: description,
         category: category || null,
-        status: status || 'completed',
+        status: status || "completed",
         date: new Date(),
         bankName: null,
         swiftCode: null,
@@ -1260,45 +1342,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approvedAt: null,
         rejectedBy: null,
         rejectedAt: null,
-        adminNotes: reference || null
+        adminNotes: reference || null,
       });
 
       res.json(transaction);
     } catch (error) {
-      console.error('Error creating transaction:', error);
-      res.status(500).json({ error: 'Failed to create transaction' });
+      console.error("Error creating transaction:", error);
+      res.status(500).json({ error: "Failed to create transaction" });
     }
   });
 
-  app.post('/api/admin/update-balance', async (req, res) => {
+  app.post("/api/admin/update-balance", async (req, res) => {
     try {
       const { customerId, amount, description } = req.body;
-      
+
       // Parse customerId and amount as numbers
       const customerIdNum = parseInt(customerId);
       const amountNum = parseFloat(amount);
-      
+
       if (isNaN(customerIdNum) || isNaN(amountNum)) {
-        return res.status(400).json({ error: 'Invalid customer ID or amount' });
+        return res.status(400).json({ error: "Invalid customer ID or amount" });
       }
-      
+
       const user = await storage.updateUserBalance(customerIdNum, amountNum);
-      
+
       if (user) {
-        console.log(`✅ Admin Balance Update: Customer ${customerIdNum} balance changed by ${amountNum > 0 ? '+' : ''}${amountNum}, new balance: ${user.balance}`);
-        
+        console.log(
+          `✅ Admin Balance Update: Customer ${customerIdNum} balance changed by ${amountNum > 0 ? "+" : ""}${amountNum}, new balance: ${user.balance}`,
+        );
+
         // Get customer's accounts to find the correct accountId
         const accounts = await storage.getUserAccounts(customerIdNum);
         const accountId = accounts.length > 0 ? accounts[0].id : customerIdNum;
-        
+
         // Create transaction record for audit trail
         await storage.createTransaction({
           accountId: accountId,
-          type: amountNum > 0 ? 'credit' : 'debit',
+          type: amountNum > 0 ? "credit" : "debit",
           amount: Math.abs(amountNum).toString(),
-          description: description || `Admin ${amountNum > 0 ? 'credit' : 'debit'} adjustment`,
-          category: 'Admin Adjustment',
-          status: 'completed',
+          description:
+            description ||
+            `Admin ${amountNum > 0 ? "credit" : "debit"} adjustment`,
+          category: "Admin Adjustment",
+          status: "completed",
           date: new Date(),
           adminNotes: `Balance adjustment by admin: ${amountNum}`,
           bankName: null,
@@ -1309,108 +1395,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
           approvedBy: null,
           approvedAt: null,
           rejectedBy: null,
-          rejectedAt: null
+          rejectedAt: null,
         });
-        
+
         res.json({ success: true, newBalance: user.balance });
       } else {
-        res.status(404).json({ error: 'Customer not found' });
+        res.status(404).json({ error: "Customer not found" });
       }
     } catch (error) {
-      console.error('Error updating balance:', error);
-      res.status(500).json({ error: 'Failed to update balance' });
+      console.error("Error updating balance:", error);
+      res.status(500).json({ error: "Failed to update balance" });
     }
   });
 
-  app.get('/api/admin/transactions', async (req, res) => {
+  app.get("/api/admin/transactions", async (req, res) => {
     try {
       const allTransactions = await storage.getAllTransactions();
-      
+
       // Format transactions with customer info
-      const formattedTransactions = allTransactions.map(transaction => ({
+      const formattedTransactions = allTransactions.map((transaction) => ({
         id: transaction.id.toString(),
-        type: transaction.type === 'credit' ? 'credit' : 'debit',
+        type: transaction.type === "credit" ? "credit" : "debit",
         amount: parseFloat(transaction.amount),
         description: transaction.description,
-        category: transaction.category || 'General',
+        category: transaction.category || "General",
         reference: transaction.adminNotes || `TXN-${transaction.id}`,
-        status: transaction.status || 'completed',
-        createdAt: transaction.createdAt?.toISOString() || new Date().toISOString(),
-        customerName: 'Mr. Liu Wei', // Default for now
-        customerId: transaction.accountId
+        status: transaction.status || "completed",
+        createdAt:
+          transaction.createdAt?.toISOString() || new Date().toISOString(),
+        customerName: "Mr. Liu Wei", // Default for now
+        customerId: transaction.accountId,
       }));
 
       res.json(formattedTransactions);
     } catch (error) {
-      console.error('Error fetching transactions:', error);
-      res.status(500).json({ error: 'Failed to fetch transactions' });
+      console.error("Error fetching transactions:", error);
+      res.status(500).json({ error: "Failed to fetch transactions" });
     }
   });
 
   // Admin customer management endpoints
-  app.patch('/api/admin/customers/:id', async (req, res) => {
+  app.patch("/api/admin/customers/:id", async (req, res) => {
     try {
       const customerId = parseInt(req.params.id);
       const updateData = req.body;
-      
+
       if (isNaN(customerId)) {
-        return res.status(400).json({ error: 'Invalid customer ID' });
+        return res.status(400).json({ error: "Invalid customer ID" });
       }
-      
+
       const updatedUser = await storage.updateUser(customerId, updateData);
-      
+
       if (!updatedUser) {
-        return res.status(404).json({ error: 'Customer not found' });
+        return res.status(404).json({ error: "Customer not found" });
       }
-      
-      console.log(`✅ Admin Profile Update: Customer ${customerId} profile updated`);
-      
+
+      console.log(
+        `✅ Admin Profile Update: Customer ${customerId} profile updated`,
+      );
+
       // Log admin action for audit trail
       await storage.createAdminAction({
         adminId: 1, // Admin user ID
-        actionType: 'profile_update',
-        targetType: 'user',
+        actionType: "profile_update",
+        targetType: "user",
         targetId: customerId.toString(),
         description: "Updated customer profile",
-        metadata: JSON.stringify(updateData)
+        metadata: JSON.stringify(updateData),
       });
-      
-      res.json({ 
-        success: true, 
-        message: 'Customer profile updated successfully',
-        user: updatedUser 
+
+      res.json({
+        success: true,
+        message: "Customer profile updated successfully",
+        user: updatedUser,
       });
     } catch (error) {
-      console.error('Error updating customer profile:', error);
-      res.status(500).json({ error: 'Failed to update customer profile' });
+      console.error("Error updating customer profile:", error);
+      res.status(500).json({ error: "Failed to update customer profile" });
     }
   });
 
-  app.post('/api/admin/customers/:id/balance', async (req, res) => {
+  app.post("/api/admin/customers/:id/balance", async (req, res) => {
     try {
       const customerId = parseInt(req.params.id);
       const { amount } = req.body;
-      
+
       if (isNaN(customerId) || isNaN(amount)) {
-        return res.status(400).json({ error: 'Invalid customer ID or amount' });
+        return res.status(400).json({ error: "Invalid customer ID or amount" });
       }
-      
+
       const user = await storage.updateUserBalance(customerId, amount);
-      
+
       if (!user) {
-        return res.status(404).json({ error: 'Customer not found' });
+        return res.status(404).json({ error: "Customer not found" });
       }
-      
-      console.log(`✅ Admin Balance Top-up: Customer ${customerId} balance increased by ${amount}, new balance: ${user.balance}`);
-      
+
+      console.log(
+        `✅ Admin Balance Top-up: Customer ${customerId} balance increased by ${amount}, new balance: ${user.balance}`,
+      );
+
       // Create transaction record for audit trail
       await storage.createTransaction({
         accountId: customerId,
-        type: 'credit',
+        type: "credit",
         amount: amount.toString(),
         description: `Admin balance top-up: +$${amount}`,
-        category: 'Admin Top-up',
-        status: 'completed',
+        category: "Admin Top-up",
+        status: "completed",
         date: new Date(),
         adminNotes: `Balance top-up by admin: +${amount}`,
         bankName: null,
@@ -1421,32 +1512,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         approvedBy: null,
         approvedAt: null,
         rejectedBy: null,
-        rejectedAt: null
+        rejectedAt: null,
       });
-      
+
       // Log admin action
       await storage.createAdminAction({
         adminId: 1,
-        actionType: 'balance_top_up',
-        targetType: 'user',
+        actionType: "balance_top_up",
+        targetType: "user",
         targetId: customerId.toString(),
         description: `Added $${amount} to customer balance`,
-        metadata: JSON.stringify({ amount, newBalance: user.balance })
+        metadata: JSON.stringify({ amount, newBalance: user.balance }),
       });
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         newBalance: user.balance,
-        message: `Successfully added $${amount} to customer balance`
+        message: `Successfully added $${amount} to customer balance`,
       });
     } catch (error) {
-      console.error('Error updating customer balance:', error);
-      res.status(500).json({ error: 'Failed to update customer balance' });
+      console.error("Error updating customer balance:", error);
+      res.status(500).json({ error: "Failed to update customer balance" });
     }
   });
 
   // User Registration Approval API endpoints
-  app.post('/api/admin/approve-registration/:id', async (req, res) => {
+  app.post("/api/admin/approve-registration/:id", async (req, res) => {
     try {
       const registrationId = parseInt(req.params.id);
       const { initialBalance, notes } = req.body;
@@ -1454,56 +1545,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the pending registration user
       const user = await storage.getUser(registrationId);
       if (!user) {
-        return res.status(404).json({ message: 'Registration not found' });
+        return res.status(404).json({ message: "Registration not found" });
       }
 
       if (user.isActive) {
-        return res.status(400).json({ message: 'User is already activated' });
+        return res.status(400).json({ message: "User is already activated" });
       }
 
       // Activate the user account
       const updatedUser = await storage.updateUser(registrationId, {
         isActive: true,
         isVerified: true,
-        balance: initialBalance.toString()
+        balance: initialBalance.toString(),
       });
 
       if (!updatedUser) {
-        return res.status(500).json({ message: 'Failed to approve registration' });
+        return res
+          .status(500)
+          .json({ message: "Failed to approve registration" });
       }
 
       // Create initial checking account for the user
       await storage.createAccount({
         userId: registrationId,
         accountNumber: generateAccountNumber(),
-        accountType: 'checking',
-        accountName: 'Primary Checking',
+        accountType: "checking",
+        accountName: "Primary Checking",
         balance: initialBalance.toString(),
-        currency: 'USD',
-        isActive: true
+        currency: "USD",
+        isActive: true,
       });
 
       // Log admin action
       await storage.createAdminAction({
         adminId: 1, // Current admin user ID
-        actionType: 'registration_approval',
-        targetType: 'user',
+        actionType: "registration_approval",
+        targetType: "user",
         targetId: registrationId.toString(),
         description: `Approved user registration for ${updatedUser.fullName} with initial balance $${initialBalance}`,
-        metadata: JSON.stringify({ initialBalance, notes })
+        metadata: JSON.stringify({ initialBalance, notes }),
       });
 
-      res.json({ 
-        message: 'Registration approved successfully',
-        user: updatedUser 
+      res.json({
+        message: "Registration approved successfully",
+        user: updatedUser,
       });
     } catch (error) {
-      console.error('Error approving registration:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      console.error("Error approving registration:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
-  app.post('/api/admin/reject-registration/:id', async (req, res) => {
+  app.post("/api/admin/reject-registration/:id", async (req, res) => {
     try {
       const registrationId = parseInt(req.params.id);
       const { reason } = req.body;
@@ -1511,75 +1604,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the pending registration user
       const user = await storage.getUser(registrationId);
       if (!user) {
-        return res.status(404).json({ message: 'Registration not found' });
+        return res.status(404).json({ message: "Registration not found" });
       }
 
       if (user.isActive) {
-        return res.status(400).json({ message: 'User is already activated' });
+        return res.status(400).json({ message: "User is already activated" });
       }
 
       // Mark user as rejected (could delete or keep for audit)
       const updatedUser = await storage.updateUser(registrationId, {
         isActive: false,
-        adminNotes: `Registration rejected: ${reason}`
+        adminNotes: `Registration rejected: ${reason}`,
       });
 
       // Log admin action
       await storage.createAdminAction({
         adminId: 1, // Current admin user ID
-        actionType: 'registration_rejection',
-        targetType: 'user',
+        actionType: "registration_rejection",
+        targetType: "user",
         targetId: registrationId.toString(),
         description: `Rejected user registration for ${user.fullName}`,
-        metadata: JSON.stringify({ reason })
+        metadata: JSON.stringify({ reason }),
       });
 
-      res.json({ 
-        message: 'Registration rejected successfully',
-        reason 
+      res.json({
+        message: "Registration rejected successfully",
+        reason,
       });
     } catch (error) {
-      console.error('Error rejecting registration:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      console.error("Error rejecting registration:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
   // Get pending registrations for admin dashboard (simplified access)
-  app.get('/api/admin/pending-registrations', async (req, res) => {
+  app.get("/api/admin/pending-registrations", async (req, res) => {
     try {
       const allUsers = await storage.getAllUsers();
-      const pendingRegistrations = allUsers.filter(user => 
-        !user.isActive && user.role === 'customer'
+      const pendingRegistrations = allUsers.filter(
+        (user) => !user.isActive && user.role === "customer",
       );
 
       res.json(pendingRegistrations);
     } catch (error) {
-      console.error('Error fetching pending registrations:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      console.error("Error fetching pending registrations:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
   // Fund account endpoint for direct account number operations
-  app.post('/api/admin/fund-account', async (req, res) => {
+  app.post("/api/admin/fund-account", async (req, res) => {
     try {
       const { accountNumber, type, amount, description, reference } = req.body;
 
       if (!accountNumber || !type || !amount || !description) {
-        return res.status(400).json({ error: 'Missing required fields' });
+        return res.status(400).json({ error: "Missing required fields" });
       }
 
       // Find user by account number
       const users = await storage.getAllUsers();
-      const user = users.find(u => u.accountNumber === accountNumber);
+      const user = users.find((u) => u.accountNumber === accountNumber);
 
       if (!user) {
-        return res.status(404).json({ error: 'Account not found' });
+        return res.status(404).json({ error: "Account not found" });
       }
 
       // Get user's first account
       const accounts = await storage.getUserAccounts(user.id);
       if (accounts.length === 0) {
-        return res.status(404).json({ error: 'No accounts found for user' });
+        return res.status(404).json({ error: "No accounts found for user" });
       }
 
       const account = accounts[0];
@@ -1588,141 +1681,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const transaction = await storage.createTransaction({
         accountId: account.id,
         amount: amount.toString(),
-        type: type === 'credit' ? 'deposit' : 'withdrawal',
+        type: type === "credit" ? "deposit" : "withdrawal",
         description: description,
-        status: 'completed',
+        status: "completed",
         date: new Date(),
-        category: 'admin_operation'
+        category: "admin_operation",
       });
 
       // Update user balance
-      const balanceChange = type === 'credit' ? amount : -amount;
+      const balanceChange = type === "credit" ? amount : -amount;
       await storage.updateUserBalance(user.id, balanceChange);
 
       // Log admin action
       await storage.createAdminAction({
         adminId: 1, // Admin user ID
-        actionType: 'fund_operation',
-        targetType: 'account',
+        actionType: "fund_operation",
+        targetType: "account",
         targetId: accountNumber,
-        description: `${type === 'credit' ? 'Added' : 'Deducted'} $${amount} ${type === 'credit' ? 'to' : 'from'} account ${accountNumber}`,
-        metadata: JSON.stringify({ amount, type, description, reference })
+        description: `${type === "credit" ? "Added" : "Deducted"} $${amount} ${type === "credit" ? "to" : "from"} account ${accountNumber}`,
+        metadata: JSON.stringify({ amount, type, description, reference }),
       });
 
-      res.json({ 
-        success: true, 
-        message: `Successfully ${type === 'credit' ? 'added' : 'deducted'} $${amount} ${type === 'credit' ? 'to' : 'from'} account ${accountNumber}`,
-        transaction 
+      res.json({
+        success: true,
+        message: `Successfully ${type === "credit" ? "added" : "deducted"} $${amount} ${type === "credit" ? "to" : "from"} account ${accountNumber}`,
+        transaction,
       });
     } catch (error) {
-      console.error('Error processing fund operation:', error);
-      res.status(500).json({ error: 'Failed to process fund operation' });
+      console.error("Error processing fund operation:", error);
+      res.status(500).json({ error: "Failed to process fund operation" });
     }
   });
 
   // Change user PIN endpoint
-  app.post('/api/user/change-pin', async (req, res) => {
+  app.post("/api/user/change-pin", async (req, res) => {
     try {
       const { currentPin, newPin } = req.body;
-      
+
       if (!currentPin || !newPin) {
-        return res.status(400).json({ message: 'Current PIN and new PIN are required' });
+        return res
+          .status(400)
+          .json({ message: "Current PIN and new PIN are required" });
       }
 
       // PIN validation
       if (newPin.length !== 4 || !/^\d+$/.test(newPin)) {
-        return res.status(400).json({ message: 'PIN must be 4 digits' });
+        return res.status(400).json({ message: "PIN must be 4 digits" });
       }
 
       // Get current user (simplified for demo - in production use proper session management)
       const users = await storage.getAllUsers();
-      const user = users.find(u => u.role === 'customer' && u.isActive);
-      
+      const user = users.find((u) => u.role === "customer" && u.isActive);
+
       if (!user) {
-        return res.status(404).json({ message: 'User not found' });
+        return res.status(404).json({ message: "User not found" });
       }
 
       // Verify current PIN
       if (user.transferPin !== currentPin) {
-        return res.status(400).json({ message: 'Current PIN is incorrect' });
+        return res.status(400).json({ message: "Current PIN is incorrect" });
       }
 
       // Update PIN
       const updatedUser = await storage.updateUser(user.id, {
-        transferPin: newPin
+        transferPin: newPin,
       });
 
       if (!updatedUser) {
-        return res.status(500).json({ message: 'Failed to update PIN' });
+        return res.status(500).json({ message: "Failed to update PIN" });
       }
 
       // Log admin action for security audit
       await storage.createAdminAction({
         adminId: user.id,
-        actionType: 'pin_change',
-        targetType: 'user',
+        actionType: "pin_change",
+        targetType: "user",
         targetId: user.id.toString(),
         description: "User changed transfer PIN",
-        metadata: JSON.stringify({ 
+        metadata: JSON.stringify({
           timestamp: new Date().toISOString(),
-          userAgent: req.headers['user-agent'] 
-        })
+          userAgent: req.headers["user-agent"],
+        }),
       });
 
-      res.json({ 
-        success: true, 
-        message: 'PIN changed successfully' 
+      res.json({
+        success: true,
+        message: "PIN changed successfully",
       });
     } catch (error) {
-      console.error('Error changing PIN:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      console.error("Error changing PIN:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
   const httpServer = createServer(app);
 
   // WebSocket server for live chat
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
+  const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
+
   // Store connected clients
-  const clients = new Map<string, { ws: WebSocket; userId: string; role: 'admin' | 'customer' }>();
+  const clients = new Map<
+    string,
+    { ws: WebSocket; userId: string; role: "admin" | "customer" }
+  >();
 
-  wss.on('connection', (ws, req) => {
-    console.log('New WebSocket connection established');
-    
+  wss.on("connection", (ws, req) => {
+    console.log("New WebSocket connection established");
+
     let clientId: string | null = null;
-    let clientRole: 'admin' | 'customer' = 'customer';
+    let clientRole: "admin" | "customer" = "customer";
 
-    ws.on('message', (data) => {
+    ws.on("message", (data) => {
       try {
         const message = JSON.parse(data.toString());
-        
-        if (message.type === 'auth') {
+
+        if (message.type === "auth") {
           // Client authentication
           clientId = message.userId || `client_${Date.now()}`;
-          clientRole = message.role || 'customer';
+          clientRole = message.role || "customer";
           if (clientId) {
             clients.set(clientId, { ws, userId: clientId, role: clientRole });
           }
-          
-          ws.send(JSON.stringify({
-            type: 'auth_success',
-            clientId,
-            role: clientRole
-          }));
-          
+
+          ws.send(
+            JSON.stringify({
+              type: "auth_success",
+              clientId,
+              role: clientRole,
+            }),
+          );
+
           console.log(`Client authenticated: ${clientId} as ${clientRole}`);
-        } else if (message.type === 'chat_message') {
+        } else if (message.type === "chat_message") {
           // Broadcast message to all connected clients
           const chatMessage = {
-            type: 'chat_message',
+            type: "chat_message",
             id: message.id,
             senderId: message.senderId,
             senderName: message.senderName,
             senderRole: message.senderRole,
             message: message.message,
             timestamp: message.timestamp,
-            isRead: false
+            isRead: false,
           };
 
           // Send to all connected clients except sender
@@ -1732,57 +1832,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
 
-          console.log(`Chat message from ${message.senderName}: ${message.message}`);
-        } else if (message.type === 'typing') {
+          console.log(
+            `Chat message from ${message.senderName}: ${message.message}`,
+          );
+        } else if (message.type === "typing") {
           // Broadcast typing indicator
           clients.forEach((client, id) => {
             if (id !== clientId && client.ws.readyState === WebSocket.OPEN) {
-              client.ws.send(JSON.stringify({
-                type: 'typing',
-                senderId: message.senderId,
-                isTyping: message.isTyping
-              }));
+              client.ws.send(
+                JSON.stringify({
+                  type: "typing",
+                  senderId: message.senderId,
+                  isTyping: message.isTyping,
+                }),
+              );
             }
           });
         }
       } catch (error) {
-        console.error('Error processing WebSocket message:', error);
+        console.error("Error processing WebSocket message:", error);
       }
     });
 
-    ws.on('close', () => {
+    ws.on("close", () => {
       if (clientId) {
         clients.delete(clientId);
         console.log(`Client disconnected: ${clientId}`);
       }
     });
 
-    ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
+    ws.on("error", (error) => {
+      console.error("WebSocket error:", error);
       if (clientId) {
         clients.delete(clientId);
       }
     });
 
     // Send initial auth request
-    ws.send(JSON.stringify({
-      type: 'auth_request',
-      message: 'Please authenticate'
-    }));
+    ws.send(
+      JSON.stringify({
+        type: "auth_request",
+        message: "Please authenticate",
+      }),
+    );
   });
 
-  console.log('WebSocket server initialized on /ws path');
+  console.log("WebSocket server initialized on /ws path");
 
   // Setup transfer routes
   // Object Storage Routes for ID Card Uploads
-  app.post('/api/objects/upload', async (req, res) => {
+  app.post("/api/objects/upload", async (req, res) => {
     try {
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       res.json({ uploadURL });
     } catch (error) {
-      console.error('Upload URL generation error:', error);
-      res.status(500).json({ error: 'Failed to generate upload URL' });
+      console.error("Upload URL generation error:", error);
+      res.status(500).json({ error: "Failed to generate upload URL" });
     }
   });
 
