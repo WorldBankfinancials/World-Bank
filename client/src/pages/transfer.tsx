@@ -4,35 +4,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import {
-  Send,
-  Globe,
-  Building,
+import { 
+  Send, 
+  Globe, 
+  Building, 
   Smartphone,
   Users,
   Clock,
-  Shield,
+  Shield
 } from "lucide-react";
 
 export default function Transfer() {
   const { t } = useLanguage();
   const { data: user, isLoading } = useQuery({
-    queryKey: ["/api/user"],
+    queryKey: ['/api/user'],
   });
   const { userProfile } = useAuth();
-
+  
   const [amount, setAmount] = useState("");
   const [transferType, setTransferType] = useState("international");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -41,7 +35,7 @@ export default function Transfer() {
   const [pinError, setPinError] = useState("");
   const [showPendingStatus, setShowPendingStatus] = useState(false);
   const [transferReference, setTransferReference] = useState("");
-
+  
   // International transfer details
   const [recipientDetails, setRecipientDetails] = useState({
     fullName: "",
@@ -59,56 +53,33 @@ export default function Transfer() {
     accountNumber: "",
     routingNumber: "",
     purpose: "",
-    relationship: "",
+    relationship: ""
   });
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">{t("loading")}</div>
+        <div className="text-gray-600">{t('loading')}</div>
       </div>
     );
   }
 
   const quickTransferOptions = [
-    {
-      icon: Globe,
-      label: "International Wire",
-      description: "SWIFT transfers worldwide",
-      action: () => setTransferType("international"),
-    },
-    {
-      icon: Building,
-      label: "Cross-Border Bank",
-      description: "Bank to bank transfers",
-      action: () => setTransferType("bank"),
-    },
-    {
-      icon: Smartphone,
-      label: "Global Mobile Money",
-      description: "190+ countries coverage",
-      action: () => setTransferType("mobile"),
-    },
-    {
-      icon: Send,
-      label: "Express Transfer",
-      description: "Fast international delivery",
-      action: () => setTransferType("express"),
-    },
+    { icon: Globe, label: "International Wire", description: "SWIFT transfers worldwide", action: () => setTransferType("international") },
+    { icon: Building, label: "Cross-Border Bank", description: "Bank to bank transfers", action: () => setTransferType("bank") },
+    { icon: Smartphone, label: "Global Mobile Money", description: "190+ countries coverage", action: () => setTransferType("mobile") },
+    { icon: Send, label: "Express Transfer", description: "Fast international delivery", action: () => setTransferType("express") }
   ];
 
   const recentContacts = [
     { name: "John Smith", account: "****1234", lastAmount: "$500" },
     { name: "Sarah Wilson", account: "****5678", lastAmount: "$1,200" },
-    { name: "Mike Chen", account: "****9012", lastAmount: "$750" },
+    { name: "Mike Chen", account: "****9012", lastAmount: "$750" }
   ];
 
   const handleTransfer = () => {
-    if (
-      !amount ||
-      !recipientDetails.fullName ||
-      !recipientDetails.accountNumber
-    ) {
+    if (!amount || !recipientDetails.fullName || !recipientDetails.accountNumber) {
+      
       return;
     }
 
@@ -117,6 +88,8 @@ export default function Transfer() {
   };
 
   const verifyPinAndTransfer = async () => {
+    
+    
     if (!transferPin || transferPin.length !== 4) {
       setPinError("Please enter a 4-digit PIN");
       return;
@@ -124,15 +97,15 @@ export default function Transfer() {
 
     // Verify PIN with backend
     try {
-      const pinResponse = await fetch("/api/verify-pin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const pinResponse = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: userProfile?.email,
-          pin: transferPin,
-        }),
+          pin: transferPin
+        })
       });
-
+      
       const pinResult = await pinResponse.json();
       if (!pinResult.success) {
         setPinError("Invalid PIN");
@@ -145,7 +118,7 @@ export default function Transfer() {
 
     setPinError("");
     setIsProcessing(true);
-
+    
     try {
       // Verify PIN and create transfer request
       const transferData = {
@@ -158,27 +131,29 @@ export default function Transfer() {
         transferPurpose: recipientDetails.purpose,
         transferPin: transferPin,
         status: "pending_approval",
-        requiresApproval: parseFloat(amount) >= 10000, // Transfers over $10k require admin approval
+        requiresApproval: parseFloat(amount) >= 10000 // Transfers over $10k require admin approval
       };
+      
+      
 
-      const response = await fetch("/api/transfers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(transferData),
+      const response = await fetch('/api/transfers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transferData)
       });
 
+      
+      
       if (response.ok) {
         const result = await response.json();
-
+        
         setShowPinVerification(false);
         setTransferPin("");
-        setTransferReference(
-          result.transactionId || result.id || `WB-${Date.now()}`,
-        );
-
+        setTransferReference(result.transactionId || result.id || `WB-${Date.now()}`);
+        
         // Show pending status instead of alert
         setShowPendingStatus(true);
-
+        
         // Reset form
         setAmount("");
         setRecipientDetails({
@@ -197,17 +172,16 @@ export default function Transfer() {
           accountNumber: "",
           routingNumber: "",
           purpose: "",
-          relationship: "",
+          relationship: ""
         });
       } else {
         const error = await response.json();
-
+        
         setPinError(error.message || "Invalid PIN. Please try PIN: 0192");
       }
     } catch (error) {
-      setPinError(
-        "Network connection error. Check your internet and try again.",
-      );
+      
+      setPinError("Network connection error. Check your internet and try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -218,7 +192,7 @@ export default function Transfer() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header user={userProfile || undefined} />
-
+        
         <div className="px-4 py-6 pb-20">
           <div className="max-w-md mx-auto">
             <Card className="text-center">
@@ -227,76 +201,57 @@ export default function Transfer() {
                   <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Clock className="w-10 h-10 text-orange-600 animate-spin" />
                   </div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                    Transfer Processing
-                  </h2>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Transfer Processing</h2>
                   <p className="text-gray-600 mb-4">
-                    Your international transfer is being processed securely
-                    through our banking network.
+                    Your international transfer is being processed securely through our banking network.
                   </p>
                 </div>
-
+                
                 <div className="bg-gray-50 rounded-lg p-4 mb-6">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-600">
-                      Reference Number
-                    </span>
-                    <span className="font-mono text-sm font-medium">
-                      {transferReference}
-                    </span>
+                    <span className="text-sm text-gray-600">Reference Number</span>
+                    <span className="font-mono text-sm font-medium">{transferReference}</span>
                   </div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-600">Status</span>
-                    <span className="text-sm font-medium text-orange-600">
-                      Processing
-                    </span>
+                    <span className="text-sm font-medium text-orange-600">Processing</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">
-                      Estimated Time
-                    </span>
-                    <span className="text-sm font-medium">
-                      1-3 business days
-                    </span>
+                    <span className="text-sm text-gray-600">Estimated Time</span>
+                    <span className="text-sm font-medium">1-3 business days</span>
                   </div>
                 </div>
-
+                
                 <div className="text-left space-y-3 mb-6">
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-                    <span className="text-sm text-gray-700">
-                      Transfer request verified
-                    </span>
+                    <span className="text-sm text-gray-700">Transfer request verified</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-orange-500 rounded-full mr-3 animate-pulse"></div>
-                    <span className="text-sm text-gray-700">
-                      Compliance review in progress
-                    </span>
+                    <span className="text-sm text-gray-700">Compliance review in progress</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
-                    <span className="text-sm text-gray-500">
-                      Processing to recipient bank
-                    </span>
+                    <span className="text-sm text-gray-500">Processing to recipient bank</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
-                    <span className="text-sm text-gray-500">
-                      Transfer completed
-                    </span>
+                    <span className="text-sm text-gray-500">Transfer completed</span>
                   </div>
                 </div>
-
+                
                 <div className="flex space-x-3">
-                  <Button
-                    variant="outline"
+                  <Button 
+                    variant="outline" 
                     className="flex-1"
                     onClick={() => setShowPendingStatus(false)}
                   >
                     New Transfer
                   </Button>
-                  <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button 
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
                     Track Transfer
                   </Button>
                 </div>
@@ -304,7 +259,7 @@ export default function Transfer() {
             </Card>
           </div>
         </div>
-
+        
         <BottomNavigation />
       </div>
     );
@@ -313,17 +268,13 @@ export default function Transfer() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header user={userProfile || user} />
-
+      
       <div className="px-4 py-6 pb-20">
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">
-              International Money Transfer
-            </h1>
-            <p className="text-sm text-gray-600">
-              Send money worldwide with complete recipient details
-            </p>
+            <h1 className="text-xl font-semibold text-gray-900">International Money Transfer</h1>
+            <p className="text-sm text-gray-600">Send money worldwide with complete recipient details</p>
           </div>
           <div className="flex space-x-2">
             <Badge className="bg-green-100 text-green-800">
@@ -350,17 +301,13 @@ export default function Transfer() {
                   variant="outline"
                   onClick={option.action}
                   className={`h-20 flex flex-col items-center space-y-2 ${
-                    transferType === option.label.toLowerCase().replace(" ", "")
-                      ? "border-blue-500 bg-blue-50"
-                      : ""
+                    transferType === option.label.toLowerCase().replace(" ", "") ? 'border-blue-500 bg-blue-50' : ''
                   }`}
                 >
                   <option.icon className="w-6 h-6" />
                   <div className="text-center">
                     <div className="text-xs font-medium">{option.label}</div>
-                    <div className="text-xs text-gray-500">
-                      {option.description}
-                    </div>
+                    <div className="text-xs text-gray-500">{option.description}</div>
                   </div>
                 </Button>
               ))}
@@ -376,9 +323,7 @@ export default function Transfer() {
           <CardContent className="space-y-6">
             {/* Transfer Amount */}
             <div className="bg-blue-50 p-4 rounded-lg">
-              <Label htmlFor="amount" className="text-lg font-semibold">
-                Transfer Amount (USD)
-              </Label>
+              <Label htmlFor="amount" className="text-lg font-semibold">Transfer Amount (USD)</Label>
               <Input
                 id="amount"
                 type="number"
@@ -387,16 +332,12 @@ export default function Transfer() {
                 onChange={(e) => setAmount(e.target.value)}
                 className="text-2xl font-bold text-center mt-2"
               />
-              <p className="text-sm text-gray-600 mt-1">
-                Exchange rate: 1 USD = 1.00 USD • Fee: $15.00
-              </p>
+              <p className="text-sm text-gray-600 mt-1">Exchange rate: 1 USD = 1.00 USD • Fee: $15.00</p>
             </div>
 
             {/* Recipient Information - Simplified */}
             <div>
-              <h3 className="font-semibold text-lg mb-3 text-gray-800">
-                Recipient Information
-              </h3>
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">Recipient Information</h3>
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label htmlFor="fullName">Full Name *</Label>
@@ -404,27 +345,14 @@ export default function Transfer() {
                     id="fullName"
                     placeholder="John Smith"
                     value={recipientDetails.fullName}
-                    onChange={(e) =>
-                      setRecipientDetails((prev) => ({
-                        ...prev,
-                        fullName: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setRecipientDetails(prev => ({...prev, fullName: e.target.value}))}
                   />
                 </div>
-
+                
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="country">Country *</Label>
-                    <Select
-                      value={recipientDetails.country}
-                      onValueChange={(value) =>
-                        setRecipientDetails((prev) => ({
-                          ...prev,
-                          country: value,
-                        }))
-                      }
-                    >
+                    <Select value={recipientDetails.country} onValueChange={(value) => setRecipientDetails(prev => ({...prev, country: value}))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select country" />
                       </SelectTrigger>
@@ -446,12 +374,7 @@ export default function Transfer() {
                       id="phoneNumber"
                       placeholder="+1 555 123 4567"
                       value={recipientDetails.phoneNumber}
-                      onChange={(e) =>
-                        setRecipientDetails((prev) => ({
-                          ...prev,
-                          phoneNumber: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => setRecipientDetails(prev => ({...prev, phoneNumber: e.target.value}))}
                     />
                   </div>
                 </div>
@@ -460,9 +383,7 @@ export default function Transfer() {
 
             {/* Bank Information */}
             <div>
-              <h3 className="font-semibold text-lg mb-3 text-gray-800">
-                Bank Information
-              </h3>
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">Bank Information</h3>
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label htmlFor="bankName">Bank Name</Label>
@@ -470,30 +391,20 @@ export default function Transfer() {
                     id="bankName"
                     placeholder="JPMorgan Chase Bank"
                     value={recipientDetails.bankName}
-                    onChange={(e) =>
-                      setRecipientDetails((prev) => ({
-                        ...prev,
-                        bankName: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setRecipientDetails(prev => ({...prev, bankName: e.target.value}))}
                   />
                 </div>
-
+                
                 <div>
                   <Label htmlFor="bankAddress">Bank Address</Label>
                   <Input
                     id="bankAddress"
                     placeholder="270 Park Avenue, New York, NY 10017"
                     value={recipientDetails.bankAddress}
-                    onChange={(e) =>
-                      setRecipientDetails((prev) => ({
-                        ...prev,
-                        bankAddress: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setRecipientDetails(prev => ({...prev, bankAddress: e.target.value}))}
                   />
                 </div>
-
+                
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="swiftCode">SWIFT/BIC Code</Label>
@@ -501,12 +412,7 @@ export default function Transfer() {
                       id="swiftCode"
                       placeholder="CHASUS33"
                       value={recipientDetails.swiftCode}
-                      onChange={(e) =>
-                        setRecipientDetails((prev) => ({
-                          ...prev,
-                          swiftCode: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => setRecipientDetails(prev => ({...prev, swiftCode: e.target.value}))}
                     />
                   </div>
                   <div>
@@ -515,16 +421,11 @@ export default function Transfer() {
                       id="iban"
                       placeholder="GB82 WEST 1234 5698 7654 32"
                       value={recipientDetails.iban}
-                      onChange={(e) =>
-                        setRecipientDetails((prev) => ({
-                          ...prev,
-                          iban: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => setRecipientDetails(prev => ({...prev, iban: e.target.value}))}
                     />
                   </div>
                 </div>
-
+                
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="accountNumber">Account Number</Label>
@@ -532,12 +433,7 @@ export default function Transfer() {
                       id="accountNumber"
                       placeholder="123456789"
                       value={recipientDetails.accountNumber}
-                      onChange={(e) =>
-                        setRecipientDetails((prev) => ({
-                          ...prev,
-                          accountNumber: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => setRecipientDetails(prev => ({...prev, accountNumber: e.target.value}))}
                     />
                   </div>
                   <div>
@@ -546,12 +442,7 @@ export default function Transfer() {
                       id="routingNumber"
                       placeholder="021000021"
                       value={recipientDetails.routingNumber}
-                      onChange={(e) =>
-                        setRecipientDetails((prev) => ({
-                          ...prev,
-                          routingNumber: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => setRecipientDetails(prev => ({...prev, routingNumber: e.target.value}))}
                     />
                   </div>
                 </div>
@@ -560,72 +451,40 @@ export default function Transfer() {
 
             {/* Transfer Purpose */}
             <div>
-              <h3 className="font-semibold text-lg mb-3 text-gray-800">
-                Transfer Purpose
-              </h3>
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">Transfer Purpose</h3>
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label htmlFor="purpose">Purpose of Transfer</Label>
-                  <Select
-                    value={recipientDetails.purpose}
-                    onValueChange={(value) =>
-                      setRecipientDetails((prev) => ({
-                        ...prev,
-                        purpose: value,
-                      }))
-                    }
-                  >
+                  <Select value={recipientDetails.purpose} onValueChange={(value) => setRecipientDetails(prev => ({...prev, purpose: value}))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select purpose" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="family_support">
-                        Family Support
-                      </SelectItem>
-                      <SelectItem value="education">
-                        Education Expenses
-                      </SelectItem>
+                      <SelectItem value="family_support">Family Support</SelectItem>
+                      <SelectItem value="education">Education Expenses</SelectItem>
                       <SelectItem value="medical">Medical Expenses</SelectItem>
                       <SelectItem value="business">Business Payment</SelectItem>
                       <SelectItem value="investment">Investment</SelectItem>
-                      <SelectItem value="property">
-                        Property Purchase
-                      </SelectItem>
+                      <SelectItem value="property">Property Purchase</SelectItem>
                       <SelectItem value="gift">Gift</SelectItem>
-                      <SelectItem value="loan_repayment">
-                        Loan Repayment
-                      </SelectItem>
+                      <SelectItem value="loan_repayment">Loan Repayment</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
+                
                 <div>
-                  <Label htmlFor="relationship">
-                    Relationship to Recipient
-                  </Label>
-                  <Select
-                    value={recipientDetails.relationship}
-                    onValueChange={(value) =>
-                      setRecipientDetails((prev) => ({
-                        ...prev,
-                        relationship: value,
-                      }))
-                    }
-                  >
+                  <Label htmlFor="relationship">Relationship to Recipient</Label>
+                  <Select value={recipientDetails.relationship} onValueChange={(value) => setRecipientDetails(prev => ({...prev, relationship: value}))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select relationship" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="family">Family Member</SelectItem>
                       <SelectItem value="friend">Friend</SelectItem>
-                      <SelectItem value="business_partner">
-                        Business Partner
-                      </SelectItem>
+                      <SelectItem value="business_partner">Business Partner</SelectItem>
                       <SelectItem value="employee">Employee</SelectItem>
-                      <SelectItem value="service_provider">
-                        Service Provider
-                      </SelectItem>
+                      <SelectItem value="service_provider">Service Provider</SelectItem>
                       <SelectItem value="myself">Myself</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
@@ -652,10 +511,7 @@ export default function Transfer() {
                 </div>
                 <div className="flex justify-between border-t pt-2 font-semibold">
                   <span>Total Debit:</span>
-                  <span>
-                    ${amount ? (parseFloat(amount) + 15).toFixed(2) : "15.00"}{" "}
-                    USD
-                  </span>
+                  <span>${amount ? (parseFloat(amount) + 15).toFixed(2) : "15.00"} USD</span>
                 </div>
                 <div className="flex justify-between font-semibold text-green-600">
                   <span>Recipient Receives:</span>
@@ -664,14 +520,9 @@ export default function Transfer() {
               </div>
             </div>
 
-            <Button
+            <Button 
               onClick={handleTransfer}
-              disabled={
-                !amount ||
-                !recipientDetails.fullName ||
-                !recipientDetails.accountNumber ||
-                isProcessing
-              }
+              disabled={!amount || !recipientDetails.fullName || !recipientDetails.accountNumber || isProcessing}
               className="w-full bg-blue-600 text-white h-12 hover:bg-blue-700"
             >
               {isProcessing ? (
@@ -686,41 +537,33 @@ export default function Transfer() {
                 </>
               )}
             </Button>
-
+            
             {/* PIN Verification Modal */}
             {showPinVerification && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
                   <div className="text-center mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Enter Transfer PIN
-                    </h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Enter Transfer PIN</h3>
                     <p className="text-sm text-gray-600">
-                      Please enter your 4-digit PIN to authorize this ${amount}{" "}
-                      transfer
+                      Please enter your 4-digit PIN to authorize this ${amount} transfer
                     </p>
                   </div>
-
+                  
                   <div className="mb-4">
                     <input
                       type="password"
                       value={transferPin}
-                      onChange={(e) =>
-                        setTransferPin(
-                          e.target.value.replace(/\D/g, "").slice(0, 4),
-                        )
-                      }
+                      onChange={(e) => setTransferPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                       className="w-full text-center text-2xl tracking-widest p-4 border border-gray-300 rounded-lg"
                       placeholder="****"
                       maxLength={4}
+                      
                     />
                     {pinError && (
-                      <p className="text-red-600 text-sm mt-2 text-center">
-                        {pinError}
-                      </p>
+                      <p className="text-red-600 text-sm mt-2 text-center">{pinError}</p>
                     )}
                   </div>
-
+                  
                   <div className="flex space-x-3">
                     <Button
                       variant="outline"
@@ -756,10 +599,7 @@ export default function Transfer() {
           <CardContent>
             <div className="space-y-3">
               {recentContacts.map((contact, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                >
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                       <Users className="w-5 h-5 text-blue-600" />
@@ -770,18 +610,11 @@ export default function Transfer() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-500">
-                      Last: {contact.lastAmount}
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setRecipientDetails((prev) => ({
-                          ...prev,
-                          fullName: contact.name,
-                        }))
-                      }
+                    <p className="text-sm text-gray-500">Last: {contact.lastAmount}</p>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => setRecipientDetails(prev => ({...prev, fullName: contact.name}))}
                     >
                       Select
                     </Button>
@@ -792,7 +625,7 @@ export default function Transfer() {
           </CardContent>
         </Card>
       </div>
-
+      
       <BottomNavigation />
     </div>
   );
