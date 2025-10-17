@@ -245,7 +245,7 @@ module.exports = async function handler(req, res) {
     if (apiPath === '/verify-pin' && req.method === 'POST') {
       const { pin, username } = req.body;
       
-      console.log(`🔐 PIN verification request:`, { username, pin });
+      console.log("🔐 PIN verification request:", { username, pin });
       
       try {
         // Check the user exists by email, account ID, or mobile

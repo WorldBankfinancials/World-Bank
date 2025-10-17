@@ -922,7 +922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: new Date()
       });
 
-      console.log(`Update result:`, updatedUser ? 'Success' : 'Failed');
+      console.log("Update result:", updatedUser ? 'Success' : 'Failed');
 
       if (!updatedUser) {
         return res.status(404).json({ error: "Customer not found" });
@@ -1371,7 +1371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         actionType: 'profile_update',
         targetType: 'user',
         targetId: customerId.toString(),
-        description: `Updated customer profile`,
+        description: "Updated customer profile",
         metadata: JSON.stringify(updateData)
       });
       
@@ -1662,7 +1662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         actionType: 'pin_change',
         targetType: 'user',
         targetId: user.id.toString(),
-        description: `User changed transfer PIN`,
+        description: "User changed transfer PIN",
         metadata: JSON.stringify({ 
           timestamp: new Date().toISOString(),
           userAgent: req.headers['user-agent'] 
