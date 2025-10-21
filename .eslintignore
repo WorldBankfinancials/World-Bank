@@ -2,4 +2,7 @@ node_modules
 dist
 build
 coverage
-*.config.js
+vite.config.ts
+postcss.config.js
+tailwind.config.ts
+.eslintrc.js
