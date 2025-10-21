@@ -1,74 +1,62 @@
-module.exports = {
+export default {
   root: true,
-  parser: '@typescript-eslint/parser',
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    ecmaFeatures: {
-      jsx: true
-    }
-  },
-  settings: {
-    react: {
-      version: 'detect'
-    }
-  },
   env: {
     browser: true,
+    es2021: true,
     node: true,
-    es2021: true
   },
-  extends: [
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:react/recommended',
-    'plugin:react-hooks/recommended',
-    'plugin:jsx-a11y/recommended',
-    'plugin:import/errors',
-    'plugin:import/warnings',
-    'plugin:import/typescript',
-    'prettier'
-  ],
+  parser: "@typescript-eslint/parser",
+  parserOptions: {
+    ecmaVersion: "latest",
+    sourceType: "module",
+    ecmaFeatures: {
+      jsx: true,
+    },
+  },
   plugins: [
-    'react',
-    '@typescript-eslint',
-    'jsx-a11y',
-    'import'
+    "react",
+    "react-hooks",
+    "@typescript-eslint",
+    "unused-imports",
+    "prettier"
+  ],
+  extends: [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:prettier/recommended"
   ],
   rules: {
-    // General
-    'no-unused-vars': 'off',
-    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-    'no-console': 'off',
+    // 🧹 Clean code rules
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": ["warn"],
+    "unused-imports/no-unused-imports": "warn",
 
-    // React
-    'react/react-in-jsx-scope': 'off',
-    'react/prop-types': 'off',
-    'react/no-unescaped-entities': 'off',
-
-    // Import
-    'import/order': [
-      'warn',
+    // 💅 Enforce Prettier formatting
+    "prettier/prettier": [
+      "warn",
       {
-        groups: [
-          'builtin',
-          'external',
-          'internal',
-          ['parent', 'sibling', 'index']
-        ],
-        'newlines-between': 'always'
+        endOfLine: "auto",
+        semi: true,
+        singleQuote: false,
+        trailingComma: "es5",
+        tabWidth: 2,
+        printWidth: 100
       }
     ],
 
-    // Accessibility
-    'jsx-a11y/anchor-is-valid': 'off',
+    // ⚛️ React best practices
+    "react/react-in-jsx-scope": "off",
+    "react/prop-types": "off",
 
-    // Formatting
-    'prettier/prettier': [
-      'error',
-      {
-        endOfLine: 'auto'
-      }
-    ]
-  }
-}
+    // ✅ TypeScript-specific
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/ban-ts-comment": "off",
+  },
+  settings: {
+    react: {
+      version: "detect"
+    }
+  },
+};
