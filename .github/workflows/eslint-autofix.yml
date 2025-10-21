@@ -1,4 +1,4 @@
-name: ESLint Auto Fix
+name: ESLint + Prettier Auto Fix
 
 on:
   push:
@@ -7,12 +7,12 @@ on:
     branches: [ "main" ]
 
 jobs:
-  eslint-fix:
-    name: Run ESLint and Auto Fix
+  lint:
+    name: Run ESLint & Prettier Auto Fix
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -20,26 +20,28 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # ✅ use latest stable Node version
+          node-version: 18
 
       - name: Install dependencies
         run: |
-          npm install
-          npm install eslint@latest prettier@latest --save-dev
-          npx eslint --version
+          npm install --legacy-peer-deps
 
       - name: Run ESLint with auto-fix
         run: |
           npx eslint . --ext .js,.jsx,.ts,.tsx --fix || true
 
-      - name: Commit and push fixes (if any)
+      - name: Run Prettier to auto-format
+        run: |
+          npx prettier --write .
+
+      - name: Commit and push changes (if any)
         run: |
           if [[ `git status --porcelain` ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add .
-            git commit -m "🔧 ESLint auto-fix: $(date +'%Y-%m-%d %H:%M:%S')"
+            git commit -m "Auto ESLint & Prettier fixes [skip ci]"
             git push
           else
-            echo "✅ No ESLint fixes to commit."
+            echo "✅ No fixes needed."
           fi
