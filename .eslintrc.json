@@ -1,55 +1,37 @@
 {
   "root": true,
   "env": {
+    "browser": true,
     "node": true,
     "es2022": true
   },
   "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint", "unused-imports", "react", "react-hooks"],
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "plugins": [
+    "@typescript-eslint",
+    "react",
+    "react-hooks",
+    "unused-imports"
+  ],
   "extends": [
     "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
     "plugin:react/recommended",
+    "plugin:@typescript-eslint/recommended",
     "plugin:react-hooks/recommended",
     "prettier"
   ],
-  "parserOptions": {
-    "ecmaVersion": "latest",
-    "sourceType": "module",
-    "ecmaFeatures": {
-      "jsx": true
-    }
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "unused-imports/no-unused-imports": "error"
   },
   "settings": {
     "react": {
       "version": "detect"
     }
   },
-  "rules": {
-    "no-unused-vars": "off",
-    "@typescript-eslint/no-unused-vars": "off",
-    "unused-imports/no-unused-imports": "error",
-    "unused-imports/no-unused-vars": [
-      "warn",
-      {
-        "vars": "all",
-        "varsIgnorePattern": "^_",
-        "args": "after-used",
-        "argsIgnorePattern": "^_"
-      }
-    ],
-    "react/react-in-jsx-scope": "off",
-    "react/prop-types": "off",
-    "no-console": "warn",
-    "semi": ["error", "always"],
-    "quotes": ["error", "double"],
-    "indent": ["error", 2]
-  },
-  "ignorePatterns": [
-    "node_modules/",
-    "dist/",
-    "build/",
-    ".next/",
-    "coverage/"
-  ]
+  "ignorePatterns": ["dist", "node_modules"]
 }
