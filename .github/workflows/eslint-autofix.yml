@@ -20,13 +20,17 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20' # ✅ use latest stable Node version
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install
+          npm install eslint@latest prettier@latest --save-dev
+          npx eslint --version
 
       - name: Run ESLint with auto-fix
-        run: npx eslint . --ext .js,.jsx,.ts,.tsx --fix || true
+        run: |
+          npx eslint . --ext .js,.jsx,.ts,.tsx --fix || true
 
       - name: Commit and push fixes (if any)
         run: |
@@ -34,8 +38,8 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add .
-            git commit -m "ESLint auto-fix: $(date +'%Y-%m-%d %H:%M:%S')"
+            git commit -m "🔧 ESLint auto-fix: $(date +'%Y-%m-%d %H:%M:%S')"
             git push
           else
-            echo "No ESLint fixes to commit."
+            echo "✅ No ESLint fixes to commit."
           fi
