@@ -1,0 +1,50 @@
+name: ESLint + Prettier Auto Fix
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-format-fix:
+    name: Auto Fix & Format Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install eslint prettier eslint-config-prettier eslint-plugin-prettier @typescript-eslint/parser @typescript-eslint/eslint-plugin --save-dev
+          npx eslint --version
+          npx prettier --version
+
+      - name: Run ESLint with auto-fix
+        run: |
+          npx eslint . --ext .js,.jsx,.ts,.tsx --fix || true
+
+      - name: Run Prettier for formatting
+        run: |
+          npx prettier --write .
+
+      - name: Commit and push fixes (if any)
+        run: |
+          if [[ `git status --porcelain` ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "🧹 Auto fix & format: $(date +'%Y-%m-%d %H:%M:%S')"
+            git push
+          else
+            echo "✅ No changes to commit."
+          fi
