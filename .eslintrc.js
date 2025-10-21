@@ -29,12 +29,7 @@ module.exports = {
     'plugin:import/typescript',
     'prettier'
   ],
-  plugins: [
-    'react',
-    '@typescript-eslint',
-    'jsx-a11y',
-    'import'
-  ],
+  plugins: ['react', '@typescript-eslint', 'jsx-a11y', 'import'],
   rules: {
     // General
     'no-unused-vars': 'off',
