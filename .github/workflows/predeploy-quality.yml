@@ -8,12 +8,9 @@ jobs:
   quality-check:
     name: 🧹 Lint & Format Code
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -31,11 +28,11 @@ jobs:
       - name: Run Prettier formatting
         run: npx prettier --write .
 
-      - name: Check if there are remaining lint errors
+      - name: Check remaining lint errors
         run: npx eslint . --ext .js,.jsx,.ts,.tsx
-        continue-on-error: false  # ❌ stops deploy if any errors remain
+        continue-on-error: false
 
-      - name: Commit and push auto-fixes
+      - name: Commit auto-fixes
         run: |
           if [[ `git status --porcelain` ]]; then
             git config user.name "github-actions[bot]"
@@ -45,34 +42,20 @@ jobs:
             git push
           else
             echo "✅ Code clean. Ready for deployment."
-          fi
 
-  # 🟢 Optional: Auto-deploy after successful lint/format
   deploy:
-    name: 🚀 Deploy to Netlify or Vercel
+    name: 🚀 Deploy to Vercel
     runs-on: ubuntu-latest
-    needs: quality-check  # ✅ only runs if lint/format job succeeds
+    needs: quality-check
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 👉 Uncomment ONE of the sections below depending on your platform:
-
-      # --- For Netlify deployment ---
-      # - name: Deploy to Netlify
-      #   uses: netlify/actions/cli@master
-      #   with:
-      #     args: deploy --prod --dir=dist
-      #   env:
-      #     NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      #     NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-
-      # --- For Vercel deployment ---
-      # - name: Deploy to Vercel
-      #   uses: amondnet/vercel-action@v25
-      #   with:
-      #     vercel-token: ${{ secrets.VERCEL_TOKEN }}
-      #     vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-      #     vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-      #     working-directory: ./
-      #     vercel-args: '--prod'
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./
+          vercel-args: '--prod'
