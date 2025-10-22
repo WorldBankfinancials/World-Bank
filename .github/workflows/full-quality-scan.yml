@@ -35,14 +35,14 @@ jobs:
 
       - name: Run ESLint & Prettier Auto-Fix (Root)
         run: |
-          npx eslint . --ext .js,.ts,.tsx --config .eslintrc.js --fix || true
-          npx prettier --config .prettierrc --write . || true
+          npx eslint . --ext .js,.ts,.tsx --fix || true
+          npx prettier --write .
 
       - name: Run ESLint & Prettier Auto-Fix (Client)
         run: |
           cd client
-          npx eslint . --ext .ts,.tsx --config .eslintrc.js --fix || true
-          npx prettier --config .prettierrc --write . || true
+          npx eslint . --ext .ts,.tsx --fix || true
+          npx prettier --write .
           cd ..
 
       - name: Commit auto-fixes if any
