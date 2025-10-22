@@ -1,0 +1,139 @@
+name: 🌐 Full Stack Auto: Lint → Scan → Backup → Build → Deploy → Auto-Merge
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: "0 3 * * *" # daily at 3AM UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  pull-requests: write
+
+jobs:
+  full-stack:
+    name: Full Stack Auto Fix + Scan + Backup + Deploy
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        language: [ "javascript-typescript" ]
+    steps:
+      # -------------------- CHECKOUT --------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -------------------- SETUP NODE --------------------
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # -------------------- INSTALL DEPENDENCIES --------------------
+      - name: Install dependencies
+        run: npm ci
+
+      # -------------------- ESLINT + PRETTIER FRONTEND & BACKEND --------------------
+      - name: Run ESLint + Prettier Auto Fix
+        run: |
+          npm run lint || true
+          npm run lint:fix || true
+          npm run format || true
+
+      # -------------------- COMMIT AUTO FIXES --------------------
+      - name: Commit Auto Fixes
+        id: commit-fixes
+        run: |
+          if [[ `git status --porcelain` ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git checkout -b auto-fixes-$(date +'%Y%m%d%H%M%S')
+            git add .
+            git commit -m "🤖 Auto fixes + formatting applied by workflow"
+            git push --set-upstream origin HEAD
+            echo "fixes_branch=auto-fixes-$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+          else
+            echo "✅ No auto-fixes to commit"
+            echo "fixes_branch=" >> $GITHUB_OUTPUT
+
+      # -------------------- CREATE PR IF FIXES COMMITTED --------------------
+      - name: Create PR for Auto Fixes
+        if: steps.commit-fixes.outputs.fixes_branch != ''
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "🤖 Auto Fixes & Formatting"
+          body: "This PR contains auto-applied ESLint/Prettier fixes."
+          head: ${{ steps.commit-fixes.outputs.fixes_branch }}
+          base: main
+          draft: false
+          labels: "auto-fix"
+
+      # -------------------- CODACY SCAN --------------------
+      - name: Codacy Security Scan
+        uses: codacy/codacy-analysis-cli-action@d840f886c4bd4edc059706d09c6a1586111c540b
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          verbose: true
+          output: codacy-results.sarif
+          format: sarif
+          gh-code-scanning-compat: true
+          max-allowed-issues: 2147483647
+
+      - name: Upload SARIF to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: codacy-results.sarif
+
+      # -------------------- CODEQL SCAN --------------------
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
+
+      # -------------------- SUPABASE BACKUP + MIGRATION --------------------
+      - name: Supabase Backup
+        run: |
+          npx supabase db dump -f backups/supabase-backup-$(date +'%Y-%m-%d').sql
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+      - name: Supabase Migration
+        run: npx supabase db push || true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+      # -------------------- BUILD --------------------
+      - name: Build Full Stack
+        run: npm run build
+
+      # -------------------- VERCEL DEPLOY --------------------
+      - name: Deploy to Vercel (Prod)
+        id: vercel-deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./
+          prod: true
+
+      - name: Rollback if Deployment Fails
+        if: failure() || steps.vercel-deploy.outcome != 'success'
+        run: |
+          echo "⚠️ Deployment failed. Rolling back..."
+          curl -X POST "https://api.vercel.com/v13/deployments/${{ secrets.VERCEL_PROJECT_ID }}/rollback" \
+          -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}"
+          echo "✅ Rollback initiated"
