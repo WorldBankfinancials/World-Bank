@@ -1,0 +1,6 @@
+services:
+  worldbank:
+    image: worldbank
+    build:
+      context: .
+      dockerfile: ./Dockerfile
