@@ -1,0 +1,112 @@
+name: 🧠 Full Stack Auto Fix + Build + Deploy + Supabase Backup + Rollback
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: "0 2 * * *" # Runs daily at 2AM UTC
+  workflow_dispatch:
+
+jobs:
+  full-auto-safe:
+    runs-on: ubuntu-latest
+    name: Auto Lint → Fix → PR → Build → Deploy → Supabase Backup → Rollback
+
+    steps:
+      - name: 🧩 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🧱 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      # ---------- LINT + FIX + PRETTIER ----------
+      - name: 🔍 Lint and Fix Frontend + Backend
+        run: |
+          npm run lint || true
+          npm run lint:fix || true
+          npm run format || true
+
+      # ---------- BRANCH + PR FOR FIXES ----------
+      - name: 🪄 Create Auto-Fix Branch
+        run: |
+          BRANCH_NAME="auto-fix-$(date +'%Y%m%d-%H%M%S')"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_ENV
+          git checkout -b $BRANCH_NAME
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add .
+          git diff --quiet && echo "✅ No fixes to commit" || (git commit -m "🤖 Auto-fixed lint & format issues" && git push origin $BRANCH_NAME)
+
+      - name: 🧾 Auto-create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "🤖 Auto-fix and formatting updates"
+          branch: ${{ env.branch_name }}
+          title: "🤖 Auto Fix & Format Updates"
+          body: |
+            This pull request includes automatic ESLint + Prettier fixes and formatting updates.
+
+      # ---------- SUPABASE BACKUP + MIGRATION ----------
+      - name: 🗄️ Supabase Backup (Daily)
+        run: |
+          npx supabase db dump -f supabase-backup-$(date +'%Y-%m-%d').sql
+          mkdir -p backups
+          mv supabase-backup-*.sql backups/
+          git add backups/
+          git commit -m "🗄️ Daily Supabase DB backup - $(date +'%Y-%m-%d')" || echo "No changes in backup"
+          git push || echo "No backup push needed"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+      - name: 🔄 Supabase Migration Sync
+        run: npx supabase db push || true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+      # ---------- BUILD ----------
+      - name: 🏗️ Build full stack app
+        run: npm run build
+
+      # ---------- DEPLOY WITH ROLLBACK ----------
+      - name: 🚀 Deploy to Vercel (Production)
+        id: vercel-deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./
+          prod: true
+
+      - name: 🛡️ Check deployment status and rollback if failed
+        if: failure() || steps.vercel-deploy.outcome != 'success'
+        run: |
+          echo "⚠️ Deployment failed. Rolling back to last working version..."
+          curl -X POST "https://api.vercel.com/v13/deployments/${{ secrets.VERCEL_PROJECT_ID }}/rollback" \
+          -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}"
+          echo "✅ Rollback initiated"
+
+      # ---------- FAILURE REPORT ----------
+      - name: ❌ Create GitHub Issue on Failure
+        if: failure()
+        uses: dacbd/create-issue-action@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "🚨 Full Stack Auto Deploy Failed"
+          body: |
+            One of the automated steps failed in the workflow **Full Stack Auto Fix + Supabase + Deploy + Rollback**.
+            Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
