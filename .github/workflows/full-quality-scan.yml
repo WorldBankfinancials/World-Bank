@@ -1,0 +1,114 @@
+name: Full Quality, Security Scan & Deploy
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: '0 4 * * 0' # Every Sunday at 4:00 UTC
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  lint-format:
+    name: ESLint + Prettier Auto-Fix
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (root + client)
+        run: |
+          npm ci || npm install
+          cd client
+          npm ci || npm install
+          cd ..
+
+      - name: Run ESLint & Prettier Auto-Fix (Root)
+        run: |
+          npx eslint . --ext .js,.ts,.tsx --config .eslintrc.js --fix || true
+          npx prettier --config .prettierrc --write . || true
+
+      - name: Run ESLint & Prettier Auto-Fix (Client)
+        run: |
+          cd client
+          npx eslint . --ext .ts,.tsx --config .eslintrc.js --fix || true
+          npx prettier --config .prettierrc --write . || true
+          cd ..
+
+      - name: Commit auto-fixes if any
+        run: |
+          if [[ `git status --porcelain` ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "🧹 Auto-fix ESLint + Prettier [skip ci]"
+            git push
+          else
+            echo "✅ No auto-fix changes."
+
+  security-scan:
+    name: Codacy + CodeQL Security Scan
+    runs-on: ubuntu-latest
+    needs: lint-format
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ "javascript-typescript" ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Codacy Security Scan
+      - name: Run Codacy Analysis CLI
+        uses: codacy/codacy-analysis-cli-action@d840f886c4bd4edc059706d09c6a1586111c540b
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          verbose: true
+          output: results.sarif
+          format: sarif
+          gh-code-scanning-compat: true
+          max-allowed-issues: 2147483647
+
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+
+      # CodeQL Analysis
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{matrix.language}}"
+
+  deploy:
+    name: Deploy to Vercel (Optional)
+    runs-on: ubuntu-latest
+    needs: security-scan
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./
+          vercel-args: '--prod'
