@@ -13,12 +13,7 @@ module.exports = {
       jsx: true,
     },
   },
-  plugins: [
-    'react',
-    'react-hooks',
-    '@typescript-eslint',
-    'unused-imports',
-  ],
+  plugins: ['react', 'react-hooks', '@typescript-eslint', 'unused-imports'],
   extends: [
     'eslint:recommended',
     'plugin:react/recommended',
