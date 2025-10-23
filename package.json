@@ -121,8 +121,14 @@
     "vite": "^7.1.10"
   },
   "lint-staged": {
-    "client/**/*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write"],
-    "server/**/*.{js,jsx,ts,tsx}": ["eslint --fix", "prettier --write"]
+    "client/**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "server/**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

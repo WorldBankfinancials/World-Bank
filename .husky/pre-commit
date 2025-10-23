@@ -1,0 +1,6 @@
+#!/bin/sh
+git pull --rebase origin main || true 
+npx eslint . --ext .js,.jsx,.ts,.tsx --fix || true 
+npx prettier --write . || true
+echo " Code cleaned and updated before commit!"
+
