@@ -10,19 +10,13 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "start": "NODE_ENV=production node dist/server/index.js",
-
-    // 🔍 Linting and Formatting
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write .",
-
-    // 🧭 Folder-specific Linting
     "lint:frontend": "eslint client --ext .js,.jsx,.ts,.tsx",
     "lint:frontend:fix": "eslint client --ext .js,.jsx,.ts,.tsx --fix",
     "lint:backend": "eslint server --ext .js,.jsx,.ts,.tsx",
     "lint:backend:fix": "eslint server --ext .js,.jsx,.ts,.tsx --fix",
-
-    // ⚙️ Husky (auto runs lint before commits)
     "prepare": "husky install"
   },
   "dependencies": {
