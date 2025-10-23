@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e  # stop on first error
+
+echo "1️⃣ Installing dependencies..."
+npm install
+
+echo "2️⃣ Installing frontend dependencies..."
+if [ -d "./client" ]; then
+  cd client
+  npm install
+  cd ..
+fi
+
+echo "3️⃣ Setting up Husky hooks..."
+npm run prepare
+
+echo "4️⃣ Fixing lint & formatting..."
+npm run lint:fix
+npm run format
+
+echo "5️⃣ Checking TypeScript compilation..."
+npm run check
+
+echo "✅ Setup complete!"
