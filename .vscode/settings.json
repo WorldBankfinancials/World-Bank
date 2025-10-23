@@ -1,8 +1,8 @@
 {
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll": true,
-    "source.fixAll.eslint": true
+    "source.fixAll": "explicit",
+    "source.fixAll.eslint": "explicit"
   },
   "eslint.validate": [
     "javascript",
@@ -12,7 +12,9 @@
   ],
   "eslint.alwaysShowStatus": true,
   "eslint.workingDirectories": [
-    { "mode": "auto" },
+    {
+      "mode": "auto"
+    },
     "server",
     "client"
   ],
@@ -22,5 +24,6 @@
   "prettier.semi": true,
   "prettier.trailingComma": "es5",
   "prettier.tabWidth": 2,
-  "prettier.printWidth": 100
+  "prettier.printWidth": 100,
+  "workbench.editor.enablePreviewFromQuickOpen": true
 }
