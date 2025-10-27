@@ -13,13 +13,13 @@ import { BankLogo } from '@/components/BankLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client only when needed
+// Initialize Supabase client using environment variables
 const getSupabaseClient = () => {
-  const supabaseUrl = 'https://sgxmfpirkjlomzfaqqzr.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNneG1mcGlya2psb216ZmFxcXpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5NzM0MzIsImV4cCI6MjA2NDU0OTQzMn0.y7YhuW22z-p2JiGLHGEGJligvqnnJS8JfF856O-z8IY';
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    // console.warn('Supabase environment variables not configured');
+    console.error('Supabase environment variables not configured');
     return null;
   }
 
