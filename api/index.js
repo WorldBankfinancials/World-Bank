@@ -12,12 +12,49 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Helper function to get authenticated user from Supabase
+async function getAuthenticatedUser(req) {
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  
+  const token = authHeader.replace('Bearer ', '');
+  
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      console.log('❌ Failed to get user from token');
+      return null;
+    }
+    
+    // Get the bank user ID from Supabase user ID
+    const { data: bankUser } = await supabase
+      .from('bank_users')
+      .select('id')
+      .eq('supabase_user_id', user.id)
+      .single();
+    
+    if (!bankUser) {
+      console.log('❌ No bank user found for Supabase user');
+      return null;
+    }
+    
+    return { supabaseUserId: user.id, bankUserId: bankUser.id };
+  } catch (error) {
+    console.error('Auth error:', error);
+    return null;
+  }
+}
+
 module.exports = async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -159,11 +196,16 @@ module.exports = async function handler(req, res) {
 
     // Get user profile (legacy endpoint)
     if (apiPath === '/user' && req.method === 'GET') {
-      // Return the Wei Liu profile from Supabase
+      const authUser = await getAuthenticatedUser(req);
+      
+      if (!authUser) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      
       const { data, error } = await supabase
         .from('bank_users')
         .select('*')
-        .eq('id', 1)
+        .eq('id', authUser.bankUserId)
         .single();
       
       if (error || !data) {
@@ -212,10 +254,16 @@ module.exports = async function handler(req, res) {
 
     // Get bank accounts
     if (apiPath === '/accounts' && req.method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      
+      if (!authUser) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      
       const { data, error } = await supabase
         .from('bank_accounts')
         .select('*')
-        .eq('user_id', 1)
+        .eq('user_id', authUser.bankUserId)
         .eq('is_active', true);
       
       if (error) {
@@ -375,10 +423,16 @@ module.exports = async function handler(req, res) {
     // Get user cards - REAL DATABASE
     if (apiPath === '/cards' && req.method === 'GET') {
       try {
+        const authUser = await getAuthenticatedUser(req);
+        
+        if (!authUser) {
+          return res.status(401).json({ error: 'Authentication required' });
+        }
+        
         const { data, error } = await supabase
           .from('cards')
           .select('*')
-          .eq('user_id', 1)
+          .eq('user_id', authUser.bankUserId)
           .eq('is_active', true);
         
         if (error) {
@@ -417,13 +471,19 @@ module.exports = async function handler(req, res) {
     
     // Update card lock status
     if (apiPath === '/cards/lock' && req.method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      
+      if (!authUser) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      
       const { cardId, isLocked } = req.body;
       
       const { data, error } = await supabase
         .from('cards')
         .update({ is_locked: isLocked })
         .eq('id', cardId)
-        .eq('user_id', 1)
+        .eq('user_id', authUser.bankUserId)
         .select()
         .single();
       
@@ -436,6 +496,12 @@ module.exports = async function handler(req, res) {
     
     // Update card settings
     if (apiPath === '/cards/settings' && req.method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      
+      if (!authUser) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      
       const { cardId, dailyLimit, contactlessEnabled } = req.body;
       
       const { data, error } = await supabase
@@ -445,7 +511,7 @@ module.exports = async function handler(req, res) {
           contactless_enabled: contactlessEnabled 
         })
         .eq('id', cardId)
-        .eq('user_id', 1)
+        .eq('user_id', authUser.bankUserId)
         .select()
         .single();
       

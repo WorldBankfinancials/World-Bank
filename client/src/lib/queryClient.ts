@@ -9,24 +9,19 @@ async function throwIfResNotOk(res: Response) {
 }
 
 /**
- * Helper to add email parameter to API URLs
+ * Helper to get Authorization header with Supabase token
  */
-async function addEmailToUrl(url: string): Promise<string> {
-  // Skip if not an API call or already has email parameter
-  if (!url.startsWith('/api/') || url.includes('email=')) {
-    return url;
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.access_token) {
+    console.warn(`⚠️ No Supabase session available for API call`);
+    return {};
   }
   
-  // Get current user email from Supabase
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user?.email) {
-    console.warn(`⚠️ No user email available for API call: ${url}`);
-    return url;
-  }
-  
-  // Add email parameter
-  const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}email=${encodeURIComponent(user.email)}`;
+  return {
+    'Authorization': `Bearer ${session.access_token}`
+  };
 }
 
 export async function apiRequest(
@@ -34,12 +29,14 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  // Add email to URL automatically
-  const finalUrl = await addEmailToUrl(url);
+  const authHeaders = await getAuthHeaders();
   
-  const res = await fetch(finalUrl, {
+  const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: {
+      ...authHeaders,
+      ...(data ? { "Content-Type": "application/json" } : {})
+    },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -54,10 +51,11 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // Automatically add email parameter to API calls
-    const url = await addEmailToUrl(queryKey[0] as string);
+    const url = queryKey[0] as string;
+    const authHeaders = await getAuthHeaders();
     
     const res = await fetch(url, {
+      headers: authHeaders,
       credentials: "include",
     });
 
