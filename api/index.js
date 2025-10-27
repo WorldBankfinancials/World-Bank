@@ -289,7 +289,7 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(accounts);
     }
 
-    // PIN verification
+    // PIN verification - ONLY for authenticated user (prevents enumeration)
     if (apiPath === '/verify-pin' && req.method === 'POST') {
       const authUser = await getAuthenticatedUser(req);
       
@@ -297,41 +297,28 @@ module.exports = async function handler(req, res) {
         return res.status(401).json({ error: 'Authentication required' });
       }
       
-      const { pin, username } = req.body;
+      const { pin } = req.body;
       
-      console.log(`🔐 PIN verification request:`, { username, pin });
+      console.log(`🔐 PIN verification request for authenticated user`);
       
       try {
-        // Check the user exists by email, account ID, or mobile
-        let userQuery = supabase.from('bank_users').select('transfer_pin, email, username, account_id');
-        
-        // Handle different login types
-        if (username.includes('@')) {
-          // Email login
-          userQuery = userQuery.eq('email', username);
-        } else if (username.startsWith('WB-') || username.startsWith('wb-')) {
-          // Account ID login (like WB-2025-8912)
-          userQuery = userQuery.eq('account_id', username);
-        } else if (username.startsWith('+') || /^\d+$/.test(username)) {
-          // Mobile number login
-          userQuery = userQuery.eq('phone', username);
-        } else {
-          // Fallback to username
-          userQuery = userQuery.eq('username', username);
-        }
-        
-        const { data: userData, error } = await userQuery.single();
+        // SECURITY: Only verify PIN for the authenticated user, ignore username from request
+        const { data: userData, error } = await supabase
+          .from('bank_users')
+          .select('transfer_pin')
+          .eq('id', authUser.bankUserId)
+          .single();
         
         if (error || !userData) {
-          console.log('User not found:', { username, error });
-          return res.status(401).json({
+          console.log('Authenticated user not found in database:', error);
+          return res.status(500).json({
             success: false,
             verified: false,
-            message: 'User not found'
+            message: 'User data error'
           });
         }
         
-        console.log(`Found user PIN: ${userData.transfer_pin}, provided PIN: ${pin}`);
+        console.log(`Verifying PIN for authenticated user ID: ${authUser.bankUserId}`);
         
         if (userData.transfer_pin === pin) {
           console.log('✅ PIN verification successful');
@@ -359,7 +346,7 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Create transfer
+    // Create transfer - WITH ACCOUNT OWNERSHIP VERIFICATION
     if (apiPath === '/transfers' && req.method === 'POST') {
       const authUser = await getAuthenticatedUser(req);
       
@@ -368,6 +355,33 @@ module.exports = async function handler(req, res) {
       }
       
       const { fromAccountId, toAccountNumber, amount, description, recipientName } = req.body;
+      
+      // SECURITY: Verify the fromAccount belongs to the authenticated user
+      const { data: accountCheck, error: accountError } = await supabase
+        .from('bank_accounts')
+        .select('id, user_id, balance')
+        .eq('id', fromAccountId)
+        .eq('user_id', authUser.bankUserId)
+        .single();
+      
+      if (accountError || !accountCheck) {
+        console.log('❌ Transfer blocked: Account not found or not owned by user');
+        return res.status(403).json({ 
+          error: 'Access denied - you can only transfer from your own accounts' 
+        });
+      }
+      
+      // Additional check: Verify sufficient balance
+      const accountBalance = Number(accountCheck.balance);
+      const transferAmount = Number(amount);
+      
+      if (accountBalance < transferAmount) {
+        return res.status(400).json({
+          error: 'Insufficient funds',
+          available: accountBalance,
+          requested: transferAmount
+        });
+      }
       
       const newTransaction = {
         account_id: fromAccountId,
@@ -557,9 +571,28 @@ module.exports = async function handler(req, res) {
 
     // Get recent deposits for add-money page
     if (apiPath === '/recent-deposits' && req.method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      
+      if (!authUser) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      
+      // Get user's accounts first to filter transactions
+      const { data: accounts } = await supabase
+        .from('bank_accounts')
+        .select('id')
+        .eq('user_id', authUser.bankUserId);
+      
+      if (!accounts || accounts.length === 0) {
+        return res.status(200).json([]);
+      }
+      
+      const accountIds = accounts.map(acc => acc.id);
+      
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
+        .in('account_id', accountIds)
         .eq('type', 'credit')
         .eq('category', 'deposit')
         .order('date', { ascending: false })
@@ -581,12 +614,18 @@ module.exports = async function handler(req, res) {
 
     // Create support ticket
     if (apiPath === '/support-tickets' && req.method === 'POST') {
-      const { userId, subject, category, priority, description } = req.body;
+      const authUser = await getAuthenticatedUser(req);
+      
+      if (!authUser) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      
+      const { subject, category, priority, description } = req.body;
       
       const { data, error } = await supabase
         .from('support_tickets')
         .insert({
-          user_id: userId,
+          user_id: authUser.bankUserId,
           subject,
           category,
           priority,
@@ -625,10 +664,16 @@ module.exports = async function handler(req, res) {
 
     // Currency exchange transaction
     if (apiPath === '/currency-exchange' && req.method === 'POST') {
-      const { userId, fromCurrency, toCurrency, amount, exchangeRate } = req.body;
+      const authUser = await getAuthenticatedUser(req);
+      
+      if (!authUser) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      
+      const { fromCurrency, toCurrency, amount, exchangeRate } = req.body;
       
       const transaction = {
-        user_id: userId,
+        user_id: authUser.bankUserId,
         type: 'exchange',
         amount: amount.toString(),
         description: `Currency exchange: ${amount} ${fromCurrency} to ${toCurrency}`,
