@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { storage } from './storage-factory';
 import { setupTransferRoutes } from './routes-transfer';
 import { config, logConfiguration } from './config';
+import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
 
 // Fixed route handlers with proper typing
 export async function registerFixedRoutes(app: Express): Promise<Server> {
@@ -111,17 +112,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User endpoints - get authenticated user from session
-  app.get('/api/user', async (req: Request, res: Response) => {
+  // User endpoints - PROTECTED with JWT authentication
+  app.get('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Get user email from query parameter (sent by authenticated frontend)
-      const userEmail = req.query.email as string;
-      
-      if (!userEmail) {
-        return res.status(401).json({ message: 'User email required - please login' });
-      }
-      
-      const user = await (storage as any).getUserByEmail(userEmail);
+      const user = await (storage as any).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -131,20 +125,15 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Real user profile endpoint based on email
-  app.post('/api/user/profile', async (req: Request, res: Response) => {
+  // Real user profile endpoint - PROTECTED with JWT authentication
+  app.post('/api/user/profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ message: 'Email required' });
-      }
-
-      const user = await (storage as any).getUserByEmail(email);
+      const user = await (storage as any).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
       
-      console.log('🔍 Fetching real user profile for:', email);
+      console.log('🔍 Fetching authenticated user profile for:', req.user!.email);
       res.json(user);
     } catch (error) {
       console.error('Get user profile error:', error);
@@ -152,21 +141,16 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Real user accounts endpoint
-  app.post('/api/accounts/user', async (req: Request, res: Response) => {
+  // Real user accounts endpoint - PROTECTED with JWT authentication
+  app.post('/api/accounts/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ message: 'Email required' });
-      }
-
-      const user = await (storage as any).getUserByEmail(email);
+      const user = await (storage as any).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
 
       const accounts = await storage.getUserAccounts(user.id);
-      console.log('🏦 Fetching real account data for user:', user.id);
+      console.log('🏦 Fetching authenticated account data for user:', user.id);
       res.json(accounts);
     } catch (error) {
       console.error('Get user accounts error:', error);
@@ -174,16 +158,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // SECURITY: Admin endpoints require authentication in production
-  // WARNING: These endpoints modify financial data and must be protected
+  // SECURITY: Admin endpoints - PROTECTED with role-based access control
   
-  // Admin transaction creation with fixed typing
-  app.post('/api/admin/create-transaction', async (req: Request, res: Response) => {
-    // CRITICAL: Require authentication in production
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(404).json({ error: 'Not found' });
-    }
-    
+  // Admin transaction creation - REQUIRES ADMIN ROLE
+  app.post('/api/admin/create-transaction', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const body = req.body as {
         customerId: string;
@@ -233,13 +211,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Individual account balance update endpoint
-  app.post('/api/admin/accounts/:accountId/balance', async (req: Request, res: Response) => {
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(404).json({ error: 'Not found' });
-    }
-    
-    try{
+  // Individual account balance update endpoint - REQUIRES ADMIN ROLE
+  app.post('/api/admin/accounts/:accountId/balance', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
       const accountId = parseInt(req.params.accountId, 10);
       const body = req.body as { amount: string; description: string; type: 'credit' | 'debit' };
       
@@ -278,12 +252,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Balance update endpoint with fixed typing
-  app.post('/api/admin/customers/:id/balance', async (req: Request, res: Response) => {
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(404).json({ error: 'Not found' });
-    }
-    
+  // Balance update endpoint - REQUIRES ADMIN ROLE
+  app.post('/api/admin/customers/:id/balance', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const customerId = parseInt(req.params.id, 10);
       const body = req.body as { amount: string; description: string };
@@ -307,12 +277,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Customer update endpoint with immediate sync
-  app.patch('/api/admin/customers/:id', async (req: Request, res: Response) => {
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(404).json({ error: 'Not found' });
-    }
-    
+  // Customer update endpoint - REQUIRES ADMIN ROLE
+  app.patch('/api/admin/customers/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const customerId = parseInt(req.params.id, 10);
       const updates = req.body as Record<string, any>;
@@ -338,12 +304,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all transactions with fixed typing
-  app.get('/api/admin/transactions', async (req: Request, res: Response) => {
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(404).json({ error: 'Not found' });
-    }
-    
+  // Get all transactions - REQUIRES ADMIN ROLE
+  app.get('/api/admin/transactions', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const transactions = await storage.getAllTransactions();
       res.json(transactions);
@@ -397,24 +359,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Account endpoints with proper authentication
-  app.get('/api/accounts', async (req: Request, res: Response) => {
+  // Account endpoints - PROTECTED with JWT authentication
+  app.get('/api/accounts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Require user email from authenticated session
-      const userEmail = req.query.email as string;
-      
-      if (!userEmail) {
-        console.warn('⚠️ /api/accounts called without email parameter - authentication required');
-        return res.status(401).json({ 
-          error: 'Authentication required',
-          message: 'Please provide email parameter or login'
-        });
-      }
-      
-      const user = await (storage as any).getUserByEmail(userEmail);
+      const user = await (storage as any).getUserByEmail(req.user!.email);
       
       if (!user) {
-        console.warn(`⚠️ User not found for email: ${userEmail}`);
         return res.status(404).json({ 
           error: 'User not found',
           message: 'Invalid user credentials'
@@ -422,6 +372,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
       
       const accounts = await storage.getUserAccounts(user.id);
+      console.log('🔐 Authenticated access to accounts for:', req.user!.email);
       res.json(accounts);
     } catch (error: any) {
       console.error('❌ Failed to get accounts:', error);
@@ -429,10 +380,26 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/accounts/:id/transactions', async (req: Request, res: Response) => {
+  app.get('/api/accounts/:id/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const accountId = parseInt(req.params.id, 10);
+      
+      // SECURITY: Verify account belongs to authenticated user
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const userAccounts = await storage.getUserAccounts(user.id);
+      const ownsAccount = userAccounts.some(acc => acc.id === accountId);
+      
+      if (!ownsAccount) {
+        console.warn(`🚫 Unauthorized account access attempt: user ${req.user!.email} tried to access account ${accountId}`);
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
       const transactions = await storage.getAccountTransactions(accountId);
+      console.log(`🔐 Authorized transaction access for account: ${accountId}`);
       res.json(transactions);
     } catch (error) {
       console.error('Get account transactions error:', error);
@@ -440,12 +407,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin pending registrations
-  app.get('/api/admin/pending-registrations', async (req: Request, res: Response) => {
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(404).json({ error: 'Not found' });
-    }
-    
+  // Admin pending registrations - REQUIRES ADMIN ROLE
+  app.get('/api/admin/pending-registrations', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const users = await storage.getAllUsers();
       const pending = users.filter(user => !user.isActive);
@@ -456,23 +419,25 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // PIN management endpoints
-  app.post('/api/user/change-pin', async (req: Request, res: Response) => {
+  // PIN management endpoints - PROTECTED with JWT authentication
+  app.post('/api/user/change-pin', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const body = req.body as { currentPin: string; newPin: string; email: string };
+      const body = req.body as { currentPin: string; newPin: string };
       
-      if (!body.email) {
-        return res.status(401).json({ message: 'User email required' });
+      // Get authenticated user (email from JWT token)
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
       }
       
-      // Get user by email
-      const user = await (storage as any).getUserByEmail(body.email);
-      
-      if (!user || user.transferPin !== body.currentPin) {
+      if (user.transferPin !== body.currentPin) {
         return res.status(401).json({ message: 'Current PIN is incorrect' });
       }
 
-      await storage.updateUser(1, { transferPin: body.newPin });
+      // Use authenticated user's ID (not hardcoded)
+      await storage.updateUser(user.id, { transferPin: body.newPin });
+      console.log(`🔐 PIN updated successfully for user: ${req.user!.email}`);
       res.json({ success: true, message: 'PIN updated successfully' });
     } catch (error) {
       console.error('Change PIN error:', error);
@@ -486,11 +451,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Setup transfer routes
   setupTransferRoutes(app);
 
-  // ==================== CARDS API ROUTES ====================
-  app.get('/api/cards', async (req: Request, res: Response) => {
+  // ==================== CARDS API ROUTES - PROTECTED ====================
+  app.get('/api/cards', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = req.session?.userId || 1;
-      const cards = await storage.getUserCards(userId);
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      const cards = await storage.getUserCards(user.id);
       res.json(cards);
     } catch (error) {
       console.error('Error fetching cards:', error);
@@ -498,13 +466,26 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/cards/:id', async (req: Request, res: Response) => {
+  app.get('/api/cards/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const cardId = parseInt(req.params.id);
+      
+      // SECURITY: Verify card belongs to authenticated user
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
       const card = await storage.getCard(cardId);
       if (!card) {
         return res.status(404).json({ error: 'Card not found' });
       }
+      
+      if (card.userId !== user.id) {
+        console.warn(`🚫 Unauthorized card access: user ${req.user!.email} tried to access card ${cardId}`);
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
       res.json(card);
     } catch (error) {
       console.error('Error fetching card:', error);
@@ -512,9 +493,22 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/cards/lock', async (req: Request, res: Response) => {
+  app.post('/api/cards/lock', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { cardId, isLocked } = req.body;
+      
+      // SECURITY: Verify card belongs to authenticated user
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const card = await storage.getCard(cardId);
+      if (!card || card.userId !== user.id) {
+        console.warn(`🚫 Unauthorized card lock attempt: user ${req.user!.email} tried to lock card ${cardId}`);
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
       const updatedCard = await storage.updateCard(cardId, { isLocked });
       res.json({ success: true, card: updatedCard });
     } catch (error) {
@@ -523,11 +517,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ==================== INVESTMENTS API ROUTES ====================
-  app.get('/api/investments', async (req: Request, res: Response) => {
+  // ==================== INVESTMENTS API ROUTES - PROTECTED ====================
+  app.get('/api/investments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = req.session?.userId || 1;
-      const investments = await storage.getUserInvestments(userId);
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      const investments = await storage.getUserInvestments(user.id);
       res.json(investments);
     } catch (error) {
       console.error('Error fetching investments:', error);
@@ -535,13 +532,26 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/investments/:id', async (req: Request, res: Response) => {
+  app.get('/api/investments/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // SECURITY: Verify investment belongs to authenticated user
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
       const investment = await storage.getInvestment(id);
       if (!investment) {
         return res.status(404).json({ error: 'Investment not found' });
       }
+      
+      if (investment.userId !== user.id) {
+        console.warn(`🚫 Unauthorized investment access: user ${req.user!.email} tried to access investment ${id}`);
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
       res.json(investment);
     } catch (error) {
       console.error('Error fetching investment:', error);
@@ -549,22 +559,37 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ==================== MESSAGES API ROUTES ====================
-  app.get('/api/messages', async (req: Request, res: Response) => {
+  // ==================== MESSAGES API ROUTES - PROTECTED ====================
+  app.get('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      // SECURITY: Only return messages for authenticated user
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const messages = await storage.getUserMessages(user.id);
+      
+      // Filter by conversationId if provided
       const conversationId = req.query.conversationId as string | undefined;
-      const messages = await storage.getMessages(conversationId);
-      res.json(messages);
+      const filteredMessages = conversationId 
+        ? messages.filter(msg => msg.conversationId === conversationId)
+        : messages;
+      
+      res.json(filteredMessages);
     } catch (error) {
       console.error('Error fetching messages:', error);
       res.status(500).json({ error: 'Failed to fetch messages' });
     }
   });
 
-  app.get('/api/messages/user/:userId', async (req: Request, res: Response) => {
+  app.get('/api/messages/user/:userId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = parseInt(req.params.userId);
-      const messages = await storage.getUserMessages(userId);
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      const messages = await storage.getUserMessages(user.id);
       res.json(messages);
     } catch (error) {
       console.error('Error fetching user messages:', error);
@@ -572,19 +597,71 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/messages', async (req: Request, res: Response) => {
+  app.post('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const message = await storage.createMessage(req.body);
-      res.json(message);
+      // SECURITY: Derive sender from authenticated user, not client input
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const { recipientId, conversationId, message: messageText } = req.body;
+      
+      // SECURITY: Verify conversation ownership/participation
+      // In a banking system, conversationId typically represents the customer's thread
+      // Customers can only post to their own conversations (conversationId matches their ID)
+      // Admins can post to any conversation (for customer support)
+      
+      // Enforce that non-admin users can only create messages in their own conversation
+      const isAdmin = req.user!.role === 'admin';
+      
+      if (!isAdmin && conversationId && conversationId !== user.id.toString()) {
+        console.warn(`🚫 Unauthorized conversation access: user ${req.user!.email} tried to post to conversation ${conversationId}`);
+        return res.status(403).json({ error: 'Access denied: Cannot post to other users\' conversations' });
+      }
+      
+      // SECURITY: Derive senderRole and senderName from authenticated user (server-side only)
+      // Never trust client-supplied role/name to prevent impersonation
+      const senderRole = req.user!.role === 'admin' ? 'admin' : 'customer';
+      const senderName = user.fullName || user.email;
+      
+      // Create message with server-derived sender information
+      const messageData = {
+        senderId: user.id,
+        senderName: senderName,
+        senderRole: senderRole,
+        recipientId: recipientId,
+        message: messageText,
+        conversationId: conversationId || user.id.toString(), // Default to user's own conversation
+        isRead: false,
+      };
+      
+      const createdMessage = await storage.createMessage(messageData);
+      res.json(createdMessage);
     } catch (error) {
       console.error('Error creating message:', error);
       res.status(500).json({ error: 'Failed to create message' });
     }
   });
 
-  app.patch('/api/messages/:id/read', async (req: Request, res: Response) => {
+  app.patch('/api/messages/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // SECURITY: Only allow marking own messages as read
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const userMessages = await storage.getUserMessages(user.id);
+      const ownsMessage = userMessages.some(msg => msg.id === id);
+      
+      if (!ownsMessage) {
+        console.warn(`🚫 Unauthorized message modification: user ${req.user!.email} tried to mark message ${id} as read`);
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
       const message = await storage.markMessageAsRead(id);
       res.json(message);
     } catch (error) {
@@ -593,11 +670,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ==================== ALERTS API ROUTES ====================
-  app.get('/api/alerts', async (req: Request, res: Response) => {
+  // ==================== ALERTS API ROUTES - PROTECTED ====================
+  app.get('/api/alerts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = req.session?.userId || 1;
-      const alerts = await storage.getUserAlerts(userId);
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      const alerts = await storage.getUserAlerts(user.id);
       res.json(alerts);
     } catch (error) {
       console.error('Error fetching alerts:', error);
@@ -605,10 +685,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/alerts/unread', async (req: Request, res: Response) => {
+  app.get('/api/alerts/unread', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = req.session?.userId || 1;
-      const alerts = await storage.getUnreadAlerts(userId);
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      const alerts = await storage.getUnreadAlerts(user.id);
       res.json(alerts);
     } catch (error) {
       console.error('Error fetching unread alerts:', error);
@@ -616,9 +699,21 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/alerts', async (req: Request, res: Response) => {
+  app.post('/api/alerts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const alert = await storage.createAlert(req.body);
+      // SECURITY: Derive userId from authenticated user, not client input
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Create alert with authenticated user's ID
+      const alertData = {
+        ...req.body,
+        userId: user.id, // Override any client-supplied userId
+      };
+      
+      const alert = await storage.createAlert(alertData);
       res.json(alert);
     } catch (error) {
       console.error('Error creating alert:', error);
@@ -626,9 +721,24 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/alerts/:id/read', async (req: Request, res: Response) => {
+  app.patch('/api/alerts/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      
+      // SECURITY: Only allow marking own alerts as read
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const userAlerts = await storage.getUserAlerts(user.id);
+      const ownsAlert = userAlerts.some(alert => alert.id === id);
+      
+      if (!ownsAlert) {
+        console.warn(`🚫 Unauthorized alert modification: user ${req.user!.email} tried to mark alert ${id} as read`);
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
       const alert = await storage.markAlertAsRead(id);
       res.json(alert);
     } catch (error) {
@@ -641,35 +751,82 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  const clients = new Map<string, { ws: WebSocket; userId: string; role: 'admin' | 'customer' }>();
+  const clients = new Map<string, { ws: WebSocket; userId: string; role: 'admin' | 'customer'; email: string }>();
 
   wss.on('connection', (ws: WebSocket) => {
-    console.log('WebSocket client connected');
+    console.log('WebSocket client attempting connection');
+    let isAuthenticated = false;
+    let clientId: string | null = null;
     
-    ws.on('message', (message: string) => {
+    ws.on('message', async (message: string) => {
       try {
         const data = JSON.parse(message);
-        console.log('WebSocket message received:', data);
+        console.log('WebSocket message received:', data.type);
         
         if (data.type === 'auth') {
-          clients.set(data.userId, {
+          // SECURITY: Validate JWT token before registering client
+          const token = data.token;
+          
+          if (!token) {
+            console.warn('🚫 WebSocket auth attempt without token');
+            ws.send(JSON.stringify({ type: 'error', message: 'Authentication required' }));
+            ws.close();
+            return;
+          }
+          
+          // Validate token using Supabase
+          const { supabase } = await import('./supabase-public-storage');
+          const { data: { user: authUser }, error } = await supabase.auth.getUser(token);
+          
+          if (error || !authUser) {
+            console.warn('🚫 WebSocket auth failed: Invalid token');
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid authentication token' }));
+            ws.close();
+            return;
+          }
+          
+          // SECURITY: Derive role from app_metadata (immutable, server-controlled)
+          const role = authUser.app_metadata?.role || 'customer';
+          
+          // Fetch user from database to get userId
+          const dbUser = await (storage as any).getUserByEmail(authUser.email);
+          
+          if (!dbUser) {
+            console.warn(`🚫 WebSocket auth failed: User ${authUser.email} not found in database`);
+            ws.send(JSON.stringify({ type: 'error', message: 'User not found' }));
+            ws.close();
+            return;
+          }
+          
+          // Register authenticated client
+          clientId = authUser.id;
+          clients.set(clientId, {
             ws,
-            userId: data.userId,
-            role: data.role || 'customer'
+            userId: dbUser.id.toString(),
+            role: role as 'admin' | 'customer',
+            email: authUser.email!
           });
+          
+          isAuthenticated = true;
+          console.log(`✅ WebSocket client authenticated: ${authUser.email} (${role})`);
+          ws.send(JSON.stringify({ type: 'auth_success', role, userId: dbUser.id }));
+        } else if (!isAuthenticated) {
+          // Reject all messages until client authenticates
+          console.warn('🚫 WebSocket message rejected: Client not authenticated');
+          ws.send(JSON.stringify({ type: 'error', message: 'Must authenticate first' }));
+          ws.close();
         }
       } catch (error) {
         console.error('WebSocket message error:', error);
+        ws.send(JSON.stringify({ type: 'error', message: 'Internal server error' }));
       }
     });
 
     ws.on('close', () => {
       console.log('WebSocket client disconnected');
-      clients.forEach((client, userId) => {
-        if (client.ws === ws) {
-          clients.delete(userId);
-        }
-      });
+      if (clientId) {
+        clients.delete(clientId);
+      }
     });
   });
 
