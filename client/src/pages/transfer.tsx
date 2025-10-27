@@ -101,7 +101,7 @@ export default function Transfer() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: userProfile?.email || 'vaa33053@gmail.com',
+          username: userProfile?.email || user?.email || 'vaa33053@gmail.com',
           pin: transferPin
         })
       });
@@ -130,7 +130,7 @@ export default function Transfer() {
         swiftCode: recipientDetails.swiftCode,
         transferPurpose: recipientDetails.purpose,
         transferPin: transferPin,
-        userEmail: userProfile?.email || 'vaa33053@gmail.com',
+        userEmail: userProfile?.email || user?.email || 'vaa33053@gmail.com',
         status: "pending_approval",
         requiresApproval: parseFloat(amount) >= 10000 // Transfers over $10k require admin approval
       };

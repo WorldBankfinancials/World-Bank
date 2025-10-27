@@ -105,16 +105,22 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User endpoints with proper typing
+  // User endpoints - get authenticated user from session
   app.get('/api/user', async (req: Request, res: Response) => {
     try {
-      const user = await storage.getUser(1); // Legacy endpoint for compatibility
+      // Get user email from query parameter (sent by authenticated frontend)
+      const userEmail = req.query.email as string;
+      
+      if (!userEmail) {
+        return res.status(401).json({ message: 'User email required - please login' });
+      }
+      
+      const user = await (storage as any).getUserByEmail(userEmail);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
       res.json(user);
-    } catch (error) {
-      console.error('Get user error:', error);
+    } catch (error: any) {
       res.status(500).json({ error: 'Failed to get user' });
     }
   });
@@ -361,11 +367,16 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Account endpoints with fixed typing
+  // Account endpoints with proper authentication
   app.get('/api/accounts', async (req: Request, res: Response) => {
     try {
-      // Get user email from query or use default for testing
-      const userEmail = req.query.email as string || 'vaa33053@gmail.com';
+      // Require user email from authenticated session
+      const userEmail = req.query.email as string;
+      
+      if (!userEmail) {
+        return res.status(401).json({ error: 'User email required - please login' });
+      }
+      
       const user = await (storage as any).getUserByEmail(userEmail);
       
       if (!user) {
@@ -407,8 +418,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const body = req.body as { currentPin: string; newPin: string; email: string };
       
+      if (!body.email) {
+        return res.status(401).json({ message: 'User email required' });
+      }
+      
       // Get user by email
-      const user = await (storage as any).getUserByEmail(body.email || 'vaa33053@gmail.com');
+      const user = await (storage as any).getUserByEmail(body.email);
       
       if (!user || user.transferPin !== body.currentPin) {
         return res.status(401).json({ message: 'Current PIN is incorrect' });

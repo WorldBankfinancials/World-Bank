@@ -20,9 +20,12 @@ export function setupTransferRoutes(app: Express) {
         userEmail
       } = req.body;
 
-      // Get user by email instead of hardcoded ID
-      const email = userEmail || 'vaa33053@gmail.com';
-      const user = await (storage as any).getUserByEmail(email);
+      // Require user email for authentication
+      if (!userEmail) {
+        return res.status(401).json({ message: "User email required for authentication" });
+      }
+      
+      const user = await (storage as any).getUserByEmail(userEmail);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -67,9 +70,12 @@ export function setupTransferRoutes(app: Express) {
         userEmail
       } = req.body;
 
-      // Get user by email instead of hardcoded ID
-      const email = userEmail || 'vaa33053@gmail.com';
-      const user = await (storage as any).getUserByEmail(email);
+      // Require user email for authentication
+      if (!userEmail) {
+        return res.status(401).json({ message: "User email required for authentication" });
+      }
+      
+      const user = await (storage as any).getUserByEmail(userEmail);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
