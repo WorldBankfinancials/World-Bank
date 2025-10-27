@@ -5,16 +5,16 @@ echo "Running pre-push checks..."
 
 # Run linting
 echo "Running ESLint..."
-npm run lint || true
+npm run lint
 
-# Run type check
+# Run type check (excluding protected files)
 echo "Running TypeScript type check..."
-npx tsc --noEmit || true
+npx tsc --noEmit --skipLibCheck
 
 # Run tests if they exist
 if [ -f "package.json" ] && grep -q "\"test\"" package.json; then
   echo "Running tests..."
-  npm test || true
+  npm test
 fi
 
 echo "Pre-push checks complete!"
