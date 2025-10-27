@@ -64,7 +64,7 @@ export default function Cards() {
       const response = await fetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'bankmanagerworld5@gmail.com', pin })
+        body: JSON.stringify({ pin })
       });
 
       if (response.ok) {
@@ -102,7 +102,7 @@ export default function Cards() {
       const response = await fetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'bankmanagerworld5@gmail.com', pin })
+        body: JSON.stringify({ pin })
       });
 
       if (response.ok) {
@@ -135,7 +135,7 @@ export default function Cards() {
       const response = await fetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'bankmanagerworld5@gmail.com', pin })
+        body: JSON.stringify({ pin })
       });
 
       if (response.ok) {

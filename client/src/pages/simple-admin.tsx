@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { queryClient } from '@/lib/queryClient';
 import { 
   Shield, 
   Clock, 
@@ -385,8 +386,8 @@ export default function SimpleAdmin() {
         const userData = await response.json();
         setEditingCustomer(customer);
         setEditForm({
-          fullName: userData.fullName || 'Liu Wei',
-          email: userData.email || 'bankmanagerworld5@gmail.com',
+          fullName: userData.fullName || customer.fullName,
+          email: userData.email || customer.email,
           phone: userData.phone || '+86 138 0013 8000',
           profession: userData.profession || 'Marine Engineer',
           address: userData.address || 'Beijing Shijingshan',
@@ -405,8 +406,8 @@ export default function SimpleAdmin() {
       // Use fallback data based on customer profile settings
       setEditingCustomer(customer);
       setEditForm({
-        fullName: 'Liu Wei',
-        email: 'bankmanagerworld5@gmail.com',
+        fullName: customer.fullName || 'Customer',
+        email: customer.email || '',
         phone: '+86 138 0013 8000',
         profession: 'Marine Engineer',
         address: 'Beijing Shijingshan',
@@ -570,8 +571,9 @@ export default function SimpleAdmin() {
             setUploadingPhoto(false);
             alert('Profile photo uploaded successfully!');
             
-            // Force immediate page refresh to sync with customer interface
-            window.location.reload();
+            // Invalidate user queries to trigger refetch in customer interface
+            queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/users'] });
           } else {
             const errorData = await response.json();
             // console.error('Upload failed:', errorData);
@@ -616,8 +618,9 @@ export default function SimpleAdmin() {
         
         alert(`Successfully added $${amount} to customer balance! New balance: $${result.user.balance}`);
         
-        // Force immediate page refresh to sync with customer dashboard
-        window.location.reload();
+        // Invalidate queries to trigger refetch in customer dashboard
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
       } else {
         const errorData = await response.json();
         // console.error('Balance update failed:', errorData);

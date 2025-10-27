@@ -4,6 +4,10 @@ import {
   transactions,
   adminActions,
   supportTickets,
+  cards,
+  investments,
+  messages,
+  alerts,
   type User, 
   type InsertUser,
   type Account,
@@ -13,7 +17,15 @@ import {
   type AdminAction,
   type InsertAdminAction,
   type SupportTicket,
-  type InsertSupportTicket
+  type InsertSupportTicket,
+  type Card,
+  type InsertCard,
+  type Investment,
+  type InsertInvestment,
+  type Message,
+  type InsertMessage,
+  type Alert,
+  type InsertAlert
 } from "@shared/schema";
 
 export interface IStorage {
@@ -40,6 +52,30 @@ export interface IStorage {
   getSupportTickets(userId?: number): Promise<SupportTicket[]>;
   updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined>;
   getAllTransactions(): Promise<Transaction[]>;
+  
+  // Cards operations
+  getUserCards(userId: number): Promise<Card[]>;
+  getCard(id: number): Promise<Card | undefined>;
+  createCard(card: InsertCard): Promise<Card>;
+  updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined>;
+  
+  // Investments operations
+  getUserInvestments(userId: number): Promise<Investment[]>;
+  getInvestment(id: number): Promise<Investment | undefined>;
+  createInvestment(investment: InsertInvestment): Promise<Investment>;
+  updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined>;
+  
+  // Messages operations
+  getMessages(conversationId?: string): Promise<Message[]>;
+  getUserMessages(userId: number): Promise<Message[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
+  markMessageAsRead(id: number): Promise<Message | undefined>;
+  
+  // Alerts operations
+  getUserAlerts(userId: number): Promise<Alert[]>;
+  getUnreadAlerts(userId: number): Promise<Alert[]>;
+  createAlert(alert: InsertAlert): Promise<Alert>;
+  markAlertAsRead(id: number): Promise<Alert | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -434,9 +470,41 @@ export class MemStorage implements IStorage {
     this.supportTickets.set(id, updatedTicket);
     return updatedTicket;
   }
+
+  // Cards stubs
+  async getUserCards(userId: number): Promise<Card[]> { return []; }
+  async getCard(id: number): Promise<Card | undefined> { return undefined; }
+  async createCard(card: InsertCard): Promise<Card> { 
+    const id = this.currentTransactionId++;
+    const newCard = { id, ...card, createdAt: new Date(), updatedAt: new Date() } as Card;
+    return newCard;
+  }
+  async updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined> { return undefined; }
+  
+  // Investments stubs
+  async getUserInvestments(userId: number): Promise<Investment[]> { return []; }
+  async getInvestment(id: number): Promise<Investment | undefined> { return undefined; }
+  async createInvestment(investment: InsertInvestment): Promise<Investment> {
+    const id = this.currentTransactionId++;
+    return { id, ...investment, createdAt: new Date(), lastUpdated: new Date() } as Investment;
+  }
+  async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> { return undefined; }
+  
+  // Messages stubs
+  async getMessages(conversationId?: string): Promise<Message[]> { return []; }
+  async getUserMessages(userId: number): Promise<Message[]> { return []; }
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const id = this.currentTransactionId++;
+    return { id, ...message, createdAt: new Date() } as Message;
+  }
+  async markMessageAsRead(id: number): Promise<Message | undefined> { return undefined; }
+  
+  // Alerts stubs
+  async getUserAlerts(userId: number): Promise<Alert[]> { return []; }
+  async getUnreadAlerts(userId: number): Promise<Alert[]> { return []; }
+  async createAlert(alert: InsertAlert): Promise<Alert> {
+    const id = this.currentTransactionId++;
+    return { id, ...alert, createdAt: new Date() } as Alert;
+  }
+  async markAlertAsRead(id: number): Promise<Alert | undefined> { return undefined; }
 }
-
-import { SupabaseStorage } from './supabase-storage';
-
-// Use hybrid approach - Supabase Auth with in-memory storage for stability
-export const storage = new MemStorage();

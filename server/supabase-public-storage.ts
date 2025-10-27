@@ -10,7 +10,15 @@ import {
   type AdminAction,
   type InsertAdminAction,
   type SupportTicket,
-  type InsertSupportTicket
+  type InsertSupportTicket,
+  type Card,
+  type InsertCard,
+  type Investment,
+  type InsertInvestment,
+  type Message,
+  type InsertMessage,
+  type Alert,
+  type InsertAlert
 } from "@shared/schema";
 import { IStorage } from "./storage";
 
@@ -1029,6 +1037,167 @@ export class SupabasePublicStorage implements IStorage {
   async updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
     return undefined;
   }
-}
 
-export { supabase };
+  // Cards methods
+  async getUserCards(userId: number): Promise<Card[]> {
+    try {
+      const result = await sql`SELECT * FROM public.cards WHERE user_id = ${userId}`;
+      return result as unknown as Card[];
+    } catch (error) {
+      console.error('Error fetching cards:', error);
+      return [];
+    }
+  }
+
+  async getCard(id: number): Promise<Card | undefined> {
+    try {
+      const result = await sql`SELECT * FROM public.cards WHERE id = ${id}`;
+      return result[0] as Card | undefined;
+    } catch (error) {
+      console.error('Error fetching card:', error);
+      return undefined;
+    }
+  }
+
+  async createCard(card: InsertCard): Promise<Card> {
+    const result = await sql`
+      INSERT INTO public.cards ${sql(card as any)}
+      RETURNING *
+    `;
+    return result[0] as Card;
+  }
+
+  async updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined> {
+    const result = await sql`
+      UPDATE public.cards 
+      SET ${sql(updates as any)}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    return result[0] as Card | undefined;
+  }
+
+  // Investments methods
+  async getUserInvestments(userId: number): Promise<Investment[]> {
+    try {
+      const result = await sql`SELECT * FROM public.investments WHERE user_id = ${userId}`;
+      return result as unknown as Investment[];
+    } catch (error) {
+      console.error('Error fetching investments:', error);
+      return [];
+    }
+  }
+
+  async getInvestment(id: number): Promise<Investment | undefined> {
+    try {
+      const result = await sql`SELECT * FROM public.investments WHERE id = ${id}`;
+      return result[0] as Investment | undefined;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async createInvestment(investment: InsertInvestment): Promise<Investment> {
+    const result = await sql`
+      INSERT INTO public.investments ${sql(investment as any)}
+      RETURNING *
+    `;
+    return result[0] as Investment;
+  }
+
+  async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> {
+    const result = await sql`
+      UPDATE public.investments 
+      SET ${sql(updates as any)}
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    return result[0] as Investment | undefined;
+  }
+
+  // Messages methods
+  async getMessages(conversationId?: string): Promise<Message[]> {
+    try {
+      if (conversationId) {
+        const result = await sql`SELECT * FROM public.messages WHERE conversation_id = ${conversationId} ORDER BY created_at DESC`;
+        return result as unknown as Message[];
+      }
+      const result = await sql`SELECT * FROM public.messages ORDER BY created_at DESC LIMIT 100`;
+      return result as unknown as Message[];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getUserMessages(userId: number): Promise<Message[]> {
+    try {
+      const result = await sql`
+        SELECT * FROM public.messages 
+        WHERE sender_id = ${userId} OR recipient_id = ${userId}
+        ORDER BY created_at DESC
+      `;
+      return result as unknown as Message[];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const result = await sql`
+      INSERT INTO public.messages ${sql(message as any)}
+      RETURNING *
+    `;
+    return result[0] as Message;
+  }
+
+  async markMessageAsRead(id: number): Promise<Message | undefined> {
+    const result = await sql`
+      UPDATE public.messages 
+      SET is_read = true, read_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    return result[0] as Message | undefined;
+  }
+
+  // Alerts methods
+  async getUserAlerts(userId: number): Promise<Alert[]> {
+    try {
+      const result = await sql`SELECT * FROM public.alerts WHERE user_id = ${userId} ORDER BY created_at DESC`;
+      return result as unknown as Alert[];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getUnreadAlerts(userId: number): Promise<Alert[]> {
+    try {
+      const result = await sql`
+        SELECT * FROM public.alerts 
+        WHERE user_id = ${userId} AND is_read = false
+        ORDER BY created_at DESC
+      `;
+      return result as unknown as Alert[];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async createAlert(alert: InsertAlert): Promise<Alert> {
+    const result = await sql`
+      INSERT INTO public.alerts ${sql(alert as any)}
+      RETURNING *
+    `;
+    return result[0] as Alert;
+  }
+
+  async markAlertAsRead(id: number): Promise<Alert | undefined> {
+    const result = await sql`
+      UPDATE public.alerts 
+      SET is_read = true, read_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `;
+    return result[0] as Alert | undefined;
+  }
+}
