@@ -71,7 +71,7 @@ export default function InternationalTransfer() {
         accountNumber: "0000000000",
         transferPurpose: "International Transfer",
         transferPin: transferPin,
-        userEmail: user?.email || 'vaa33053@gmail.com'
+        userEmail: user?.email!
       };
       
       const response = await fetch('/api/international-transfers', {

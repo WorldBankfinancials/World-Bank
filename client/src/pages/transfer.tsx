@@ -20,12 +20,29 @@ import {
   Shield
 } from "lucide-react";
 
+interface User {
+  id: number;
+  email: string;
+  fullName?: string;
+  balance?: number;
+  transferPin?: string;
+}
+
 export default function Transfer() {
   const { t } = useLanguage();
-  const { data: user, isLoading } = useQuery({
-    queryKey: ['/api/user'],
-  });
   const { userProfile } = useAuth();
+  
+  // Fetch user data with proper email parameter
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ['/api/user', userProfile?.email],
+    queryFn: async () => {
+      if (!userProfile?.email) return null;
+      const response = await fetch(`/api/user?email=${encodeURIComponent(userProfile.email)}`);
+      if (!response.ok) throw new Error('Failed to fetch user');
+      return response.json();
+    },
+    enabled: !!userProfile?.email
+  });
   
   const [amount, setAmount] = useState("");
   const [transferType, setTransferType] = useState("international");
@@ -101,7 +118,7 @@ export default function Transfer() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: userProfile?.email || user?.email || 'vaa33053@gmail.com',
+          username: userProfile?.email || user?.email!,
           pin: transferPin
         })
       });
@@ -130,7 +147,7 @@ export default function Transfer() {
         swiftCode: recipientDetails.swiftCode,
         transferPurpose: recipientDetails.purpose,
         transferPin: transferPin,
-        userEmail: userProfile?.email || user?.email || 'vaa33053@gmail.com',
+        userEmail: userProfile?.email || user?.email!,
         status: "pending_approval",
         requiresApproval: parseFloat(amount) >= 10000 // Transfers over $10k require admin approval
       };

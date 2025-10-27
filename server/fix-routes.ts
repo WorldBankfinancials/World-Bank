@@ -234,8 +234,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Account not found' });
       }
       
-      const newBalance = parseFloat(account.balance) + balanceChange;
-      await storage.updateAccount(accountId, { balance: newBalance.toString() });
+      const newBalance = parseFloat(account.balance.toString()) + balanceChange;
+      await storage.updateAccount?.(accountId, { balance: newBalance.toString() });
       
       // Create transaction record
       await storage.createTransaction({
@@ -459,29 +459,21 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       
       // Create transaction with PostgreSQL storage
       const transaction = await storage.createTransaction({
-        transactionId,
-        fromUserId,
-        toUserId: null,
-        fromAccountId: 1,
-        toAccountId: null,
-        amount: parseFloat(amount),
-        currency: currency || 'USD',
-        transactionType,
+        accountId: 1,
+        type: 'debit',
+        amount: amount.toString(),
+        description: description || 'Transfer',
+        category: 'transfer',
+        date: new Date(),
         status: 'pending',
-        description,
         recipientName,
-        recipientAccount,
-        referenceNumber: transactionId,
-        fee: transactionType === 'international' ? 25 : 0,
-        countryCode: 'US',
         bankName: 'World Bank',
         adminNotes: 'Awaiting admin approval'
       });
       
-      console.log('✅ Transfer created successfully:', transaction);
       res.json({ 
         success: true, 
-        transactionId: transaction.transactionId,
+        transactionId: transactionId,
         status: 'pending',
         message: 'Transfer submitted for admin approval'
       });
