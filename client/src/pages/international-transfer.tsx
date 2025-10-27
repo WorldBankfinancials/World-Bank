@@ -70,7 +70,8 @@ export default function InternationalTransfer() {
         swiftCode: "INTBANK",
         accountNumber: "0000000000",
         transferPurpose: "International Transfer",
-        transferPin: transferPin
+        transferPin: transferPin,
+        userEmail: user?.email || 'vaa33053@gmail.com'
       };
       
       const response = await fetch('/api/international-transfers', {

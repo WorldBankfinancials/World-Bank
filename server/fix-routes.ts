@@ -26,7 +26,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         .limit(5);
       
       if (error) {
-        console.error('❌ Supabase table test failed:', error);
         res.json({ 
           connected: false, 
           message: 'Banking tables not found in Supabase',
@@ -34,7 +33,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           action: 'Please run the SQL in supabase-cleanup-and-setup.sql'
         });
       } else {
-        console.log('✅ Banking tables found in Supabase:', data?.length || 0, 'users');
         res.json({ 
           connected: true, 
           message: `Banking tables working! Found ${data?.length || 0} users`,
@@ -42,9 +40,68 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           details: 'International banking system ready with realtime synchronization'
         });
       }
-    } catch (error) {
-      console.error('Supabase setup error:', error);
+    } catch (error: any) {
       res.status(500).json({ error: 'Connection test failed', details: error.message });
+    }
+  });
+
+  // Create or update test user with Supabase Auth credentials (for testing purposes)
+  app.post('/api/create-test-user', async (req: Request, res: Response) => {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password required' });
+      }
+
+      // Create Supabase admin client with service role key
+      const supabaseAdmin = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+
+      // Try to get user by email first
+      const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = users?.users.find((u: any) => u.email === email);
+
+      if (existingUser) {
+        // Update password for existing user
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+          existingUser.id,
+          { password, email_confirm: true }
+        );
+
+        if (updateError) {
+          return res.status(400).json({ error: updateError.message });
+        }
+
+        res.json({ 
+          success: true, 
+          message: 'Test user password updated successfully',
+          user: { email, id: existingUser.id }
+        });
+      } else {
+        // Create new user in Supabase Auth
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true
+        });
+
+        if (authError) {
+          return res.status(400).json({ error: authError.message });
+        }
+
+        res.json({ 
+          success: true, 
+          message: 'Test user created successfully in Supabase Auth',
+          user: { email, id: authData.user?.id }
+        });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to create/update test user', details: error.message });
     }
   });
 
@@ -307,10 +364,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Account endpoints with fixed typing
   app.get('/api/accounts', async (req: Request, res: Response) => {
     try {
-      const accounts = await storage.getUserAccounts(1); // Liu Wei's ID
+      // Get user email from query or use default for testing
+      const userEmail = req.query.email as string || 'vaa33053@gmail.com';
+      const user = await (storage as any).getUserByEmail(userEmail);
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const accounts = await storage.getUserAccounts(user.id);
       res.json(accounts);
-    } catch (error) {
-      console.error('Get accounts error:', error);
+    } catch (error: any) {
       res.status(500).json({ error: 'Failed to get accounts' });
     }
   });
@@ -341,8 +405,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // PIN management endpoints
   app.post('/api/user/change-pin', async (req: Request, res: Response) => {
     try {
-      const body = req.body as { currentPin: string; newPin: string };
-      const user = await storage.getUser(1); // Liu Wei's ID
+      const body = req.body as { currentPin: string; newPin: string; email: string };
+      
+      // Get user by email
+      const user = await (storage as any).getUserByEmail(body.email || 'vaa33053@gmail.com');
       
       if (!user || user.transferPin !== body.currentPin) {
         return res.status(401).json({ message: 'Current PIN is incorrect' });

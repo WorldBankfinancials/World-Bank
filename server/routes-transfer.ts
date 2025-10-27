@@ -16,12 +16,20 @@ export function setupTransferRoutes(app: Express) {
         recipientCountry,
         bankName,
         swiftCode,
-        transferPin
+        transferPin,
+        userEmail
       } = req.body;
 
+      // Get user by email instead of hardcoded ID
+      const email = userEmail || 'vaa33053@gmail.com';
+      const user = await (storage as any).getUserByEmail(email);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
       // Validate PIN against real user data from Supabase
-      const user = await storage.getUser(1); // TODO: Get actual user ID from session
-      if (!user || transferPin !== user.transferPin) {
+      if (transferPin !== user.transferPin) {
         return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
       }
 
@@ -55,12 +63,20 @@ export function setupTransferRoutes(app: Express) {
         swiftCode,
         accountNumber,
         transferPurpose,
-        transferPin
+        transferPin,
+        userEmail
       } = req.body;
 
+      // Get user by email instead of hardcoded ID
+      const email = userEmail || 'vaa33053@gmail.com';
+      const user = await (storage as any).getUserByEmail(email);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
       // Validate PIN against real user data from Supabase
-      const user = await storage.getUser(1); // TODO: Get actual user ID from session
-      if (!user || transferPin !== user.transferPin) {
+      if (transferPin !== user.transferPin) {
         return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
       }
 
