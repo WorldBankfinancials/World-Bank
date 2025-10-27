@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { supabase } from "./supabase";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -7,12 +8,36 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+/**
+ * Helper to add email parameter to API URLs
+ */
+async function addEmailToUrl(url: string): Promise<string> {
+  // Skip if not an API call or already has email parameter
+  if (!url.startsWith('/api/') || url.includes('email=')) {
+    return url;
+  }
+  
+  // Get current user email from Supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) {
+    console.warn(`⚠️ No user email available for API call: ${url}`);
+    return url;
+  }
+  
+  // Add email parameter
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}email=${encodeURIComponent(user.email)}`;
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  // Add email to URL automatically
+  const finalUrl = await addEmailToUrl(url);
+  
+  const res = await fetch(finalUrl, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -29,7 +54,10 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    // Automatically add email parameter to API calls
+    const url = await addEmailToUrl(queryKey[0] as string);
+    
+    const res = await fetch(url, {
       credentials: "include",
     });
 

@@ -486,22 +486,26 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchUserData = async () => {
+      if (!userProfile?.email) {
+        console.warn('⚠️ Cannot fetch user data - user email not available');
+        return;
+      }
+      
       try {
-        const response = await fetch(`/api/user?t=${Date.now()}`);
+        const response = await fetch(`/api/user?email=${encodeURIComponent(userProfile.email)}&t=${Date.now()}`);
         if (response.ok) {
           const data = await response.json();
-
           setUserData(data);
         } else {
-
+          console.error('❌ Failed to fetch user data:', response.status);
         }
       } catch (error) {
-
+        console.error('❌ Error fetching user data:', error);
       }
     };
 
     fetchUserData();
-  }, []);
+  }, [userProfile]);
 
   useEffect(() => {
     const handleToggleChat = () => setIsChatOpen(!isChatOpen);
@@ -523,8 +527,13 @@ export default function Dashboard() {
   // Fetch accounts on mount
   React.useEffect(() => {
     const fetchAccounts = async () => {
+      if (!userProfile?.email) {
+        console.warn('⚠️ Cannot fetch accounts - user email not available');
+        return;
+      }
+      
       try {
-        const response = await fetch('/api/accounts?t=' + Date.now());
+        const response = await fetch(`/api/accounts?email=${encodeURIComponent(userProfile.email)}&t=` + Date.now());
         if (response.ok) {
           const accountsData = await response.json();
 
@@ -546,7 +555,7 @@ export default function Dashboard() {
     };
 
     fetchAccounts();
-  }, []);
+  }, [userProfile]);
 
   // Real-time subscription for transactions and admin changes
   React.useEffect(() => {
