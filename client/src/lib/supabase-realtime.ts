@@ -279,7 +279,131 @@ class RealtimeBankAccounts {
   }
 }
 
+export interface RealtimeSupportTicket {
+  id: number;
+  userId: number;
+  description: string;
+  status: string;
+  priority: string;
+  category: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface RealtimeAdminAction {
+  id: number;
+  adminId: number;
+  actionType: string;
+  targetId: string;
+  targetType: string;
+  description: string;
+  createdAt: Date;
+}
+
+class RealtimeSupportTickets {
+  private channel: any = null;
+
+  subscribe(callback: (ticket: RealtimeSupportTicket) => void, userId?: number) {
+    this.channel = supabase
+      .channel('support-tickets')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public', 
+          table: 'support_tickets',
+          ...(userId ? { filter: `user_id=eq.${userId}` } : {})
+        },
+        (payload) => {
+          if (!payload.new && payload.eventType !== 'DELETE') {
+            console.warn('⚠️ Realtime support ticket event with null payload.new');
+            return;
+          }
+          
+          try {
+            const ticketData = (payload.new || payload.old) as any;
+            if (!ticketData) return;
+            
+            const ticket: RealtimeSupportTicket = {
+              id: ticketData.id,
+              userId: ticketData.user_id,
+              description: ticketData.description || '',
+              status: ticketData.status || 'open',
+              priority: ticketData.priority || 'medium',
+              category: ticketData.category || 'general',
+              createdAt: new Date(ticketData.created_at),
+              updatedAt: new Date(ticketData.updated_at || ticketData.created_at)
+            };
+            callback(ticket);
+          } catch (error) {
+            console.error('❌ Error processing realtime support ticket:', error);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔄 Realtime support tickets subscription:', status);
+      });
+  }
+
+  unsubscribe() {
+    if (this.channel) {
+      supabase.removeChannel(this.channel);
+      this.channel = null;
+    }
+  }
+}
+
+class RealtimeAdminActions {
+  private channel: any = null;
+
+  subscribe(callback: (action: RealtimeAdminAction) => void) {
+    this.channel = supabase
+      .channel('admin-actions')
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT',
+          schema: 'public', 
+          table: 'admin_actions'
+        },
+        (payload) => {
+          if (!payload.new) {
+            console.warn('⚠️ Realtime admin action event with null payload.new');
+            return;
+          }
+          
+          try {
+            const action: RealtimeAdminAction = {
+              id: payload.new.id,
+              adminId: payload.new.admin_id,
+              actionType: payload.new.action_type,
+              targetId: payload.new.target_id || '',
+              targetType: payload.new.target_type || '',
+              description: payload.new.description || '',
+              createdAt: new Date(payload.new.created_at)
+            };
+            callback(action);
+          } catch (error) {
+            console.error('❌ Error processing realtime admin action:', error);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔄 Realtime admin actions subscription:', status);
+      });
+  }
+
+  unsubscribe() {
+    if (this.channel) {
+      supabase.removeChannel(this.channel);
+      this.channel = null;
+    }
+  }
+}
+
 export const realtimeChat = new RealtimeChat();
 export const realtimeAlerts = new RealtimeAlerts();
 export const realtimeTransactions = new RealtimeTransactions();
 export const realtimeBankAccounts = new RealtimeBankAccounts();
+export const realtimeSupportTickets = new RealtimeSupportTickets();
+export const realtimeAdminActions = new RealtimeAdminActions();
