@@ -907,6 +907,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Search users by ID, phone, or email (admin only)
+  app.get("/api/admin/users/search", async (req, res) => {
+    try {
+      console.log('🔍 Admin user search request:', req.query);
+      
+      const { id, phone, email } = req.query;
+      
+      if (!id && !phone && !email) {
+        return res.status(400).json({ error: "Please provide id, phone, or email parameter" });
+      }
+
+      let user: any = undefined;
+
+      // Search by ID first (most specific)
+      if (id) {
+        const userId = parseInt(id as string);
+        if (!isNaN(userId)) {
+          user = await storage.getUser(userId);
+          console.log(`📋 Search by ID ${userId}:`, user ? 'Found' : 'Not found');
+        }
+      }
+
+      // Search by phone if not found by ID
+      if (!user && phone && (storage as any).getUserByPhone) {
+        user = await (storage as any).getUserByPhone(phone as string);
+        console.log(`📱 Search by phone ${phone}:`, user ? 'Found' : 'Not found');
+      }
+
+      // Search by email if not found by phone
+      if (!user && email && (storage as any).getUserByEmail) {
+        user = await (storage as any).getUserByEmail(email as string);
+        console.log(`📧 Search by email ${email}:`, user ? 'Found' : 'Not found');
+      }
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Return sanitized user data
+      res.json({
+        id: user.id,
+        username: user.username,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+        accountNumber: user.accountNumber,
+        accountId: user.accountId,
+        profession: user.profession,
+        address: user.address,
+        city: user.city,
+        state: user.state,
+        country: user.country,
+        role: user.role,
+        isVerified: user.isVerified,
+        isActive: user.isActive,
+        balance: user.balance,
+        createdAt: user.createdAt
+      });
+    } catch (error) {
+      console.error("❌ User search error:", error);
+      res.status(500).json({ error: "Failed to search user" });
+    }
+  });
+
   // Update customer information (admin only)
   app.patch("/api/admin/customers/:id", async (req, res) => {
     try {

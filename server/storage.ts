@@ -148,6 +148,22 @@ export class MemStorage implements IStorage {
     return `WB-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
   }
 
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.username === username);
+  }
+
+  async getUserByPhone(phone: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.phone === phone);
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
   async getUsers(): Promise<User[]> {
     return Array.from(this.users.values());
   }
@@ -214,7 +230,26 @@ export class MemStorage implements IStorage {
     return undefined;
   }
 
+  async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (user) {
+      const updatedUser = { ...user, balance: amount, updatedAt: new Date() };
+      this.users.set(id, updatedUser);
+      await this.savePersistedData();
+      return updatedUser;
+    }
+    return undefined;
+  }
+
   // Account management methods
+  async getUserAccounts(userId: number): Promise<Account[]> {
+    return Array.from(this.accounts.values()).filter(account => account.userId === userId);
+  }
+
+  async getAccount(id: number): Promise<Account | undefined> {
+    return this.accounts.get(id);
+  }
+
   async createAccount(accountData: Partial<Account>): Promise<Account> {
     const id = this.currentAccountId++;
     const account: Account = {
@@ -222,9 +257,12 @@ export class MemStorage implements IStorage {
       userId: accountData.userId || 0,
       accountNumber: accountData.accountNumber || this.generateAccountNumber(),
       accountType: accountData.accountType || 'checking',
-      accountName: accountData.accountName || '',
+      accountName: accountData.accountName || null,
       balance: accountData.balance || '0',
-      currency: accountData.currency || 'USD',
+      currency: accountData.currency || null,
+      isActive: accountData.isActive ?? null,
+      interestRate: accountData.interestRate ?? null,
+      minimumBalance: accountData.minimumBalance ?? null,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -259,6 +297,18 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getAccountTransactions(accountId: number, limit?: number): Promise<Transaction[]> {
+    let txns = Array.from(this.transactions.values())
+      .filter(t => t.accountId === accountId)
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+    
+    if (limit) {
+      txns = txns.slice(0, limit);
+    }
+    
+    return txns;
+  }
+
   async createTransaction(transactionData: Partial<Transaction>): Promise<Transaction> {
     const id = this.currentTransactionId++;
     const transaction: Transaction = {
@@ -267,9 +317,23 @@ export class MemStorage implements IStorage {
       type: transactionData.type || 'debit',
       amount: transactionData.amount || '0',
       description: transactionData.description || '',
-      category: transactionData.category || 'other',
+      category: transactionData.category || null,
       date: transactionData.date || new Date(),
       status: transactionData.status || 'pending',
+      recipientName: transactionData.recipientName || null,
+      recipientAddress: transactionData.recipientAddress || null,
+      recipientCountry: transactionData.recipientCountry || null,
+      bankName: transactionData.bankName || null,
+      swiftCode: transactionData.swiftCode || null,
+      routingNumber: transactionData.routingNumber || null,
+      accountNumberRecipient: transactionData.accountNumberRecipient || null,
+      reference: transactionData.reference || null,
+      fee: transactionData.fee || null,
+      exchangeRate: transactionData.exchangeRate || null,
+      adminNotes: transactionData.adminNotes || null,
+      approvedBy: transactionData.approvedBy || null,
+      approvedAt: transactionData.approvedAt || null,
+      rejectedAt: transactionData.rejectedAt || null,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -279,19 +343,75 @@ export class MemStorage implements IStorage {
     return transaction;
   }
 
+  async updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<Transaction | undefined> {
+    const transaction = this.transactions.get(id);
+    if (!transaction) return undefined;
+
+    const now = new Date();
+    const updatedTransaction = {
+      ...transaction,
+      status,
+      adminNotes: notes || transaction.adminNotes,
+      approvedBy: status === 'approved' ? adminId : transaction.approvedBy,
+      approvedAt: status === 'approved' ? now : transaction.approvedAt,
+      rejectedAt: status === 'rejected' ? now : transaction.rejectedAt,
+      updatedAt: now
+    };
+
+    this.transactions.set(id, updatedTransaction);
+    await this.savePersistedData();
+    return updatedTransaction;
+  }
+
+  async getPendingTransactions(): Promise<Transaction[]> {
+    return Array.from(this.transactions.values())
+      .filter(t => t.status === 'pending')
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+  }
+
+  // Admin action methods
+  async createAdminAction(actionData: Partial<AdminAction>): Promise<AdminAction> {
+    const id = this.currentAdminActionId++;
+    const action: AdminAction = {
+      id,
+      adminId: actionData.adminId || 0,
+      actionType: actionData.actionType || '',
+      targetId: actionData.targetId || null,
+      targetType: actionData.targetType || null,
+      description: actionData.description || null,
+      metadata: actionData.metadata || null,
+      createdAt: new Date()
+    };
+    
+    this.adminActions.set(id, action);
+    await this.savePersistedData();
+    return action;
+  }
+
+  async getAdminActions(adminId?: number): Promise<AdminAction[]> {
+    let actions = Array.from(this.adminActions.values());
+    if (adminId) {
+      actions = actions.filter(action => action.adminId === adminId);
+    }
+    return actions.sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+  }
+
   // Support ticket methods
   async createSupportTicket(ticketData: Partial<SupportTicket>): Promise<SupportTicket> {
     const id = this.currentSupportTicketId++;
     const ticket: SupportTicket = {
       id,
       userId: ticketData.userId || 0,
-      subject: ticketData.subject || '',
       description: ticketData.description || '',
-      priority: ticketData.priority || 'medium',
-      status: ticketData.status || 'open',
-      category: ticketData.category || 'general',
+      priority: ticketData.priority || null,
+      status: ticketData.status || null,
+      category: ticketData.category || null,
+      adminNotes: ticketData.adminNotes || null,
+      assignedTo: ticketData.assignedTo || null,
+      resolution: ticketData.resolution || null,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      resolvedAt: ticketData.resolvedAt || null
     };
     
     this.supportTickets.set(id, ticket);
