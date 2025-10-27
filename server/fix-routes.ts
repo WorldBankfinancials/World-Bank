@@ -437,52 +437,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Transfer endpoint with proper PostgreSQL integration
-  app.post('/api/transfer', async (req: Request, res: Response) => {
-    try {
-      const { fromUserId, amount, currency, transactionType, recipientName, recipientAccount, description, pin } = req.body;
-      
-      console.log('🏦 Processing transfer:', { fromUserId, amount, currency, transactionType });
-      
-      // Validate PIN
-      const user = await storage.getUser(fromUserId);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      
-      if (user.transferPin !== pin) {
-        return res.status(401).json({ error: 'Invalid PIN' });
-      }
-      
-      // Generate transaction ID
-      const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Create transaction with PostgreSQL storage
-      const transaction = await storage.createTransaction({
-        accountId: 1,
-        type: 'debit',
-        amount: amount.toString(),
-        description: description || 'Transfer',
-        category: 'transfer',
-        date: new Date(),
-        status: 'pending',
-        recipientName,
-        bankName: 'World Bank',
-        adminNotes: 'Awaiting admin approval'
-      });
-      
-      res.json({ 
-        success: true, 
-        transactionId: transactionId,
-        status: 'pending',
-        message: 'Transfer submitted for admin approval'
-      });
-      
-    } catch (error) {
-      console.error('❌ Transfer error:', error);
-      res.status(500).json({ error: 'Transfer failed' });
-    }
-  });
+  // Note: Transfer endpoints moved to routes-transfer.ts
+  // Using /api/transfers (plural) with email-based authentication
 
   // Setup transfer routes
   setupTransferRoutes(app);
