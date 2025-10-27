@@ -5,6 +5,28 @@ import { storage } from "./storage-factory";
 import { setupTransferRoutes } from './routes-transfer';
 import { ObjectStorageService } from './objectStorage';
 
+// Simple in-memory rate limiter for admin endpoints
+const rateLimitMap = new Map<string, { count: number, resetTime: number }>();
+function adminRateLimit(req: any, res: any, next: any) {
+  const key = req.session?.userId || req.ip || 'anonymous';
+  const now = Date.now();
+  const limit = 60; // 60 requests
+  const window = 60 * 1000; // per minute
+  
+  const record = rateLimitMap.get(key);
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(key, { count: 1, resetTime: now + window });
+    return next();
+  }
+  
+  if (record.count >= limit) {
+    return res.status(429).json({ error: 'Rate limit exceeded. Try again later.' });
+  }
+  
+  record.count++;
+  next();
+}
+
 
 // Utility functions for generating account details
 function generateAccountNumber(): string {
@@ -16,17 +38,20 @@ function generateAccountId(): string {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get user by Supabase ID
+  // Get user by Supabase ID - SECURE: No getAllUsers() fallback
   app.get('/api/users/supabase/:supabaseId', async (req, res) => {
     try {
       const { supabaseId } = req.params;
-      const users = await storage.getAllUsers();
-      const user = users.find(u => u.supabaseUserId === supabaseId);
+      
+      // SECURITY: Direct query - no getAllUsers() enumeration
+      const user = (storage as any).getUserBySupabaseId 
+        ? await (storage as any).getUserBySupabaseId(supabaseId)
+        : undefined;
       
       if (user) {
         res.json(user);
       } else {
-        res.status(404).json({ error: 'User not found' });
+        res.status(404).json({ error: 'User not found with provided Supabase ID' });
       }
     } catch (error) {
       console.error('Get Supabase user error:', error);
@@ -907,8 +932,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Search users by ID, phone, or email (admin only)
-  app.get("/api/admin/users/search", async (req, res) => {
+  // Search users by ID, phone, or email (admin only) - RATE LIMITED
+  app.get("/api/admin/users/search", adminRateLimit, async (req, res) => {
     try {
       console.log('🔍 Admin user search request:', req.query);
       
@@ -925,27 +950,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const userId = parseInt(id as string);
         if (!isNaN(userId)) {
           user = await storage.getUser(userId);
-          console.log(`📋 Search by ID ${userId}:`, user ? 'Found' : 'Not found');
+          console.log(`📋 Admin search by ID ${userId}:`, user ? 'Found' : 'Not found');
         }
       }
 
       // Search by phone if not found by ID
-      if (!user && phone && (storage as any).getUserByPhone) {
-        user = await (storage as any).getUserByPhone(phone as string);
-        console.log(`📱 Search by phone ${phone}:`, user ? 'Found' : 'Not found');
+      if (!user && phone) {
+        user = await storage.getUserByPhone(phone as string);
+        console.log(`📱 Admin search by phone ${phone}:`, user ? 'Found' : 'Not found');
       }
 
       // Search by email if not found by phone
-      if (!user && email && (storage as any).getUserByEmail) {
-        user = await (storage as any).getUserByEmail(email as string);
-        console.log(`📧 Search by email ${email}:`, user ? 'Found' : 'Not found');
+      if (!user && email) {
+        user = await storage.getUserByEmail(email as string);
+        console.log(`📧 Admin search by email ${email}:`, user ? 'Found' : 'Not found');
       }
 
+      // SECURITY: Fail fast - no fallback to getAllUsers()
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        return res.status(404).json({ error: "User not found with provided criteria" });
       }
 
-      // Return sanitized user data
+      // Log admin action for audit trail
+      const adminId = req.session?.userId || 1;
+      await storage.createAdminAction({
+        adminId,
+        actionType: "user_search",
+        targetType: "user",
+        targetId: user.id.toString(),
+        description: `Admin searched for user by ${id ? 'ID' : phone ? 'phone' : 'email'}: ${id || phone || email}`,
+        metadata: JSON.stringify({ searchCriteria: { id, phone, email } })
+      });
+
+      // Return sanitized user data (no sensitive fields)
       res.json({
         id: user.id,
         username: user.username,
@@ -966,7 +1003,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: user.createdAt
       });
     } catch (error) {
-      console.error("❌ User search error:", error);
+      console.error("❌ Admin user search error:", error);
       res.status(500).json({ error: "Failed to search user" });
     }
   });

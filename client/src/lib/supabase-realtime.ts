@@ -279,6 +279,8 @@ class RealtimeBankAccounts {
   }
 }
 
+export type RealtimeEventType = 'INSERT' | 'UPDATE' | 'DELETE';
+
 export interface RealtimeSupportTicket {
   id: number;
   userId: number;
@@ -288,6 +290,7 @@ export interface RealtimeSupportTicket {
   category: string;
   createdAt: Date;
   updatedAt: Date;
+  eventType?: RealtimeEventType; // Track event type for DELETE distinction
 }
 
 export interface RealtimeAdminAction {
@@ -321,22 +324,33 @@ class RealtimeSupportTickets {
           }
           
           try {
-            const ticketData = (payload.new || payload.old) as any;
-            if (!ticketData) return;
+            // Use Record type for safer typing than `as any`
+            const ticketData = (payload.new || payload.old) as Record<string, any> | null;
+            if (!ticketData) {
+              console.warn('⚠️ Realtime support ticket: no data in payload');
+              return;
+            }
+            
+            // Validate required fields before usage
+            if (!ticketData.id || !ticketData.user_id) {
+              console.error('❌ Invalid support ticket payload: missing required fields');
+              return;
+            }
             
             const ticket: RealtimeSupportTicket = {
-              id: ticketData.id,
-              userId: ticketData.user_id,
-              description: ticketData.description || '',
-              status: ticketData.status || 'open',
-              priority: ticketData.priority || 'medium',
-              category: ticketData.category || 'general',
+              id: Number(ticketData.id),
+              userId: Number(ticketData.user_id),
+              description: String(ticketData.description || ''),
+              status: String(ticketData.status || 'open'),
+              priority: String(ticketData.priority || 'medium'),
+              category: String(ticketData.category || 'general'),
               createdAt: new Date(ticketData.created_at),
-              updatedAt: new Date(ticketData.updated_at || ticketData.created_at)
+              updatedAt: new Date(ticketData.updated_at || ticketData.created_at),
+              eventType: payload.eventType as RealtimeEventType // Pass event type for DELETE distinction
             };
             callback(ticket);
           } catch (error) {
-            console.error('❌ Error processing realtime support ticket:', error);
+            console.error('❌ Error processing realtime support ticket:', error, payload);
           }
         }
       )
