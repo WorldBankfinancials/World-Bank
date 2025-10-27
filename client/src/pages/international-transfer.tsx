@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
+import { COUNTRIES } from "@/data/countries";
 import { 
   Globe, 
   ArrowRightLeft, 
@@ -416,14 +417,9 @@ export default function InternationalTransfer() {
                               <SelectValue placeholder="Select recipient's country" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="cn">🇨🇳 China</SelectItem>
-                              <SelectItem value="uk">🇬🇧 United Kingdom</SelectItem>
-                              <SelectItem value="jp">🇯🇵 Japan</SelectItem>
-                              <SelectItem value="sg">🇸🇬 Singapore</SelectItem>
-                              <SelectItem value="au">🇦🇺 Australia</SelectItem>
-                              <SelectItem value="de">🇩🇪 Germany</SelectItem>
-                              <SelectItem value="fr">🇫🇷 France</SelectItem>
-                              <SelectItem value="ca">🇨🇦 Canada</SelectItem>
+                              {COUNTRIES.map(country => (
+                                <SelectItem key={country} value={country}>{country}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>

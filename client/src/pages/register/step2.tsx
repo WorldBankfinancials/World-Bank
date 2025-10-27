@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BankLogo } from '@/components/BankLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { COUNTRIES } from '@/data/countries';
 import { ArrowRight, ArrowLeft, MapPin } from 'lucide-react';
 
 const step2Schema = z.object({
@@ -126,16 +127,9 @@ export default function RegistrationStep2({ initialData = {}, onNext, onBack }: 
                   <SelectValue placeholder={t('Select your country')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="US">{t('United States')}</SelectItem>
-                  <SelectItem value="CA">{t('Canada')}</SelectItem>
-                  <SelectItem value="GB">{t('United Kingdom')}</SelectItem>
-                  <SelectItem value="DE">{t('Germany')}</SelectItem>
-                  <SelectItem value="FR">{t('France')}</SelectItem>
-                  <SelectItem value="CN">{t('China')}</SelectItem>
-                  <SelectItem value="JP">{t('Japan')}</SelectItem>
-                  <SelectItem value="AU">{t('Australia')}</SelectItem>
-                  <SelectItem value="BR">{t('Brazil')}</SelectItem>
-                  <SelectItem value="IN">{t('India')}</SelectItem>
+                  {COUNTRIES.map(country => (
+                    <SelectItem key={country} value={country}>{country}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {errors.country && (

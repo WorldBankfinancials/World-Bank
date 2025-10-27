@@ -26,6 +26,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { BankLogo } from '@/components/BankLogo';
+import { COUNTRIES } from '../../client/src/data/countries';
 
 interface PendingTransfer {
   id: number;
@@ -218,12 +219,44 @@ export default function SimpleAdmin() {
     }
   }, [isAuthenticated]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'admin123') {
-      setIsAuthenticated(true);
-    } else {
-      alert('Invalid credentials');
+    
+    try {
+      // Use Supabase authentication for admin login
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = 'https://icbsxmrmorkdgxtumamu.supabase.co';
+      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYnN4bXJtb3JrZGd4dHVtYW11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NTkxMDksImV4cCI6MjA3MDMzNTEwOX0.GDBjj7flp-6sLjfHh3mil31zPq_97Tvfw47Oz5KxKqk';
+      
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      
+      // Authenticate with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: username,
+        password: password
+      });
+      
+      if (error) {
+        alert('Invalid admin credentials: ' + error.message);
+        return;
+      }
+      
+      // Verify user has admin role by checking their email or custom claims
+      if (data.user) {
+        // Check if user is admin (you can customize this logic)
+        const isAdmin = data.user.email?.includes('admin') || 
+                       data.user.email === 'bankmanagerworld5@gmail.com';
+        
+        if (isAdmin) {
+          setIsAuthenticated(true);
+        } else {
+          alert('Access denied: Admin privileges required');
+          await supabase.auth.signOut();
+        }
+      }
+    } catch (error) {
+      console.error('Admin login error:', error);
+      alert('Login failed: ' + (error as Error).message);
     }
   };
 
@@ -1395,17 +1428,9 @@ export default function SimpleAdmin() {
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select Country</option>
-                    <option value="China">China</option>
-                    <option value="United States">United States</option>
-                    <option value="Canada">Canada</option>
-                    <option value="United Kingdom">United Kingdom</option>
-                    <option value="Germany">Germany</option>
-                    <option value="France">France</option>
-                    <option value="Japan">Japan</option>
-                    <option value="Australia">Australia</option>
-                    <option value="India">India</option>
-                    <option value="Brazil">Brazil</option>
-                    <option value="Other">Other</option>
+                    {COUNTRIES.map(country => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -1427,17 +1452,9 @@ export default function SimpleAdmin() {
                     className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select Nationality</option>
-                    <option value="Chinese">Chinese</option>
-                    <option value="American">American</option>
-                    <option value="Canadian">Canadian</option>
-                    <option value="British">British</option>
-                    <option value="German">German</option>
-                    <option value="French">French</option>
-                    <option value="Japanese">Japanese</option>
-                    <option value="Australian">Australian</option>
-                    <option value="Indian">Indian</option>
-                    <option value="Brazilian">Brazilian</option>
-                    <option value="Other">Other</option>
+                    {COUNTRIES.map(country => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
                   </select>
                 </div>
                 <div>

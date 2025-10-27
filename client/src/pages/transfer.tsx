@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { COUNTRIES } from "@/data/countries";
 import { 
   Send, 
   Globe, 
@@ -375,14 +376,9 @@ export default function Transfer() {
                         <SelectValue placeholder="Select country" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="US">United States</SelectItem>
-                        <SelectItem value="CA">Canada</SelectItem>
-                        <SelectItem value="GB">United Kingdom</SelectItem>
-                        <SelectItem value="CN">China</SelectItem>
-                        <SelectItem value="JP">Japan</SelectItem>
-                        <SelectItem value="AU">Australia</SelectItem>
-                        <SelectItem value="DE">Germany</SelectItem>
-                        <SelectItem value="IN">India</SelectItem>
+                        {COUNTRIES.map(country => (
+                          <SelectItem key={country} value={country}>{country}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
