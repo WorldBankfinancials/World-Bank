@@ -1,0 +1,23 @@
+---
+engines:
+  eslint:
+    enabled: true
+    exclude_paths:
+      - 'dist/**'
+      - 'node_modules/**'
+      - '**/*.config.js'
+      - '**/*.config.ts'
+  duplication:
+    enabled: true
+    exclude_paths:
+      - 'dist/**'
+      - 'node_modules/**'
+  metrics:
+    enabled: true
+exclude_paths:
+  - 'dist/**'
+  - 'node_modules/**'
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - '**/*.spec.ts'
+  - '**/*.spec.tsx'
