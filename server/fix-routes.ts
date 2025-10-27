@@ -374,18 +374,27 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const userEmail = req.query.email as string;
       
       if (!userEmail) {
-        return res.status(401).json({ error: 'User email required - please login' });
+        console.warn('⚠️ /api/accounts called without email parameter - authentication required');
+        return res.status(401).json({ 
+          error: 'Authentication required',
+          message: 'Please provide email parameter or login'
+        });
       }
       
       const user = await (storage as any).getUserByEmail(userEmail);
       
       if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+        console.warn(`⚠️ User not found for email: ${userEmail}`);
+        return res.status(404).json({ 
+          error: 'User not found',
+          message: 'Invalid user credentials'
+        });
       }
       
       const accounts = await storage.getUserAccounts(user.id);
       res.json(accounts);
     } catch (error: any) {
+      console.error('❌ Failed to get accounts:', error);
       res.status(500).json({ error: 'Failed to get accounts' });
     }
   });

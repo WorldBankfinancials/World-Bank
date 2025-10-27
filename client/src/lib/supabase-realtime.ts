@@ -20,6 +20,29 @@ export interface RealtimeAlert {
   isRead: boolean;
 }
 
+export interface RealtimeTransaction {
+  id: number;
+  fromAccountId: number;
+  toAccountId: number;
+  amount: string;
+  currency: string;
+  transactionType: string;
+  status: string;
+  description: string;
+  createdAt: Date;
+}
+
+export interface RealtimeBankAccount {
+  id: number;
+  userId: number;
+  accountNumber: string;
+  accountType: string;
+  balance: string;
+  currency: string;
+  isActive: boolean;
+  updatedAt: Date;
+}
+
 class RealtimeChat {
   private channel: any = null;
 
@@ -153,5 +176,110 @@ class RealtimeAlerts {
   }
 }
 
+class RealtimeTransactions {
+  private channel: any = null;
+
+  subscribe(callback: (transaction: RealtimeTransaction) => void, accountId?: number) {
+    this.channel = supabase
+      .channel('user-transactions')
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', // Only listen to INSERT to avoid payload.new being null on DELETE
+          schema: 'public', 
+          table: 'transactions',
+          ...(accountId ? { filter: `from_account_id=eq.${accountId}` } : {})
+        },
+        (payload) => {
+          // Guard against missing payload.new
+          if (!payload.new) {
+            console.warn('⚠️ Realtime transaction event with null payload.new');
+            return;
+          }
+          
+          try {
+            const transaction: RealtimeTransaction = {
+              id: payload.new.id,
+              fromAccountId: payload.new.from_account_id,
+              toAccountId: payload.new.to_account_id,
+              amount: payload.new.amount,
+              currency: payload.new.currency || 'USD',
+              transactionType: payload.new.transaction_type,
+              status: payload.new.status,
+              description: payload.new.description || '',
+              createdAt: new Date(payload.new.created_at)
+            };
+            callback(transaction);
+          } catch (error) {
+            console.error('❌ Error processing realtime transaction:', error);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔄 Realtime transactions subscription:', status);
+      });
+  }
+
+  unsubscribe() {
+    if (this.channel) {
+      supabase.removeChannel(this.channel);
+      this.channel = null;
+    }
+  }
+}
+
+class RealtimeBankAccounts {
+  private channel: any = null;
+
+  subscribe(callback: (account: RealtimeBankAccount) => void, userId?: number) {
+    this.channel = supabase
+      .channel('user-accounts')
+      .on(
+        'postgres_changes',
+        { 
+          event: 'UPDATE', // Listen to balance updates
+          schema: 'public', 
+          table: 'bank_accounts',
+          ...(userId ? { filter: `user_id=eq.${userId}` } : {})
+        },
+        (payload) => {
+          // Guard against missing payload.new (replica identity issues)
+          if (!payload.new) {
+            console.warn('⚠️ Realtime bank account event with null payload.new');
+            return;
+          }
+          
+          try {
+            const account: RealtimeBankAccount = {
+              id: payload.new.id,
+              userId: payload.new.user_id,
+              accountNumber: payload.new.account_number,
+              accountType: payload.new.account_type,
+              balance: payload.new.balance,
+              currency: payload.new.currency || 'USD',
+              isActive: payload.new.is_active !== false,
+              updatedAt: new Date(payload.new.updated_at || payload.new.created_at)
+            };
+            callback(account);
+          } catch (error) {
+            console.error('❌ Error processing realtime account update:', error);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔄 Realtime bank accounts subscription:', status);
+      });
+  }
+
+  unsubscribe() {
+    if (this.channel) {
+      supabase.removeChannel(this.channel);
+      this.channel = null;
+    }
+  }
+}
+
 export const realtimeChat = new RealtimeChat();
 export const realtimeAlerts = new RealtimeAlerts();
+export const realtimeTransactions = new RealtimeTransactions();
+export const realtimeBankAccounts = new RealtimeBankAccounts();
