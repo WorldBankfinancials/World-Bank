@@ -219,12 +219,39 @@ export default function SimpleAdmin() {
     }
   }, [isAuthenticated]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'admin123') {
+    
+    try {
+      // Server-side admin authentication via API
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: username,
+          password: password
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        alert('Invalid admin credentials: ' + (error.message || 'Authentication failed'));
+        return;
+      }
+      
+      const data = await response.json();
+      
+      // Store admin token in sessionStorage for subsequent API requests
+      sessionStorage.setItem('adminToken', data.token);
+      sessionStorage.setItem('adminUser', JSON.stringify(data.user));
+      
       setIsAuthenticated(true);
-    } else {
-      alert('Invalid credentials');
+      console.log('✅ Admin authenticated:', data.user.email);
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('Login failed. Please check your credentials and try again.');
     }
   };
 
