@@ -68,7 +68,7 @@ export default function InvestmentTrading() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Investment & Trading</h1>
-            <p className="text-gray-600 mt-2">Professional investment platform for global markets</p>
+            <p className="text-gray-600 mt-2">Professional investment bank for global markets</p>
           </div>
           <div className="flex space-x-3">
             <Button variant="outline">

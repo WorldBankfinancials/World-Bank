@@ -187,7 +187,7 @@ export default function BusinessBanking() {
               <div>
                 <h2 className="text-3xl font-bold mb-4">Digital Business Banking</h2>
                 <p className="text-blue-100 mb-6">
-                  Advanced digital platform with API integration, real-time reporting, and automated workflows
+                  Advanced digital bank with API integration, real-time reporting, and automated workflows
                 </p>
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div className="flex items-center space-x-2">
@@ -208,14 +208,14 @@ export default function BusinessBanking() {
                   </div>
                 </div>
                 <Button className="bg-white text-blue-600 hover:bg-gray-100">
-                  Try Digital Platform
+                  Try Digital Banking
                 </Button>
               </div>
               <div className="text-center">
                 <div className="bg-white bg-opacity-10 rounded-lg p-6">
                   <Building2 className="w-24 h-24 text-blue-200 mx-auto mb-4" />
                   <div className="text-2xl font-bold mb-2">99.9%</div>
-                  <div className="text-blue-100">Platform Uptime</div>
+                  <div className="text-blue-100">Bank Uptime</div>
                 </div>
               </div>
             </div>

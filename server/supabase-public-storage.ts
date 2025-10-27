@@ -181,6 +181,62 @@ export class SupabasePublicStorage implements IStorage {
     }
   }
 
+  async getUserByPhone(phone: string): Promise<User | undefined> {
+    console.log('📱 Searching for user with phone:', phone);
+    try {
+      const { data: user, error } = await supabase
+        .from('bank_users')
+        .select('*')
+        .eq('phone', phone)
+        .single();
+      
+      if (error || !user) {
+        console.log('❌ No user found with phone:', phone);
+        return undefined;
+      }
+      
+      console.log('✅ Found user by phone in Supabase');
+      return {
+        id: user.id,
+        username: user.username,
+        password: user.password_hash,
+        fullName: user.full_name,
+        email: user.email,
+        phone: user.phone,
+        accountNumber: user.account_number,
+        accountId: user.account_id,
+        profession: user.profession,
+        dateOfBirth: user.date_of_birth,
+        address: user.address,
+        city: user.city,
+        state: user.state,
+        country: user.country,
+        postalCode: user.postal_code,
+        nationality: user.nationality,
+        annualIncome: user.annual_income,
+        idType: user.id_type,
+        idNumber: user.id_number,
+        transferPin: user.transfer_pin,
+        role: user.role,
+        isVerified: user.is_verified,
+        isOnline: user.is_online,
+        isActive: user.is_active,
+        avatarUrl: user.avatar_url,
+        balance: parseFloat(user.balance || '0'),
+        createdAt: user.created_at,
+        supabaseUserId: user.supabase_user_id,
+        lastLogin: user.last_login,
+        createdByAdmin: user.created_by_admin,
+        modifiedByAdmin: user.modified_by_admin,
+        adminNotes: user.admin_notes,
+        updatedAt: user.updated_at
+      };
+    } catch (error) {
+      console.error('❌ Error getting user by phone:', error);
+      return undefined;
+    }
+  }
+
   async getUserAccounts(userId: number): Promise<Account[]> {
     console.log('🏦 Fetching accounts for user ID:', userId);
     try {

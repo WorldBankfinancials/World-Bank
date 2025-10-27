@@ -179,7 +179,7 @@ export default function About() {
             <CardHeader>
               <CardTitle className="text-2xl text-gray-900 flex items-center space-x-2">
                 <Globe className="w-6 h-6 text-green-600" />
-                <span>Technology Platform</span>
+                <span>Technology Infrastructure</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-gray-600">
