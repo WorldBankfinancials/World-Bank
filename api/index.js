@@ -291,6 +291,12 @@ module.exports = async function handler(req, res) {
 
     // PIN verification
     if (apiPath === '/verify-pin' && req.method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      
+      if (!authUser) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      
       const { pin, username } = req.body;
       
       console.log(`🔐 PIN verification request:`, { username, pin });
@@ -355,6 +361,12 @@ module.exports = async function handler(req, res) {
 
     // Create transfer
     if (apiPath === '/transfers' && req.method === 'POST') {
+      const authUser = await getAuthenticatedUser(req);
+      
+      if (!authUser) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      
       const { fromAccountId, toAccountNumber, amount, description, recipientName } = req.body;
       
       const newTransaction = {
@@ -392,7 +404,28 @@ module.exports = async function handler(req, res) {
 
     // Get transactions for account
     if (apiPath.match(/^\/accounts\/\d+\/transactions$/) && req.method === 'GET') {
+      const authUser = await getAuthenticatedUser(req);
+      
+      if (!authUser) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      
       const accountId = parseInt(apiPath.split('/')[2]);
+      
+      // Verify the account belongs to the authenticated user
+      const { data: accountCheck, error: accountError } = await supabase
+        .from('bank_accounts')
+        .select('user_id')
+        .eq('id', accountId)
+        .single();
+      
+      if (accountError || !accountCheck) {
+        return res.status(404).json({ error: 'Account not found' });
+      }
+      
+      if (accountCheck.user_id !== authUser.bankUserId) {
+        return res.status(403).json({ error: 'Access denied - account belongs to another user' });
+      }
       
       const { data, error } = await supabase
         .from('transactions')
