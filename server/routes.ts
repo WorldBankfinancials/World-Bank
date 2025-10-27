@@ -5,6 +5,9 @@ import { storage } from "./storage-factory";
 import { setupTransferRoutes } from './routes-transfer';
 import { ObjectStorageService } from './objectStorage';
 
+// System admin ID for automated/system actions
+const SYSTEM_ADMIN_ID = 1;
+
 // Simple in-memory rate limiter for admin endpoints
 const rateLimitMap = new Map<string, { count: number, resetTime: number }>();
 function adminRateLimit(req: any, res: any, next: any) {
@@ -114,7 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create admin notification for new registration
       await storage.createAdminAction({
-        adminId: 1, // System admin
+        adminId: SYSTEM_ADMIN_ID,
         actionType: 'new_registration',
         targetType: 'user',
         targetId: newUser.id.toString(),
@@ -231,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Log admin action
         await storage.createAdminAction({
-          adminId: 1,
+          adminId: SYSTEM_ADMIN_ID,
           actionType: 'approve_registration',
           targetType: 'user',
           targetId: userId.toString(),
@@ -272,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (updatedUser) {
         // Log admin action
         await storage.createAdminAction({
-          adminId: 1,
+          adminId: SYSTEM_ADMIN_ID,
           actionType: 'reject_registration',
           targetType: 'user',
           targetId: userId.toString(),
@@ -299,11 +302,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check session or headers for Supabase user info
       const supabaseEmail = req.headers['x-supabase-email'] as string;
       
-      if (supabaseEmail === 'bankmanagerworld5@gmail.com') {
-        // Return Liu Wei's account data for this specific Supabase user
-        const liuWeiUser = await storage.getUserByUsername('liu.wei');
-        if (liuWeiUser) {
-          res.json(liuWeiUser);
+      if (supabaseEmail) {
+        // Return user account data based on Supabase email
+        const user = await storage.getUserByEmail(supabaseEmail);
+        if (user) {
+          res.json(user);
           return;
         }
       }
@@ -357,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create admin action for new registration
       await storage.createAdminAction({
-        adminId: 1, // System admin
+        adminId: SYSTEM_ADMIN_ID,
         actionType: 'user_registration',
         targetId: newUser.id.toString(),
         targetType: 'user',
@@ -593,7 +596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create admin action for approval
       await storage.createAdminAction({
-        adminId: 1,
+        adminId: SYSTEM_ADMIN_ID,
         actionType: 'user_approved',
         targetId: registrationId.toString(),
         targetType: 'user',
@@ -648,7 +651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create admin action for rejection
       await storage.createAdminAction({
-        adminId: 1,
+        adminId: SYSTEM_ADMIN_ID,
         actionType: 'user_rejected',
         targetId: registrationId.toString(),
         targetType: 'user',
@@ -1468,7 +1471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Log admin action for audit trail
       await storage.createAdminAction({
-        adminId: 1, // Admin user ID
+        adminId: SYSTEM_ADMIN_ID,
         actionType: 'profile_update',
         targetType: 'user',
         targetId: customerId.toString(),
@@ -1527,7 +1530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Log admin action
       await storage.createAdminAction({
-        adminId: 1,
+        adminId: SYSTEM_ADMIN_ID,
         actionType: 'balance_top_up',
         targetType: 'user',
         targetId: customerId.toString(),
@@ -1586,7 +1589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log admin action
       await storage.createAdminAction({
-        adminId: 1, // Current admin user ID
+        adminId: SYSTEM_ADMIN_ID,
         actionType: 'registration_approval',
         targetType: 'user',
         targetId: registrationId.toString(),
@@ -1627,7 +1630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log admin action
       await storage.createAdminAction({
-        adminId: 1, // Current admin user ID
+        adminId: SYSTEM_ADMIN_ID,
         actionType: 'registration_rejection',
         targetType: 'user',
         targetId: registrationId.toString(),
@@ -1702,7 +1705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log admin action
       await storage.createAdminAction({
-        adminId: 1, // Admin user ID
+        adminId: SYSTEM_ADMIN_ID,
         actionType: 'fund_operation',
         targetType: 'account',
         targetId: accountNumber,

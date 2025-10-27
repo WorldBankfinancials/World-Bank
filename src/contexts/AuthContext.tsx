@@ -96,13 +96,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: authData.user.email || '',
         });
         
-        // Special handling for your Liu Wei account
-        if (authData.user.email === 'bankmanagerworld5@gmail.com') {
-          await fetchUserData(authData.user.email);
-        } else {
-          // Create new banking account for other Supabase users
-          await createNewSupabaseAccount(authData.user);
-        }
+        // Fetch user data from database
+        await fetchUserData(authData.user.email);
         
         return {};
       }
