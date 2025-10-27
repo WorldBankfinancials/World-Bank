@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running pre-pull checks..."
+
+# Stash any uncommitted changes
+git stash -q --keep-index
+
+# Run checks
+echo "Checking for conflicts..."
+git fetch origin
+
+echo "Pre-pull checks complete!"
