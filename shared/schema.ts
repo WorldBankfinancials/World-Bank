@@ -121,6 +121,79 @@ export const documents = pgTable("documents", {
   expiryDate: timestamp("expiry_date"),
 });
 
+// Cards table for credit/debit card management
+export const cards = pgTable("cards", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  accountId: integer("account_id").notNull(),
+  cardNumber: text("card_number").notNull(), // Store masked (last 4 digits)
+  cardHolderName: text("card_holder_name").notNull(),
+  cardType: text("card_type").notNull(), // 'credit', 'debit', 'platinum', 'business'
+  cardName: text("card_name").notNull(), // 'World Bank Platinum', etc.
+  expiryDate: text("expiry_date").notNull(),
+  cvv: text("cvv"), // Encrypted in production
+  balance: decimal("balance", { precision: 15, scale: 2 }).default("0"),
+  creditLimit: decimal("credit_limit", { precision: 15, scale: 2 }),
+  availableCredit: decimal("available_credit", { precision: 15, scale: 2 }),
+  isLocked: boolean("is_locked").default(false),
+  isActive: boolean("is_active").default(true),
+  isPrimary: boolean("is_primary").default(false),
+  dailyLimit: decimal("daily_limit", { precision: 15, scale: 2 }).default("5000"),
+  monthlySpending: decimal("monthly_spending", { precision: 15, scale: 2 }).default("0"),
+  lastUsed: timestamp("last_used"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Investment portfolios
+export const investments = pgTable("investments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  accountId: integer("account_id").notNull(),
+  symbol: text("symbol").notNull(), // Stock ticker like 'AAPL', 'MSFT'
+  name: text("name").notNull(), // Company name
+  assetType: text("asset_type").notNull(), // 'stock', 'bond', 'etf', 'crypto', 'mutual_fund'
+  quantity: decimal("quantity", { precision: 15, scale: 4 }).notNull(),
+  purchasePrice: decimal("purchase_price", { precision: 15, scale: 2 }).notNull(),
+  currentPrice: decimal("current_price", { precision: 15, scale: 2 }).notNull(),
+  totalValue: decimal("total_value", { precision: 15, scale: 2 }).notNull(),
+  gainLoss: decimal("gain_loss", { precision: 15, scale: 2 }).default("0"),
+  gainLossPercent: decimal("gain_loss_percent", { precision: 10, scale: 4 }).default("0"),
+  purchaseDate: timestamp("purchase_date").notNull(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Messages table for real-time chat
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  senderId: integer("sender_id").notNull(),
+  senderName: text("sender_name").notNull(),
+  senderRole: text("sender_role").notNull(), // 'customer', 'admin', 'support'
+  recipientId: integer("recipient_id"),
+  message: text("message").notNull(),
+  conversationId: text("conversation_id"),
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Alerts/notifications table
+export const alerts = pgTable("alerts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull(), // 'transaction', 'security', 'account', 'promotion'
+  category: text("category"),
+  priority: text("priority").default("normal"), // 'low', 'normal', 'high', 'urgent'
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  actionUrl: text("action_url"),
+  metadata: text("metadata"), // JSON string
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -153,6 +226,28 @@ export const insertDocumentSchema = createInsertSchema(documents).omit({
   uploadedAt: true,
 });
 
+export const insertCardSchema = createInsertSchema(cards).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvestmentSchema = createInsertSchema(investments).omit({
+  id: true,
+  createdAt: true,
+  lastUpdated: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAlertSchema = createInsertSchema(alerts).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertAccount = z.infer<typeof insertAccountSchema>;
@@ -165,3 +260,11 @@ export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
 export type SupportTicket = typeof supportTickets.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 export type Document = typeof documents.$inferSelect;
+export type InsertCard = z.infer<typeof insertCardSchema>;
+export type Card = typeof cards.$inferSelect;
+export type InsertInvestment = z.infer<typeof insertInvestmentSchema>;
+export type Investment = typeof investments.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Message = typeof messages.$inferSelect;
+export type InsertAlert = z.infer<typeof insertAlertSchema>;
+export type Alert = typeof alerts.$inferSelect;
