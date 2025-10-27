@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
+import { supabase } from "@/lib/supabase";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -79,13 +80,21 @@ export default function Login() {
     }
 
     try {
+      // Get Supabase session token for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        setPinError(t('session_expired'));
+        return;
+      }
+
       const response = await fetch('/api/verify-pin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          username: 'bankmanagerworld5@gmail.com',
           pin: loginPin
         }),
       });
