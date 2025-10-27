@@ -22,8 +22,15 @@ import {
 } from "@shared/schema";
 import { IStorage } from "./storage";
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://icbsxmrmorkdgxtumamu.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYnN4bXJtb3JrZGd4dHVtYW11Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDc1OTEwOSwiZXhwIjoyMDcwMzM1MTA5fQ.flfRMxdMFOQXqfdjGxSUWKSHsimTM0FSy-b2ZZda5HU';
+if (!process.env.VITE_SUPABASE_URL) {
+  throw new Error('VITE_SUPABASE_URL environment variable is required');
+}
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required');
+}
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { persistSession: false },
@@ -1041,8 +1048,9 @@ export class SupabasePublicStorage implements IStorage {
   // Cards methods
   async getUserCards(userId: number): Promise<Card[]> {
     try {
-      const result = await sql`SELECT * FROM public.cards WHERE user_id = ${userId}`;
-      return result as unknown as Card[];
+      const { data, error } = await supabase.from('cards').select('*').eq('user_id', userId);
+      if (error) throw error;
+      return (data || []) as unknown as Card[];
     } catch (error) {
       console.error('Error fetching cards:', error);
       return [];
@@ -1051,8 +1059,9 @@ export class SupabasePublicStorage implements IStorage {
 
   async getCard(id: number): Promise<Card | undefined> {
     try {
-      const result = await sql`SELECT * FROM public.cards WHERE id = ${id}`;
-      return result[0] as Card | undefined;
+      const { data, error } = await supabase.from('cards').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data as unknown as Card;
     } catch (error) {
       console.error('Error fetching card:', error);
       return undefined;
@@ -1060,28 +1069,23 @@ export class SupabasePublicStorage implements IStorage {
   }
 
   async createCard(card: InsertCard): Promise<Card> {
-    const result = await sql`
-      INSERT INTO public.cards ${sql(card as any)}
-      RETURNING *
-    `;
-    return result[0] as Card;
+    const { data, error } = await supabase.from('cards').insert(card as any).select().single();
+    if (error) throw error;
+    return data as unknown as Card;
   }
 
   async updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined> {
-    const result = await sql`
-      UPDATE public.cards 
-      SET ${sql(updates as any)}
-      WHERE id = ${id}
-      RETURNING *
-    `;
-    return result[0] as Card | undefined;
+    const { data, error } = await supabase.from('cards').update(updates as any).eq('id', id).select().single();
+    if (error) throw error;
+    return data as unknown as Card;
   }
 
   // Investments methods
   async getUserInvestments(userId: number): Promise<Investment[]> {
     try {
-      const result = await sql`SELECT * FROM public.investments WHERE user_id = ${userId}`;
-      return result as unknown as Investment[];
+      const { data, error } = await supabase.from('investments').select('*').eq('user_id', userId);
+      if (error) throw error;
+      return (data || []) as unknown as Investment[];
     } catch (error) {
       console.error('Error fetching investments:', error);
       return [];
@@ -1090,40 +1094,38 @@ export class SupabasePublicStorage implements IStorage {
 
   async getInvestment(id: number): Promise<Investment | undefined> {
     try {
-      const result = await sql`SELECT * FROM public.investments WHERE id = ${id}`;
-      return result[0] as Investment | undefined;
+      const { data, error } = await supabase.from('investments').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data as unknown as Investment;
     } catch (error) {
       return undefined;
     }
   }
 
   async createInvestment(investment: InsertInvestment): Promise<Investment> {
-    const result = await sql`
-      INSERT INTO public.investments ${sql(investment as any)}
-      RETURNING *
-    `;
-    return result[0] as Investment;
+    const { data, error } = await supabase.from('investments').insert(investment as any).select().single();
+    if (error) throw error;
+    return data as unknown as Investment;
   }
 
   async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> {
-    const result = await sql`
-      UPDATE public.investments 
-      SET ${sql(updates as any)}
-      WHERE id = ${id}
-      RETURNING *
-    `;
-    return result[0] as Investment | undefined;
+    const { data, error } = await supabase.from('investments').update(updates as any).eq('id', id).select().single();
+    if (error) throw error;
+    return data as unknown as Investment;
   }
 
   // Messages methods
   async getMessages(conversationId?: string): Promise<Message[]> {
     try {
+      let query = supabase.from('messages').select('*').order('created_at', { ascending: false });
       if (conversationId) {
-        const result = await sql`SELECT * FROM public.messages WHERE conversation_id = ${conversationId} ORDER BY created_at DESC`;
-        return result as unknown as Message[];
+        query = query.eq('conversation_id', conversationId);
+      } else {
+        query = query.limit(100);
       }
-      const result = await sql`SELECT * FROM public.messages ORDER BY created_at DESC LIMIT 100`;
-      return result as unknown as Message[];
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []) as unknown as Message[];
     } catch (error) {
       return [];
     }
@@ -1131,40 +1133,37 @@ export class SupabasePublicStorage implements IStorage {
 
   async getUserMessages(userId: number): Promise<Message[]> {
     try {
-      const result = await sql`
-        SELECT * FROM public.messages 
-        WHERE sender_id = ${userId} OR recipient_id = ${userId}
-        ORDER BY created_at DESC
-      `;
-      return result as unknown as Message[];
+      const { data, error } = await supabase.from('messages').select('*')
+        .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as unknown as Message[];
     } catch (error) {
       return [];
     }
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {
-    const result = await sql`
-      INSERT INTO public.messages ${sql(message as any)}
-      RETURNING *
-    `;
-    return result[0] as Message;
+    const { data, error } = await supabase.from('messages').insert(message as any).select().single();
+    if (error) throw error;
+    return data as unknown as Message;
   }
 
   async markMessageAsRead(id: number): Promise<Message | undefined> {
-    const result = await sql`
-      UPDATE public.messages 
-      SET is_read = true, read_at = NOW()
-      WHERE id = ${id}
-      RETURNING *
-    `;
-    return result[0] as Message | undefined;
+    const { data, error } = await supabase.from('messages')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('id', id).select().single();
+    if (error) throw error;
+    return data as unknown as Message;
   }
 
   // Alerts methods
   async getUserAlerts(userId: number): Promise<Alert[]> {
     try {
-      const result = await sql`SELECT * FROM public.alerts WHERE user_id = ${userId} ORDER BY created_at DESC`;
-      return result as unknown as Alert[];
+      const { data, error } = await supabase.from('alerts').select('*')
+        .eq('user_id', userId).order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as unknown as Alert[];
     } catch (error) {
       return [];
     }
@@ -1172,32 +1171,27 @@ export class SupabasePublicStorage implements IStorage {
 
   async getUnreadAlerts(userId: number): Promise<Alert[]> {
     try {
-      const result = await sql`
-        SELECT * FROM public.alerts 
-        WHERE user_id = ${userId} AND is_read = false
-        ORDER BY created_at DESC
-      `;
-      return result as unknown as Alert[];
+      const { data, error } = await supabase.from('alerts').select('*')
+        .eq('user_id', userId).eq('is_read', false)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as unknown as Alert[];
     } catch (error) {
       return [];
     }
   }
 
   async createAlert(alert: InsertAlert): Promise<Alert> {
-    const result = await sql`
-      INSERT INTO public.alerts ${sql(alert as any)}
-      RETURNING *
-    `;
-    return result[0] as Alert;
+    const { data, error } = await supabase.from('alerts').insert(alert as any).select().single();
+    if (error) throw error;
+    return data as unknown as Alert;
   }
 
   async markAlertAsRead(id: number): Promise<Alert | undefined> {
-    const result = await sql`
-      UPDATE public.alerts 
-      SET is_read = true, read_at = NOW()
-      WHERE id = ${id}
-      RETURNING *
-    `;
-    return result[0] as Alert | undefined;
+    const { data, error } = await supabase.from('alerts')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('id', id).select().single();
+    if (error) throw error;
+    return data as unknown as Alert;
   }
 }

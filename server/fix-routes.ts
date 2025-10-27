@@ -45,8 +45,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create or update test user with Supabase Auth credentials (for testing purposes)
+  // SECURITY: Test user creation endpoint - DEVELOPMENT ONLY
+  // WARNING: This endpoint uses service role key and should NEVER be exposed in production
   app.post('/api/create-test-user', async (req: Request, res: Response) => {
+    // CRITICAL: Block in production to prevent privilege escalation
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    
     try {
       const { createClient } = await import('@supabase/supabase-js');
       const { email, password } = req.body;
@@ -168,8 +174,16 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SECURITY: Admin endpoints require authentication in production
+  // WARNING: These endpoints modify financial data and must be protected
+  
   // Admin transaction creation with fixed typing
   app.post('/api/admin/create-transaction', async (req: Request, res: Response) => {
+    // CRITICAL: Require authentication in production
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    
     try {
       const body = req.body as {
         customerId: string;
@@ -221,7 +235,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   // Individual account balance update endpoint
   app.post('/api/admin/accounts/:accountId/balance', async (req: Request, res: Response) => {
-    try {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    
+    try{
       const accountId = parseInt(req.params.accountId, 10);
       const body = req.body as { amount: string; description: string; type: 'credit' | 'debit' };
       
@@ -262,6 +280,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   // Balance update endpoint with fixed typing
   app.post('/api/admin/customers/:id/balance', async (req: Request, res: Response) => {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    
     try {
       const customerId = parseInt(req.params.id, 10);
       const body = req.body as { amount: string; description: string };
@@ -287,6 +309,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   // Customer update endpoint with immediate sync
   app.patch('/api/admin/customers/:id', async (req: Request, res: Response) => {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    
     try {
       const customerId = parseInt(req.params.id, 10);
       const updates = req.body as Record<string, any>;
@@ -314,6 +340,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   // Get all transactions with fixed typing
   app.get('/api/admin/transactions', async (req: Request, res: Response) => {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    
     try {
       const transactions = await storage.getAllTransactions();
       res.json(transactions);
@@ -412,6 +442,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   // Admin pending registrations
   app.get('/api/admin/pending-registrations', async (req: Request, res: Response) => {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    
     try {
       const users = await storage.getAllUsers();
       const pending = users.filter(user => !user.isActive);
@@ -451,6 +485,157 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   // Setup transfer routes
   setupTransferRoutes(app);
+
+  // ==================== CARDS API ROUTES ====================
+  app.get('/api/cards', async (req: Request, res: Response) => {
+    try {
+      const userId = req.session?.userId || 1;
+      const cards = await storage.getUserCards(userId);
+      res.json(cards);
+    } catch (error) {
+      console.error('Error fetching cards:', error);
+      res.status(500).json({ error: 'Failed to fetch cards' });
+    }
+  });
+
+  app.get('/api/cards/:id', async (req: Request, res: Response) => {
+    try {
+      const cardId = parseInt(req.params.id);
+      const card = await storage.getCard(cardId);
+      if (!card) {
+        return res.status(404).json({ error: 'Card not found' });
+      }
+      res.json(card);
+    } catch (error) {
+      console.error('Error fetching card:', error);
+      res.status(500).json({ error: 'Failed to fetch card' });
+    }
+  });
+
+  app.post('/api/cards/lock', async (req: Request, res: Response) => {
+    try {
+      const { cardId, isLocked } = req.body;
+      const updatedCard = await storage.updateCard(cardId, { isLocked });
+      res.json({ success: true, card: updatedCard });
+    } catch (error) {
+      console.error('Error updating card:', error);
+      res.status(500).json({ error: 'Failed to update card' });
+    }
+  });
+
+  // ==================== INVESTMENTS API ROUTES ====================
+  app.get('/api/investments', async (req: Request, res: Response) => {
+    try {
+      const userId = req.session?.userId || 1;
+      const investments = await storage.getUserInvestments(userId);
+      res.json(investments);
+    } catch (error) {
+      console.error('Error fetching investments:', error);
+      res.status(500).json({ error: 'Failed to fetch investments' });
+    }
+  });
+
+  app.get('/api/investments/:id', async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const investment = await storage.getInvestment(id);
+      if (!investment) {
+        return res.status(404).json({ error: 'Investment not found' });
+      }
+      res.json(investment);
+    } catch (error) {
+      console.error('Error fetching investment:', error);
+      res.status(500).json({ error: 'Failed to fetch investment' });
+    }
+  });
+
+  // ==================== MESSAGES API ROUTES ====================
+  app.get('/api/messages', async (req: Request, res: Response) => {
+    try {
+      const conversationId = req.query.conversationId as string | undefined;
+      const messages = await storage.getMessages(conversationId);
+      res.json(messages);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  });
+
+  app.get('/api/messages/user/:userId', async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const messages = await storage.getUserMessages(userId);
+      res.json(messages);
+    } catch (error) {
+      console.error('Error fetching user messages:', error);
+      res.status(500).json({ error: 'Failed to fetch user messages' });
+    }
+  });
+
+  app.post('/api/messages', async (req: Request, res: Response) => {
+    try {
+      const message = await storage.createMessage(req.body);
+      res.json(message);
+    } catch (error) {
+      console.error('Error creating message:', error);
+      res.status(500).json({ error: 'Failed to create message' });
+    }
+  });
+
+  app.patch('/api/messages/:id/read', async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const message = await storage.markMessageAsRead(id);
+      res.json(message);
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      res.status(500).json({ error: 'Failed to mark message as read' });
+    }
+  });
+
+  // ==================== ALERTS API ROUTES ====================
+  app.get('/api/alerts', async (req: Request, res: Response) => {
+    try {
+      const userId = req.session?.userId || 1;
+      const alerts = await storage.getUserAlerts(userId);
+      res.json(alerts);
+    } catch (error) {
+      console.error('Error fetching alerts:', error);
+      res.status(500).json({ error: 'Failed to fetch alerts' });
+    }
+  });
+
+  app.get('/api/alerts/unread', async (req: Request, res: Response) => {
+    try {
+      const userId = req.session?.userId || 1;
+      const alerts = await storage.getUnreadAlerts(userId);
+      res.json(alerts);
+    } catch (error) {
+      console.error('Error fetching unread alerts:', error);
+      res.status(500).json({ error: 'Failed to fetch unread alerts' });
+    }
+  });
+
+  app.post('/api/alerts', async (req: Request, res: Response) => {
+    try {
+      const alert = await storage.createAlert(req.body);
+      res.json(alert);
+    } catch (error) {
+      console.error('Error creating alert:', error);
+      res.status(500).json({ error: 'Failed to create alert' });
+    }
+  });
+
+  app.patch('/api/alerts/:id/read', async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const alert = await storage.markAlertAsRead(id);
+      res.json(alert);
+    } catch (error) {
+      console.error('Error marking alert as read:', error);
+      res.status(500).json({ error: 'Failed to mark alert as read' });
+    }
+  });
 
   // Return a dummy server that will be replaced by the main server
   const httpServer = createServer(app);
