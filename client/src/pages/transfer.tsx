@@ -196,7 +196,7 @@ export default function Transfer() {
       } else {
         const error = await response.json();
         
-        setPinError(error.message || "Invalid PIN. Please try PIN: 0192");
+        setPinError(error.message || "Invalid PIN. Please verify your 4-digit transfer PIN.");
       }
     } catch (error) {
       

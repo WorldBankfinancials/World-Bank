@@ -31,7 +31,19 @@ export default function TransferProcess({ transferData, onBack, onComplete }: Tr
   const [transactionId, setTransactionId] = useState("");
 
   const handlePinSubmit = async () => {
-    if (pin !== "0192") {
+    // Verify PIN with backend
+    try {
+      const verifyResponse = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin })
+      });
+
+      if (!verifyResponse.ok) {
+        setPinError(t('invalid_pin_try_again'));
+        return;
+      }
+    } catch (error) {
       setPinError(t('invalid_pin_try_again'));
       return;
     }

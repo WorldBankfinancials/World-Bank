@@ -83,7 +83,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         annualIncome: 'Pending Admin Update',
         idType: 'Pending Admin Update',
         idNumber: 'Pending Admin Update',
-        transferPin: '1234', // Default PIN - admin can change
+        transferPin: null, // PIN must be set by user after account activation
         role: 'customer',
         isVerified: false, // REQUIRES ADMIN APPROVAL
         isOnline: false, // INACTIVE until approved

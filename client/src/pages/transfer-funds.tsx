@@ -159,7 +159,7 @@ export default function TransferFunds() {
           swiftCode: formData.swiftCode,
           purpose: formData.purpose,
           reference: formData.reference,
-          transferPin: '0192' // Default PIN for demo
+          transferPin: null // PIN verified separately via /api/verify-pin
         })
       });
 
