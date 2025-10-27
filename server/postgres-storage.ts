@@ -97,6 +97,21 @@ export class PostgresStorage implements IStorage {
     }
   }
 
+  async getUserByPhone(phone: string): Promise<User | undefined> {
+    try {
+      const result = await sql`
+        SELECT * FROM public.bank_users WHERE phone = ${phone}
+      `;
+      
+      if (result.length === 0) return undefined;
+      
+      return this.mapDbUser(result[0]);
+    } catch (error) {
+      console.error('❌ Error fetching user by phone:', error);
+      return undefined;
+    }
+  }
+
   async getAllUsers(): Promise<User[]> {
     try {
       const result = await sql`
@@ -112,19 +127,47 @@ export class PostgresStorage implements IStorage {
 
   async createUser(user: InsertUser): Promise<User> {
     try {
+      const emailVal = user.email || null;
+      const phoneVal = user.phone || null;
+      const professionVal = user.profession || null;
+      const dobVal = user.dateOfBirth || null;
+      const addressVal = user.address || null;
+      const cityVal = user.city || null;
+      const stateVal = user.state || null;
+      const countryVal = user.country || null;
+      const postalCodeVal = user.postalCode || null;
+      const nationalityVal = user.nationality || null;
+      const annualIncomeVal = user.annualIncome || null;
+      const idTypeVal = user.idType || null;
+      const idNumberVal = user.idNumber || null;
+      const transferPinVal = user.transferPin || null;
+      const roleVal = user.role || 'customer';
+      const isVerifiedVal = user.isVerified ?? false;
+      const isOnlineVal = user.isOnline ?? false;
+      const isActiveVal = user.isActive ?? true;
+      const avatarUrlVal = user.avatarUrl || null;
+      const balanceVal = user.balance || 0;
+      const supabaseUserIdVal = user.supabaseUserId || null;
+      const lastLoginVal = user.lastLogin || null;
+      const createdByAdminVal = user.createdByAdmin || null;
+      const modifiedByAdminVal = user.modifiedByAdmin || null;
+      const adminNotesVal = user.adminNotes || null;
+      
       const result = await sql`
         INSERT INTO public.bank_users (
           username, password_hash, full_name, email, phone,
           account_number, account_id, profession, date_of_birth,
           address, city, state, country, postal_code, nationality,
           annual_income, id_type, id_number, transfer_pin, role,
-          is_verified, is_online, is_active, avatar_url, balance, supabase_user_id
+          is_verified, is_online, is_active, avatar_url, balance, supabase_user_id,
+          last_login, created_by_admin, modified_by_admin, admin_notes
         ) VALUES (
-          ${user.username}, ${user.password}, ${user.fullName}, ${user.email}, ${user.phone},
-          ${user.accountNumber}, ${user.accountId}, ${user.profession}, ${user.dateOfBirth},
-          ${user.address}, ${user.city}, ${user.state}, ${user.country}, ${user.postalCode}, ${user.nationality},
-          ${user.annualIncome}, ${user.idType}, ${user.idNumber}, ${user.transferPin}, ${user.role || 'customer'},
-          ${user.isVerified || false}, ${user.isOnline || false}, ${user.isActive || true}, ${user.avatarUrl}, ${user.balance || 0}, ${user.supabaseUserId}
+          ${user.username}, ${user.password}, ${user.fullName}, ${emailVal}, ${phoneVal},
+          ${user.accountNumber}, ${user.accountId}, ${professionVal}, ${dobVal},
+          ${addressVal}, ${cityVal}, ${stateVal}, ${countryVal}, ${postalCodeVal}, ${nationalityVal},
+          ${annualIncomeVal}, ${idTypeVal}, ${idNumberVal}, ${transferPinVal}, ${roleVal},
+          ${isVerifiedVal}, ${isOnlineVal}, ${isActiveVal}, ${avatarUrlVal}, ${balanceVal}, ${supabaseUserIdVal},
+          ${lastLoginVal}, ${createdByAdminVal}, ${modifiedByAdminVal}, ${adminNotesVal}
         ) RETURNING *
       `;
 
@@ -137,26 +180,44 @@ export class PostgresStorage implements IStorage {
 
   async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
     try {
+      const usernameVal = updates.username || null;
+      const fullNameVal = updates.fullName || null;
+      const emailVal = updates.email || null;
+      const phoneVal = updates.phone || null;
+      const professionVal = updates.profession || null;
+      const addressVal = updates.address || null;
+      const cityVal = updates.city || null;
+      const stateVal = updates.state || null;
+      const countryVal = updates.country || null;
+      const postalCodeVal = updates.postalCode || null;
+      const nationalityVal = updates.nationality || null;
+      const annualIncomeVal = updates.annualIncome || null;
+      const isVerifiedVal = updates.isVerified ?? null;
+      const isOnlineVal = updates.isOnline ?? null;
+      const isActiveVal = updates.isActive ?? null;
+      const avatarUrlVal = updates.avatarUrl || null;
+      const balanceVal = updates.balance ?? null;
+      
       const result = await sql`
         UPDATE public.bank_users 
         SET 
-          username = COALESCE(${updates.username}, username),
-          full_name = COALESCE(${updates.fullName}, full_name),
-          email = COALESCE(${updates.email}, email),
-          phone = COALESCE(${updates.phone}, phone),
-          profession = COALESCE(${updates.profession}, profession),
-          address = COALESCE(${updates.address}, address),
-          city = COALESCE(${updates.city}, city),
-          state = COALESCE(${updates.state}, state),
-          country = COALESCE(${updates.country}, country),
-          postal_code = COALESCE(${updates.postalCode}, postal_code),
-          nationality = COALESCE(${updates.nationality}, nationality),
-          annual_income = COALESCE(${updates.annualIncome}, annual_income),
-          is_verified = COALESCE(${updates.isVerified}, is_verified),
-          is_online = COALESCE(${updates.isOnline}, is_online),
-          is_active = COALESCE(${updates.isActive}, is_active),
-          avatar_url = COALESCE(${updates.avatarUrl}, avatar_url),
-          balance = COALESCE(${updates.balance}, balance),
+          username = COALESCE(${usernameVal}, username),
+          full_name = COALESCE(${fullNameVal}, full_name),
+          email = COALESCE(${emailVal}, email),
+          phone = COALESCE(${phoneVal}, phone),
+          profession = COALESCE(${professionVal}, profession),
+          address = COALESCE(${addressVal}, address),
+          city = COALESCE(${cityVal}, city),
+          state = COALESCE(${stateVal}, state),
+          country = COALESCE(${countryVal}, country),
+          postal_code = COALESCE(${postalCodeVal}, postal_code),
+          nationality = COALESCE(${nationalityVal}, nationality),
+          annual_income = COALESCE(${annualIncomeVal}, annual_income),
+          is_verified = COALESCE(${isVerifiedVal}, is_verified),
+          is_online = COALESCE(${isOnlineVal}, is_online),
+          is_active = COALESCE(${isActiveVal}, is_active),
+          avatar_url = COALESCE(${avatarUrlVal}, avatar_url),
+          balance = COALESCE(${balanceVal}, balance),
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
         RETURNING *
@@ -226,12 +287,19 @@ export class PostgresStorage implements IStorage {
 
   async createAccount(account: InsertAccount): Promise<Account> {
     try {
+      const accountNameVal = account.accountName || null;
+      const balanceVal = account.balance || '0';
+      const currencyVal = account.currency || 'USD';
+      const isActiveVal = account.isActive ?? true;
+      const interestRateVal = account.interestRate || null;
+      const minimumBalanceVal = account.minimumBalance || null;
+      
       const result = await sql`
         INSERT INTO public.bank_accounts (
-          user_id, account_number, account_type, balance, currency, is_active
+          user_id, account_number, account_name, account_type, balance, currency, is_active, interest_rate, minimum_balance
         ) VALUES (
-          ${account.userId}, ${account.accountNumber}, ${account.accountType}, 
-          ${account.balance}, ${account.currency || 'USD'}, ${account.isActive || true}
+          ${account.userId}, ${account.accountNumber}, ${accountNameVal}, ${account.accountType}, 
+          ${balanceVal}, ${currencyVal}, ${isActiveVal}, ${interestRateVal}, ${minimumBalanceVal}
         ) RETURNING *
       `;
 
@@ -246,7 +314,7 @@ export class PostgresStorage implements IStorage {
     try {
       const result = await sql`
         SELECT * FROM public.transactions 
-        WHERE from_account_id = ${accountId} OR to_account_id = ${accountId}
+        WHERE account_id = ${accountId}
         ORDER BY created_at DESC 
         LIMIT ${limit}
       `;
@@ -260,19 +328,31 @@ export class PostgresStorage implements IStorage {
 
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
     try {
+      const statusVal = transaction.status || 'pending';
+      const recipientNameVal = transaction.recipientName || null;
+      const recipientAddressVal = transaction.recipientAddress || null;
+      const recipientCountryVal = transaction.recipientCountry || null;
+      const bankNameVal = transaction.bankName || null;
+      const swiftCodeVal = transaction.swiftCode || null;
+      const transferPurposeVal = transaction.transferPurpose || null;
+      const adminNotesVal = transaction.adminNotes || null;
+      const categoryVal = transaction.category || null;
+      const approvedByVal = transaction.approvedBy || null;
+      const approvedAtVal = transaction.approvedAt || null;
+      const rejectedByVal = transaction.rejectedBy || null;
+      const rejectedAtVal = transaction.rejectedAt || null;
+      
       const result = await sql`
         INSERT INTO public.transactions (
-          transaction_id, from_user_id, to_user_id, from_account_id, to_account_id,
-          amount, currency, transaction_type, status, description,
-          recipient_name, recipient_account, reference_number, fee,
-          exchange_rate, country_code, bank_name, swift_code, admin_notes
+          account_id, type, amount, description, date, status,
+          recipient_name, recipient_address, recipient_country, 
+          bank_name, swift_code, transfer_purpose, admin_notes, category,
+          approved_by, approved_at, rejected_by, rejected_at
         ) VALUES (
-          ${transaction.transactionId}, ${transaction.fromUserId}, ${transaction.toUserId}, 
-          ${transaction.fromAccountId}, ${transaction.toAccountId}, ${transaction.amount},
-          ${transaction.currency || 'USD'}, ${transaction.transactionType}, ${transaction.status},
-          ${transaction.description}, ${transaction.recipientName}, ${transaction.recipientAccount},
-          ${transaction.referenceNumber}, ${transaction.fee || 0}, ${transaction.exchangeRate},
-          ${transaction.countryCode}, ${transaction.bankName}, ${transaction.swiftCode}, ${transaction.adminNotes}
+          ${transaction.accountId}, ${transaction.type}, ${transaction.amount}, ${transaction.description}, ${transaction.date}, ${statusVal},
+          ${recipientNameVal}, ${recipientAddressVal}, ${recipientCountryVal},
+          ${bankNameVal}, ${swiftCodeVal}, ${transferPurposeVal}, ${adminNotesVal}, ${categoryVal},
+          ${approvedByVal}, ${approvedAtVal}, ${rejectedByVal}, ${rejectedAtVal}
         ) RETURNING *
       `;
 
@@ -285,9 +365,11 @@ export class PostgresStorage implements IStorage {
 
   async updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<Transaction | undefined> {
     try {
+      const notesVal = notes || null;
+      
       const result = await sql`
         UPDATE public.transactions 
-        SET status = ${status}, admin_notes = ${notes}, updated_at = CURRENT_TIMESTAMP
+        SET status = ${status}, admin_notes = ${notesVal}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
         RETURNING *
       `;
@@ -332,12 +414,16 @@ export class PostgresStorage implements IStorage {
 
   async updateAccount(id: number, updates: Partial<Account>): Promise<Account | undefined> {
     try {
+      const balanceVal = updates.balance || null;
+      const isActiveVal = updates.isActive ?? null;
+      const accountTypeVal = updates.accountType || null;
+      
       const result = await sql`
         UPDATE public.bank_accounts 
         SET 
-          balance = COALESCE(${updates.balance}, balance),
-          is_active = COALESCE(${updates.isActive}, is_active),
-          account_type = COALESCE(${updates.accountType}, account_type),
+          balance = COALESCE(${balanceVal}, balance),
+          is_active = COALESCE(${isActiveVal}, is_active),
+          account_type = COALESCE(${accountTypeVal}, account_type),
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
         RETURNING *
@@ -400,7 +486,12 @@ export class PostgresStorage implements IStorage {
       isActive: data.is_active,
       avatarUrl: data.avatar_url,
       balance: parseFloat(data.balance || '0'),
+      lastLogin: data.last_login || null,
+      createdByAdmin: data.created_by_admin || null,
+      modifiedByAdmin: data.modified_by_admin || null,
+      adminNotes: data.admin_notes || null,
       createdAt: data.created_at,
+      updatedAt: data.updated_at || null,
       supabaseUserId: data.supabase_user_id
     };
   }
@@ -410,10 +501,13 @@ export class PostgresStorage implements IStorage {
       id: data.id,
       userId: data.user_id,
       accountNumber: data.account_number,
+      accountName: data.account_name || null,
       accountType: data.account_type,
-      balance: parseFloat(data.balance || '0'),
+      balance: data.balance || '0',
       currency: data.currency,
       isActive: data.is_active,
+      interestRate: data.interest_rate || null,
+      minimumBalance: data.minimum_balance || null,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -422,25 +516,24 @@ export class PostgresStorage implements IStorage {
   private mapDbTransaction(data: any): Transaction {
     return {
       id: data.id,
-      transactionId: data.transaction_id,
-      fromUserId: data.from_user_id,
-      toUserId: data.to_user_id,
-      fromAccountId: data.from_account_id,
-      toAccountId: data.to_account_id,
-      amount: parseFloat(data.amount),
-      currency: data.currency,
-      transactionType: data.transaction_type,
-      status: data.status,
+      accountId: data.account_id,
+      type: data.type,
+      amount: data.amount,
       description: data.description,
+      category: data.category,
+      date: data.date,
+      status: data.status,
       recipientName: data.recipient_name,
-      recipientAccount: data.recipient_account,
-      referenceNumber: data.reference_number,
-      fee: data.fee ? parseFloat(data.fee) : 0,
-      exchangeRate: data.exchange_rate ? parseFloat(data.exchange_rate) : undefined,
-      countryCode: data.country_code,
+      recipientAddress: data.recipient_address,
+      recipientCountry: data.recipient_country,
       bankName: data.bank_name,
       swiftCode: data.swift_code,
+      transferPurpose: data.transfer_purpose,
       adminNotes: data.admin_notes,
+      approvedBy: data.approved_by,
+      approvedAt: data.approved_at,
+      rejectedBy: data.rejected_by,
+      rejectedAt: data.rejected_at,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };

@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Post-merge: Updating dependencies..."
+npm install
+
+echo "Post-merge complete!"

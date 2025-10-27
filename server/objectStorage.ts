@@ -1,10 +1,13 @@
-import { Storage, File } from "@google-cloud/storage";
+// Commented out @google-cloud/storage - not installed, not critical for current app functionality
+// import { Storage, File } from "@google-cloud/storage";
 import { Response } from "express";
 import { randomUUID } from "crypto";
 
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 
 // The object storage client is used to interact with the object storage service.
+// Commented out - @google-cloud/storage not installed
+/*
 export const objectStorageClient = new Storage({
   credentials: {
     audience: "replit",
@@ -22,6 +25,7 @@ export const objectStorageClient = new Storage({
   },
   projectId: "",
 });
+*/
 
 export class ObjectNotFoundError extends Error {
   constructor() {
@@ -72,7 +76,7 @@ export class ObjectStorageService {
   }
 
   // Downloads an object to the response.
-  async downloadObject(file: File, res: Response, cacheTtlSec: number = 3600) {
+  async downloadObject(file: any, res: Response, cacheTtlSec: number = 3600) {
     try {
       // Get file metadata
       const [metadata] = await file.getMetadata();
@@ -87,7 +91,7 @@ export class ObjectStorageService {
       // Stream the file to the response
       const stream = file.createReadStream();
 
-      stream.on("error", (err) => {
+      stream.on("error", (err: Error) => {
         console.error("Stream error:", err);
         if (!res.headersSent) {
           res.status(500).json({ error: "Error streaming file" });

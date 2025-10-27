@@ -14,15 +14,31 @@ export default function Investment() {
   const { t } = useLanguage();
   const [selectedTimeframe, setSelectedTimeframe] = useState('1M');
 
+  interface InvestmentData {
+    accounts: any[];
+  }
+
+  interface MarketRate {
+    change: number;
+    trending: 'up' | 'down';
+  }
+
+  interface MarketData {
+    stocks: MarketRate;
+    bonds: MarketRate;
+    crypto: MarketRate;
+    forex: MarketRate;
+  }
+
   // Fetch real investment data from Supabase
-  const { data: investmentData, isLoading } = useQuery({
+  const { data: investmentData, isLoading } = useQuery<InvestmentData>({
     queryKey: ['/api/investments', userProfile?.id],
     enabled: !!userProfile?.id,
     staleTime: 30000
   });
 
   // Fetch live market data
-  const { data: marketData } = useQuery({
+  const { data: marketData } = useQuery<MarketData>({
     queryKey: ['/api/market-rates'],
     staleTime: 60000, // 1 minute cache
     refetchInterval: 60000 // Auto refresh every minute
@@ -31,7 +47,7 @@ export default function Investment() {
   const investmentAccounts = investmentData?.accounts || [];
   const totalInvestmentValue = investmentAccounts.reduce((total: number, account: any) => total + account.balance, 0);
   
-  const marketRates = marketData || {
+  const marketRates: MarketData = marketData || {
     stocks: { change: 2.4, trending: 'up' },
     bonds: { change: -0.8, trending: 'down' },
     crypto: { change: 5.2, trending: 'up' },

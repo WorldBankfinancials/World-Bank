@@ -70,13 +70,6 @@ export class MemStorage implements IStorage {
     this.loadPersistedData();
   }
 
-  private generateAccountNumber(): string {
-    return `4789-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
-  }
-
-  private generateAccountId(): string {
-    return `WB-2024-${Math.floor(1000 + Math.random() * 9000)}`;
-  }
 
   private async loadPersistedData() {
     try {
@@ -325,14 +318,11 @@ export class MemStorage implements IStorage {
       recipientCountry: transactionData.recipientCountry || null,
       bankName: transactionData.bankName || null,
       swiftCode: transactionData.swiftCode || null,
-      routingNumber: transactionData.routingNumber || null,
-      accountNumberRecipient: transactionData.accountNumberRecipient || null,
-      reference: transactionData.reference || null,
-      fee: transactionData.fee || null,
-      exchangeRate: transactionData.exchangeRate || null,
+      transferPurpose: transactionData.transferPurpose || null,
       adminNotes: transactionData.adminNotes || null,
       approvedBy: transactionData.approvedBy || null,
       approvedAt: transactionData.approvedAt || null,
+      rejectedBy: transactionData.rejectedBy || null,
       rejectedAt: transactionData.rejectedAt || null,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -352,8 +342,9 @@ export class MemStorage implements IStorage {
       ...transaction,
       status,
       adminNotes: notes || transaction.adminNotes,
-      approvedBy: status === 'approved' ? adminId : transaction.approvedBy,
+      approvedBy: status === 'approved' ? adminId.toString() : transaction.approvedBy,
       approvedAt: status === 'approved' ? now : transaction.approvedAt,
+      rejectedBy: status === 'rejected' ? adminId.toString() : transaction.rejectedBy,
       rejectedAt: status === 'rejected' ? now : transaction.rejectedAt,
       updatedAt: now
     };
@@ -376,9 +367,9 @@ export class MemStorage implements IStorage {
       id,
       adminId: actionData.adminId || 0,
       actionType: actionData.actionType || '',
-      targetId: actionData.targetId || null,
-      targetType: actionData.targetType || null,
-      description: actionData.description || null,
+      targetId: actionData.targetId || '',
+      targetType: actionData.targetType || '',
+      description: actionData.description || '',
       metadata: actionData.metadata || null,
       createdAt: new Date()
     };
@@ -402,6 +393,7 @@ export class MemStorage implements IStorage {
     const ticket: SupportTicket = {
       id,
       userId: ticketData.userId || 0,
+      subject: ticketData.subject || '',
       description: ticketData.description || '',
       priority: ticketData.priority || null,
       status: ticketData.status || null,

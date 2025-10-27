@@ -30,13 +30,12 @@ export async function createTransferForApproval(data: TransferApprovalData) {
       accountId: fromAccount.id,
       type: data.transferType,
       amount: data.amount.toString(),
-      description: `Transfer to ${data.recipientName}`,
+      description: `Transfer to ${data.recipientName} - ${data.purpose}`,
       status: 'pending_approval',
       recipientName: data.recipientName,
       recipientCountry: 'Unknown',
       bankName: data.bankName,
       swiftCode: '',
-      purpose: data.purpose,
       adminNotes: null
     });
 

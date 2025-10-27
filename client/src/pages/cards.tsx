@@ -30,7 +30,7 @@ export default function Cards() {
   const [accountNumber, setAccountNumber] = useState('');
 
   const queryClient = useQueryClient();
-  const { data: creditCards, isLoading: cardsLoading, error: cardsError } = useQuery({
+  const { data: creditCards, isLoading: cardsLoading, error: cardsError } = useQuery<any[]>({
     queryKey: ['/api/cards'],
     staleTime: 30000,
     retry: 3
@@ -212,7 +212,7 @@ export default function Cards() {
         {/* Credit Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {cardsLoading && <div className="text-center py-8">Loading cards...</div>}
-          {creditCards && creditCards.map((card) => (
+          {creditCards && creditCards.map((card: any) => (
             <Card key={card.id} className="overflow-hidden">
               <div className={`${card.color} text-white p-6 relative`}>
                 <div className="flex justify-between items-start mb-4">

@@ -18,6 +18,8 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
 const databaseUrl = process.env.DATABASE_URL!;
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 if (!databaseUrl) {
   throw new Error('Missing DATABASE_URL environment variable');
@@ -25,6 +27,9 @@ if (!databaseUrl) {
 
 const connection = postgres(databaseUrl);
 const db = drizzle(connection);
+
+// Initialize Supabase client
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export class SupabaseStorage implements IStorage {
   
@@ -37,36 +42,7 @@ export class SupabaseStorage implements IStorage {
     
     if (error || !data) return undefined;
     
-    return {
-      id: data.id,
-      username: data.username,
-      password: data.password_hash,
-      fullName: data.full_name,
-      email: data.email,
-      phone: data.phone,
-      accountNumber: data.account_number,
-      accountId: data.account_id,
-      profession: data.profession,
-      dateOfBirth: data.date_of_birth,
-      address: data.address,
-      city: data.city,
-      state: data.state,
-      country: data.country,
-      postalCode: data.postal_code,
-      nationality: data.nationality,
-      annualIncome: data.annual_income,
-      idType: data.id_type,
-      idNumber: data.id_number,
-      transferPin: data.transfer_pin,
-      role: data.role,
-      isVerified: data.is_verified,
-      isOnline: data.is_online,
-      isActive: data.is_active,
-      avatarUrl: data.avatar_url,
-      balance: parseFloat(data.balance || '0'),
-      createdAt: data.created_at,
-      supabaseUserId: data.supabase_user_id
-    };
+    return this.mapSupabaseUser(data);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
@@ -100,6 +76,18 @@ export class SupabaseStorage implements IStorage {
     }
     
     console.log('✅ Found user in Supabase:', data);
+    return this.mapSupabaseUser(data);
+  }
+
+  async getUserByPhone(phone: string): Promise<User | undefined> {
+    const { data, error } = await supabase
+      .from('bank_users')
+      .select('*')
+      .eq('phone', phone)
+      .single();
+    
+    if (error || !data) return undefined;
+    
     return this.mapSupabaseUser(data);
   }
 
@@ -221,10 +209,13 @@ export class SupabaseStorage implements IStorage {
       id: account.id,
       userId: account.user_id,
       accountNumber: account.account_number,
+      accountName: account.account_name || null,
       accountType: account.account_type,
-      balance: parseFloat(account.balance),
+      balance: account.balance,
       currency: account.currency,
       isActive: account.is_active,
+      interestRate: account.interest_rate || null,
+      minimumBalance: account.minimum_balance || null,
       createdAt: account.created_at,
       updatedAt: account.updated_at
     }));
@@ -243,10 +234,13 @@ export class SupabaseStorage implements IStorage {
       id: data.id,
       userId: data.user_id,
       accountNumber: data.account_number,
+      accountName: data.account_name || null,
       accountType: data.account_type,
-      balance: parseFloat(data.balance),
+      balance: data.balance,
       currency: data.currency,
       isActive: data.is_active,
+      interestRate: data.interest_rate || null,
+      minimumBalance: data.minimum_balance || null,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -258,10 +252,13 @@ export class SupabaseStorage implements IStorage {
       .insert({
         user_id: account.userId,
         account_number: account.accountNumber,
+        account_name: account.accountName,
         account_type: account.accountType,
-        balance: account.balance.toString(),
+        balance: account.balance,
         currency: account.currency || 'USD',
-        is_active: account.isActive || true
+        is_active: account.isActive ?? true,
+        interest_rate: account.interestRate,
+        minimum_balance: account.minimumBalance
       })
       .select()
       .single();
@@ -274,10 +271,13 @@ export class SupabaseStorage implements IStorage {
       id: data.id,
       userId: data.user_id,
       accountNumber: data.account_number,
+      accountName: data.account_name || null,
       accountType: data.account_type,
-      balance: parseFloat(data.balance),
+      balance: data.balance,
       currency: data.currency,
       isActive: data.is_active,
+      interestRate: data.interest_rate || null,
+      minimumBalance: data.minimum_balance || null,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -297,29 +297,31 @@ export class SupabaseStorage implements IStorage {
   }
 
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
+    // Map from schema to database columns
+    const dbTransaction: any = {
+      account_id: transaction.accountId,
+      type: transaction.type,
+      amount: transaction.amount,
+      description: transaction.description,
+      date: transaction.date,
+      status: transaction.status || 'pending',
+      recipient_name: transaction.recipientName,
+      recipient_country: transaction.recipientCountry,
+      bank_name: transaction.bankName,
+      swift_code: transaction.swiftCode,
+      admin_notes: transaction.adminNotes,
+      category: transaction.category,
+      recipient_address: transaction.recipientAddress,
+      transfer_purpose: transaction.transferPurpose,
+      approved_by: transaction.approvedBy,
+      approved_at: transaction.approvedAt,
+      rejected_by: transaction.rejectedBy,
+      rejected_at: transaction.rejectedAt
+    };
+
     const { data, error } = await supabase
       .from('transactions')
-      .insert({
-        transaction_id: transaction.transactionId,
-        from_user_id: transaction.fromUserId,
-        to_user_id: transaction.toUserId,
-        from_account_id: transaction.fromAccountId,
-        to_account_id: transaction.toAccountId,
-        amount: transaction.amount.toString(),
-        currency: transaction.currency || 'USD',
-        transaction_type: transaction.transactionType,
-        status: transaction.status,
-        description: transaction.description,
-        recipient_name: transaction.recipientName,
-        recipient_account: transaction.recipientAccount,
-        reference_number: transaction.referenceNumber,
-        fee: transaction.fee?.toString() || '0.00',
-        exchange_rate: transaction.exchangeRate?.toString(),
-        country_code: transaction.countryCode,
-        bank_name: transaction.bankName,
-        swift_code: transaction.swiftCode,
-        admin_notes: transaction.adminNotes
-      })
+      .insert(dbTransaction)
       .select()
       .single();
 
@@ -374,9 +376,12 @@ export class SupabaseStorage implements IStorage {
     const { data, error } = await supabase
       .from('bank_accounts')
       .update({
-        balance: updates.balance?.toString(),
+        balance: updates.balance,
         is_active: updates.isActive,
-        account_type: updates.accountType
+        account_type: updates.accountType,
+        account_name: updates.accountName,
+        interest_rate: updates.interestRate,
+        minimum_balance: updates.minimumBalance
       })
       .eq('id', id)
       .select()
@@ -388,10 +393,13 @@ export class SupabaseStorage implements IStorage {
       id: data.id,
       userId: data.user_id,
       accountNumber: data.account_number,
+      accountName: data.account_name || null,
       accountType: data.account_type,
-      balance: parseFloat(data.balance),
+      balance: data.balance,
       currency: data.currency,
       isActive: data.is_active,
+      interestRate: data.interest_rate || null,
+      minimumBalance: data.minimum_balance || null,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -450,7 +458,12 @@ export class SupabaseStorage implements IStorage {
       isActive: data.is_active,
       avatarUrl: data.avatar_url,
       balance: parseFloat(data.balance || '0'),
+      lastLogin: data.last_login || null,
+      createdByAdmin: data.created_by_admin || null,
+      modifiedByAdmin: data.modified_by_admin || null,
+      adminNotes: data.admin_notes || null,
       createdAt: data.created_at,
+      updatedAt: data.updated_at || null,
       supabaseUserId: data.supabase_user_id
     };
   }
@@ -458,25 +471,24 @@ export class SupabaseStorage implements IStorage {
   private mapSupabaseTransaction(data: any): Transaction {
     return {
       id: data.id,
-      transactionId: data.transaction_id,
-      fromUserId: data.from_user_id,
-      toUserId: data.to_user_id,
-      fromAccountId: data.from_account_id,
-      toAccountId: data.to_account_id,
-      amount: parseFloat(data.amount),
-      currency: data.currency,
-      transactionType: data.transaction_type,
-      status: data.status,
+      accountId: data.account_id,
+      type: data.type,
+      amount: data.amount,
       description: data.description,
-      recipientName: data.recipient_name,
-      recipientAccount: data.recipient_account,
-      referenceNumber: data.reference_number,
-      fee: data.fee ? parseFloat(data.fee) : 0,
-      exchangeRate: data.exchange_rate ? parseFloat(data.exchange_rate) : undefined,
-      countryCode: data.country_code,
-      bankName: data.bank_name,
-      swiftCode: data.swift_code,
-      adminNotes: data.admin_notes,
+      category: data.category || null,
+      date: data.date,
+      status: data.status,
+      recipientName: data.recipient_name || null,
+      recipientAddress: data.recipient_address || null,
+      recipientCountry: data.recipient_country || null,
+      bankName: data.bank_name || null,
+      swiftCode: data.swift_code || null,
+      transferPurpose: data.transfer_purpose || null,
+      adminNotes: data.admin_notes || null,
+      approvedBy: data.approved_by || null,
+      approvedAt: data.approved_at || null,
+      rejectedBy: data.rejected_by || null,
+      rejectedAt: data.rejected_at || null,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };

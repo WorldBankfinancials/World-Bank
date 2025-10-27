@@ -23,7 +23,7 @@ export default function Exchange() {
   const queryClient = useQueryClient();
 
   // Fetch live exchange rates from Supabase/API
-  const { data: exchangeRates, isLoading: ratesLoading, refetch } = useQuery({
+  const { data: exchangeRates, isLoading: ratesLoading, refetch } = useQuery<Record<string, number>>({
     queryKey: ['/api/exchange-rates'],
     staleTime: 30000, // 30 seconds cache
     refetchInterval: 60000 // Auto refresh every minute
@@ -88,9 +88,9 @@ export default function Exchange() {
     { code: 'KRW', name: 'Korean Won', flag: '🇰🇷' }
   ];
 
-  const topRates = exchangeRates ? Object.entries(exchangeRates)
+  const topRates: [string, number][] = exchangeRates ? Object.entries(exchangeRates)
     .filter(([code]) => ['EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD'].includes(code))
-    .slice(0, 6) : [];
+    .slice(0, 6) as [string, number][] : [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -218,7 +218,7 @@ export default function Exchange() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {topRates.map(([currency, rate]: [string, any]) => {
+                {topRates.map(([currency, rate]) => {
                   const currencyInfo = currencies.find(c => c.code === currency);
                   const change = Math.random() * 2 - 1; // Simulate rate change
                   const isPositive = change >= 0;
@@ -233,7 +233,7 @@ export default function Exchange() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{parseFloat(rate).toFixed(4)}</div>
+                        <div className="font-medium">{rate.toFixed(4)}</div>
                         <div className={`text-sm flex items-center ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
                           {isPositive ? (
                             <TrendingUp className="w-3 h-3 mr-1" />
