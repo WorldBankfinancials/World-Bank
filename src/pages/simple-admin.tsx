@@ -202,7 +202,12 @@ export default function SimpleAdmin() {
 
   const fetchPendingRegistrations = async () => {
     try {
-      const response = await fetch('/api/admin/pending-registrations');
+      const token = sessionStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/pending-registrations', {
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setPendingRegistrations(data);
@@ -223,41 +228,44 @@ export default function SimpleAdmin() {
     e.preventDefault();
     
     try {
-      // Use Supabase authentication for admin login
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = 'https://icbsxmrmorkdgxtumamu.supabase.co';
-      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljYnN4bXJtb3JrZGd4dHVtYW11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NTkxMDksImV4cCI6MjA3MDMzNTEwOX0.GDBjj7flp-6sLjfHh3mil31zPq_97Tvfw47Oz5KxKqk';
-      
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
-      
-      // Authenticate with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: username,
-        password: password
+      // Server-side admin authentication via API
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: username,
+          password: password
+        })
       });
       
-      if (error) {
-        alert('Invalid admin credentials: ' + error.message);
+      if (!response.ok) {
+        const error = await response.json();
+        alert('Invalid admin credentials: ' + (error.message || 'Authentication failed'));
         return;
       }
       
-      // Verify user has admin role by checking their email or custom claims
-      if (data.user) {
-        // Check if user is admin (you can customize this logic)
-        const isAdmin = data.user.email?.includes('admin') || 
-                       data.user.email === 'bankmanagerworld5@gmail.com';
-        
-        if (isAdmin) {
-          setIsAuthenticated(true);
-        } else {
-          alert('Access denied: Admin privileges required');
-          await supabase.auth.signOut();
-        }
-      }
+      const { token, user } = await response.json();
+      
+      // Store admin token in sessionStorage (or localStorage)
+      sessionStorage.setItem('adminToken', token);
+      sessionStorage.setItem('adminUser', JSON.stringify(user));
+      
+      setIsAuthenticated(true);
     } catch (error) {
       console.error('Admin login error:', error);
-      alert('Login failed: ' + (error as Error).message);
+      alert('Login failed. Please try again.');
     }
+  };
+
+  // Helper function to get admin authorization headers
+  const getAdminHeaders = () => {
+    const token = sessionStorage.getItem('adminToken');
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
   };
 
   const handleApproveRegistration = async (registrationId: number) => {
@@ -271,9 +279,7 @@ export default function SimpleAdmin() {
 
       const response = await fetch(`/api/admin/approve-registration/${registrationId}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ initialBalance: parseFloat(initialBalance) })
       });
 
@@ -302,9 +308,7 @@ export default function SimpleAdmin() {
 
       const response = await fetch(`/api/admin/reject-registration/${registrationId}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ reason })
       });
 
@@ -431,9 +435,7 @@ export default function SimpleAdmin() {
     try {
       const response = await fetch(`/api/admin/customers/${editingCustomer.id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAdminHeaders(),
         body: JSON.stringify({
           fullName: editForm.fullName,
           email: editForm.email,
@@ -556,9 +558,7 @@ export default function SimpleAdmin() {
           
           const response = await fetch(`/api/admin/customers/${editingCustomer.id}`, {
             method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: getAdminHeaders(),
             body: JSON.stringify({
               avatarUrl: base64Image
             })
@@ -604,9 +604,7 @@ export default function SimpleAdmin() {
     try {
       const response = await fetch(`/api/admin/customers/${customerId}/balance`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ amount, description: `Admin balance top-up: $${amount}` })
       });
 
@@ -649,9 +647,7 @@ export default function SimpleAdmin() {
     try {
       const response = await fetch('/api/admin/create-transaction', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAdminHeaders(),
         body: JSON.stringify({
           customerId: selectedCustomerForTransaction,
           type: transactionType,
@@ -665,9 +661,7 @@ export default function SimpleAdmin() {
       if (response.ok) {
         const balanceResponse = await fetch(`/api/admin/customers/${selectedCustomerForTransaction}/balance`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: getAdminHeaders(),
           body: JSON.stringify({ 
             amount: transactionType === 'credit' ? amount : -amount,
             description: transactionDescription
@@ -722,9 +716,7 @@ export default function SimpleAdmin() {
       // Use the correct account-specific endpoint
       const response = await fetch(`/api/admin/accounts/${accountId}/balance`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAdminHeaders(),
         body: JSON.stringify({
           amount: amount.toString(),
           description: fundDescription,

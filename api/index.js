@@ -115,6 +115,56 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // Admin login endpoint - server-side authentication only
+    if (apiPath === '/admin/login' && req.method === 'POST') {
+      try {
+        const { email, password } = req.body;
+        
+        if (!email || !password) {
+          return res.status(400).json({ message: 'Email and password required' });
+        }
+        
+        // Authenticate with Supabase using service role (server-side only)
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (error || !data.user) {
+          return res.status(401).json({ message: 'Invalid credentials' });
+        }
+        
+        // Check if user has admin role - STRICT role verification required
+        const { data: bankUser } = await supabase
+          .from('bank_users')
+          .select('id, email, role, full_name')
+          .eq('supabase_user_id', data.user.id)
+          .single();
+        
+        // Verify admin role - MUST have explicit 'admin' role in database
+        if (!bankUser || bankUser.role !== 'admin') {
+          console.log(`❌ Access denied for user: ${data.user.email} - Role: ${bankUser?.role || 'none'}`);
+          return res.status(403).json({ message: 'Access denied: Admin privileges required' });
+        }
+        
+        console.log(`✅ Admin authenticated: ${bankUser.email}`);
+        
+        // Return session token for subsequent admin API requests
+        return res.status(200).json({
+          token: data.session.access_token,
+          user: {
+            id: data.user.id,
+            email: data.user.email,
+            role: bankUser?.role || 'admin',
+            full_name: bankUser?.full_name || data.user.email
+          }
+        });
+      } catch (error) {
+        console.error('Admin login error:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+      }
+    }
+
     // Get user by Supabase user ID
     if (apiPath.startsWith('/users/supabase/') && req.method === 'GET') {
       const supabaseUserId = apiPath.split('/')[3];
