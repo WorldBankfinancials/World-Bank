@@ -10,6 +10,27 @@ The application is built as a modern single-page application (SPA) with a React 
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### October 28, 2025 - Critical Security Fixes
+**Registration Flow Security Hardening:**
+- Fixed frontend registration to fail immediately when Supabase Auth fails (prevents orphaned database users)
+- Removed password transmission from frontend to backend (passwords only handled by Supabase Auth)
+- Created secure `/api/auth/register` endpoint with server-side field whitelisting
+- Blocked privilege escalation by hardcoding role, balance, isVerified, and isActive server-side
+- Added explicit validation rejecting password submissions and non-customer role attempts
+- All privileged fields now server-controlled; client can only set safe profile information
+- Status: All security vulnerabilities fixed and approved by architect review
+
+**Admin Live Chat System:**
+- Removed all mock data from admin-live-chat page
+- Fixed WebSocket handler to create chat sessions dynamically from incoming customer messages
+- System now operates entirely on real database data
+
+**Support System:**
+- Added `/api/support-tickets` GET and POST endpoints for customer support system
+- Support tickets now fully integrated with real database storage
+
 ## System Architecture
 
 ### Frontend Architecture
