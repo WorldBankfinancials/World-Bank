@@ -52,7 +52,9 @@ export default function InvestmentTrading() {
   // Calculate real portfolio statistics from investments
   const totalPortfolioValue = investments.reduce((sum: number, inv: any) => sum + parseFloat(inv.total_value || inv.totalValue || 0), 0);
   const totalGainLoss = investments.reduce((sum: number, inv: any) => sum + parseFloat(inv.gain_loss || inv.gainLoss || 0), 0);
-  const gainLossPercent = totalPortfolioValue > 0 ? (totalGainLoss / (totalPortfolioValue - totalGainLoss)) * 100 : 0;
+  // Guard against division by zero: use cost basis (totalPortfolioValue - totalGainLoss)
+  const costBasis = totalPortfolioValue - totalGainLoss;
+  const gainLossPercent = costBasis > 0 ? (totalGainLoss / costBasis) * 100 : 0;
 
   if (isLoading) {
     return (
@@ -140,7 +142,7 @@ export default function InvestmentTrading() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Active Positions</p>
-                  <p className="text-2xl font-bold text-gray-900">47</p>
+                  <p className="text-2xl font-bold text-gray-900">{investments.length}</p>
                   <p className="text-sm text-gray-600">Holdings</p>
                 </div>
                 <PieChart className="w-8 h-8 text-purple-600" />

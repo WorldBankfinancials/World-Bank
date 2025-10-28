@@ -30,7 +30,9 @@ export default function InvestmentPortfolio() {
   // Calculate real portfolio metrics
   const totalValue = investments.reduce((sum, inv) => sum + parseFloat(inv.total_value || inv.totalValue || 0), 0);
   const totalGainLoss = investments.reduce((sum, inv) => sum + parseFloat(inv.gain_loss || inv.gainLoss || 0), 0);
-  const gainLossPercent = totalValue > 0 ? (totalGainLoss / (totalValue - totalGainLoss)) * 100 : 0;
+  // Guard against division by zero: use cost basis (totalValue - totalGainLoss)
+  const costBasis = totalValue - totalGainLoss;
+  const gainLossPercent = costBasis > 0 ? (totalGainLoss / costBasis) * 100 : 0;
 
   if (userLoading || investmentsLoading) {
     return (

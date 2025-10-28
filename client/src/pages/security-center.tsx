@@ -71,18 +71,11 @@ export default function SecurityCenter() {
     }
   ];
 
-  const recentActivity = [
-    { action: "Login", device: "iPhone 15 Pro", location: "New York, NY", time: "2 hours ago", status: "success" },
-    { action: "Password Changed", device: "MacBook Pro", location: "New York, NY", time: "3 days ago", status: "success" },
-    { action: "Failed Login Attempt", device: "Unknown Device", location: "Moscow, RU", time: "5 days ago", status: "blocked" },
-    { action: "2FA Setup", device: "iPhone 15 Pro", location: "New York, NY", time: "1 week ago", status: "success" }
-  ];
+  // Backend API needed: /api/user/activity-log for real activity tracking
+  const recentActivity: any[] = [];
 
-  const trustedDevices = [
-    { name: "iPhone 15 Pro", type: "Mobile", lastUsed: "Currently Active", status: "trusted" },
-    { name: "MacBook Pro", type: "Computer", lastUsed: "2 hours ago", status: "trusted" },
-    { name: "iPad Air", type: "Tablet", lastUsed: "3 days ago", status: "trusted" }
-  ];
+  // Backend API needed: /api/user/trusted-devices for real device management
+  const trustedDevices: any[] = [];
 
   return (
     <div className="min-h-screen bg-wb-gray">
