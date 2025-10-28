@@ -65,6 +65,128 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // TRANSACTIONAL REGISTRATION ENDPOINT
+  // This endpoint handles BOTH Supabase Auth AND local database creation atomically
+  // If either step fails, it rolls back the other to prevent desynchronization
+  app.post('/api/auth/register-complete', async (req: Request, res: Response) => {
+    let supabaseUserId: string | null = null;
+    
+    try {
+      const registrationData = req.body;
+      
+      // Validate required fields
+      if (!registrationData.email || !registrationData.password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+      
+      // Create Supabase service client
+      const { createClient } = require('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+      
+      // STEP 1: Create Supabase Auth account
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: registrationData.email,
+        password: registrationData.password,
+        email_confirm: false, // Auto-confirm for banking app
+        user_metadata: {
+          full_name: registrationData.fullName,
+          phone: registrationData.phone,
+          registration_date: new Date().toISOString()
+        }
+      });
+      
+      if (authError || !authData.user) {
+        console.error('❌ Supabase Auth creation failed:', authError);
+        return res.status(500).json({ 
+          error: authError?.message || 'Failed to create authentication account' 
+        });
+      }
+      
+      supabaseUserId = authData.user.id;
+      console.log(`✅ Supabase Auth account created: ${supabaseUserId}`);
+      
+      // STEP 2: Create local database profile
+      try {
+        const newUser = await storage.createUser({
+          username: registrationData.email.split('@')[0],
+          fullName: registrationData.fullName,
+          email: registrationData.email,
+          phone: registrationData.phone,
+          dateOfBirth: registrationData.dateOfBirth,
+          address: registrationData.address,
+          city: registrationData.city,
+          state: registrationData.state,
+          country: registrationData.country,
+          postalCode: registrationData.postalCode,
+          nationality: registrationData.nationality,
+          profession: registrationData.profession,
+          annualIncome: registrationData.annualIncome,
+          idType: registrationData.idType,
+          idNumber: registrationData.idNumber,
+          supabaseUserId: supabaseUserId,
+          accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
+          accountId: `WB${Date.now()}`,
+          password: 'supabase_auth',
+          transferPin: registrationData.transferPin || '0000',
+          role: 'customer',
+          isVerified: false,
+          isOnline: false,
+          isActive: false, // Requires admin approval
+          balance: 0,
+        });
+        
+        // Create initial checking account
+        await storage.createAccount({
+          userId: newUser.id,
+          accountNumber: newUser.accountNumber,
+          accountName: `${newUser.fullName}'s Checking Account`,
+          accountType: 'checking',
+          balance: '0.00',
+          currency: 'USD',
+          isActive: false // Requires admin approval
+        });
+        
+        console.log(`✅ Complete registration successful: ${newUser.email}`);
+        
+        res.status(201).json({ 
+          success: true,
+          message: 'Registration successful. Awaiting admin approval.',
+          user: {
+            email: newUser.email,
+            fullName: newUser.fullName
+          }
+        });
+        
+      } catch (dbError: any) {
+        // ROLLBACK: Delete Supabase Auth account if database creation fails
+        console.error('❌ Database creation failed, rolling back Supabase Auth account:', dbError);
+        
+        if (supabaseUserId) {
+          const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(supabaseUserId);
+          if (deleteError) {
+            console.error('❌ CRITICAL: Failed to rollback Supabase Auth account:', deleteError);
+            console.error(`⚠️ ORPHANED ACCOUNT: ${registrationData.email} (${supabaseUserId})`);
+          } else {
+            console.log(`✅ Rolled back Supabase Auth account: ${supabaseUserId}`);
+          }
+        }
+        
+        throw dbError;
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Registration failed:', error);
+      res.status(500).json({ 
+        error: 'Registration failed',
+        details: error.message 
+      });
+    }
+  });
+
   // Check email availability endpoint - checks both Supabase and local DB
   app.post('/api/auth/check-email', async (req: Request, res: Response) => {
     try {

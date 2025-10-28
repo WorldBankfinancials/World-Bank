@@ -100,38 +100,17 @@ export default function MultiStepRegisterPage() {
         }
       }
 
-      // STEP 1: Create Supabase Auth account - Email uniqueness is checked in Step 1
-      const { error: signUpError } = await signUp(completeData.email, completeData.password, {
-        full_name: `${completeData.firstName} ${completeData.lastName}`,
-        phone: completeData.phone,
-        date_of_birth: completeData.dateOfBirth,
-        nationality: completeData.nationality,
-        registration_date: new Date().toISOString()
-      });
-
-      if (signUpError) {
-        // Check if it's a duplicate email error
-        if (signUpError.toLowerCase().includes('already') || signUpError.toLowerCase().includes('exists') || signUpError.toLowerCase().includes('duplicate')) {
-          throw new Error('This email is already registered. Please use a different email or try logging in with your existing account.');
-        }
-        throw new Error(signUpError);
-      }
-
-      // STEP 2: Get the created Supabase user ID
-      const { data: { session } } = await (await import('@/lib/supabase')).supabase.auth.getSession();
-      if (!session?.user?.id) {
-        throw new Error('Registration failed: Unable to create account. Please try again.');
-      }
-
-      // STEP 3: Create user profile in local database
-      const profileResponse = await fetch('/api/auth/register', {
+      // Call the transactional registration endpoint
+      // This atomically creates BOTH Supabase Auth account AND local database profile
+      // If either fails, it rolls back the other to prevent desynchronization
+      const response = await fetch('/api/auth/register-complete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           email: completeData.email,
-          supabaseUserId: session.user.id,
+          password: completeData.password,
           fullName: `${completeData.firstName} ${completeData.lastName}`,
           phone: completeData.phone,
           dateOfBirth: completeData.dateOfBirth,
@@ -153,9 +132,10 @@ export default function MultiStepRegisterPage() {
         }),
       });
 
-      if (!profileResponse.ok) {
-        const errorData = await profileResponse.json();
-        throw new Error(errorData.error || 'Failed to create user profile');
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || result.details || 'Registration failed');
       }
 
       toast({
@@ -163,9 +143,6 @@ export default function MultiStepRegisterPage() {
         description: 'Your application is being reviewed by our customer support team. You will be able to login once approved.',
         duration: 5000,
       });
-
-      // Sign out to prevent automatic login before approval
-      await (await import('@/lib/supabase')).supabase.auth.signOut();
 
       // Redirect to login with pending approval message
       setLocation('/login?status=pending');
