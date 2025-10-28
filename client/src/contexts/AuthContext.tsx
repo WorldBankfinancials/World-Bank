@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
@@ -65,10 +64,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           'Pragma': 'no-cache'
         }
       });
-      
+
       if (response.ok) {
         const bankingUser = await response.json();
-        
+
         const userProfile: UserProfile = {
           id: currentUser.id,
           email: currentUser.email || '',
@@ -99,17 +98,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserProfile(userProfile);
       } else {
         console.log('⚠️ User not found in banking system after 500ms, retrying...');
-        
+
         // Retry after another second for new users
         await new Promise(resolve => setTimeout(resolve, 1500));
-        
+
         const retryResponse = await fetch(`/api/users/supabase/${currentUser.id}`, {
           headers: {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'
           }
         });
-        
+
         if (retryResponse.ok) {
           const bankingUser = await retryResponse.json();
           const userProfile: UserProfile = {
@@ -154,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
 
       await supabase.auth.signOut();
-      
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -168,11 +167,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.user && data.session) {
         console.log('✅ Authentication successful for:', email);
-        
+
         setUser(data.user);
-        
+
         await fetchUserData(data.user);
-        
+
         setLoading(false);
         return {};
       }
@@ -262,18 +261,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔐 Auth state change:', event);
+      console.log('Supabase auth event:', event, session);
 
-      if (event === 'SIGNED_IN' && session?.user) {
+      if (event === 'SIGNED_OUT') {
+        console.log('✅ Successfully signed out');
+        setUser(null);
+        setLoading(false);
+      } else if (event === 'INITIAL_SESSION' && session) {
+        // Handle initial session
+        console.log('🔐 Restoring session');
+        fetchUserData(session.user); // Changed from fetchUserProfile to fetchUserData
+      } else if (event === 'SIGNED_IN' && session) {
         console.log('✅ User signed in');
         setUser(session.user);
         await fetchUserData(session.user);
-        setLoading(false);
-
-      } else if (event === 'SIGNED_OUT') {
-        console.log('🔐 User signed out');
-        setUser(null);
-        setUserProfile(null);
         setLoading(false);
 
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
@@ -291,7 +292,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Real-time subscription for user profile changes
     const userChannel = supabase
       .channel('user_profile_changes')
-      .on('postgres_changes', 
+      .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'bank_users' },
         async (payload: any) => {
           console.log('👤 User profile updated by admin:', payload);

@@ -51,7 +51,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Get user by Supabase UUID
   app.get('/api/users/supabase/:supabaseId', async (req: Request, res: Response) => {
     try {
-      const { supabaseId } = req.params;
+      const {supabaseId } = req.params;
 
       const user = await (storage as any).getUserBySupabaseId(supabaseId);
       if (!user) {
@@ -70,15 +70,15 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // If either step fails, it rolls back the other to prevent desynchronization
   app.post('/api/auth/register-complete', async (req: Request, res: Response) => {
     let supabaseUserId: string | null = null;
-    
+
     try {
       const registrationData = req.body;
-      
+
       // Validate required fields
       if (!registrationData.email || !registrationData.password) {
         return res.status(400).json({ error: 'Email and password are required' });
       }
-      
+
       // Create Supabase service client
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
@@ -86,7 +86,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
-      
+
       // STEP 1: Create Supabase Auth account
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: registrationData.email,
@@ -98,7 +98,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           registration_date: new Date().toISOString()
         }
       });
-      
+
       if (authError || !authData.user) {
         console.error('❌ Supabase Auth creation failed for email:', registrationData.email);
         console.error('❌ Error details:', JSON.stringify(authError, null, 2));
@@ -108,10 +108,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           error: authError?.message || 'Failed to create authentication account' 
         });
       }
-      
+
       supabaseUserId = authData.user.id;
       console.log(`✅ Supabase Auth account created: ${supabaseUserId}`);
-      
+
       // STEP 2: Create local database profile
       try {
         const newUser = await storage.createUser({
@@ -141,7 +141,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           isActive: false, // Requires admin approval
           balance: "0",
         });
-        
+
         // Create initial checking account
         await storage.createAccount({
           userId: newUser.id,
@@ -151,9 +151,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           currency: 'USD',
           isActive: false // Requires admin approval
         });
-        
+
         console.log(`✅ Complete registration successful: ${newUser.email}`);
-        
+
         res.status(201).json({ 
           success: true,
           message: 'Registration successful. Awaiting admin approval.',
@@ -162,24 +162,28 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             fullName: newUser.fullName
           }
         });
-        
+
       } catch (dbError: any) {
-        // ROLLBACK: Delete Supabase Auth account if database creation fails
-        console.error('❌ Database creation failed, rolling back Supabase Auth account:', dbError);
-        
+        console.error('❌ Database error during registration:', dbError);
+
+        // Attempt to rollback Supabase Auth account
         if (supabaseUserId) {
           const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(supabaseUserId);
           if (deleteError) {
-            console.error('❌ CRITICAL: Failed to rollback Supabase Auth account:', deleteError);
+            console.error('⚠️ Failed to rollback Supabase Auth account:', deleteError);
             console.error(`⚠️ ORPHANED ACCOUNT: ${registrationData.email} (${supabaseUserId})`);
           } else {
             console.log(`✅ Rolled back Supabase Auth account: ${supabaseUserId}`);
           }
         }
-        
-        throw dbError;
+
+        res.status(500).json({ 
+          error: 'Database error during registration',
+          details: dbError.message 
+        });
+        return;
       }
-      
+
     } catch (error: any) {
       console.error('❌ Registration failed:', error);
       res.status(500).json({ 
@@ -272,7 +276,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (existingUser) {
         return res.status(409).json({ error: 'User already exists' });
       }
-      
+
       // Check if user exists in Supabase Auth (redundant if /api/auth/check-email is used correctly, but good as a safeguard)
       const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(
@@ -1470,13 +1474,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/create-admin-user', async (req: Request, res: Response) => {
     try {
       const { email, password, fullName } = req.body;
-      
+
       if (!email || !password || !fullName) {
         return res.status(400).json({ error: 'Email, password, and fullName are required' });
       }
-      
+
       console.log(`🔧 Creating admin user: ${email}`);
-      
+
       // Create Supabase admin client
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
@@ -1484,7 +1488,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
-      
+
       // STEP 1: Create Supabase Auth account with ADMIN role in app_metadata
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
@@ -1497,16 +1501,16 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           role: 'admin' // CRITICAL: Sets admin role in app_metadata
         }
       });
-      
+
       if (authError || !authData.user) {
         console.error('❌ Supabase Auth admin creation failed:', authError);
         return res.status(500).json({ 
           error: authError?.message || 'Failed to create admin authentication account' 
         });
       }
-      
+
       console.log(`✅ Supabase Auth admin account created: ${authData.user.id}`);
-      
+
       // STEP 2: Create local database profile
       try {
         const adminUser = await storage.createUser({
@@ -1535,12 +1539,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           idType: 'Staff ID',
           idNumber: 'ADMIN-001'
         });
-        
+
         console.log(`✅ Admin user created successfully: ${fullName} (${email})`);
         console.log(`📧 Email: ${email}`);
         console.log(`🔐 Password: ${password}`);
         console.log(`👤 Role: admin`);
-        
+
         res.status(201).json({ 
           success: true,
           message: 'Admin user created successfully',
@@ -1555,17 +1559,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             note: 'Password was provided during creation'
           }
         });
-        
+
       } catch (dbError: any) {
         // ROLLBACK: Delete Supabase Auth account if database creation fails
         console.error('❌ Database creation failed, rolling back Supabase Auth account:', dbError);
-        
+
         await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
         console.log(`✅ Rolled back Supabase Auth account: ${authData.user.id}`);
-        
+
         throw dbError;
       }
-      
+
     } catch (error: any) {
       console.error('❌ Admin user creation failed:', error);
       res.status(500).json({ 
