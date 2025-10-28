@@ -8,6 +8,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useRealtimeAlerts } from "@/hooks/useRealtimeTransactions";
 import { 
   Bell, 
   
@@ -34,6 +35,10 @@ export default function Alerts() {
     queryKey: ['/api/user'],
   });
 
+  // Enable real-time alerts updates
+  const userId = user?.id ? (typeof user.id === 'number' ? user.id : parseInt(user.id)) : undefined;
+  useRealtimeAlerts(userId, !!user);
+
   // Fetch real alerts from database
   const { data: alerts, isLoading: alertsLoading } = useQuery<any[]>({
     queryKey: ['/api/alerts'],
@@ -53,9 +58,7 @@ export default function Alerts() {
   // Mutation for marking alert as read
   const markAsReadMutation = useMutation({
     mutationFn: async (alertId: number) => {
-      return apiRequest(`/api/alerts/${alertId}/read`, {
-        method: 'PATCH',
-      });
+      return apiRequest(`/api/alerts/${alertId}/read`, 'PATCH');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
