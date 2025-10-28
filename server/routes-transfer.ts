@@ -1,13 +1,14 @@
 import { Express, Request, Response } from 'express';
 import { storage } from './storage-factory';
+import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
 
 function generateReferenceNumber(): string {
   return `WB-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 }
 
 export function setupTransferRoutes(app: Express) {
-  // Regular Transfer API
-  app.post('/api/transfers', async (req: Request, res: Response) => {
+  // Regular Transfer API - PROTECTED: requires authentication
+  app.post('/api/transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const {
         amount,
@@ -55,8 +56,8 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 
-  // International Transfer API
-  app.post('/api/international-transfers', async (req: Request, res: Response) => {
+  // International Transfer API - PROTECTED: requires authentication
+  app.post('/api/international-transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const {
         amount,
