@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Search, Download, ArrowUpRight, ArrowDownRight, Calendar, FileText, Tre
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 import { useToast } from "@/hooks/use-toast";
 import type { User, Transaction } from "@/lib/schema";
@@ -26,15 +27,49 @@ interface TransactionFormData {
 export default function TransactionHistory() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user'],
-  });
-  
-  const { data: transactions, isLoading: transactionsLoading, refetch: refetchTransactions } = useQuery<Transaction[]>({
-    queryKey: ['/api/accounts', '1', 'transactions'],
-    enabled: !!user?.id,
-  });
+  const [user, setUser] = useState<any>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) return;
+
+        const { data: bankUser } = await supabase
+          .from('bank_users')
+          .select('*')
+          .eq('supabase_user_id', authUser.id)
+          .single();
+
+        setUser(bankUser);
+
+        if (bankUser) {
+          const { data: accounts } = await supabase
+            .from('bank_accounts')
+            .select('id')
+            .eq('user_id', bankUser.id);
+
+          if (accounts && accounts.length > 0) {
+            const { data: txns } = await supabase
+              .from('transactions')
+              .select('*')
+              .or(`from_account_id.eq.${accounts[0].id},to_account_id.eq.${accounts[0].id}`)
+              .order('created_at', { ascending: false });
+
+            setTransactions(txns || []);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -177,7 +212,40 @@ export default function TransactionHistory() {
 
   const totals = calculateTotals();
 
-  if (isLoading || transactionsLoading) {
+  const refetchTransactions = async () => {
+    setLoading(true);
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
+      const { data: bankUser } = await supabase
+        .from('bank_users')
+        .select('*')
+        .eq('supabase_user_id', authUser.id)
+        .single();
+
+      if (bankUser) {
+        const { data: accounts } = await supabase
+          .from('bank_accounts')
+          .select('id')
+          .eq('user_id', bankUser.id);
+
+        if (accounts && accounts.length > 0) {
+          const { data: txns } = await supabase
+            .from('transactions')
+            .select('*')
+            .or(`from_account_id.eq.${accounts[0].id},to_account_id.eq.${accounts[0].id}`)
+            .order('created_at', { ascending: false });
+
+          setTransactions(txns || []);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex items-center space-x-2">

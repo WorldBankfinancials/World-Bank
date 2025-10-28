@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { 
   QrCode, 
   Share, 
@@ -52,11 +53,43 @@ export default function Receive() {
 
   const shareLink = `https://worldbank.app/pay/LW-${Date.now()}`;
 
-  // Fetch real pending requests from Supabase
-  const { data: pendingRequests } = useQuery({
-    queryKey: ['/api/payment-requests'],
-    staleTime: 30000
-  });
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchRequests() {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) return;
+
+        const { data: bankUser } = await supabase
+          .from('bank_users')
+          .select('id')
+          .eq('supabase_user_id', authUser.id)
+          .single();
+
+        if (bankUser) {
+          const { data: messages } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('recipient_id', authUser.id)
+            .eq('message_type', 'payment_request')
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          setPendingRequests(messages?.map(m => ({
+            from: m.sender_name,
+            amount: m.metadata?.amount || '$0.00',
+            time: new Date(m.created_at).toLocaleDateString(),
+            status: m.is_read ? 'completed' : 'pending'
+          })) || []);
+        }
+      } catch (error) {
+        console.error('Error fetching requests:', error);
+      }
+    }
+
+    fetchRequests();
+  }, []);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareLink);

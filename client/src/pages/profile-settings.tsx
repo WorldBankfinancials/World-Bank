@@ -7,23 +7,48 @@ import { useQuery } from "@tanstack/react-query";
 import { User, Shield, MapPin, Check, Eye, Lock, KeyRound } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/lib/supabase";
+import { useState, useEffect } from "react";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function ProfileSettings() {
-  const { data: user, isLoading } = useQuery<UserType>({
-    queryKey: ['/api/user'],
-  });
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
+  const [displayUser, setDisplayUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // For now, we are directly using the `user` object for display.
-  // In a real-world scenario, you might have a separate state for display data
-  // that gets updated after fetching, or derived from the `user` object.
-  const displayUser = user;
+  useEffect(() => {
+    async function fetchUserProfile() {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        
+        if (!authUser) {
+          setLocation('/login');
+          return;
+        }
+
+        const { data: bankUser, error } = await supabase
+          .from('bank_users')
+          .select('*')
+          .eq('supabase_user_id', authUser.id)
+          .single();
+
+        if (error) throw error;
+        
+        setDisplayUser(bankUser);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchUserProfile();
+  }, [setLocation]);
 
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">Loading profile...</div>
@@ -31,9 +56,17 @@ export default function ProfileSettings() {
     );
   }
 
+  if (!displayUser) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">User not found</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={user} />
+      <Header user={displayUser} />
 
       <div className="px-4 py-6 pb-20">
         {/* Header */}

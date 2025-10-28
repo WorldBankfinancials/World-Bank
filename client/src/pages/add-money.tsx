@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/lib/supabase";
 import { 
   CreditCard, 
   Banknote, 
@@ -81,27 +82,96 @@ export default function AddMoney() {
     }
   ];
 
-  // Fetch real transaction data from Supabase
-  const { data: recentTransactions } = useQuery({
-    queryKey: ['/api/recent-deposits'],
-    staleTime: 30000
-  });
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchDeposits() {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) return;
+
+        const { data: bankUser } = await supabase
+          .from('bank_users')
+          .select('id')
+          .eq('supabase_user_id', authUser.id)
+          .single();
+
+        if (bankUser) {
+          const { data: accounts } = await supabase
+            .from('bank_accounts')
+            .select('id')
+            .eq('user_id', bankUser.id);
+
+          if (accounts && accounts.length > 0) {
+            const { data: deposits } = await supabase
+              .from('transactions')
+              .select('*')
+              .eq('to_account_id', accounts[0].id)
+              .eq('transaction_type', 'deposit')
+              .order('created_at', { ascending: false })
+              .limit(5);
+
+            setRecentTransactions(deposits?.map(d => ({
+              method: d.description || 'Debit Card',
+              amount: `$${parseFloat(d.amount || '0').toFixed(2)}`,
+              time: new Date(d.created_at).toLocaleDateString(),
+              status: d.status === 'completed' ? 'Completed' : 'Pending'
+            })) || []);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching deposits:', error);
+      }
+    }
+
+    fetchDeposits();
+  }, []);
 
   const handleAddMoney = async () => {
     if (!selectedMethod || !amount) {
-      
+      alert('Please select a payment method and enter an amount');
       return;
     }
 
     setLoading(true);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error('Not authenticated');
+
+      const { data: bankUser } = await supabase
+        .from('bank_users')
+        .select('id')
+        .eq('supabase_user_id', authUser.id)
+        .single();
+
+      if (!bankUser) throw new Error('User not found');
+
+      const { data: accounts } = await supabase
+        .from('bank_accounts')
+        .select('id')
+        .eq('user_id', bankUser.id);
+
+      if (!accounts || accounts.length === 0) throw new Error('No account found');
+
+      await supabase
+        .from('transactions')
+        .insert({
+          to_account_id: accounts[0].id,
+          amount: parseFloat(amount),
+          currency: 'USD',
+          transaction_type: 'deposit',
+          description: `Add Money via ${selectedMethod}`,
+          status: 'completed'
+        });
+
+      alert(`Successfully added $${amount} to your account!`);
       setAmount("");
       setSelectedMethod("");
-    } catch (error) {
       
+      window.location.reload();
+    } catch (error: any) {
+      alert(error.message || 'Failed to add money');
     } finally {
       setLoading(false);
     }

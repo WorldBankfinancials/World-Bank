@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Send, MessageSquare, Users, AlertCircle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 
 export default function CustomerSupport() {
@@ -32,30 +33,37 @@ export default function CustomerSupport() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/support-tickets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id || 1,
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error('Not authenticated');
+
+      const { data: bankUser } = await supabase
+        .from('bank_users')
+        .select('id')
+        .eq('supabase_user_id', authUser.id)
+        .single();
+
+      if (!bankUser) throw new Error('User not found');
+
+      const { error } = await supabase
+        .from('support_tickets')
+        .insert({
+          user_id: bankUser.id,
           subject,
           category,
           priority,
           description,
           status: 'open'
-        })
-      });
+        });
 
-      if (response.ok) {
-        alert('Support ticket submitted successfully! Our team will contact you soon.');
-        setSubject('');
-        setCategory('');
-        setPriority('');
-        setDescription('');
-      } else {
-        throw new Error('Failed to submit ticket');
-      }
-    } catch (error) {
-      alert('Failed to submit support ticket. Please try again.');
+      if (error) throw error;
+
+      alert('Support ticket submitted successfully! Our team will contact you soon.');
+      setSubject('');
+      setCategory('');
+      setPriority('');
+      setDescription('');
+    } catch (error: any) {
+      alert(error.message || 'Failed to submit support ticket. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

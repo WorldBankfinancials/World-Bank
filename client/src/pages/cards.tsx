@@ -13,6 +13,7 @@ import QuickActions from '@/components/QuickActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 export default function Cards() {
   const { userProfile } = useAuth();
@@ -30,11 +31,56 @@ export default function Cards() {
   const [accountNumber, setAccountNumber] = useState('');
 
   const queryClient = useQueryClient();
-  const { data: creditCards, isLoading: cardsLoading, error: cardsError } = useQuery<any[]>({
-    queryKey: ['/api/cards'],
-    staleTime: 30000,
-    retry: 3
-  });
+  const [creditCards, setCreditCards] = useState<any[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(true);
+  const [cardsError, setCardsError] = useState<any>(null);
+
+  useEffect(() => {
+    async function fetchCards() {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) return;
+
+        const { data: bankUser } = await supabase
+          .from('bank_users')
+          .select('id')
+          .eq('supabase_user_id', authUser.id)
+          .single();
+
+        if (bankUser) {
+          const { data: cards, error } = await supabase
+            .from('cards')
+            .select('*')
+            .eq('user_id', bankUser.id);
+
+          if (error) throw error;
+          
+          setCreditCards(cards?.map(card => ({
+            id: card.id,
+            name: card.card_name,
+            number: card.card_number,
+            type: card.card_type,
+            balance: parseFloat(card.balance || '0'),
+            limit: parseFloat(card.credit_limit || '0'),
+            expiry: card.expiry_date,
+            isLocked: card.is_locked,
+            color: card.card_type === 'Platinum' ? 'bg-gradient-to-br from-gray-800 to-gray-900' :
+                   card.card_type === 'Business' ? 'bg-gradient-to-br from-blue-600 to-blue-800' :
+                   'bg-gradient-to-br from-yellow-600 to-yellow-800',
+            dailyLimit: parseFloat(card.daily_limit || '5000'),
+            contactlessEnabled: card.contactless_enabled
+          })) || []);
+        }
+      } catch (error) {
+        console.error('Error fetching cards:', error);
+        setCardsError(error);
+      } finally {
+        setCardsLoading(false);
+      }
+    }
+
+    fetchCards();
+  }, []);
 
   // Show error message if cards fail to load
   useEffect(() => {
