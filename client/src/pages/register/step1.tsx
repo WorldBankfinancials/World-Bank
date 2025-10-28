@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { BankLogo } from '@/components/BankLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/hooks/use-toast';
 import { ArrowRight, User } from 'lucide-react';
 
 const step1Schema = z.object({
@@ -29,6 +30,7 @@ interface Step1Props {
 export default function RegistrationStep1({ initialData = {}, onNext }: Step1Props) {
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const {
     register,
@@ -42,6 +44,37 @@ export default function RegistrationStep1({ initialData = {}, onNext }: Step1Pro
   const onSubmit = async (data: Step1Data) => {
     setIsLoading(true);
     try {
+      // Check if email already exists via server API
+      const response = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: data.email }),
+      });
+      
+      if (!response.ok) {
+        toast({
+          title: 'Error',
+          description: 'Unable to verify email. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      const result = await response.json();
+      
+      // Check if email is already registered
+      if (!result.available) {
+        toast({
+          title: 'Email Already Registered',
+          description: 'This email address is already registered. Please use a different email or contact customer support if you need assistance.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Email is available, proceed to next step
       onNext(data);
     } finally {
       setIsLoading(false);

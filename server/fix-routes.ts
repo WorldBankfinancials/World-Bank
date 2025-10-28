@@ -65,6 +65,47 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check email availability endpoint - Used during registration Step 1
+  app.post('/api/auth/check-email', async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+      
+      // Check if email exists in Supabase Auth using service role
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseServiceClient = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        }
+      );
+      
+      const { data: { users }, error } = await supabaseServiceClient.auth.admin.listUsers();
+      
+      if (error) {
+        console.error('Error checking email:', error);
+        return res.status(500).json({ error: 'Unable to check email availability' });
+      }
+      
+      const emailExists = users?.some(user => user.email?.toLowerCase() === email.toLowerCase());
+      
+      res.json({ 
+        available: !emailExists,
+        message: emailExists ? 'Email already registered' : 'Email available'
+      });
+    } catch (error: any) {
+      console.error('Check email error:', error);
+      res.status(500).json({ error: 'Failed to check email availability', details: error.message });
+    }
+  });
+
   // User registration endpoint - Creates user profile in local database
   // SECURITY: Password should NEVER be sent here - Supabase Auth handles passwords
   app.post('/api/auth/register', async (req: Request, res: Response) => {

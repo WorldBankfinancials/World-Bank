@@ -100,7 +100,7 @@ export default function MultiStepRegisterPage() {
         }
       }
 
-      // Create Supabase account - REQUIRES SUPPORT TEAM APPROVAL
+      // Create Supabase account - Note: Email uniqueness is checked in Step 1
       const { error } = await signUp(completeData.email, completeData.password, {
         full_name: `${completeData.firstName} ${completeData.lastName}`,
         phone: completeData.phone,
