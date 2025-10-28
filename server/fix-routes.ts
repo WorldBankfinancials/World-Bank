@@ -91,7 +91,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: registrationData.email,
         password: registrationData.password,
-        email_confirm: false, // Auto-confirm for banking app
+        email_confirm: true, // Auto-confirm for banking app
         user_metadata: {
           full_name: registrationData.fullName,
           phone: registrationData.phone,
@@ -133,20 +133,19 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           supabaseUserId: supabaseUserId,
           accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
           accountId: `WB${Date.now()}`,
-          password: 'supabase_auth',
+          passwordHash: 'supabase_auth',
           transferPin: registrationData.transferPin || '0000',
           role: 'customer',
           isVerified: false,
           isOnline: false,
           isActive: false, // Requires admin approval
-          balance: 0,
+          balance: "0",
         });
         
         // Create initial checking account
         await storage.createAccount({
           userId: newUser.id,
           accountNumber: newUser.accountNumber,
-          accountName: `${newUser.fullName}'s Checking Account`,
           accountType: 'checking',
           balance: '0.00',
           currency: 'USD',
@@ -332,7 +331,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       await storage.createAccount({
         userId: newUser.id,
         accountNumber: accountNumber,
-        accountName: `${newUser.fullName}'s Checking Account`,
         accountType: 'checking',
         balance: '0.00',
         currency: 'USD',
