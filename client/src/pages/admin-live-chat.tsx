@@ -93,19 +93,40 @@ export default function AdminLiveChat() {
         const data = JSON.parse(event.data);
         if (data.type === 'chat_message' && data.senderRole === 'customer') {
           // Add customer message to appropriate chat session
-          setChatSessions(prev => prev.map(session => {
-            if (session.customerId === data.senderId) {
-              return {
-                ...session,
-                messages: [...session.messages, data],
+          setChatSessions(prev => {
+            // Check if session exists for this customer
+            const existingSessionIndex = prev.findIndex(s => s.customerId === data.senderId);
+            
+            if (existingSessionIndex >= 0) {
+              // Update existing session
+              return prev.map((session, index) => {
+                if (index === existingSessionIndex) {
+                  return {
+                    ...session,
+                    messages: [...session.messages, data],
+                    lastMessage: data.message,
+                    lastMessageTime: new Date(data.timestamp),
+                    unreadCount: session.unreadCount + 1,
+                    status: 'active' as const
+                  };
+                }
+                return session;
+              });
+            } else {
+              // Create new session for this customer
+              const newSession: ChatSession = {
+                id: `chat_${data.senderId}`,
+                customerId: data.senderId,
+                customerName: data.senderName,
+                status: 'active',
                 lastMessage: data.message,
                 lastMessageTime: new Date(data.timestamp),
-                unreadCount: session.unreadCount + 1,
-                status: 'active' as const
+                unreadCount: 1,
+                messages: [data]
               };
+              return [...prev, newSession];
             }
-            return session;
-          }));
+          });
         }
       };
 
