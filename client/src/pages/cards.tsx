@@ -98,13 +98,14 @@ export default function Cards() {
     if (!selectedCard) return;
     
     try {
-      const response = await apiRequest('POST', '/api/verify-pin', {
-        username: userProfile?.email || 'user@worldbank.com',
-        pin
+      const response = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
       });
 
       if (response.ok) {
-        // Update card lock status in database
+        // Update card lock status in database (PROTECTED - needs auth)
         await apiRequest('POST', '/api/cards/lock', {
           cardId: selectedCard.id,
           isLocked: !selectedCard.isLocked
@@ -139,9 +140,10 @@ export default function Cards() {
 
   const handleMobilePay = async () => {
     try {
-      const response = await apiRequest('POST', '/api/verify-pin', {
-        username: userProfile?.email || 'user@worldbank.com',
-        pin
+      const response = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
       });
 
       if (response.ok) {
@@ -171,9 +173,10 @@ export default function Cards() {
 
   const handlePayBill = async () => {
     try {
-      const response = await apiRequest('POST', '/api/verify-pin', {
-        username: userProfile?.email || 'user@worldbank.com',
-        pin
+      const response = await fetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
       });
 
       if (response.ok) {
