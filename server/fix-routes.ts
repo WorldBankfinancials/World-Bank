@@ -65,6 +65,105 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User registration endpoint - Creates user profile in local database
+  // SECURITY: Password should NEVER be sent here - Supabase Auth handles passwords
+  app.post('/api/auth/register', async (req: Request, res: Response) => {
+    try {
+      const userData = req.body;
+      
+      // SECURITY: Verify required fields (but NOT password - that's in Supabase Auth only)
+      if (!userData.email || !userData.supabaseUserId) {
+        return res.status(400).json({ 
+          error: 'Missing required fields: email and supabaseUserId are required' 
+        });
+      }
+
+      // SECURITY: Block if password is included - this is a security violation
+      if (userData.password) {
+        console.error('🚨 SECURITY VIOLATION: Password sent to /api/auth/register endpoint!');
+        return res.status(400).json({ 
+          error: 'Invalid request - passwords must not be sent to this endpoint' 
+        });
+      }
+
+      // SECURITY: Block privilege escalation attempts
+      if (userData.role && userData.role !== 'customer') {
+        console.error(`🚨 PRIVILEGE ESCALATION ATTEMPT: Client tried to set role to "${userData.role}"`);
+        return res.status(400).json({ 
+          error: 'Invalid request - role cannot be set by client' 
+        });
+      }
+
+      // Check if user already exists
+      const existingUser = await (storage as any).getUserByEmail(userData.email);
+      if (existingUser) {
+        return res.status(409).json({ error: 'User already exists' });
+      }
+
+      // SECURITY: Only accept whitelisted fields from client, hardcode privileged fields server-side
+      const newUser = await storage.createUser({
+        // WHITELISTED FIELDS (client-provided)
+        username: userData.username || userData.email.split('@')[0],
+        fullName: userData.fullName,
+        email: userData.email,
+        phone: userData.phone,
+        dateOfBirth: userData.dateOfBirth,
+        address: userData.address,
+        city: userData.city,
+        state: userData.state,
+        country: userData.country,
+        postalCode: userData.postalCode,
+        profession: userData.profession,
+        annualIncome: userData.annualIncome,
+        idType: userData.idType,
+        idNumber: userData.idNumber,
+        supabaseUserId: userData.supabaseUserId,
+        accountNumber: userData.accountNumber || `${Math.floor(10000000 + Math.random() * 90000000)}`,
+        accountId: userData.accountId || `WB${Date.now()}`,
+        
+        // SERVER-CONTROLLED FIELDS (never trust client)
+        password: 'supabase_auth', // Marker indicating password is in Supabase Auth
+        transferPin: '0000', // Default PIN, user MUST change on first login
+        role: 'customer', // Always customer for new registrations
+        isVerified: false, // Admin must verify
+        isOnline: true,
+        isActive: false, // Admin must activate
+        balance: 0, // Always start at 0
+      });
+
+      // Create initial checking account
+      const accountNumber = `${Math.floor(10000000 + Math.random() * 90000000)}`;
+      await storage.createAccount({
+        userId: newUser.id,
+        accountNumber: accountNumber,
+        accountName: `${newUser.fullName}'s Checking Account`,
+        accountType: 'checking',
+        balance: '0.00',
+        currency: 'USD',
+        isActive: true
+      });
+
+      console.log(`✅ New user registered: ${newUser.fullName} (${newUser.email})`);
+      
+      res.status(201).json({ 
+        success: true,
+        message: 'User profile created successfully',
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          fullName: newUser.fullName,
+          role: newUser.role
+        }
+      });
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      res.status(500).json({ 
+        error: 'Failed to create user profile',
+        details: error.message 
+      });
+    }
+  });
+
   // WARNING: This endpoint uses service role key and should NEVER be exposed in production
   app.post('/api/create-test-user', async (req: Request, res: Response) => {
     // CRITICAL: Block in production to prevent privilege escalation

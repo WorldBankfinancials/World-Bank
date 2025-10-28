@@ -86,31 +86,38 @@ export default function RegisterPage() {
       const supabase = getSupabaseClient();
       let supabaseUserId = null;
 
-      // Try to create user in Supabase Auth if available
-      if (supabase) {
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: data.email,
-          password: data.password,
-          options: {
-            data: {
-              first_name: data.firstName,
-              last_name: data.lastName,
-              full_name: `${data.firstName} ${data.lastName}`,
-            }
-          }
-        });
-
-        if (authError) {
-          // console.warn('Supabase auth error:', authError.message);
-        } else if (authData.user) {
-          supabaseUserId = authData.user.id;
-        }
+      // CRITICAL: Create user in Supabase Auth FIRST
+      if (!supabase) {
+        throw new Error('Authentication service unavailable. Please try again later.');
       }
 
-      // Create user profile in our database
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            first_name: data.firstName,
+            last_name: data.lastName,
+            full_name: `${data.firstName} ${data.lastName}`,
+          }
+        }
+      });
+
+      // SECURITY: Fail immediately if Supabase auth fails
+      if (authError) {
+        console.error('Supabase authentication failed:', authError.message);
+        throw new Error(authError.message || 'Failed to create authentication account. User may already exist.');
+      }
+
+      if (!authData.user) {
+        throw new Error('Authentication account creation failed. Please try again.');
+      }
+
+      supabaseUserId = authData.user.id;
+
+      // SECURITY: NEVER send password to backend - Supabase handles it
       const userProfile = {
         username: data.email.split('@')[0],
-        password: data.password,
         fullName: `${data.firstName} ${data.lastName}`,
         email: data.email,
         phone: data.phone,
