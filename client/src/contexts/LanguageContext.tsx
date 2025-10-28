@@ -223,6 +223,7 @@ const translations = {
     'transfer_pin_settings': 'Transfer PIN Settings',
     'contact_customer_support_to_request_pin_changes': 'Contact customer support to request PIN changes',
     'admin_only': 'Admin Only',
+    'admin_will_review_shortly': 'Our customer support team will review your request shortly',
     'two_factor_authentication': 'Two-Factor Authentication',
     'add_an_extra_layer_of_security': 'Add an extra layer of security',
     'enabled': 'Enabled',

@@ -100,7 +100,7 @@ export default function MultiStepRegisterPage() {
         }
       }
 
-      // Create Supabase account - REQUIRES ADMIN APPROVAL
+      // Create Supabase account - REQUIRES SUPPORT TEAM APPROVAL
       const { error } = await signUp(completeData.email, completeData.password, {
         full_name: `${completeData.firstName} ${completeData.lastName}`,
         phone: completeData.phone,
@@ -120,19 +120,23 @@ export default function MultiStepRegisterPage() {
         id_number: completeData.idNumber,
         transfer_pin: completeData.transferPin,
         id_card_url: idCardUrl,
-        // ADMIN APPROVAL REQUIRED
+        // SUPPORT TEAM APPROVAL REQUIRED
         approval_status: 'pending',
         is_approved: false,
         registration_date: new Date().toISOString()
       });
 
       if (error) {
+        // Check if it's a duplicate email error
+        if (error.toLowerCase().includes('already') || error.toLowerCase().includes('exists') || error.toLowerCase().includes('duplicate')) {
+          throw new Error('This email is already registered. Please use a different email or try logging in with your existing account.');
+        }
         throw new Error(error);
       }
 
       toast({
         title: 'Registration Submitted Successfully!',
-        description: 'Your application is pending admin approval. You will receive an email notification once approved.',
+        description: 'Your application is being reviewed by our customer support team. You will receive an email notification once approved.',
         duration: 5000,
       });
 

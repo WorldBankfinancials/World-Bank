@@ -150,7 +150,7 @@ export default function Transfer() {
         transferPin: transferPin,
         userEmail: userProfile?.email || user?.email!,
         status: "pending_approval",
-        requiresApproval: parseFloat(amount) >= 10000 // Transfers over $10k require admin approval
+        requiresApproval: parseFloat(amount) >= 10000 // Transfers over $10k require support team approval
       };
       
       

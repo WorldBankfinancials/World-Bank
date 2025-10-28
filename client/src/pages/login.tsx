@@ -29,7 +29,7 @@ export default function Login() {
     if (urlParams.get('status') === 'pending') {
       toast({
         title: "Registration Pending Approval",
-        description: "Your registration is being reviewed by our admin team. You'll receive an email once approved.",
+        description: "Your registration is being reviewed by our customer support team. You'll receive an email once approved.",
         duration: 8000,
       });
     }
