@@ -2,7 +2,7 @@ import { pgTable, text, serial, integer, boolean, decimal, timestamp } from "dri
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
+export const users = pgTable("bank_users", {
   id: serial("id").primaryKey(),
   supabaseUserId: text("supabase_user_id").unique(),
   username: text("username").notNull().unique(),
@@ -38,7 +38,7 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const accounts = pgTable("accounts", {
+export const accounts = pgTable("bank_accounts", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   accountNumber: text("account_number").notNull(),

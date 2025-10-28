@@ -1456,6 +1456,117 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ADMIN USER CREATION ENDPOINT
+  // Creates a complete admin user in both Supabase Auth and local database
+  // This is a one-time setup endpoint - should be secured in production
+  app.post('/api/admin/create-admin-user', async (req: Request, res: Response) => {
+    try {
+      const { email, password, fullName } = req.body;
+      
+      if (!email || !password || !fullName) {
+        return res.status(400).json({ error: 'Email, password, and fullName are required' });
+      }
+      
+      console.log(`🔧 Creating admin user: ${email}`);
+      
+      // Create Supabase admin client
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+      
+      // STEP 1: Create Supabase Auth account with ADMIN role in app_metadata
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true, // Auto-confirm
+        user_metadata: {
+          full_name: fullName
+        },
+        app_metadata: {
+          role: 'admin' // CRITICAL: Sets admin role in app_metadata
+        }
+      });
+      
+      if (authError || !authData.user) {
+        console.error('❌ Supabase Auth admin creation failed:', authError);
+        return res.status(500).json({ 
+          error: authError?.message || 'Failed to create admin authentication account' 
+        });
+      }
+      
+      console.log(`✅ Supabase Auth admin account created: ${authData.user.id}`);
+      
+      // STEP 2: Create local database profile
+      try {
+        const adminUser = await storage.createUser({
+          username: email.split('@')[0] + '_admin',
+          fullName: fullName,
+          email: email,
+          phone: '+1-000-000-0000',
+          supabaseUserId: authData.user.id,
+          accountNumber: `ADMIN-${Math.floor(10000000 + Math.random() * 90000000)}`,
+          accountId: `WB-ADMIN-${Date.now()}`,
+          password: 'supabase_auth', // Marker
+          transferPin: '9999', // Admin PIN
+          role: 'admin', // ADMIN ROLE
+          isVerified: true,
+          isOnline: true,
+          isActive: true,
+          balance: 0,
+          dateOfBirth: '1990-01-01',
+          address: 'World Bank HQ',
+          city: 'Washington',
+          state: 'DC',
+          country: 'United States',
+          postalCode: '20001',
+          profession: 'Administrator',
+          annualIncome: 'N/A',
+          idType: 'Staff ID',
+          idNumber: 'ADMIN-001'
+        });
+        
+        console.log(`✅ Admin user created successfully: ${fullName} (${email})`);
+        console.log(`📧 Email: ${email}`);
+        console.log(`🔐 Password: ${password}`);
+        console.log(`👤 Role: admin`);
+        
+        res.status(201).json({ 
+          success: true,
+          message: 'Admin user created successfully',
+          user: {
+            id: adminUser.id,
+            email: adminUser.email,
+            fullName: adminUser.fullName,
+            role: adminUser.role
+          },
+          credentials: {
+            email: email,
+            note: 'Password was provided during creation'
+          }
+        });
+        
+      } catch (dbError: any) {
+        // ROLLBACK: Delete Supabase Auth account if database creation fails
+        console.error('❌ Database creation failed, rolling back Supabase Auth account:', dbError);
+        
+        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+        console.log(`✅ Rolled back Supabase Auth account: ${authData.user.id}`);
+        
+        throw dbError;
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Admin user creation failed:', error);
+      res.status(500).json({ 
+        error: 'Admin user creation failed',
+        details: error.message 
+      });
+    }
+  });
+
   // Admin login endpoint - Validates admin credentials from Supabase app_metadata
   app.post('/api/admin/login', async (req: Request, res: Response) => {
     try {
