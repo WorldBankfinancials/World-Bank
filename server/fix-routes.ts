@@ -80,7 +80,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
       
       // Create Supabase service client
-      const { createClient } = require('@supabase/supabase-js');
+      const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
         process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -100,7 +100,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
       
       if (authError || !authData.user) {
-        console.error('❌ Supabase Auth creation failed:', authError);
+        console.error('❌ Supabase Auth creation failed for email:', registrationData.email);
+        console.error('❌ Error details:', JSON.stringify(authError, null, 2));
+        console.error('❌ Error message:', authError?.message);
+        console.error('❌ Error status:', authError?.status);
         return res.status(500).json({ 
           error: authError?.message || 'Failed to create authentication account' 
         });
@@ -206,7 +209,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // Check Supabase Auth
-      const { createClient } = require('@supabase/supabase-js');
+      const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(
         process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -272,7 +275,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user exists in Supabase Auth (redundant if /api/auth/check-email is used correctly, but good as a safeguard)
-      const { createClient } = require('@supabase/supabase-js');
+      const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(
         process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -1463,7 +1466,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // Use Supabase Auth for admin authentication
-      const { createClient } = require('@supabase/supabase-js');
+      const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(
         process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
