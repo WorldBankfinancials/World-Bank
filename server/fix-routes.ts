@@ -673,7 +673,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found', verified: false });
       }
 
-      console.log('✅ Found user:', { id: user.id, email: user.email });
+      console.log('✅ Found user:', { id: user.id, email: user.email, isActive: user.isActive });
+
+      // SECURITY: Check if account is active (approved by admin)
+      if (!user.isActive) {
+        console.log('🚫 PIN verification blocked - account pending approval:', user.email);
+        return res.status(403).json({ 
+          message: 'Your account is pending approval by our customer support team. You will receive a notification once your account is activated.',
+          verified: false,
+          error: 'Account pending approval'
+        });
+      }
 
       if (user.transferPin !== body.pin) {
         console.log('❌ PIN mismatch - Expected:', user.transferPin, 'Got:', body.pin);
@@ -1596,6 +1606,22 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // CRITICAL: Check role from app_metadata (server-controlled)
       const role = data.user.app_metadata?.role || 'customer';
+
+      // SECURITY: Check if user account is active (approved by admin)
+      const dbUser = await storage.getUserByEmail(email);
+      if (!dbUser) {
+        console.error(`❌ User authenticated but not found in database: ${email}`);
+        return res.status(403).json({ 
+          error: 'Account not found. Please contact support.' 
+        });
+      }
+
+      if (!dbUser.isActive) {
+        console.log(`🚫 Login blocked - account pending approval: ${email}`);
+        return res.status(403).json({ 
+          error: 'Your account is pending approval by our customer support team. You will receive a notification once your account is activated.' 
+        });
+      }
 
       console.log(`✅ Customer login successful: ${email} (role: ${role})`);
 

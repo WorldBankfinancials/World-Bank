@@ -87,16 +87,7 @@ export default function RegistrationStep4({ initialData = {}, onSubmit, onBack, 
   };
 
   const handleFormSubmit = (data: Step4Data) => {
-    if (!idCardFile) {
-      toast({
-        title: t('ID Card Required'),
-        description: t('Please upload a photo of your ID card'),
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    onSubmit(data, idCardFile);
+    onSubmit(data, idCardFile || undefined);
   };
 
   return (
@@ -162,7 +153,7 @@ export default function RegistrationStep4({ initialData = {}, onSubmit, onBack, 
 
               {/* ID Card Upload */}
               <div>
-                <Label>{t('Upload ID Card Photo')} *</Label>
+                <Label>{t('Upload ID Card Photo')} ({t('Optional')})</Label>
                 <div className="mt-2">
                   <input
                     id="idCardUpload"
