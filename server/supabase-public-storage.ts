@@ -1026,23 +1026,182 @@ export class SupabasePublicStorage implements IStorage {
   }
 
   async createAdminAction(action: InsertAdminAction): Promise<AdminAction> {
-    throw new Error('Admin actions not implemented yet');
+    try {
+      const { data, error } = await supabase.from('admin_actions').insert({
+        admin_id: action.adminId,
+        action_type: action.actionType,
+        target_id: action.targetId,
+        target_type: action.targetType,
+        description: action.description,
+        metadata: action.metadata || null,
+      }).select().single();
+      
+      if (error) {
+        console.error('Error creating admin action:', error);
+        throw error;
+      }
+      
+      return {
+        id: data.id,
+        adminId: data.admin_id,
+        actionType: data.action_type,
+        targetId: data.target_id,
+        targetType: data.target_type,
+        description: data.description,
+        metadata: data.metadata,
+        createdAt: new Date(data.created_at),
+      } as AdminAction;
+    } catch (error) {
+      console.error('Failed to create admin action:', error);
+      throw error;
+    }
   }
 
   async getAdminActions(adminId?: number): Promise<AdminAction[]> {
-    return [];
+    let query = supabase.from('admin_actions').select('*').order('created_at', { ascending: false });
+    
+    if (adminId !== undefined) {
+      query = query.eq('admin_id', adminId);
+    }
+    
+    const { data, error } = await query;
+    if (error) {
+      console.error('Error fetching admin actions:', error);
+      throw new Error(`Failed to fetch admin actions: ${error.message}`);
+    }
+    
+    return (data || []).map(action => ({
+      id: action.id,
+      adminId: action.admin_id,
+      actionType: action.action_type,
+      targetId: action.target_id,
+      targetType: action.target_type,
+      description: action.description,
+      metadata: action.metadata,
+      createdAt: new Date(action.created_at),
+    } as AdminAction));
   }
 
   async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> {
-    throw new Error('Support tickets not implemented yet');
+    try {
+      const { data, error } = await supabase.from('support_tickets').insert({
+        user_id: ticket.userId,
+        subject: ticket.subject,
+        description: ticket.description,
+        priority: ticket.priority || 'medium',
+        status: ticket.status || 'open',
+        category: ticket.category || null,
+        assigned_to: ticket.assignedTo || null,
+        admin_notes: ticket.adminNotes || null,
+        resolution: ticket.resolution || null,
+      }).select().single();
+      
+      if (error) {
+        console.error('Error creating support ticket:', error);
+        throw error;
+      }
+      
+      return {
+        id: data.id,
+        userId: data.user_id,
+        subject: data.subject,
+        description: data.description,
+        priority: data.priority,
+        status: data.status,
+        category: data.category,
+        assignedTo: data.assigned_to,
+        adminNotes: data.admin_notes,
+        resolution: data.resolution,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at),
+        resolvedAt: data.resolved_at ? new Date(data.resolved_at) : null,
+      } as SupportTicket;
+    } catch (error) {
+      console.error('Failed to create support ticket:', error);
+      throw error;
+    }
   }
 
   async getSupportTickets(userId?: number): Promise<SupportTicket[]> {
-    return [];
+    let query = supabase.from('support_tickets').select('*').order('created_at', { ascending: false });
+    
+    if (userId !== undefined) {
+      query = query.eq('user_id', userId);
+    }
+    
+    const { data, error} = await query;
+    if (error) {
+      console.error('Error fetching support tickets:', error);
+      throw new Error(`Failed to fetch support tickets: ${error.message}`);
+    }
+    
+    return (data || []).map(ticket => ({
+      id: ticket.id,
+      userId: ticket.user_id,
+      subject: ticket.subject,
+      description: ticket.description,
+      priority: ticket.priority,
+      status: ticket.status,
+      category: ticket.category,
+      assignedTo: ticket.assigned_to,
+      adminNotes: ticket.admin_notes,
+      resolution: ticket.resolution,
+      createdAt: new Date(ticket.created_at),
+      updatedAt: new Date(ticket.updated_at),
+      resolvedAt: ticket.resolved_at ? new Date(ticket.resolved_at) : null,
+    } as SupportTicket));
   }
 
   async updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
-    return undefined;
+    try {
+      const updateData: any = {
+        updated_at: new Date().toISOString(),
+      };
+      
+      if (updates.status !== undefined) updateData.status = updates.status;
+      if (updates.priority !== undefined) updateData.priority = updates.priority;
+      if (updates.assignedTo !== undefined) updateData.assigned_to = updates.assignedTo;
+      if (updates.adminNotes !== undefined) updateData.admin_notes = updates.adminNotes;
+      if (updates.resolution !== undefined) updateData.resolution = updates.resolution;
+      if (updates.category !== undefined) updateData.category = updates.category;
+      
+      // If status is being set to resolved, update resolvedAt
+      if (updates.status === 'resolved' && !updates.resolvedAt) {
+        updateData.resolved_at = new Date().toISOString();
+      }
+      
+      const { data, error } = await supabase.from('support_tickets')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error updating support ticket:', error);
+        throw error;
+      }
+      
+      if (!data) return undefined;
+      
+      return {
+        id: data.id,
+        userId: data.user_id,
+        subject: data.subject,
+        description: data.description,
+        priority: data.priority,
+        status: data.status,
+        category: data.category,
+        assignedTo: data.assigned_to,
+        adminNotes: data.admin_notes,
+        resolution: data.resolution,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at),
+        resolvedAt: data.resolved_at ? new Date(data.resolved_at) : null,
+      } as SupportTicket;
+    } catch (error) {
+      console.error('Failed to update support ticket:', error);
+      return undefined;
+    }
   }
 
   // Cards methods

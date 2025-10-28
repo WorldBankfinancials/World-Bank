@@ -28,6 +28,12 @@ export default function InvestmentTrading() {
     queryKey: ['/api/user'],
   });
 
+  // Market data APIs not yet implemented - showing empty state
+  // TODO: Implement /api/market-indices, /api/top-stocks, /api/portfolio-assets endpoints
+  const marketIndices: Array<{ name: string; value: string; change: string; trend: string }> = [];
+  const topStocks: Array<{ symbol: string; name: string; price: string; change: string; trend: string }> = [];
+  const portfolioAssets: Array<{ name: string; value: string; allocation: string; change: string }> = [];
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -35,29 +41,6 @@ export default function InvestmentTrading() {
       </div>
     );
   }
-
-  const marketIndices = [
-    { name: "S&P 500", value: "4,789.45", change: "+1.2%", trend: "up" },
-    { name: "NASDAQ", value: "15,234.87", change: "+0.8%", trend: "up" },
-    { name: "DOW JONES", value: "37,845.12", change: "-0.3%", trend: "down" },
-    { name: "FTSE 100", value: "7,654.23", change: "+0.5%", trend: "up" }
-  ];
-
-  const topStocks = [
-    { symbol: "AAPL", name: "Apple Inc.", price: "$195.42", change: "+2.1%", trend: "up" },
-    { symbol: "MSFT", name: "Microsoft", price: "$378.85", change: "+1.8%", trend: "up" },
-    { symbol: "GOOGL", name: "Alphabet", price: "$142.65", change: "-0.7%", trend: "down" },
-    { symbol: "AMZN", name: "Amazon", price: "$151.94", change: "+1.4%", trend: "up" },
-    { symbol: "TSLA", name: "Tesla", price: "$248.48", change: "+3.2%", trend: "up" },
-    { symbol: "NVDA", name: "NVIDIA", price: "$495.22", change: "+2.9%", trend: "up" }
-  ];
-
-  const portfolioAssets = [
-    { name: "US Equities", value: "$25,847,392", allocation: "54%", change: "+8.2%" },
-    { name: "International Equities", value: "$12,384,156", allocation: "26%", change: "+6.7%" },
-    { name: "Fixed Income", value: "$7,245,891", allocation: "15%", change: "+2.1%" },
-    { name: "Commodities", value: "$2,355,756", allocation: "5%", change: "+12.4%" }
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -152,23 +135,31 @@ export default function InvestmentTrading() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {marketIndices.map((index, i) => (
-                    <div key={i} className="text-center p-4 border rounded-lg">
-                      <div className="font-semibold text-gray-900">{index.name}</div>
-                      <div className="text-lg font-bold mt-1">{index.value}</div>
-                      <div className={`text-sm flex items-center justify-center mt-1 ${
-                        index.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {index.trend === 'up' ? 
-                          <ArrowUpRight className="w-3 h-3 mr-1" /> : 
-                          <ArrowDownRight className="w-3 h-3 mr-1" />
-                        }
-                        {index.change}
+                {marketIndices.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <Globe className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p className="font-medium">Market Data Not Available</p>
+                    <p className="text-sm mt-2">Market indices API integration pending</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {marketIndices.map((index, i) => (
+                      <div key={i} className="text-center p-4 border rounded-lg">
+                        <div className="font-semibold text-gray-900">{index.name}</div>
+                        <div className="text-lg font-bold mt-1">{index.value}</div>
+                        <div className={`text-sm flex items-center justify-center mt-1 ${
+                          index.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {index.trend === 'up' ? 
+                            <ArrowUpRight className="w-3 h-3 mr-1" /> : 
+                            <ArrowDownRight className="w-3 h-3 mr-1" />
+                          }
+                          {index.change}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -181,9 +172,16 @@ export default function InvestmentTrading() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {topStocks.map((stock, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                {topStocks.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <Star className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p className="font-medium">Stock Data Not Available</p>
+                    <p className="text-sm mt-2">Top stocks API integration pending</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {topStocks.map((stock, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                           <span className="text-blue-600 font-semibold text-sm">{stock.symbol}</span>
@@ -206,8 +204,9 @@ export default function InvestmentTrading() {
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -220,23 +219,31 @@ export default function InvestmentTrading() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {portfolioAssets.map((asset, i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-4 h-4 bg-blue-600 rounded-full"></div>
-                        <div>
-                          <div className="font-medium text-gray-900">{asset.name}</div>
-                          <div className="text-sm text-gray-500">{asset.allocation} of portfolio</div>
+                {portfolioAssets.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <PieChart className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p className="font-medium">Portfolio Data Not Available</p>
+                    <p className="text-sm mt-2">Portfolio assets API integration pending</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {portfolioAssets.map((asset, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-4 h-4 bg-blue-600 rounded-full"></div>
+                          <div>
+                            <div className="font-medium text-gray-900">{asset.name}</div>
+                            <div className="text-sm text-gray-500">{asset.allocation} of portfolio</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-gray-900">{asset.value}</div>
+                          <div className="text-sm text-green-600">{asset.change}</div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-semibold text-gray-900">{asset.value}</div>
-                        <div className="text-sm text-green-600">{asset.change}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

@@ -146,39 +146,7 @@ export default function CustomerServicePortal() {
           </div>
         </div>
 
-        {/* Current Activity */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-2xl font-semibold mb-6">Current Activity</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-900 mb-2">Active Chats</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-blue-700">Liu Wei - Transfer Issue</span>
-                  <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">Active</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-blue-700">Sarah Johnson - Account Access</span>
-                  <span className="text-xs bg-orange-200 text-orange-800 px-2 py-1 rounded">Waiting</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-green-50 rounded-lg p-4">
-              <h3 className="font-semibold text-green-900 mb-2">Support Tickets</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-700">Account Verification</span>
-                  <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded">High Priority</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-green-700">Transfer Delay</span>
-                  <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded">Urgent</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* NOTE: Current Activity section removed - mock data eliminated per production requirements */}
 
         {/* Action Button */}
         <div className="text-center">
