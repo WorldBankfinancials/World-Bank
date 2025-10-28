@@ -30,7 +30,16 @@ export default function FindBranches() {
     queryKey: ['/api/user'],
   });
 
-  if (isLoading) {
+  // Fetch branches and ATMs from real database
+  const { data: branches, isLoading: branchesLoading } = useQuery<any[]>({
+    queryKey: ['/api/branches'],
+  });
+
+  const { data: atms, isLoading: atmsLoading } = useQuery<any[]>({
+    queryKey: ['/api/atms'],
+  });
+
+  if (isLoading || branchesLoading || atmsLoading) {
     return (
       <div className="min-h-screen bg-wb-gray flex items-center justify-center">
         <div className="text-wb-dark">{t('loading')}</div>
@@ -38,50 +47,8 @@ export default function FindBranches() {
     );
   }
 
-  const branches = [
-    {
-      name: "World Bank - Manhattan Financial District",
-      address: "123 Wall Street, New York, NY 10005",
-      distance: "0.5 miles",
-      phone: "(212) 555-0123",
-      hours: "Mon-Fri: 9AM-6PM, Sat: 9AM-3PM",
-      services: ["ATM", "Teller", "Safe Deposit", "Financial Advisory"],
-      amenities: ["Parking", "Wheelchair Accessible", "WiFi"]
-    },
-    {
-      name: "World Bank - Midtown Plaza",
-      address: "456 Fifth Avenue, New York, NY 10018",
-      distance: "1.2 miles",
-      phone: "(212) 555-0456",
-      hours: "Mon-Fri: 8AM-7PM, Sat: 9AM-4PM",
-      services: ["ATM", "Teller", "Business Banking", "Loans"],
-      amenities: ["Parking", "Wheelchair Accessible", "Private Banking"]
-    },
-    {
-      name: "World Bank - Brooklyn Heights",
-      address: "789 Atlantic Avenue, Brooklyn, NY 11201",
-      distance: "2.8 miles",
-      phone: "(718) 555-0789",
-      hours: "Mon-Fri: 9AM-5PM, Sat: 9AM-2PM",
-      services: ["ATM", "Teller", "Mortgage Services"],
-      amenities: ["Wheelchair Accessible", "WiFi"]
-    },
-    {
-      name: "World Bank - Queens Center",
-      address: "321 Northern Boulevard, Long Island City, NY 11101",
-      distance: "4.1 miles",
-      phone: "(718) 555-0321",
-      hours: "Mon-Fri: 9AM-6PM, Sat: 9AM-3PM",
-      services: ["ATM", "Teller", "Investment Advisory", "Currency Exchange"],
-      amenities: ["Parking", "Wheelchair Accessible", "Multilingual Staff"]
-    }
-  ];
-
-  const atms = [
-    { location: "Starbucks - 5th Ave", address: "234 Fifth Avenue", distance: "0.2 miles", features: ["24/7", "Deposit"] },
-    { location: "CVS Pharmacy", address: "567 Broadway", distance: "0.4 miles", features: ["24/7"] },
-    { location: "Penn Station", address: "1 Pennsylvania Plaza", distance: "0.8 miles", features: ["24/7", "Multiple ATMs"] }
-  ];
+  const branchesList = branches || [];
+  const atmsList = atms || [];
 
   const globalPresence = {
     regions: [
@@ -138,55 +105,69 @@ export default function FindBranches() {
             <div className="mb-8">
               <h2 className="text-2xl font-bold wb-dark mb-6">Nearby Branches</h2>
               <div className="space-y-4">
-                {branches.map((branch, index) => (
-                  <Card key={index} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold wb-dark mb-1">{branch.name}</h3>
-                          <div className="flex items-center text-wb-text mb-2">
-                            <MapPin className="w-4 h-4 mr-1" />
-                            {branch.address}
-                          </div>
-                          <div className="flex items-center text-wb-text mb-2">
-                            <Phone className="w-4 h-4 mr-1" />
-                            {branch.phone}
-                          </div>
-                          <div className="flex items-center text-wb-text">
-                            <Clock className="w-4 h-4 mr-1" />
-                            {branch.hours}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-wb-blue font-semibold mb-2">{branch.distance}</div>
-                          <Button size="sm">Get Directions</Button>
-                        </div>
-                      </div>
-                      
-                      <div className="mb-4">
-                        <div className="text-sm font-medium wb-dark mb-2">Services</div>
-                        <div className="flex flex-wrap gap-1">
-                          {branch.services.map((service, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {service}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div className="text-sm font-medium wb-dark mb-2">Amenities</div>
-                        <div className="flex flex-wrap gap-1">
-                          {branch.amenities.map((amenity, idx) => (
-                            <Badge key={idx} variant="outline" className="text-xs">
-                              {amenity}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
+                {branchesList.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-8 text-center text-gray-500">
+                      <Building className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>No branches found in your area</p>
+                      <p className="text-sm">Try searching in a different location</p>
                     </CardContent>
                   </Card>
-                ))}
+                ) : (
+                  branchesList.map((branch: any) => (
+                    <Card key={branch.id} className="hover:shadow-md transition-shadow" data-testid={`branch-card-${branch.id}`}>
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold wb-dark mb-1" data-testid={`branch-name-${branch.id}`}>{branch.name}</h3>
+                            <div className="flex items-center text-wb-text mb-2">
+                              <MapPin className="w-4 h-4 mr-1" />
+                              {branch.address}
+                            </div>
+                            <div className="flex items-center text-wb-text mb-2">
+                              <Phone className="w-4 h-4 mr-1" />
+                              {branch.phone || branch.contact_phone || 'N/A'}
+                            </div>
+                            <div className="flex items-center text-wb-text">
+                              <Clock className="w-4 h-4 mr-1" />
+                              {branch.hours || branch.opening_hours || 'Mon-Fri: 9AM-5PM'}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            {branch.distance && <div className="text-wb-blue font-semibold mb-2">{branch.distance}</div>}
+                            <Button size="sm" data-testid={`branch-directions-${branch.id}`}>Get Directions</Button>
+                          </div>
+                        </div>
+                        
+                        {branch.services && branch.services.length > 0 && (
+                          <div className="mb-4">
+                            <div className="text-sm font-medium wb-dark mb-2">Services</div>
+                            <div className="flex flex-wrap gap-1">
+                              {branch.services.map((service: string, idx: number) => (
+                                <Badge key={idx} variant="secondary" className="text-xs">
+                                  {service}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {branch.amenities && branch.amenities.length > 0 && (
+                          <div>
+                            <div className="text-sm font-medium wb-dark mb-2">Amenities</div>
+                            <div className="flex flex-wrap gap-1">
+                              {branch.amenities.map((amenity: string, idx: number) => (
+                                <Badge key={idx} variant="outline" className="text-xs">
+                                  {amenity}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </div>
 
@@ -194,28 +175,39 @@ export default function FindBranches() {
             <div className="mb-8">
               <h2 className="text-2xl font-bold wb-dark mb-6">Nearby ATMs</h2>
               <div className="space-y-3">
-                {atms.map((atm, index) => (
-                  <Card key={index} className="hover:shadow-sm transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <div className="font-medium wb-dark">{atm.location}</div>
-                          <div className="text-sm text-wb-text">{atm.address}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-wb-blue font-semibold text-sm mb-1">{atm.distance}</div>
-                          <div className="flex gap-1">
-                            {atm.features.map((feature, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
-                                {feature}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+                {atmsList.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-6 text-center text-gray-500">
+                      <Banknote className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                      <p>No ATMs found nearby</p>
                     </CardContent>
                   </Card>
-                ))}
+                ) : (
+                  atmsList.map((atm: any) => (
+                    <Card key={atm.id} className="hover:shadow-sm transition-shadow" data-testid={`atm-card-${atm.id}`}>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="font-medium wb-dark" data-testid={`atm-location-${atm.id}`}>{atm.location}</div>
+                            <div className="text-sm text-wb-text">{atm.address}</div>
+                          </div>
+                          <div className="text-right">
+                            {atm.distance && <div className="text-wb-blue font-semibold text-sm mb-1">{atm.distance}</div>}
+                            {atm.features && atm.features.length > 0 && (
+                              <div className="flex gap-1">
+                                {atm.features.map((feature: string, idx: number) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs">
+                                    {feature}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </div>
           </div>
