@@ -9,6 +9,7 @@ import {
   Search,
   Calendar
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface Transaction {
   id: string;
@@ -23,6 +24,7 @@ interface Transaction {
 }
 
 export default function AdminTransactionDashboard() {
+  const { toast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -41,9 +43,21 @@ export default function AdminTransactionDashboard() {
       if (response.ok) {
         const data = await response.json();
         setTransactions(data);
+      } else {
+        console.error('Failed to fetch transactions:', await response.text());
+        toast({
+          title: 'Error loading transactions',
+          description: 'Unable to load transactions. Please try again.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      // console.error('Failed to fetch transactions:', error);
+      console.error('Failed to fetch transactions:', error);
+      toast({
+        title: 'Network error',
+        description: 'Unable to connect to the server. Please check your connection.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -76,11 +90,22 @@ export default function AdminTransactionDashboard() {
         });
         setShowCreateForm(false);
         fetchTransactions();
-        alert('Transaction created successfully');
+        toast({
+          title: 'Transaction created',
+          description: 'The transaction has been created successfully.',
+        });
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to create transaction:', errorText);
+        throw new Error(errorText || 'Failed to create transaction');
       }
     } catch (error) {
-      // console.error('Failed to create transaction:', error);
-      alert('Failed to create transaction');
+      console.error('Failed to create transaction:', error);
+      toast({
+        title: 'Transaction failed',
+        description: error instanceof Error ? error.message : 'Failed to create transaction. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 

@@ -20,6 +20,7 @@ import {
   Calendar,
   CreditCard
 } from "lucide-react";
+import { useToast } from '@/hooks/use-toast';
 
 interface Transaction {
   id: string;
@@ -44,6 +45,7 @@ interface Customer {
 }
 
 export default function FundManagement() {
+  const { toast } = useToast();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -72,9 +74,21 @@ export default function FundManagement() {
       if (response.ok) {
         const data = await response.json();
         setCustomers(data);
+      } else {
+        console.error('Failed to fetch customers:', await response.text());
+        toast({
+          title: 'Error loading customers',
+          description: 'Unable to load customer list. Please try again.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      // Silent customer fetching
+      console.error('Failed to fetch customers:', error);
+      toast({
+        title: 'Network error',
+        description: 'Unable to connect to the server. Please check your connection.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -84,9 +98,21 @@ export default function FundManagement() {
       if (response.ok) {
         const data = await response.json();
         setTransactions(data);
+      } else {
+        console.error('Failed to fetch transactions:', await response.text());
+        toast({
+          title: 'Error loading transactions',
+          description: 'Unable to load transaction history. Please try again.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      // console.error('Failed to fetch transactions:', error);
+      console.error('Failed to fetch transactions:', error);
+      toast({
+        title: 'Network error',
+        description: 'Unable to connect to the server. Please check your connection.',
+        variant: 'destructive',
+      });
     }
   };
 

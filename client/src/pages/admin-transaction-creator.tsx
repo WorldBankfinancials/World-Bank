@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { PlusCircle, DollarSign, FileText, ArrowRight } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useLocation } from 'wouter';
+import { useToast } from '@/hooks/use-toast';
 
 interface Account {
   id: number;
@@ -19,6 +20,7 @@ interface Account {
 export default function AdminTransactionCreator() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [transactionType, setTransactionType] = useState<'credit' | 'debit'>('credit');
@@ -37,9 +39,21 @@ export default function AdminTransactionCreator() {
       if (response.ok) {
         const data = await response.json();
         setAccounts(data);
+      } else {
+        console.error('Failed to fetch accounts:', await response.text());
+        toast({
+          title: 'Error loading accounts',
+          description: 'Unable to load accounts. Please try again.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      // console.error('Failed to fetch accounts:', error);
+      console.error('Failed to fetch accounts:', error);
+      toast({
+        title: 'Error loading accounts',
+        description: 'Network error. Please check your connection.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -49,13 +63,23 @@ export default function AdminTransactionCreator() {
 
   const handleCreateTransaction = async () => {
     if (!selectedAccountId || !amount || !description) {
-      // console.warn('Missing required fields for transaction creation');
+      console.warn('Missing required fields for transaction creation');
+      toast({
+        title: 'Missing information',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
       return;
     }
 
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
-      // console.warn('Invalid amount for transaction');
+      console.warn('Invalid amount for transaction');
+      toast({
+        title: 'Invalid amount',
+        description: 'Please enter a valid amount greater than zero.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -77,7 +101,12 @@ export default function AdminTransactionCreator() {
 
       if (response.ok) {
         const result = await response.json();
-        // console.log(`Transaction created successfully: ${transactionType.toUpperCase()} $${numAmount.toLocaleString()}`);
+        console.log(`Transaction created successfully: ${transactionType.toUpperCase()} $${numAmount.toLocaleString()}`);
+        
+        toast({
+          title: 'Transaction created',
+          description: `${transactionType.toUpperCase()} of $${numAmount.toLocaleString()} completed successfully.`,
+        });
         
         // Reset form
         setSelectedAccountId('');
@@ -97,11 +126,17 @@ export default function AdminTransactionCreator() {
         // Refresh accounts to show updated balances
         fetchAccounts();
       } else {
-        throw new Error('Failed to create transaction');
+        const errorText = await response.text();
+        console.error('Failed to create transaction:', errorText);
+        throw new Error(errorText || 'Failed to create transaction');
       }
     } catch (error) {
-      // console.error('Transaction creation error:', error);
-      // console.error('Failed to create transaction');
+      console.error('Transaction creation error:', error);
+      toast({
+        title: 'Transaction failed',
+        description: error instanceof Error ? error.message : 'Failed to create transaction. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsProcessing(false);
     }

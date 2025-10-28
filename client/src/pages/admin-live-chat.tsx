@@ -9,6 +9,7 @@ import { BankLogo } from "@/components/BankLogo";
 import { MessageSquare, Send, Phone, Video, AlertTriangle, Paperclip, Headphones } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from '@/hooks/use-toast';
 
 interface ChatMessage {
   id: string;
@@ -43,6 +44,7 @@ interface SupportTicket {
 }
 
 export default function AdminLiveChat() {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("live-chat");
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
@@ -80,13 +82,13 @@ export default function AdminLiveChat() {
       
       wsRef.current.onopen = () => {
         setIsConnected(true);
+        console.log('Admin chat connected');
         // Authenticate as admin
         wsRef.current?.send(JSON.stringify({
           type: 'auth',
           userId: 'admin_1',
           role: 'admin'
         }));
-        // console.log('Admin chat connected');
       };
 
       wsRef.current.onmessage = (event) => {
@@ -132,16 +134,31 @@ export default function AdminLiveChat() {
 
       wsRef.current.onclose = () => {
         setIsConnected(false);
-        // console.log('Admin chat disconnected');
+        console.log('Admin chat disconnected');
+        toast({
+          title: 'Chat disconnected',
+          description: 'Lost connection to chat server. Attempting to reconnect...',
+          variant: 'destructive',
+        });
       };
 
-      wsRef.current.onerror = (_error) => {
-        // console.error('Admin WebSocket error:', error);
+      wsRef.current.onerror = (error) => {
+        console.error('Admin WebSocket error:', error);
         setIsConnected(false);
+        toast({
+          title: 'Connection error',
+          description: 'Unable to connect to chat server. Please refresh the page.',
+          variant: 'destructive',
+        });
       };
     } catch (error) {
-      // console.error('Failed to connect admin chat:', error);
+      console.error('Failed to connect admin chat:', error);
       setIsConnected(false);
+      toast({
+        title: 'Chat system unavailable',
+        description: 'Unable to initialize chat system. Please try again later.',
+        variant: 'destructive',
+      });
     }
   };
 

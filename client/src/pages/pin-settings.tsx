@@ -11,12 +11,14 @@ import { Lock, Shield, Eye, EyeOff, ArrowLeft, AlertTriangle, CheckCircle } from
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
+import { useToast } from '@/hooks/use-toast';
 
 export default function PinSettings() {
   const [, setLocation] = useLocation();
   const navigate = (path: string) => setLocation(path);
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -94,6 +96,10 @@ export default function PinSettings() {
 
       if (response.ok) {
         setSuccess(t('pin_changed_successfully'));
+        toast({
+          title: 'PIN changed',
+          description: 'Your transfer PIN has been updated successfully.',
+        });
         setCurrentPin('');
         setNewPin('');
         setConfirmPin('');
@@ -101,11 +107,22 @@ export default function PinSettings() {
           navigate('/profile-settings');
         }, 2000);
       } else {
+        console.error('PIN change failed:', data);
         setError(data.message || t('pin_change_failed'));
+        toast({
+          title: 'PIN change failed',
+          description: data.message || 'Unable to change PIN. Please try again.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      // console.error('PIN change error:', error);
+      console.error('PIN change error:', error);
       setError(t('network_error'));
+      toast({
+        title: 'Network error',
+        description: 'Unable to connect to the server. Please check your connection.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }

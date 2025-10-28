@@ -148,7 +148,7 @@ export default function RegisterPage() {
       });
 
     } catch (error: any) {
-      // console.error('Registration error:', error);
+      console.error('Registration error:', error);
       toast({
         title: t('registration_failed'),
         description: error.message || t('try_again_later'),

@@ -14,6 +14,7 @@ import {
   Eye,
   EyeOff 
 } from "lucide-react";
+import { useToast } from '@/hooks/use-toast';
 
 interface TransferProcessProps {
   transferData: any;
@@ -23,6 +24,7 @@ interface TransferProcessProps {
 
 export default function TransferProcess({ transferData, onBack, onComplete }: TransferProcessProps) {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1); // 1: PIN, 2: Processing, 3: Pending
   const [pin, setPin] = useState("");
   const [showPin, setShowPin] = useState(false);
@@ -40,11 +42,23 @@ export default function TransferProcess({ transferData, onBack, onComplete }: Tr
       });
 
       if (!verifyResponse.ok) {
+        console.error('PIN verification failed:', await verifyResponse.text());
         setPinError(t('invalid_pin_try_again'));
+        toast({
+          title: 'Invalid PIN',
+          description: 'The PIN you entered is incorrect. Please try again.',
+          variant: 'destructive',
+        });
         return;
       }
     } catch (error) {
+      console.error('PIN verification error:', error);
       setPinError(t('invalid_pin_try_again'));
+      toast({
+        title: 'Verification failed',
+        description: 'Unable to verify PIN. Please check your connection.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -77,11 +91,18 @@ export default function TransferProcess({ transferData, onBack, onComplete }: Tr
           setCurrentStep(3); // Move to pending status
         }, 2000);
       } else {
-        throw new Error('Transfer submission failed');
+        const errorText = await response.text();
+        console.error('Transfer submission failed:', errorText);
+        throw new Error(errorText || 'Transfer submission failed');
       }
     } catch (error) {
-      // console.error('Transfer error:', error);
+      console.error('Transfer error:', error);
       setPinError(t('transfer_failed_try_again'));
+      toast({
+        title: 'Transfer failed',
+        description: error instanceof Error ? error.message : 'Unable to process transfer. Please try again.',
+        variant: 'destructive',
+      });
       setIsProcessing(false);
       setCurrentStep(1);
     }

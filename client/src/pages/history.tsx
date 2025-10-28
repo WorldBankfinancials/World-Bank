@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Filter, Search, Calendar, Download, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface Transaction {
   id: number;
@@ -30,6 +31,7 @@ interface Account {
 
 export default function History() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,9 +45,21 @@ export default function History() {
       if (response.ok) {
         const data = await response.json();
         setAccounts(data);
+      } else {
+        console.error('Failed to fetch accounts:', await response.text());
+        toast({
+          title: 'Error loading accounts',
+          description: 'Unable to load your accounts. Please try again.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
-      // console.error('Failed to fetch accounts:', error);
+      console.error('Failed to fetch accounts:', error);
+      toast({
+        title: 'Network error',
+        description: 'Unable to connect to the server. Please check your connection.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -64,7 +78,12 @@ export default function History() {
       
       setTransactions(allTransactions);
     } catch (error) {
-      // console.error('Failed to fetch transactions:', error);
+      console.error('Failed to fetch transactions:', error);
+      toast({
+        title: 'Error loading transactions',
+        description: 'Unable to load transaction history. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
