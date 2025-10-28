@@ -12,6 +12,7 @@ import BottomNavigation from '@/components/BottomNavigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
 export default function Exchange() {
   const { userProfile } = useAuth();
@@ -51,16 +52,12 @@ export default function Exchange() {
 
   const handleExchange = async () => {
     try {
-      const response = await fetch('/api/currency-exchange', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: userProfile?.id,
-          fromCurrency,
-          toCurrency,
-          amount: parseFloat(amount),
-          exchangeRate: convertedAmount / parseFloat(amount)
-        })
+      const response = await apiRequest('POST', '/api/currency-exchange', {
+        userId: userProfile?.id,
+        fromCurrency,
+        toCurrency,
+        amount: parseFloat(amount),
+        exchangeRate: convertedAmount / parseFloat(amount)
       });
 
       if (response.ok) {

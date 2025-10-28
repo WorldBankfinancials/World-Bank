@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { apiRequest } from '@/lib/queryClient';
 
 export default function Cards() {
   const { userProfile } = useAuth();
@@ -97,21 +98,16 @@ export default function Cards() {
     if (!selectedCard) return;
     
     try {
-      const response = await fetch('/api/verify-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
+      const response = await apiRequest('POST', '/api/verify-pin', {
+        username: userProfile?.email || 'user@worldbank.com',
+        pin
       });
 
       if (response.ok) {
         // Update card lock status in database
-        await fetch('/api/cards/lock', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cardId: selectedCard.id,
-            isLocked: !selectedCard.isLocked
-          })
+        await apiRequest('POST', '/api/cards/lock', {
+          cardId: selectedCard.id,
+          isLocked: !selectedCard.isLocked
         });
         
         // Refresh cards data
@@ -143,10 +139,9 @@ export default function Cards() {
 
   const handleMobilePay = async () => {
     try {
-      const response = await fetch('/api/verify-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
+      const response = await apiRequest('POST', '/api/verify-pin', {
+        username: userProfile?.email || 'user@worldbank.com',
+        pin
       });
 
       if (response.ok) {
@@ -176,10 +171,9 @@ export default function Cards() {
 
   const handlePayBill = async () => {
     try {
-      const response = await fetch('/api/verify-pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
+      const response = await apiRequest('POST', '/api/verify-pin', {
+        username: userProfile?.email || 'user@worldbank.com',
+        pin
       });
 
       if (response.ok) {
@@ -210,14 +204,10 @@ export default function Cards() {
 
   const handleUpdateSettings = async () => {
     try {
-      await fetch('/api/cards/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cardId: selectedCard?.id,
-          dailyLimit: parseInt(amount) || selectedCard?.dailyLimit,
-          contactlessEnabled: selectedCard?.contactlessEnabled
-        })
+      await apiRequest('POST', '/api/cards/settings', {
+        cardId: selectedCard?.id,
+        dailyLimit: parseInt(amount) || selectedCard?.dailyLimit,
+        contactlessEnabled: selectedCard?.contactlessEnabled
       });
       
       // Refresh cards data
