@@ -451,14 +451,15 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.post('/api/verify-pin', async (req: Request, res: Response) => {
     try {
-      const body = req.body as { email: string; pin: string };
-      console.log('🔐 PIN verification request for:', body.email);
+      const body = req.body as { email?: string; username?: string; pin: string };
+      const identifier = body.email || body.username;
+      console.log('🔐 PIN verification request for:', identifier);
       
-      // Always use email for lookup (primary login method)
-      const user = await (storage as any).getUserByEmail(body.email);
+      // Use email for lookup (supports both email and username fields for compatibility)
+      const user = await (storage as any).getUserByEmail(identifier);
       
       if (!user) {
-        console.log('❌ User not found for email:', body.email);
+        console.log('❌ User not found for identifier:', identifier);
         return res.status(404).json({ message: 'User not found', verified: false });
       }
       
