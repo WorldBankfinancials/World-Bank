@@ -1567,6 +1567,54 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // CUSTOMER LOGIN ENDPOINT
+  // Authenticates customers using Supabase Auth
+  app.post('/api/auth/login', async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+
+      console.log(`🔐 Customer login attempt: ${email}`);
+
+      // Authenticate with Supabase
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.VITE_SUPABASE_ANON_KEY!
+      );
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error('Customer auth failed:', error);
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      // CRITICAL: Check role from app_metadata (server-controlled)
+      const role = data.user.app_metadata?.role || 'customer';
+
+      console.log(`✅ Customer login successful: ${email} (role: ${role})`);
+
+      res.json({ 
+        token: data.session.access_token,
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          role: role
+        }
+      });
+    } catch (error) {
+      console.error('Customer login error:', error);
+      res.status(500).json({ error: 'Login failed' });
+    }
+  });
+
   // Admin login endpoint - Validates admin credentials from Supabase app_metadata
   app.post('/api/admin/login', async (req: Request, res: Response) => {
     try {
