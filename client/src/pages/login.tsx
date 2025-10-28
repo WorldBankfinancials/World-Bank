@@ -98,16 +98,12 @@ export default function Login() {
 
   const handlePinVerification = async () => {
     if (loginPin.length !== 4) {
-      setPinError(t('pin_must_be_4_digits'));
+      setPinError('PIN must be 4 digits');
       return;
     }
 
     try {
-      // Determine the correct identifier based on login type
-      let identifier = '';
-      if (loginType === 'email') identifier = loginData.email;
-      else if (loginType === 'mobile') identifier = loginData.mobile;
-      else if (loginType === 'id') identifier = loginData.idNumber;
+      const identifier = loginData.email;
       
       const response = await fetch('/api/verify-pin', {
         method: 'POST',
@@ -115,29 +111,36 @@ export default function Login() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: identifier, // Use the actual logged-in user identifier
+          email: identifier,
           pin: loginPin
         }),
       });
 
+      if (!response.ok) {
+        setPinError('Invalid PIN or verification failed');
+        setLoginPin("");
+        return;
+      }
+
       const result = await response.json();
 
-      if (response.ok && result.success && result.verified) {
+      if (result.success && result.verified) {
         setShowPinVerification(false);
         setLoginPin("");
         setPinError("");
         toast({
-          title: t('login_successful'),
-          description: t('welcome_back'),
+          title: 'Login Successful',
+          description: 'Welcome back to World Bank',
         });
         setLocation("/dashboard");
       } else {
-        setPinError(t('invalid_pin'));
+        setPinError('Invalid PIN');
         setLoginPin("");
       }
     } catch (error) {
-      // console.error("PIN verification error:", error);
-      setPinError(t('verification_failed'));
+      console.error("PIN verification error:", error);
+      setPinError('Verification failed. Please try again.');
+      setLoginPin("");
     }
   };
 

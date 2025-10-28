@@ -486,25 +486,31 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!userProfile?.email) {
-        console.warn('⚠️ Cannot fetch user data - user email not available');
+      if (!userProfile?.id) {
         return;
       }
       
       try {
-        const response = await fetch(`/api/user?email=${encodeURIComponent(userProfile.email)}&t=${Date.now()}`);
+        const response = await fetch(`/api/users/supabase/${userProfile.id}`, {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
         if (response.ok) {
           const data = await response.json();
           setUserData(data);
-        } else {
-          console.error('❌ Failed to fetch user data:', response.status);
         }
       } catch (error) {
-        console.error('❌ Error fetching user data:', error);
+        console.error('Error fetching user data:', error);
       }
     };
 
     fetchUserData();
+    
+    // Refresh every 10 seconds for real-time updates
+    const interval = setInterval(fetchUserData, 10000);
+    return () => clearInterval(interval);
   }, [userProfile]);
 
   useEffect(() => {
@@ -524,16 +530,23 @@ export default function Dashboard() {
     id: number;
   }>>([]);
 
-  // Fetch accounts on mount
   React.useEffect(() => {
     const fetchAccounts = async () => {
-      if (!userProfile?.email) {
-        console.warn('⚠️ Cannot fetch accounts - user email not available');
+      if (!userProfile?.id) {
         return;
       }
       
       try {
-        const response = await fetch(`/api/accounts?email=${encodeURIComponent(userProfile.email)}&t=` + Date.now());
+        const userResponse = await fetch(`/api/users/supabase/${userProfile.id}`);
+        if (!userResponse.ok) return;
+        
+        const user = await userResponse.json();
+        const response = await fetch(`/api/accounts?userId=${user.id}&t=${Date.now()}`, {
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        });
+        
         if (response.ok) {
           const accountsData = await response.json();
 
@@ -555,6 +568,10 @@ export default function Dashboard() {
     };
 
     fetchAccounts();
+    
+    // Refresh accounts every 15 seconds
+    const interval = setInterval(fetchAccounts, 15000);
+    return () => clearInterval(interval);
   }, [userProfile]);
 
   // Real-time subscription for transactions and admin changes

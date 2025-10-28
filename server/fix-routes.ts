@@ -47,6 +47,24 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   });
 
   // SECURITY: Test user creation endpoint - DEVELOPMENT ONLY
+
+  // Get user by Supabase UUID
+  app.get('/api/users/supabase/:supabaseId', async (req: Request, res: Response) => {
+    try {
+      const { supabaseId } = req.params;
+      
+      const user = await (storage as any).getUserBySupabaseId(supabaseId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      res.json(user);
+    } catch (error) {
+      console.error('Get user by Supabase ID error:', error);
+      res.status(500).json({ error: 'Failed to get user' });
+    }
+  });
+
   // WARNING: This endpoint uses service role key and should NEVER be exposed in production
   app.post('/api/create-test-user', async (req: Request, res: Response) => {
     // CRITICAL: Block in production to prevent privilege escalation

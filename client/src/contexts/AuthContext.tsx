@@ -1,6 +1,6 @@
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from '../lib/supabase';
-// Removed fallback auth - using only real Supabase authentication
 import type { User } from '@supabase/supabase-js';
 
 interface UserProfile {
@@ -48,22 +48,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserData = async (supabaseUser?: User) => {
     try {
-      if (!supabaseUser) {
-        console.log('⚠️ No Supabase user provided to fetchUserData');
+      const currentUser = supabaseUser || user;
+      if (!currentUser) {
+        console.log('⚠️ No user to fetch data for');
         return;
       }
 
-      console.log('🔍 Fetching user data for:', supabaseUser.email);
+      console.log('🔍 Fetching fresh user data for:', currentUser.email);
 
-      // Fetch user from banking system using Supabase UUID
-      const response = await fetch(`/api/users/supabase/${supabaseUser.id}`);
+      const response = await fetch(`/api/users/supabase/${currentUser.id}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       if (response.ok) {
         const bankingUser = await response.json();
         
         const userProfile: UserProfile = {
-          id: supabaseUser.id,
-          email: supabaseUser.email || '',
+          id: currentUser.id,
+          email: currentUser.email || '',
           fullName: bankingUser.fullName,
           phone: bankingUser.phone,
           accountNumber: bankingUser.accountNumber,
@@ -83,19 +88,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isVerified: bankingUser.isVerified,
           isOnline: bankingUser.isOnline,
           isActive: bankingUser.isActive,
-          avatarUrl: bankingUser.avatarUrl || supabaseUser.user_metadata?.avatar_url,
+          avatarUrl: bankingUser.avatarUrl || currentUser.user_metadata?.avatar_url,
           balance: bankingUser.balance
         };
 
-        console.log('✅ User profile loaded');
+        console.log('✅ User profile loaded and updated');
         setUserProfile(userProfile);
       } else {
-        console.log('ℹ️ User not in banking system, needs registration');
-        // Set minimal profile for new users
+        console.log('ℹ️ User not in banking system');
         const minimalProfile: UserProfile = {
-          id: supabaseUser.id,
-          email: supabaseUser.email || '',
-          fullName: supabaseUser.user_metadata?.full_name || 'New User',
+          id: currentUser.id,
+          email: currentUser.email || '',
+          fullName: currentUser.user_metadata?.full_name || 'New User',
           role: 'customer',
           isVerified: false,
           isActive: false,
@@ -112,10 +116,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
 
-      // Clear any existing session first
       await supabase.auth.signOut();
       
-      // Use real Supabase authentication
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -130,10 +132,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data.user && data.session) {
         console.log('✅ Authentication successful for:', email);
         
-        // Store session data
         setUser(data.user);
         
-        // Fetch user profile data
         await fetchUserData(data.user);
         
         setLoading(false);
@@ -172,32 +172,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      // Clear all session data for maximum security
-      localStorage.removeItem('worldbank_session');
-      localStorage.removeItem('worldbank_user_profile');
-      localStorage.removeItem('worldbank_auth_timestamp');
+      localStorage.clear();
       sessionStorage.clear();
 
       await supabase.auth.signOut();
       setUser(null);
       setUserProfile(null);
 
-      console.log('🔐 Secure logout completed - all session data cleared');
+      console.log('🔐 Logout completed');
     } catch (error) {
       console.error("Sign out error:", error);
     }
   };
 
   useEffect(() => {
-    const initializeSecureSession = async () => {
+    const initializeSession = async () => {
       try {
         console.log('🔐 Initializing banking session');
 
-        // Check for valid Supabase session
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (session?.user && session.expires_at) {
-          // Check if session is still valid
           const expirationTime = new Date(session.expires_at * 1000);
           const now = new Date();
 
@@ -227,11 +222,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    initializeSecureSession();
+    initializeSession();
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔐 Auth state change:', event, session?.user?.email);
+      console.log('🔐 Auth state change:', event);
 
       if (event === 'SIGNED_IN' && session?.user) {
         console.log('✅ User signed in');
@@ -248,16 +242,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
         console.log('🔄 Token refreshed');
         setUser(session.user);
+        await fetchUserData(session.user);
         setLoading(false);
 
       } else if (event === 'INITIAL_SESSION') {
-        // Don't clear data on initial session check
         console.log('ℹ️ Initial session check');
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Real-time subscription for user profile changes
+    const userChannel = supabase
+      .channel('user_profile_changes')
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'bank_users' },
+        async (payload: any) => {
+          console.log('👤 User profile updated by admin:', payload);
+          if (user) {
+            await fetchUserData(user);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(userChannel);
+    };
   }, []);
 
   return (
