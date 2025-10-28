@@ -58,13 +58,18 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Use appropriate identifier based on login type
-      let identifier = '';
-      if (loginType === 'email') identifier = loginData.email;
-      else if (loginType === 'mobile') identifier = loginData.mobile;
-      else if (loginType === 'id') identifier = loginData.idNumber;
-      
-      const result = await signIn(identifier, loginData.password);
+      // For now, only support email login (mobile/ID require backend mapping)
+      if (loginType !== 'email') {
+        toast({
+          title: t('login_failed'),
+          description: 'Only email login is currently supported',
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      const result = await signIn(loginData.email, loginData.password);
       
       if (result.error) {
         toast({
@@ -76,21 +81,17 @@ export default function Login() {
         return;
       }
 
-      // Always require PIN verification for enhanced security
+      // Show PIN verification
       setShowPinVerification(true);
       setLoading(false);
-      return;
 
-      // Direct login without PIN (should not happen in production)
-      setLocation("/dashboard");
     } catch (error) {
-      // console.error("Login error:", error);
+      console.error("Login error:", error);
       toast({
         title: t('login_failed'),
         description: t('unexpected_error'),
         variant: "destructive"
       });
-    } finally {
       setLoading(false);
     }
   };
