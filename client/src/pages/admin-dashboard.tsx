@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/Header";
 import { apiRequest } from "@/lib/queryClient";
+import { useRealtimeTransactions, useRealtimeSupportTickets } from "@/hooks/useRealtimeTransactions";
 import type { Transaction, User } from "@shared/schema";
 import { useLocation } from "wouter";
 
@@ -61,6 +62,10 @@ export default function AdminDashboard() {
   const [adminNotes, setAdminNotes] = useState<{ [key: number]: string }>({});
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+
+  // Enable real-time updates for transactions and support tickets
+  useRealtimeTransactions(true);
+  useRealtimeSupportTickets(true);
 
   // Customer data for Profile Management tab
   const customers = [
