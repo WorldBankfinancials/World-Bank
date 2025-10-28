@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePresence } from "@/hooks/usePresence";
 import { 
   Eye,
   EyeOff,
@@ -483,6 +484,12 @@ export default function Dashboard() {
   const [showNotifications] = React.useState(false);
   const [userData, setUserData] = React.useState<any>(null);
   const queryClient = useQueryClient();
+
+  // Track user presence for real-time online/offline status
+  usePresence(
+    userProfile?.id ? (typeof userProfile.id === 'number' ? userProfile.id : parseInt(userProfile.id)) : undefined,
+    userProfile?.fullName || userProfile?.email
+  );
 
   useEffect(() => {
     const fetchUserData = async () => {

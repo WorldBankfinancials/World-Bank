@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Search, Edit3, UserCheck, AlertTriangle, Save, X } from "lucide-react";
+import { useOnlineUsers } from "@/hooks/usePresence";
 
 
 interface Customer {
@@ -49,12 +50,25 @@ export default function CustomerManagement() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<number>>(new Set());
+
+  // Subscribe to real-time presence updates
+  useOnlineUsers((onlineUsers) => {
+    const userIds = new Set(onlineUsers.map((u: any) => u.user_id));
+    setOnlineUserIds(userIds);
+  });
 
   // Fetch customers
-  const { data: customers = [], isLoading } = useQuery<Customer[]>({
+  const { data: customersData = [], isLoading } = useQuery<Customer[]>({
     queryKey: ["/api/admin/customers"],
     enabled: user?.role === "admin"
   });
+
+  // Merge customer data with real-time online status
+  const customers = customersData.map(customer => ({
+    ...customer,
+    isOnline: onlineUserIds.has(customer.id)
+  }));
 
   // Update customer mutation
   const updateCustomerMutation = useMutation({
