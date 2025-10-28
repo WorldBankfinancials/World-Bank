@@ -536,6 +536,34 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/cards/settings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { cardId, dailyLimit, contactlessEnabled } = req.body;
+      
+      // SECURITY: Verify card belongs to authenticated user
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const card = await storage.getCard(cardId);
+      if (!card || card.userId !== user.id) {
+        console.warn(`🚫 Unauthorized card settings update: user ${req.user!.email} tried to update card ${cardId}`);
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
+      const updates: any = {};
+      if (dailyLimit !== undefined) updates.dailyLimit = dailyLimit;
+      if (contactlessEnabled !== undefined) updates.contactlessEnabled = contactlessEnabled;
+      
+      const updatedCard = await storage.updateCard(cardId, updates);
+      res.json({ success: true, card: updatedCard });
+    } catch (error) {
+      console.error('Error updating card settings:', error);
+      res.status(500).json({ error: 'Failed to update card settings' });
+    }
+  });
+
   // ==================== INVESTMENTS API ROUTES - PROTECTED ====================
   app.get('/api/investments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -575,6 +603,84 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching investment:', error);
       res.status(500).json({ error: 'Failed to fetch investment' });
+    }
+  });
+
+  // ==================== MARKET DATA API ROUTES - PROTECTED ====================
+  app.get('/api/market-rates', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Mock market data - replace with real market data API integration
+      const marketData = {
+        stocks: { 
+          change: +(Math.random() * 6 - 1).toFixed(2), 
+          trending: Math.random() > 0.5 ? 'up' : 'down' 
+        },
+        bonds: { 
+          change: +(Math.random() * 3 - 1.5).toFixed(2), 
+          trending: Math.random() > 0.5 ? 'up' : 'down' 
+        },
+        crypto: { 
+          change: +(Math.random() * 15 - 5).toFixed(2), 
+          trending: Math.random() > 0.5 ? 'up' : 'down' 
+        },
+        forex: { 
+          change: +(Math.random() * 4 - 1).toFixed(2), 
+          trending: Math.random() > 0.5 ? 'up' : 'down' 
+        }
+      };
+      
+      res.json(marketData);
+    } catch (error) {
+      console.error('Error fetching market rates:', error);
+      res.status(500).json({ error: 'Failed to fetch market rates' });
+    }
+  });
+
+  // ==================== CURRENCY EXCHANGE API ROUTES - PROTECTED ====================
+  app.post('/api/currency-exchange', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { fromCurrency, toCurrency, amount } = req.body;
+      
+      // SECURITY: Get authenticated user
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Validate required fields
+      if (!fromCurrency || !toCurrency || !amount) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      // Mock exchange rate calculation - replace with real exchange rate API
+      const exchangeRates: Record<string, number> = {
+        'USD': 1.0,
+        'EUR': 0.92,
+        'GBP': 0.79,
+        'JPY': 149.5,
+        'CNY': 7.24,
+        'AUD': 1.53,
+        'CAD': 1.36,
+        'CHF': 0.88
+      };
+      
+      const fromRate = exchangeRates[fromCurrency] || 1;
+      const toRate = exchangeRates[toCurrency] || 1;
+      const convertedAmount = (amount / fromRate) * toRate;
+      const exchangeRate = toRate / fromRate;
+      
+      res.json({
+        success: true,
+        fromCurrency,
+        toCurrency,
+        originalAmount: amount,
+        convertedAmount: +convertedAmount.toFixed(2),
+        exchangeRate: +exchangeRate.toFixed(4),
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error processing currency exchange:', error);
+      res.status(500).json({ error: 'Failed to process currency exchange' });
     }
   });
 
@@ -763,6 +869,41 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error marking alert as read:', error);
       res.status(500).json({ error: 'Failed to mark alert as read' });
+    }
+  });
+
+  // ==================== OBJECT STORAGE API ROUTES ====================
+  app.post('/api/objects/upload', async (req: Request, res: Response) => {
+    try {
+      // Handle file upload for identity documents (ID cards, passports, etc.)
+      // This endpoint accepts base64 encoded files or multipart form data
+      
+      const { file, fileName, fileType } = req.body;
+      
+      if (!file || !fileName) {
+        return res.status(400).json({ error: 'Missing file or fileName' });
+      }
+      
+      // Generate unique file ID
+      const fileId = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      // Mock file storage - replace with actual object storage implementation
+      // In production, this should upload to Supabase Storage or similar service
+      const uploadResult = {
+        success: true,
+        fileId,
+        fileName,
+        fileType: fileType || 'image/jpeg',
+        uploadedAt: new Date().toISOString(),
+        url: `/uploads/${fileId}`, // Mock URL
+        message: 'File uploaded successfully'
+      };
+      
+      console.log(`📤 File uploaded: ${fileName} (${fileId})`);
+      res.json(uploadResult);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      res.status(500).json({ error: 'Failed to upload file' });
     }
   });
 
