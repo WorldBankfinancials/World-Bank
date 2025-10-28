@@ -20,7 +20,7 @@ export default function CustomerServicePortal() {
             <BankLogo className="w-16 h-16" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            APEX BANKING CORPORATION Customer Service Portal
+            WORLD BANK Customer Service Portal
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Professional live chat and support ticket management system for customer service representatives
@@ -167,7 +167,7 @@ export default function CustomerServicePortal() {
         {/* Footer */}
         <div className="text-center mt-12 pt-8 border-t border-gray-200">
           <p className="text-gray-500">
-            APEX BANKING CORPORATION Customer Service Portal • Vercel Deployment Ready • Real-time WebSocket Support
+            WORLD BANK Customer Service Portal • Vercel Deployment Ready • Real-time WebSocket Support
           </p>
         </div>
       </div>

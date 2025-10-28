@@ -24,7 +24,7 @@ export default function About() {
           </Button>
           <div className="flex items-center space-x-2">
             <BankLogo className="w-8 h-8" />
-            <span className="font-bold text-gray-900">APEX BANKING CORPORATION</span>
+            <span className="font-bold text-gray-900">WORLD BANK</span>
           </div>
         </div>
       </div>

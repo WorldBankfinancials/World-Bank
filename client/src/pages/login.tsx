@@ -172,7 +172,7 @@ export default function Login() {
             </div>
             <div className="space-y-3">
               <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-                APEX BANKING CORPORATION
+                WORLD BANK
               </h1>
               <p className="text-gray-600 text-base">
                 International Digital Banking

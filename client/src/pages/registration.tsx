@@ -684,7 +684,7 @@ export default function Registration() {
               />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">APEX BANKING CORPORATION</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">WORLD BANK</h1>
           <p className="text-blue-200">Open Your International Banking Account</p>
         </div>
 

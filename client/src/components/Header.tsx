@@ -103,7 +103,7 @@ export default function Header({}: HeaderProps) {
                   target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/8/80/World_Bank_Group_logo.svg/1200px-World_Bank_Group_logo.svg.png";
                 }}
               />
-              <div className="text-gray-900 font-bold text-sm tracking-wide">APEX BANKING CORPORATION</div>
+              <div className="text-gray-900 font-bold text-sm tracking-wide">WORLD BANK</div>
             </div>
           </Link>
 

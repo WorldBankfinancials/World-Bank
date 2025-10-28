@@ -11,7 +11,7 @@ interface LanguageContextType {
 const translations = {
   en: {
     // Login & Auth
-    'world_bank': 'APEX BANKING CORPORATION',
+    'world_bank': 'WORLD BANK',
     'international_banking_solutions': 'International Banking Solutions',
     'sign_in': 'Sign In',
     'access_your_secure_banking_portal': 'Access your secure banking portal',

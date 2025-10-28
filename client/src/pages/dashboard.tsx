@@ -685,7 +685,7 @@ export default function Dashboard() {
               }}
             />
             <div>
-              <div className="text-gray-900 font-semibold text-sm">APEX BANKING CORPORATION</div>
+              <div className="text-gray-900 font-semibold text-sm">WORLD BANK</div>
               <div className="text-xs text-gray-500">International Banking</div>
             </div>
           </div>
