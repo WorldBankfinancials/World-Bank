@@ -1029,6 +1029,73 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== OBJECT STORAGE API ROUTES ====================
+  // Branches endpoint
+  app.get('/api/branches', async (req: Request, res: Response) => {
+    try {
+      const branches = await storage.getBranches();
+      res.json(branches);
+    } catch (error) {
+      console.error('Get branches error:', error);
+      res.status(500).json({ error: 'Failed to fetch branches' });
+    }
+  });
+
+  // ATMs endpoint
+  app.get('/api/atms', async (req: Request, res: Response) => {
+    try {
+      const atms = await storage.getAtms();
+      res.json(atms);
+    } catch (error) {
+      console.error('Get ATMs error:', error);
+      res.status(500).json({ error: 'Failed to fetch ATMs' });
+    }
+  });
+
+  // Exchange rates endpoint
+  app.get('/api/exchange-rates', async (req: Request, res: Response) => {
+    try {
+      const rates = await storage.getExchangeRates();
+      // Convert to object format: { EUR: 0.92, GBP: 0.79, ... }
+      const ratesObject: Record<string, number> = {};
+      rates.forEach((rate: any) => {
+        ratesObject[rate.targetCurrency || rate.target_currency] = parseFloat(rate.rate);
+      });
+      res.json(ratesObject);
+    } catch (error) {
+      console.error('Get exchange rates error:', error);
+      res.status(500).json({ error: 'Failed to fetch exchange rates' });
+    }
+  });
+
+  // Admin customers endpoint
+  app.get('/api/admin/customers', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const customers = await storage.getAllUsers();
+      // Filter out admins, only return customers
+      const customerList = customers.filter((user: any) => user.role === 'customer');
+      res.json(customerList);
+    } catch (error) {
+      console.error('Get customers error:', error);
+      res.status(500).json({ error: 'Failed to fetch customers' });
+    }
+  });
+
+  // Statements endpoint
+  app.get('/api/statements', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = parseInt(req.user?.id || '0');
+      if (!userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+      
+      const statements = await storage.getStatementsByUserId(userId);
+      res.json(statements);
+    } catch (error) {
+      console.error('Get statements error:', error);
+      res.status(500).json({ error: 'Failed to fetch statements' });
+    }
+  });
+
   app.post('/api/objects/upload', async (req: Request, res: Response) => {
     try {
       // Handle file upload for identity documents (ID cards, passports, etc.)

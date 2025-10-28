@@ -76,6 +76,16 @@ export interface IStorage {
   getUnreadAlerts(userId: number): Promise<Alert[]>;
   createAlert(alert: InsertAlert): Promise<Alert>;
   markAlertAsRead(id: number): Promise<Alert | undefined>;
+  
+  // Branches and ATMs operations
+  getBranches(): Promise<any[]>;
+  getAtms(): Promise<any[]>;
+  
+  // Exchange rates operations
+  getExchangeRates(): Promise<any[]>;
+  
+  // Statements operations
+  getStatementsByUserId(userId: number): Promise<any[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -507,4 +517,10 @@ export class MemStorage implements IStorage {
     return { id, ...alert, createdAt: new Date() } as Alert;
   }
   async markAlertAsRead(id: number): Promise<Alert | undefined> { return undefined; }
+
+  // Branches, ATMs, Exchange Rates, Statements stubs
+  async getBranches(): Promise<any[]> { return []; }
+  async getAtms(): Promise<any[]> { return []; }
+  async getExchangeRates(): Promise<any[]> { return []; }
+  async getStatementsByUserId(userId: number): Promise<any[]> { return []; }
 }

@@ -1194,6 +1194,68 @@ export class SupabasePublicStorage implements IStorage {
     if (error) throw error;
     return data as unknown as Alert;
   }
+
+  // Branches and ATMs
+  async getBranches(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('branches')
+        .select('*')
+        .eq('is_active', true)
+        .order('city', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting branches:', error);
+      return [];
+    }
+  }
+
+  async getAtms(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('atms')
+        .select('*')
+        .eq('is_operational', true)
+        .order('city', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting ATMs:', error);
+      return [];
+    }
+  }
+
+  // Exchange rates
+  async getExchangeRates(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('exchange_rates')
+        .select('*')
+        .order('last_updated', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting exchange rates:', error);
+      return [];
+    }
+  }
+
+  // Statements
+  async getStatementsByUserId(userId: number): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('statements')
+        .select('*')
+        .eq('user_id', userId)
+        .order('generated_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting statements:', error);
+      return [];
+    }
+  }
 }
 
 export { supabase };

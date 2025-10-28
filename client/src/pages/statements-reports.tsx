@@ -23,13 +23,21 @@ export default function StatementsReports() {
     );
   }
 
-  const statements = [
-    { month: "December 2024", type: "Monthly Statement", size: "2.4 MB", date: "Jan 1, 2025" },
-    { month: "November 2024", type: "Monthly Statement", size: "2.1 MB", date: "Dec 1, 2024" },
-    { month: "October 2024", type: "Monthly Statement", size: "1.9 MB", date: "Nov 1, 2024" },
-    { month: "Q4 2024", type: "Quarterly Report", size: "5.2 MB", date: "Jan 1, 2025" },
-    { month: "September 2024", type: "Monthly Statement", size: "2.0 MB", date: "Oct 1, 2024" },
-  ];
+  // Fetch real statements from database
+  const { data: statements, isLoading: statementsLoading } = useQuery<any[]>({
+    queryKey: ['/api/statements'],
+    enabled: !!user,
+  });
+
+  if (statementsLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-gray-600">Loading statements...</div>
+      </div>
+    );
+  }
+
+  const statementsList = statements || [];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -111,29 +119,37 @@ export default function StatementsReports() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {statements.map((statement, index) => (
-                <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-gray-900">{statement.month}</h3>
-                      <p className="text-sm text-gray-600">{statement.type} • {statement.size}</p>
-                      <p className="text-xs text-gray-500">Generated on {statement.date}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">
-                      View
-                    </Button>
-                    <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700">
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
-                    </Button>
-                  </div>
+              {statementsList.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>No statements available yet</p>
+                  <p className="text-sm">Statements are generated monthly</p>
                 </div>
-              ))}
+              ) : (
+                statementsList.map((statement: any, index: number) => (
+                  <div key={statement.id || index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50" data-testid={`statement-item-${statement.id}`}>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900" data-testid={`statement-period-${statement.id}`}>{statement.statement_period || statement.statementPeriod}</h3>
+                        <p className="text-sm text-gray-600">{statement.statement_type || statement.statementType} • {statement.file_size || statement.fileSize || 'N/A'}</p>
+                        <p className="text-xs text-gray-500">Generated on {new Date(statement.generated_at || statement.generatedAt).toLocaleDateString()}</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" size="sm" data-testid={`statement-view-${statement.id}`}>
+                          View
+                        </Button>
+                        <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" data-testid={`statement-download-${statement.id}`}>
+                          <Download className="w-4 h-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
