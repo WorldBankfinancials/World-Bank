@@ -147,9 +147,9 @@ function ReceiveSection() {
   const { data: user } = useQuery<User>({
     queryKey: ['/api/user'],
   });
-  const [requestAmount, setRequestAmount] = React.useState("");
-  const [showQR, setShowQR] = React.useState(false);
-  const [copied, setCopied] = React.useState(false);
+  const [requestAmount, setRequestAmount] = useState("");
+  const [showQR, setShowQR] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const accountDetails = {
     name: user?.fullName || "Account Holder",
@@ -237,9 +237,9 @@ function ReceiveSection() {
 
 // Add Money Section Component
 function AddMoneySection() {
-  const [addAmount, setAddAmount] = React.useState("");
-  const [selectedMethod, setSelectedMethod] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
+  const [addAmount, setAddAmount] = useState("");
+  const [selectedMethod, setSelectedMethod] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const quickAmounts = ["50", "100", "250", "500", "1000"];
   const addMoneyMethods = [
@@ -350,7 +350,7 @@ function AddMoneySection() {
 
 // Alerts Section Component
 function AlertsSection() {
-  const [notifications, setNotifications] = React.useState({
+  const [notifications, setNotifications] = useState({
     transactions: true,
     security: true,
     statements: true,
@@ -478,11 +478,11 @@ export default function Dashboard() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
   const [, setLocation] = useLocation();
-  const [showBalance, setShowBalance] = React.useState(true);
-  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
-  const [isChatOpen, setIsChatOpen] = React.useState(false);
-  const [showNotifications] = React.useState(false);
-  const [userData, setUserData] = React.useState<any>(null);
+  const [showBalance, setShowBalance] = useState(true);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [showNotifications] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
   const queryClient = useQueryClient();
 
   // Track user presence for real-time online/offline status
@@ -529,7 +529,7 @@ export default function Dashboard() {
   const toggleBalance = () => setShowBalance(!showBalance);
 
   // Fetch real account data from API
-  const [accounts, setAccounts] = React.useState<Array<{
+  const [accounts, setAccounts] = useState<Array<{
     type: string;
     number: string;
     balance: number;
@@ -537,7 +537,7 @@ export default function Dashboard() {
     id: number;
   }>>([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchAccounts = async () => {
       if (!userProfile?.id) {
         return;
@@ -582,7 +582,7 @@ export default function Dashboard() {
   }, [userProfile]);
 
   // Real-time subscription for transactions and admin changes
-  React.useEffect(() => {
+  useEffect(() => {
     import('@/lib/supabase').then(({ supabase }) => {
       // Subscribe to transaction changes
       const transactionChannel = supabase
@@ -1002,9 +1002,9 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {(() => {
-              const [recentTransactions, setRecentTransactions] = React.useState<any[]>([]);
+              const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
 
-              React.useEffect(() => {
+              useEffect(() => {
                 const fetchRecentTransactions = async () => {
                   try {
                     const response = await fetch('/api/accounts/1/transactions');
