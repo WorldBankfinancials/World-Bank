@@ -95,7 +95,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { data: users, error } = await supabase.auth.admin.listUsers();
 
       if (!error && users) {
-        const emailExists = users.users.some(u => u.email === email);
+        const emailExists = users.users.some((u: any) => u.email === email);
         if (emailExists) {
           return res.json({
             available: false,
@@ -159,7 +159,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { data: users, error: authError } = await supabase.auth.admin.listUsers();
 
       if (!authError && users) {
-        const emailExistsInSupabase = users.users.some(u => u.email === userData.email);
+        const emailExistsInSupabase = users.users.some((u: any) => u.email === userData.email);
         if (emailExistsInSupabase) {
           // This case should ideally be caught by the /api/auth/check-email endpoint,
           // but if it reaches here, it means the user is in Supabase Auth but not in our DB.

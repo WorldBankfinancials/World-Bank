@@ -100,45 +100,72 @@ export default function MultiStepRegisterPage() {
         }
       }
 
-      // Create Supabase account - Note: Email uniqueness is checked in Step 1
-      const { error } = await signUp(completeData.email, completeData.password, {
+      // STEP 1: Create Supabase Auth account - Email uniqueness is checked in Step 1
+      const { error: signUpError } = await signUp(completeData.email, completeData.password, {
         full_name: `${completeData.firstName} ${completeData.lastName}`,
         phone: completeData.phone,
         date_of_birth: completeData.dateOfBirth,
-        address: completeData.address,
-        city: completeData.city,
-        state: completeData.state,
-        country: completeData.country,
-        postal_code: completeData.postalCode,
         nationality: completeData.nationality,
-        profession: completeData.profession,
-        employer: completeData.employer,
-        annual_income: completeData.annualIncome,
-        source_of_funds: completeData.sourceOfFunds,
-        purpose_of_account: completeData.purposeOfAccount,
-        id_type: completeData.idType,
-        id_number: completeData.idNumber,
-        transfer_pin: completeData.transferPin,
-        id_card_url: idCardUrl,
-        // SUPPORT TEAM APPROVAL REQUIRED
-        approval_status: 'pending',
-        is_approved: false,
         registration_date: new Date().toISOString()
       });
 
-      if (error) {
+      if (signUpError) {
         // Check if it's a duplicate email error
-        if (error.toLowerCase().includes('already') || error.toLowerCase().includes('exists') || error.toLowerCase().includes('duplicate')) {
+        if (signUpError.toLowerCase().includes('already') || signUpError.toLowerCase().includes('exists') || signUpError.toLowerCase().includes('duplicate')) {
           throw new Error('This email is already registered. Please use a different email or try logging in with your existing account.');
         }
-        throw new Error(error);
+        throw new Error(signUpError);
+      }
+
+      // STEP 2: Get the created Supabase user ID
+      const { data: { session } } = await (await import('@/lib/supabase')).supabase.auth.getSession();
+      if (!session?.user?.id) {
+        throw new Error('Registration failed: Unable to create account. Please try again.');
+      }
+
+      // STEP 3: Create user profile in local database
+      const profileResponse = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: completeData.email,
+          supabaseUserId: session.user.id,
+          fullName: `${completeData.firstName} ${completeData.lastName}`,
+          phone: completeData.phone,
+          dateOfBirth: completeData.dateOfBirth,
+          address: completeData.address,
+          city: completeData.city,
+          state: completeData.state,
+          country: completeData.country,
+          postalCode: completeData.postalCode,
+          nationality: completeData.nationality,
+          profession: completeData.profession,
+          employer: completeData.employer,
+          annualIncome: completeData.annualIncome,
+          sourceOfFunds: completeData.sourceOfFunds,
+          purposeOfAccount: completeData.purposeOfAccount,
+          idType: completeData.idType,
+          idNumber: completeData.idNumber,
+          transferPin: completeData.transferPin,
+          idCardUrl: idCardUrl,
+        }),
+      });
+
+      if (!profileResponse.ok) {
+        const errorData = await profileResponse.json();
+        throw new Error(errorData.error || 'Failed to create user profile');
       }
 
       toast({
         title: 'Registration Submitted Successfully!',
-        description: 'Your application is being reviewed by our customer support team. You will receive an email notification once approved.',
+        description: 'Your application is being reviewed by our customer support team. You will be able to login once approved.',
         duration: 5000,
       });
+
+      // Sign out to prevent automatic login before approval
+      await (await import('@/lib/supabase')).supabase.auth.signOut();
 
       // Redirect to login with pending approval message
       setLocation('/login?status=pending');
