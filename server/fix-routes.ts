@@ -823,7 +823,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             ws,
             userId: dbUser.id.toString(),
             role: role as 'admin' | 'customer',
-            email: authUser.email!
+            email: authUser.email || ''
           });
           
           isAuthenticated = true;

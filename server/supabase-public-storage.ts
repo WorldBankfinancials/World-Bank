@@ -1195,3 +1195,5 @@ export class SupabasePublicStorage implements IStorage {
     return data as unknown as Alert;
   }
 }
+
+export { supabase };
