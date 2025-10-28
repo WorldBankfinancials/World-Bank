@@ -552,6 +552,13 @@ export class SupabasePublicStorage implements IStorage {
   }
 
   async createUser(data: InsertUser): Promise<User> {
+    console.log('🔧 SupabasePublicStorage.createUser called with:', {
+      username: data.username,
+      email: data.email,
+      hasPasswordHash: !!data.passwordHash,
+      supabaseUserId: data.supabaseUserId
+    });
+    
     try {
       const { data: user, error } = await supabase
         .from('bank_users')
@@ -586,9 +593,22 @@ export class SupabasePublicStorage implements IStorage {
         .select()
         .single();
 
-      if (error || !user) {
-        throw error || new Error('Failed to create user');
+      if (error) {
+        console.error('❌ Supabase insert ERROR:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
       }
+      
+      if (!user) {
+        console.error('❌ Supabase insert returned no user and no error');
+        throw new Error('Failed to create user - no data returned');
+      }
+      
+      console.log('✅ Supabase user created successfully:', user.id);
 
       return {
         id: user.id,
