@@ -872,6 +872,63 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== SUPPORT TICKETS API ROUTES ====================
+  app.get('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Admin can see all tickets, customers see only their own
+      const tickets = user.role === 'admin' 
+        ? await storage.getSupportTickets()  // No userId = get all
+        : await storage.getSupportTickets(user.id);  // With userId = get user's tickets
+      
+      res.json(tickets);
+    } catch (error) {
+      console.error('Error fetching support tickets:', error);
+      res.status(500).json({ error: 'Failed to fetch support tickets' });
+    }
+  });
+
+  app.post('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const ticketData = {
+        userId: user.id,
+        subject: req.body.subject,
+        description: req.body.description,
+        priority: req.body.priority || 'medium',
+        status: 'open',
+        category: req.body.category
+      };
+      
+      const ticket = await storage.createSupportTicket(ticketData);
+      res.json(ticket);
+    } catch (error) {
+      console.error('Error creating support ticket:', error);
+      res.status(500).json({ error: 'Failed to create support ticket' });
+    }
+  });
+
+  app.patch('/api/support-tickets/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const updatedTicket = await storage.updateSupportTicket(id, updates);
+      res.json(updatedTicket);
+    } catch (error) {
+      console.error('Error updating support ticket:', error);
+      res.status(500).json({ error: 'Failed to update support ticket' });
+    }
+  });
+
   // ==================== OBJECT STORAGE API ROUTES ====================
   app.post('/api/objects/upload', async (req: Request, res: Response) => {
     try {

@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BankLogo } from "@/components/BankLogo";
 import { MessageSquare, Send, Phone, Video, AlertTriangle, Paperclip, Headphones } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ChatMessage {
   id: string;
@@ -48,92 +50,24 @@ export default function AdminLiveChat() {
   const [adminName] = useState("Customer Support");
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
-  // Mock data for chat sessions
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([
-    {
-      id: 'chat_1',
-      customerId: '1',
-      customerName: 'Liu Wei',
-      status: 'active',
-      lastMessage: 'I need help with my transfer',
-      lastMessageTime: new Date(Date.now() - 5 * 60000),
-      unreadCount: 2,
-      messages: [
-        {
-          id: '1',
-          senderId: '1',
-          senderName: 'Liu Wei',
-          senderRole: 'customer',
-          message: 'Hello, I need help with my international transfer',
-          timestamp: new Date(Date.now() - 10 * 60000),
-          isRead: true
-        },
-        {
-          id: '2',
-          senderId: 'admin',
-          senderName: 'Customer Support',
-          senderRole: 'admin',
-          message: 'Hello Liu Wei! I\'d be happy to help you with your transfer. What specific issue are you experiencing?',
-          timestamp: new Date(Date.now() - 8 * 60000),
-          isRead: true
-        },
-        {
-          id: '3',
-          senderId: '1',
-          senderName: 'Liu Wei',
-          senderRole: 'customer',
-          message: 'My transfer to Singapore has been pending for 2 days. The amount is $15,000.',
-          timestamp: new Date(Date.now() - 5 * 60000),
-          isRead: false
-        }
-      ]
-    },
-    {
-      id: 'chat_2',
-      customerId: '2',
-      customerName: 'Sarah Johnson',
-      status: 'waiting',
-      lastMessage: 'Waiting for support...',
-      lastMessageTime: new Date(Date.now() - 15 * 60000),
-      unreadCount: 1,
-      messages: [
-        {
-          id: '4',
-          senderId: '2',
-          senderName: 'Sarah Johnson',
-          senderRole: 'customer',
-          message: 'I cannot access my account dashboard',
-          timestamp: new Date(Date.now() - 15 * 60000),
-          isRead: false
-        }
-      ]
-    }
-  ]);
+  // Fetch support tickets from API
+  const { data: supportTickets = [], isLoading: ticketsLoading } = useQuery<SupportTicket[]>({
+    queryKey: ['/api/support-tickets'],
+    enabled: user?.role === 'admin',
+    refetchInterval: 30000 // Refresh every 30 seconds
+  });
 
-  // Mock support tickets
-  const [supportTickets] = useState<SupportTicket[]>([
-    {
-      id: 1,
-      subject: "Account Verification Required",
-      customerName: "Liu Wei",
-      priority: "high",
-      status: "open",
-      createdAt: "2024-12-16T09:30:00Z",
-      description: "Customer needs to verify international transfer documentation",
-      category: "verification"
-    },
-    {
-      id: 2,
-      subject: "Transfer Delay Investigation",
-      customerName: "Sarah Johnson", 
-      priority: "urgent",
-      status: "in-progress",
-      createdAt: "2024-12-16T08:15:00Z",
-      description: "International wire transfer stuck in processing for 48 hours",
-      category: "transfer"
-    }
-  ]);
+  // Fetch messages from API (for chat sessions)
+  const { data: messages = [], isLoading: messagesLoading } = useQuery({
+    queryKey: ['/api/messages'],
+    enabled: user?.role === 'admin',
+    refetchInterval: 10000 // Refresh every 10 seconds
+  });
+
+  // Transform messages into chat sessions (group by conversation)
+  const chatSessions: ChatSession[] = [];
 
   useEffect(() => {
     connectWebSocket();
