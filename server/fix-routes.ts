@@ -708,27 +708,28 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== MARKET DATA API ROUTES - PROTECTED ====================
   app.get('/api/market-rates', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Mock market data - replace with real market data API integration
-      const marketData = {
-        stocks: { 
-          change: +(Math.random() * 6 - 1).toFixed(2), 
-          trending: Math.random() > 0.5 ? 'up' : 'down' 
-        },
-        bonds: { 
-          change: +(Math.random() * 3 - 1.5).toFixed(2), 
-          trending: Math.random() > 0.5 ? 'up' : 'down' 
-        },
-        crypto: { 
-          change: +(Math.random() * 15 - 5).toFixed(2), 
-          trending: Math.random() > 0.5 ? 'up' : 'down' 
-        },
-        forex: { 
-          change: +(Math.random() * 4 - 1).toFixed(2), 
-          trending: Math.random() > 0.5 ? 'up' : 'down' 
-        }
+      const marketRates = await (storage as any).getMarketRates();
+      
+      // Transform database format to frontend expected format
+      const transformedData: any = {};
+      
+      marketRates.forEach((rate: any) => {
+        const assetType = rate.asset_type || rate.assetType;
+        transformedData[assetType] = {
+          change: rate.change_percent || rate.changePercent || 0,
+          trending: (rate.change_direction || rate.changeDirection || 'up') as 'up' | 'down'
+        };
+      });
+      
+      // Ensure all required categories exist with fallbacks
+      const result = {
+        stocks: transformedData.stocks || { change: 0, trending: 'up' as const },
+        bonds: transformedData.bonds || { change: 0, trending: 'up' as const },
+        crypto: transformedData.crypto || { change: 0, trending: 'up' as const },
+        forex: transformedData.forex || { change: 0, trending: 'up' as const }
       };
       
-      res.json(marketData);
+      res.json(result);
     } catch (error) {
       console.error('Error fetching market rates:', error);
       res.status(500).json({ error: 'Failed to fetch market rates' });

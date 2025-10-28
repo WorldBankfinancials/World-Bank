@@ -86,6 +86,9 @@ export interface IStorage {
   
   // Statements operations
   getStatementsByUserId(userId: number): Promise<any[]>;
+  
+  // Market rates operations
+  getMarketRates(): Promise<any[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -523,4 +526,5 @@ export class MemStorage implements IStorage {
   async getAtms(): Promise<any[]> { return []; }
   async getExchangeRates(): Promise<any[]> { return []; }
   async getStatementsByUserId(userId: number): Promise<any[]> { return []; }
+  async getMarketRates(): Promise<any[]> { return []; }
 }

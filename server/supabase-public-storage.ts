@@ -1256,6 +1256,21 @@ export class SupabasePublicStorage implements IStorage {
       return [];
     }
   }
+
+  // Market Rates
+  async getMarketRates(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('market_rates')
+        .select('*')
+        .order('last_updated', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting market rates:', error);
+      return [];
+    }
+  }
 }
 
 export { supabase };
