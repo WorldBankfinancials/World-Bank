@@ -59,15 +59,8 @@ export default function AdminLiveChat() {
     refetchInterval: 30000 // Refresh every 30 seconds
   });
 
-  // Fetch messages from API (for chat sessions)
-  const { data: messages = [], isLoading: messagesLoading } = useQuery({
-    queryKey: ['/api/messages'],
-    enabled: user?.role === 'admin',
-    refetchInterval: 10000 // Refresh every 10 seconds
-  });
-
-  // Transform messages into chat sessions (group by conversation)
-  const chatSessions: ChatSession[] = [];
+  // Real-time chat sessions - no mock data, only real WebSocket messages
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
 
   useEffect(() => {
     connectWebSocket();
