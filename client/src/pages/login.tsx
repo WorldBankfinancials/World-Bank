@@ -130,7 +130,7 @@ export default function Login() {
         setPinError("");
         toast({
           title: 'Login Successful',
-          description: 'Welcome back to Apex Banking Corporation',
+          description: 'Welcome back to World Bank',
         });
         setLocation("/dashboard");
       } else {
@@ -163,7 +163,7 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Professional Apex Banking Corporation Header */}
+          {/* Professional World Bank Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-6">
               <div className="relative">
@@ -337,13 +337,13 @@ export default function Login() {
                 </p>
               </div>
               
-              {/* About Apex Banking Corporation Link */}
+              {/* About World Bank Link */}
               <div className="text-center pt-2">
                 <button
                   onClick={() => setLocation("/about")}
                   className="text-gray-500 hover:text-gray-700 text-sm underline transition-colors"
                 >
-                  About Apex Banking Corporation
+                  About World Bank
                 </button>
               </div>
             </CardContent>
@@ -368,7 +368,7 @@ export default function Login() {
             </div>
 
             <div className="text-gray-500 text-xs">
-              <p>© 2025 Apex Banking Corporation Group. All rights reserved.</p>
+              <p>© 2025 World Bank Group. All rights reserved.</p>
             </div>
           </div>
         </div>

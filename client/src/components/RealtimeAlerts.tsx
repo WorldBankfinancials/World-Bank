@@ -35,7 +35,7 @@ export default function RealtimeAlerts() {
         
         // Show browser notification if permission granted
         if (Notification.permission === 'granted') {
-          new Notification(`Apex Banking Corporation: ${newAlert.title}`, {
+          new Notification(`World Bank: ${newAlert.title}`, {
             body: newAlert.message,
             icon: '/favicon.ico'
           });

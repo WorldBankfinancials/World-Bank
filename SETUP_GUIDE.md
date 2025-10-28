@@ -1,4 +1,4 @@
-# Apex Banking Corporation - Setup Guide
+# World Bank - Setup Guide
 
 ## 🏛️ Architecture Overview
 

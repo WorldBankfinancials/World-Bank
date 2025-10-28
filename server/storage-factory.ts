@@ -8,7 +8,7 @@ import type { IStorage } from './storage';
 export function createStorage(): IStorage {
   const dataSource = config.getDataSource();
   
-  console.log(`\n🏦 Apex Banking Corporation Storage Configuration:`);
+  console.log(`\n🏦 World Bank Storage Configuration:`);
   console.log(`📊 Environment: ${config.NODE_ENV}`);
   console.log(`💾 Data Source: ${dataSource}`);
   console.log(`🔐 Auth Source: ${config.getAuthSource()}`);

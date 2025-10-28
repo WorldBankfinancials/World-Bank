@@ -96,7 +96,7 @@ export default function Header({}: HeaderProps) {
             <div className="flex items-center space-x-2 cursor-pointer">
               <img 
                 src="/world-bank-logo.jpeg" 
-                alt="Apex Banking Corporation Logo" 
+                alt="World Bank Logo" 
                 className="w-8 h-8 object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;

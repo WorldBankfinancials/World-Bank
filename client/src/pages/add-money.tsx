@@ -65,7 +65,7 @@ export default function AddMoney() {
     {
       id: "cash_deposit",
       name: "Cash Deposit",
-      description: "Deposit cash at Apex Banking Corporation branches",
+      description: "Deposit cash at World Bank branches",
       icon: Banknote,
       fee: "Free",
       time: "Instant",

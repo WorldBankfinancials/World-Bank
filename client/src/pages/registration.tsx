@@ -643,7 +643,7 @@ export default function Registration() {
                 />
                 <div>
                   <Label className="text-sm">
-                    I would like to receive promotional emails and updates about Apex Banking Corporation services (optional)
+                    I would like to receive promotional emails and updates about World Bank services (optional)
                   </Label>
                 </div>
               </div>
@@ -669,13 +669,13 @@ export default function Registration() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
-        {/* Apex Banking Corporation Branding */}
+        {/* World Bank Branding */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center p-2">
               <img 
                 src="/world-bank-logo.jpeg" 
-                alt="Apex Banking Corporation Logo" 
+                alt="World Bank Logo" 
                 className="w-full h-full object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
@@ -765,7 +765,7 @@ export default function Registration() {
         </Card>
 
         <div className="text-center mt-6 text-blue-200 text-sm">
-          © 2024 Apex Banking Corporation. All rights reserved.
+          © 2024 World Bank. All rights reserved.
         </div>
       </div>
     </div>

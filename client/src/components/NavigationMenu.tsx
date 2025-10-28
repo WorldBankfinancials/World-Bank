@@ -63,7 +63,7 @@ export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps)
             <div className="flex flex-col items-center">
               <img 
                 src="/world-bank-logo.jpeg" 
-                alt="Apex Banking Corporation Logo" 
+                alt="World Bank Logo" 
                 className="w-10 h-10 object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;

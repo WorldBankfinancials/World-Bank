@@ -48,7 +48,7 @@ export default function AdminLogin() {
               <Shield className="w-6 h-6" />
               Admin Access
             </CardTitle>
-            <p className="text-gray-600 mt-2">Apex Banking Corporation Administration Panel</p>
+            <p className="text-gray-600 mt-2">World Bank Administration Panel</p>
           </div>
         </CardHeader>
 
