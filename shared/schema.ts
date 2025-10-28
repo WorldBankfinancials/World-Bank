@@ -194,6 +194,92 @@ export const alerts = pgTable("alerts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Account statements
+export const statements = pgTable("statements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  accountId: integer("account_id").notNull(),
+  statementPeriod: text("statement_period").notNull(), // 'December 2024'
+  statementType: text("statement_type").notNull(), // 'Monthly Statement', 'Quarterly Report'
+  fileSize: text("file_size"), // '2.4 MB'
+  documentUrl: text("document_url"),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  generatedAt: timestamp("generated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Bank branches
+export const branches = pgTable("branches", {
+  id: serial("id").primaryKey(),
+  branchName: text("branch_name").notNull(),
+  branchCode: text("branch_code").notNull().unique(),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  state: text("state"),
+  country: text("country").notNull(),
+  postalCode: text("postal_code"),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  openingHours: text("opening_hours"), // JSON string with daily hours
+  services: text("services").array(), // ['ATM', 'Teller', 'Safe Deposit', 'Financial Advisory']
+  amenities: text("amenities").array(), // ['Parking', 'Wheelchair Accessible', 'WiFi']
+  isActive: boolean("is_active").default(true),
+  managerName: text("manager_name"),
+  managerEmail: text("manager_email"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// ATMs
+export const atms = pgTable("atms", {
+  id: serial("id").primaryKey(),
+  branchId: integer("branch_id"), // Optional - can be standalone
+  location: text("location").notNull(), // 'Starbucks - 5th Ave'
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  state: text("state"),
+  country: text("country").notNull(),
+  postalCode: text("postal_code"),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  features: text("features").array(), // ['24/7', 'Deposit', 'Multiple ATMs']
+  isOperational: boolean("is_operational").default(true),
+  lastServiceDate: timestamp("last_service_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Exchange rates
+export const exchangeRates = pgTable("exchange_rates", {
+  id: serial("id").primaryKey(),
+  baseCurrency: text("base_currency").notNull().default("USD"),
+  targetCurrency: text("target_currency").notNull(),
+  rate: decimal("rate", { precision: 18, scale: 8 }).notNull(),
+  buyRate: decimal("buy_rate", { precision: 18, scale: 8 }),
+  sellRate: decimal("sell_rate", { precision: 18, scale: 8 }),
+  provider: text("provider"), // 'ECB', 'OpenExchangeRates', etc.
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Market rates for investments
+export const marketRates = pgTable("market_rates", {
+  id: serial("id").primaryKey(),
+  marketType: text("market_type").notNull(), // 'stocks', 'bonds', 'crypto', 'forex'
+  symbol: text("symbol"), // Optional ticker symbol
+  currentValue: decimal("current_value", { precision: 18, scale: 8 }).notNull(),
+  changePercent: decimal("change_percent", { precision: 10, scale: 4 }).notNull(),
+  changeValue: decimal("change_value", { precision: 18, scale: 8 }),
+  trending: text("trending"), // 'up', 'down', 'neutral'
+  volume: decimal("volume", { precision: 20, scale: 2 }),
+  marketCap: decimal("market_cap", { precision: 20, scale: 2 }),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -248,6 +334,36 @@ export const insertAlertSchema = createInsertSchema(alerts).omit({
   createdAt: true,
 });
 
+export const insertStatementSchema = createInsertSchema(statements).omit({
+  id: true,
+  generatedAt: true,
+  createdAt: true,
+});
+
+export const insertBranchSchema = createInsertSchema(branches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAtmSchema = createInsertSchema(atms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertExchangeRateSchema = createInsertSchema(exchangeRates).omit({
+  id: true,
+  lastUpdated: true,
+  createdAt: true,
+});
+
+export const insertMarketRateSchema = createInsertSchema(marketRates).omit({
+  id: true,
+  lastUpdated: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertAccount = z.infer<typeof insertAccountSchema>;
@@ -268,3 +384,13 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 export type InsertAlert = z.infer<typeof insertAlertSchema>;
 export type Alert = typeof alerts.$inferSelect;
+export type InsertStatement = z.infer<typeof insertStatementSchema>;
+export type Statement = typeof statements.$inferSelect;
+export type InsertBranch = z.infer<typeof insertBranchSchema>;
+export type Branch = typeof branches.$inferSelect;
+export type InsertAtm = z.infer<typeof insertAtmSchema>;
+export type Atm = typeof atms.$inferSelect;
+export type InsertExchangeRate = z.infer<typeof insertExchangeRateSchema>;
+export type ExchangeRate = typeof exchangeRates.$inferSelect;
+export type InsertMarketRate = z.infer<typeof insertMarketRateSchema>;
+export type MarketRate = typeof marketRates.$inferSelect;
