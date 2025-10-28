@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";
