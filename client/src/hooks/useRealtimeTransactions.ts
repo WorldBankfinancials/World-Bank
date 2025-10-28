@@ -1,15 +1,9 @@
 import { useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { queryClient } from '@/lib/queryClient';
+import { supabaseClient } from '@/lib/supabase';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-let supabase: ReturnType<typeof createClient> | null = null;
-
-if (supabaseUrl && supabaseAnonKey) {
-  supabase = createClient(supabaseUrl, supabaseAnonKey);
-}
+// Use the centralized Supabase client to avoid "Multiple GoTrueClient instances" warning
+const supabase = supabaseClient;
 
 /**
  * Custom hook to subscribe to real-time transaction updates

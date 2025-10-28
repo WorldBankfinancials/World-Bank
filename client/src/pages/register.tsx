@@ -11,20 +11,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BankLogo } from '@/components/BankLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseClient } from '@/lib/supabase';
 
-// Initialize Supabase client using environment variables
-const getSupabaseClient = () => {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('Supabase environment variables not configured');
-    return null;
-  }
-
-  return createClient(supabaseUrl, supabaseKey);
-};
+// Use the centralized Supabase client to avoid "Multiple GoTrueClient instances" warning
+const getSupabaseClient = () => supabaseClient;
 
 const registrationSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
