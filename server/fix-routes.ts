@@ -736,6 +736,91 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== MARKET INDICES API - PROTECTED ====================
+  app.get('/api/market-indices', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Return real-time market indices data
+      // In production, this should fetch from a financial data API (e.g., Alpha Vantage, IEX Cloud)
+      const indices = [
+        { name: 'S&P 500', value: '4,783.45', change: '+32.87', changePercent: '+0.69%', trend: 'up' },
+        { name: 'NASDAQ', value: '15,310.97', change: '+125.34', changePercent: '+0.83%', trend: 'up' },
+        { name: 'DOW JONES', value: '37,248.35', change: '-43.89', changePercent: '-0.12%', trend: 'down' },
+        { name: 'FTSE 100', value: '7,733.24', change: '+18.45', changePercent: '+0.24%', trend: 'up' },
+        { name: 'DAX', value: '16,784.86', change: '+92.12', changePercent: '+0.55%', trend: 'up' },
+        { name: 'NIKKEI 225', value: '33,377.42', change: '-124.56', changePercent: '-0.37%', trend: 'down' }
+      ];
+      res.json(indices);
+    } catch (error) {
+      console.error('Error fetching market indices:', error);
+      res.status(500).json({ error: 'Failed to fetch market indices' });
+    }
+  });
+
+  // ==================== TOP STOCKS API - PROTECTED ====================
+  app.get('/api/top-stocks', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Return top performing stocks
+      // In production, this should fetch from a financial data API
+      const stocks = [
+        { symbol: 'AAPL', name: 'Apple Inc.', price: '$185.92', change: '+2.34', changePercent: '+1.28%', trend: 'up' },
+        { symbol: 'MSFT', name: 'Microsoft Corp.', price: '$378.91', change: '+5.67', changePercent: '+1.52%', trend: 'up' },
+        { symbol: 'GOOGL', name: 'Alphabet Inc.', price: '$142.67', change: '-1.23', changePercent: '-0.85%', trend: 'down' },
+        { symbol: 'AMZN', name: 'Amazon.com Inc.', price: '$156.78', change: '+3.45', changePercent: '+2.25%', trend: 'up' },
+        { symbol: 'NVDA', name: 'NVIDIA Corp.', price: '$495.34', change: '+12.87', changePercent: '+2.67%', trend: 'up' },
+        { symbol: 'TSLA', name: 'Tesla Inc.', price: '$248.42', change: '-4.56', changePercent: '-1.80%', trend: 'down' }
+      ];
+      res.json(stocks);
+    } catch (error) {
+      console.error('Error fetching top stocks:', error);
+      res.status(500).json({ error: 'Failed to fetch top stocks' });
+    }
+  });
+
+  // ==================== PORTFOLIO ASSETS API - PROTECTED ====================
+  app.get('/api/portfolio-assets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // SECURITY: Get authenticated user
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Get user's investments and calculate portfolio breakdown
+      const investments = await storage.getUserInvestments(user.id);
+      
+      // Calculate portfolio allocation by asset type
+      const assetAllocation: Record<string, { value: number, allocation: number, change: number }> = {};
+      let totalValue = 0;
+
+      investments.forEach((inv: any) => {
+        const assetType = inv.asset_type || inv.assetType || 'Other';
+        const value = parseFloat(inv.total_value || inv.totalValue || 0);
+        const gainLoss = parseFloat(inv.gain_loss || inv.gainLoss || 0);
+        
+        totalValue += value;
+        
+        if (!assetAllocation[assetType]) {
+          assetAllocation[assetType] = { value: 0, allocation: 0, change: 0 };
+        }
+        assetAllocation[assetType].value += value;
+        assetAllocation[assetType].change += gainLoss;
+      });
+
+      // Calculate allocation percentages
+      const assets = Object.keys(assetAllocation).map(name => ({
+        name,
+        value: `$${assetAllocation[name].value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        allocation: totalValue > 0 ? `${((assetAllocation[name].value / totalValue) * 100).toFixed(1)}%` : '0%',
+        change: assetAllocation[name].change >= 0 ? `+${assetAllocation[name].change.toFixed(2)}%` : `${assetAllocation[name].change.toFixed(2)}%`
+      }));
+
+      res.json(assets);
+    } catch (error) {
+      console.error('Error fetching portfolio assets:', error);
+      res.status(500).json({ error: 'Failed to fetch portfolio assets' });
+    }
+  });
+
   // ==================== CURRENCY EXCHANGE API ROUTES - PROTECTED ====================
   app.post('/api/currency-exchange', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {

@@ -10,24 +10,15 @@ import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from "lucide-react";
 
 export default function InvestmentPortfolio() {
   const { t } = useLanguage();
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading: userLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-wb-gray flex items-center justify-center">
-        <div className="text-wb-dark">{t('loading')}</div>
-      </div>
-    );
-  }
-
-  const holdings = [
-    { symbol: "AAPL", name: "Apple Inc.", shares: 150, price: 185.32, change: 2.45, changePercent: 1.34 },
-    { symbol: "MSFT", name: "Microsoft Corporation", shares: 200, price: 378.91, change: -3.21, changePercent: -0.84 },
-    { symbol: "GOOGL", name: "Alphabet Inc.", shares: 75, price: 142.67, change: 1.89, changePercent: 1.34 },
-    { symbol: "AMZN", name: "Amazon.com Inc.", shares: 100, price: 156.78, change: -2.34, changePercent: -1.47 }
-  ];
+  // Fetch real investment data from backend
+  const { data: investments = [], isLoading: investmentsLoading } = useQuery<any[]>({
+    queryKey: ['/api/investments'],
+    staleTime: 30000,
+  });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -36,7 +27,18 @@ export default function InvestmentPortfolio() {
     }).format(amount);
   };
 
-  const totalValue = holdings.reduce((sum, holding) => sum + (holding.shares * holding.price), 0);
+  // Calculate real portfolio metrics
+  const totalValue = investments.reduce((sum, inv) => sum + parseFloat(inv.total_value || inv.totalValue || 0), 0);
+  const totalGainLoss = investments.reduce((sum, inv) => sum + parseFloat(inv.gain_loss || inv.gainLoss || 0), 0);
+  const gainLossPercent = totalValue > 0 ? (totalGainLoss / (totalValue - totalGainLoss)) * 100 : 0;
+
+  if (userLoading || investmentsLoading) {
+    return (
+      <div className="min-h-screen bg-wb-gray flex items-center justify-center">
+        <div className="text-wb-dark">{t('loading')}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-wb-gray">
@@ -56,32 +58,46 @@ export default function InvestmentPortfolio() {
             <CardContent>
               <div className="text-3xl font-bold wb-dark">{formatCurrency(totalValue)}</div>
               <div className="flex items-center mt-2">
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-green-500 text-sm">+8.45% YTD</span>
+                {gainLossPercent >= 0 ? (
+                  <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
+                )}
+                <span className={`text-sm ${gainLossPercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {gainLossPercent >= 0 ? '+' : ''}{gainLossPercent.toFixed(2)}% Total
+                </span>
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-wb-text">Today's Change</CardTitle>
+              <CardTitle className="text-sm font-medium text-wb-text">Total Gain/Loss</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-600">+$2,847.32</div>
+              <div className={`text-3xl font-bold ${totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {totalGainLoss >= 0 ? '+' : ''}{formatCurrency(Math.abs(totalGainLoss))}
+              </div>
               <div className="flex items-center mt-2">
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-                <span className="text-green-500 text-sm">+0.67%</span>
+                {gainLossPercent >= 0 ? (
+                  <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
+                )}
+                <span className={`text-sm ${gainLossPercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {gainLossPercent >= 0 ? '+' : ''}{gainLossPercent.toFixed(2)}%
+                </span>
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-wb-text">Cash Available</CardTitle>
+              <CardTitle className="text-sm font-medium text-wb-text">Total Holdings</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold wb-dark">$12,450.00</div>
-              <p className="text-sm text-wb-text mt-2">Ready to invest</p>
+              <div className="text-3xl font-bold wb-dark">{investments.length}</div>
+              <p className="text-sm text-wb-text mt-2">Active investments</p>
             </CardContent>
           </Card>
         </div>
@@ -95,37 +111,55 @@ export default function InvestmentPortfolio() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {holdings.map((holding) => (
-                <div key={holding.symbol} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-wb-blue-light rounded-full flex items-center justify-center">
-                      <span className="font-bold wb-blue">{holding.symbol.charAt(0)}</span>
-                    </div>
-                    <div>
-                      <p className="font-semibold wb-dark">{holding.symbol}</p>
-                      <p className="text-sm text-wb-text">{holding.name}</p>
-                      <p className="text-sm text-wb-text">{holding.shares} shares</p>
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <p className="font-semibold wb-dark">{formatCurrency(holding.price)}</p>
-                    <div className={`flex items-center ${holding.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {holding.change >= 0 ? (
-                        <TrendingUp className="w-4 h-4 mr-1" />
-                      ) : (
-                        <TrendingDown className="w-4 h-4 mr-1" />
-                      )}
-                      <span className="text-sm">
-                        {holding.change >= 0 ? '+' : ''}{holding.change.toFixed(2)} ({holding.changePercent.toFixed(2)}%)
-                      </span>
-                    </div>
-                    <p className="text-sm text-wb-text">
-                      Value: {formatCurrency(holding.shares * holding.price)}
-                    </p>
-                  </div>
+              {investments.length === 0 ? (
+                <div className="text-center py-12">
+                  <BarChart3 className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-500">No investments yet</p>
+                  <p className="text-sm text-gray-400 mt-2">Start building your portfolio today</p>
                 </div>
-              ))}
+              ) : (
+                investments.map((investment: any) => {
+                  const symbol = investment.symbol || 'N/A';
+                  const name = investment.name || 'Unknown';
+                  const quantity = parseFloat(investment.quantity || 0);
+                  const currentPrice = parseFloat(investment.current_price || investment.currentPrice || 0);
+                  const totalValue = parseFloat(investment.total_value || investment.totalValue || 0);
+                  const gainLoss = parseFloat(investment.gain_loss || investment.gainLoss || 0);
+                  const gainLossPercent = parseFloat(investment.gain_loss_percent || investment.gainLossPercent || 0);
+
+                  return (
+                    <div key={investment.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-wb-blue-light rounded-full flex items-center justify-center">
+                          <span className="font-bold wb-blue">{symbol.charAt(0)}</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold wb-dark">{symbol}</p>
+                          <p className="text-sm text-wb-text">{name}</p>
+                          <p className="text-sm text-wb-text">{quantity} shares</p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <p className="font-semibold wb-dark">{formatCurrency(currentPrice)}</p>
+                        <div className={`flex items-center justify-end ${gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {gainLoss >= 0 ? (
+                            <TrendingUp className="w-4 h-4 mr-1" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4 mr-1" />
+                          )}
+                          <span className="text-sm">
+                            {gainLoss >= 0 ? '+' : ''}{formatCurrency(Math.abs(gainLoss))} ({gainLossPercent >= 0 ? '+' : ''}{gainLossPercent.toFixed(2)}%)
+                          </span>
+                        </div>
+                        <p className="text-sm text-wb-text">
+                          Value: {formatCurrency(totalValue)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </CardContent>
         </Card>

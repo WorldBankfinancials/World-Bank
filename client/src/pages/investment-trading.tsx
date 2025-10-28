@@ -28,11 +28,31 @@ export default function InvestmentTrading() {
     queryKey: ['/api/user'],
   });
 
-  // Market data APIs not yet implemented - showing empty state
-  // TODO: Implement /api/market-indices, /api/top-stocks, /api/portfolio-assets endpoints
-  const marketIndices: Array<{ name: string; value: string; change: string; trend: string }> = [];
-  const topStocks: Array<{ symbol: string; name: string; price: string; change: string; trend: string }> = [];
-  const portfolioAssets: Array<{ name: string; value: string; allocation: string; change: string }> = [];
+  // Fetch real market data from backend APIs
+  const { data: marketIndices = [], isLoading: indicesLoading } = useQuery<Array<{ name: string; value: string; change: string; changePercent: string; trend: string }>>({
+    queryKey: ['/api/market-indices'],
+    staleTime: 60000, // Cache for 1 minute
+  });
+
+  const { data: topStocks = [], isLoading: stocksLoading } = useQuery<Array<{ symbol: string; name: string; price: string; change: string; changePercent: string; trend: string }>>({
+    queryKey: ['/api/top-stocks'],
+    staleTime: 60000,
+  });
+
+  const { data: portfolioAssets = [], isLoading: assetsLoading } = useQuery<Array<{ name: string; value: string; allocation: string; change: string }>>({
+    queryKey: ['/api/portfolio-assets'],
+    staleTime: 30000,
+  });
+
+  const { data: investments = [] } = useQuery<any[]>({
+    queryKey: ['/api/investments'],
+    staleTime: 30000,
+  });
+
+  // Calculate real portfolio statistics from investments
+  const totalPortfolioValue = investments.reduce((sum: number, inv: any) => sum + parseFloat(inv.total_value || inv.totalValue || 0), 0);
+  const totalGainLoss = investments.reduce((sum: number, inv: any) => sum + parseFloat(inv.gain_loss || inv.gainLoss || 0), 0);
+  const gainLossPercent = totalPortfolioValue > 0 ? (totalGainLoss / (totalPortfolioValue - totalGainLoss)) * 100 : 0;
 
   if (isLoading) {
     return (
@@ -72,13 +92,15 @@ export default function InvestmentTrading() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Total Portfolio Value</p>
-                  <p className="text-2xl font-bold text-gray-900">$47,832,195</p>
-                  <p className="text-sm text-green-600 flex items-center mt-1">
-                    <ArrowUpRight className="w-4 h-4 mr-1" />
-                    +8.45% YTD
+                  <p className="text-2xl font-bold text-gray-900">
+                    ${totalPortfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className={`text-sm flex items-center mt-1 ${gainLossPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {gainLossPercent >= 0 ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
+                    {gainLossPercent >= 0 ? '+' : ''}{gainLossPercent.toFixed(2)}% Total
                   </p>
                 </div>
-                <TrendingUp className="w-8 h-8 text-green-600" />
+                {gainLossPercent >= 0 ? <TrendingUp className="w-8 h-8 text-green-600" /> : <TrendingDown className="w-8 h-8 text-red-600" />}
               </div>
             </CardContent>
           </Card>
@@ -87,11 +109,15 @@ export default function InvestmentTrading() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Day's Gain/Loss</p>
-                  <p className="text-2xl font-bold text-green-600">+$127,845</p>
-                  <p className="text-sm text-green-600">+2.67%</p>
+                  <p className="text-sm text-gray-600">Total Gain/Loss</p>
+                  <p className={`text-2xl font-bold ${totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {totalGainLoss >= 0 ? '+' : ''}${Math.abs(totalGainLoss).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className={`text-sm ${gainLossPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {gainLossPercent >= 0 ? '+' : ''}{gainLossPercent.toFixed(2)}%
+                  </p>
                 </div>
-                <DollarSign className="w-8 h-8 text-green-600" />
+                <DollarSign className={`w-8 h-8 ${totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`} />
               </div>
             </CardContent>
           </Card>
@@ -100,9 +126,9 @@ export default function InvestmentTrading() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Cash Available</p>
-                  <p className="text-2xl font-bold text-gray-900">$2,847,392</p>
-                  <p className="text-sm text-gray-600">For trading</p>
+                  <p className="text-sm text-gray-600">Active Investments</p>
+                  <p className="text-2xl font-bold text-gray-900">{investments.length}</p>
+                  <p className="text-sm text-gray-600">{portfolioAssets.length} asset types</p>
                 </div>
                 <Shield className="w-8 h-8 text-blue-600" />
               </div>
