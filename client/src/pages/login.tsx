@@ -72,9 +72,20 @@ export default function Login() {
       const result = await signIn(loginData.email, loginData.password);
       
       if (result.error) {
+        let errorMessage = result.error;
+        
+        // Provide specific error messages
+        if (result.error.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        } else if (result.error.includes('Email not confirmed')) {
+          errorMessage = 'Please verify your email address before logging in.';
+        } else if (result.error.includes('not found')) {
+          errorMessage = 'Account not found. Please register first or contact support.';
+        }
+        
         toast({
           title: t('login_failed'),
-          description: result.error,
+          description: errorMessage,
           variant: "destructive"
         });
         setLoading(false);

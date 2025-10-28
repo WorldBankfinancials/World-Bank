@@ -19,13 +19,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const { SupabasePublicStorage } = await import('./supabase-public-storage');
       const { supabase } = await import('./supabase-public-storage');
-      
+
       // Test connection by checking if bank_users table exists
       const { data, error } = await supabase
         .from('bank_users')
         .select('id, full_name, email, balance')
         .limit(5);
-      
+
       if (error) {
         res.json({ 
           connected: false, 
@@ -52,12 +52,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/users/supabase/:supabaseId', async (req: Request, res: Response) => {
     try {
       const { supabaseId } = req.params;
-      
+
       const user = await (storage as any).getUserBySupabaseId(supabaseId);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-      
+
       res.json(user);
     } catch (error) {
       console.error('Get user by Supabase ID error:', error);
@@ -65,44 +65,52 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Check email availability endpoint - Used during registration Step 1
+  // Check email availability endpoint - checks both Supabase and local DB
   app.post('/api/auth/check-email', async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ error: 'Email is required' });
       }
-      
-      // Check if email exists in Supabase Auth using service role
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseServiceClient = createClient(
+
+      // Check local database first
+      const existingUser = await (storage as any).getUserByEmail(email);
+      if (existingUser) {
+        return res.json({
+          available: false,
+          message: 'Email already registered in database'
+        });
+      }
+
+      // Check Supabase Auth
+      const { createClient } = require('@supabase/supabase-js');
+      const supabase = createClient(
         process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false
-          }
-        }
+        { auth: { autoRefreshToken: false, persistSession: false } }
       );
-      
-      const { data: { users }, error } = await supabaseServiceClient.auth.admin.listUsers();
-      
-      if (error) {
-        console.error('Error checking email:', error);
-        return res.status(500).json({ error: 'Unable to check email availability' });
+
+      // Use admin API to check if user exists
+      const { data: users, error } = await supabase.auth.admin.listUsers();
+
+      if (!error && users) {
+        const emailExists = users.users.some(u => u.email === email);
+        if (emailExists) {
+          return res.json({
+            available: false,
+            message: 'Email already registered in authentication system'
+          });
+        }
       }
-      
-      const emailExists = users?.some(user => user.email?.toLowerCase() === email.toLowerCase());
-      
-      res.json({ 
-        available: !emailExists,
-        message: emailExists ? 'Email already registered' : 'Email available'
+
+      res.json({
+        available: true,
+        message: 'Email available'
       });
-    } catch (error: any) {
-      console.error('Check email error:', error);
-      res.status(500).json({ error: 'Failed to check email availability', details: error.message });
+    } catch (error) {
+      console.error('Email check error:', error);
+      res.status(500).json({ error: 'Failed to check email availability' });
     }
   });
 
@@ -111,7 +119,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/register', async (req: Request, res: Response) => {
     try {
       const userData = req.body;
-      
+
       // SECURITY: Verify required fields (but NOT password - that's in Supabase Auth only)
       if (!userData.email || !userData.supabaseUserId) {
         return res.status(400).json({ 
@@ -135,10 +143,32 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check if user already exists
+      // Check if user already exists in local database
       const existingUser = await (storage as any).getUserByEmail(userData.email);
       if (existingUser) {
         return res.status(409).json({ error: 'User already exists' });
+      }
+      
+      // Check if user exists in Supabase Auth (redundant if /api/auth/check-email is used correctly, but good as a safeguard)
+      const { createClient } = require('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+      const { data: users, error: authError } = await supabase.auth.admin.listUsers();
+
+      if (!authError && users) {
+        const emailExistsInSupabase = users.users.some(u => u.email === userData.email);
+        if (emailExistsInSupabase) {
+          // This case should ideally be caught by the /api/auth/check-email endpoint,
+          // but if it reaches here, it means the user is in Supabase Auth but not in our DB.
+          // We should still prevent creating a new local entry to maintain consistency.
+          return res.status(409).json({ error: 'User already exists in authentication system' });
+        }
+      } else if (authError) {
+        console.error('Error checking Supabase Auth during registration:', authError);
+        return res.status(500).json({ error: 'Unable to verify user in authentication system' });
       }
 
       // SECURITY: Only accept whitelisted fields from client, hardcode privileged fields server-side
@@ -158,10 +188,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         annualIncome: userData.annualIncome,
         idType: userData.idType,
         idNumber: userData.idNumber,
-        supabaseUserId: userData.supabaseUserId,
+        supabaseUserId: userData.supabaseUserId, // This should be the ID from Supabase Auth
         accountNumber: userData.accountNumber || `${Math.floor(10000000 + Math.random() * 90000000)}`,
         accountId: userData.accountId || `WB${Date.now()}`,
-        
+
         // SERVER-CONTROLLED FIELDS (never trust client)
         password: 'supabase_auth', // Marker indicating password is in Supabase Auth
         transferPin: '0000', // Default PIN, user MUST change on first login
@@ -184,8 +214,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         isActive: true
       });
 
-      console.log(`✅ New user registered: ${newUser.fullName} (${newUser.email})`);
-      
+      console.log(`✅ New user profile created in DB: ${newUser.fullName} (${newUser.email})`);
+
       res.status(201).json({ 
         success: true,
         message: 'User profile created successfully',
@@ -211,11 +241,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     if (process.env.NODE_ENV === 'production') {
       return res.status(404).json({ error: 'Not found' });
     }
-    
+
     try {
       const { createClient } = await import('@supabase/supabase-js');
       const { email, password } = req.body;
-      
+
       if (!email || !password) {
         return res.status(400).json({ error: 'Email and password required' });
       }
@@ -228,8 +258,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       );
 
       // Try to get user by email first
-      const { data: users } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = users?.users.find((u: any) => u.email === email);
+      const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = users?.find((u: any) => u.email === email);
 
       if (existingUser) {
         // Update password for existing user
@@ -259,9 +289,25 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: authError.message });
         }
 
+        // Create user in local database with default values
+        await storage.createUser({
+          supabaseUserId: authData.user?.id,
+          email: email,
+          username: email.split('@')[0],
+          fullName: 'Test User',
+          role: 'customer',
+          isVerified: true,
+          isActive: true,
+          balance: 0,
+          transferPin: '0000',
+          password: 'supabase_auth', // Indicate password managed by Supabase Auth
+          accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
+          accountId: `WB${Date.now()}`,
+        });
+
         res.json({ 
           success: true, 
-          message: 'Test user created successfully in Supabase Auth',
+          message: 'Test user created successfully in Supabase Auth and DB',
           user: { email, id: authData.user?.id }
         });
       }
@@ -290,7 +336,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-      
+
       console.log('🔍 Fetching authenticated user profile for:', req.user!.email);
       res.json(user);
     } catch (error) {
@@ -317,7 +363,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   });
 
   // SECURITY: Admin endpoints - PROTECTED with role-based access control
-  
+
   // Admin transaction creation - REQUIRES ADMIN ROLE
   app.post('/api/admin/create-transaction', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -333,13 +379,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const customerIdNum = parseInt(body.customerId, 10);
       const accounts = await storage.getUserAccounts(customerIdNum);
-      
+
       if (accounts.length === 0) {
         return res.status(404).json({ error: 'No accounts found for customer' });
       }
 
       const primaryAccount = accounts[0];
-      
+
       const transaction = await storage.createTransaction({
         accountId: primaryAccount.id,
         type: body.type,
@@ -374,19 +420,19 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const accountId = parseInt(req.params.accountId, 10);
       const body = req.body as { amount: string; description: string; type: 'credit' | 'debit' };
-      
+
       const amountNum = parseFloat(body.amount);
       const balanceChange = body.type === 'credit' ? amountNum : -amountNum;
-      
+
       // Get account and update balance
       const account = await storage.getAccount(accountId);
       if (!account) {
         return res.status(404).json({ error: 'Account not found' });
       }
-      
+
       const newBalance = parseFloat(account.balance.toString()) + balanceChange;
       await storage.updateAccount?.(accountId, { balance: newBalance.toString() });
-      
+
       // Create transaction record
       await storage.createTransaction({
         accountId: accountId,
@@ -415,10 +461,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const customerId = parseInt(req.params.id, 10);
       const body = req.body as { amount: string; description: string };
-      
+
       const amountNum = parseFloat(body.amount);
       const updatedUser = await storage.updateUserBalance(customerId, amountNum);
-      
+
       if (!updatedUser) {
         return res.status(404).json({ error: 'Customer not found' });
       }
@@ -440,11 +486,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const customerId = parseInt(req.params.id, 10);
       const updates = req.body as Record<string, any>;
-      
+
       console.log(`🔄 ADMIN UPDATE: Updating customer ${customerId} with:`, updates);
-      
+
       const updatedUser = await storage.updateUser(customerId, updates);
-      
+
       if (!updatedUser) {
         return res.status(404).json({ error: 'Customer not found' });
       }
@@ -478,7 +524,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const body = req.body as { username: string; password: string };
       const user = await storage.getUserByUsername(body.username);
-      
+
       if (!user || user.password !== body.password) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
@@ -495,17 +541,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const body = req.body as { email?: string; username?: string; pin: string };
       const identifier = body.email || body.username;
       console.log('🔐 PIN verification request for:', identifier);
-      
+
       // Use email for lookup (supports both email and username fields for compatibility)
       const user = await (storage as any).getUserByEmail(identifier);
-      
+
       if (!user) {
         console.log('❌ User not found for identifier:', identifier);
         return res.status(404).json({ message: 'User not found', verified: false });
       }
-      
+
       console.log('✅ Found user:', { id: user.id, email: user.email });
-      
+
       if (user.transferPin !== body.pin) {
         console.log('❌ PIN mismatch - Expected:', user.transferPin, 'Got:', body.pin);
         return res.status(401).json({ message: 'Invalid PIN', verified: false });
@@ -523,14 +569,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/accounts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await (storage as any).getUserByEmail(req.user!.email);
-      
+
       if (!user) {
         return res.status(404).json({ 
           error: 'User not found',
           message: 'Invalid user credentials'
         });
       }
-      
+
       const accounts = await storage.getUserAccounts(user.id);
       console.log('🔐 Authenticated access to accounts for:', req.user!.email);
       res.json(accounts);
@@ -543,21 +589,21 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/accounts/:id/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const accountId = parseInt(req.params.id, 10);
-      
+
       // SECURITY: Verify account belongs to authenticated user
       const user = await (storage as any).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       const userAccounts = await storage.getUserAccounts(user.id);
       const ownsAccount = userAccounts.some(acc => acc.id === accountId);
-      
+
       if (!ownsAccount) {
         console.warn(`🚫 Unauthorized account access attempt: user ${req.user!.email} tried to access account ${accountId}`);
         return res.status(403).json({ error: 'Access denied' });
       }
-      
+
       const transactions = await storage.getAccountTransactions(accountId);
       console.log(`🔐 Authorized transaction access for account: ${accountId}`);
       res.json(transactions);
@@ -583,14 +629,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/user/change-pin', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const body = req.body as { currentPin: string; newPin: string };
-      
+
       // Get authenticated user (email from JWT token)
       const user = await (storage as any).getUserByEmail(req.user!.email);
-      
+
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-      
+
       if (user.transferPin !== body.currentPin) {
         return res.status(401).json({ message: 'Current PIN is incorrect' });
       }
@@ -629,23 +675,23 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/cards/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const cardId = parseInt(req.params.id);
-      
+
       // SECURITY: Verify card belongs to authenticated user
       const user = await (storage as any).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       const card = await storage.getCard(cardId);
       if (!card) {
         return res.status(404).json({ error: 'Card not found' });
       }
-      
+
       if (card.userId !== user.id) {
         console.warn(`🚫 Unauthorized card access: user ${req.user!.email} tried to access card ${cardId}`);
         return res.status(403).json({ error: 'Access denied' });
       }
-      
+
       res.json(card);
     } catch (error) {
       console.error('Error fetching card:', error);
@@ -656,19 +702,19 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/cards/lock', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { cardId, isLocked } = req.body;
-      
+
       // SECURITY: Verify card belongs to authenticated user
       const user = await (storage as any).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       const card = await storage.getCard(cardId);
       if (!card || card.userId !== user.id) {
         console.warn(`🚫 Unauthorized card lock attempt: user ${req.user!.email} tried to lock card ${cardId}`);
         return res.status(403).json({ error: 'Access denied' });
       }
-      
+
       const updatedCard = await storage.updateCard(cardId, { isLocked });
       res.json({ success: true, card: updatedCard });
     } catch (error) {
@@ -680,23 +726,23 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/cards/settings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { cardId, dailyLimit, contactlessEnabled } = req.body;
-      
+
       // SECURITY: Verify card belongs to authenticated user
       const user = await (storage as any).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       const card = await storage.getCard(cardId);
       if (!card || card.userId !== user.id) {
         console.warn(`🚫 Unauthorized card settings update: user ${req.user!.email} tried to update card ${cardId}`);
         return res.status(403).json({ error: 'Access denied' });
       }
-      
+
       const updates: any = {};
       if (dailyLimit !== undefined) updates.dailyLimit = dailyLimit;
       if (contactlessEnabled !== undefined) updates.contactlessEnabled = contactlessEnabled;
-      
+
       const updatedCard = await storage.updateCard(cardId, updates);
       res.json({ success: true, card: updatedCard });
     } catch (error) {
@@ -723,23 +769,23 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/investments/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      
+
       // SECURITY: Verify investment belongs to authenticated user
       const user = await (storage as any).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       const investment = await storage.getInvestment(id);
       if (!investment) {
         return res.status(404).json({ error: 'Investment not found' });
       }
-      
+
       if (investment.userId !== user.id) {
         console.warn(`🚫 Unauthorized investment access: user ${req.user!.email} tried to access investment ${id}`);
         return res.status(403).json({ error: 'Access denied' });
       }
-      
+
       res.json(investment);
     } catch (error) {
       console.error('Error fetching investment:', error);
@@ -751,10 +797,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/market-rates', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const marketRates = await (storage as any).getMarketRates();
-      
+
       // Transform database format to frontend expected format
       const transformedData: any = {};
-      
+
       marketRates.forEach((rate: any) => {
         const assetType = rate.asset_type || rate.assetType;
         transformedData[assetType] = {
@@ -762,7 +808,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           trending: (rate.change_direction || rate.changeDirection || 'up') as 'up' | 'down'
         };
       });
-      
+
       // Ensure all required categories exist with fallbacks
       const result = {
         stocks: transformedData.stocks || { change: 0, trending: 'up' as const },
@@ -770,7 +816,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         crypto: transformedData.crypto || { change: 0, trending: 'up' as const },
         forex: transformedData.forex || { change: 0, trending: 'up' as const }
       };
-      
+
       res.json(result);
     } catch (error) {
       console.error('Error fetching market rates:', error);
@@ -829,7 +875,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Get user's investments and calculate portfolio breakdown
       const investments = await storage.getUserInvestments(user.id);
-      
+
       // Calculate portfolio allocation by asset type
       const assetAllocation: Record<string, { value: number, allocation: number, change: number }> = {};
       let totalValue = 0;
@@ -838,9 +884,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         const assetType = inv.asset_type || inv.assetType || 'Other';
         const value = parseFloat(inv.total_value || inv.totalValue || 0);
         const gainLoss = parseFloat(inv.gain_loss || inv.gainLoss || 0);
-        
+
         totalValue += value;
-        
+
         if (!assetAllocation[assetType]) {
           assetAllocation[assetType] = { value: 0, allocation: 0, change: 0 };
         }
@@ -867,18 +913,18 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/currency-exchange', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { fromCurrency, toCurrency, amount } = req.body;
-      
+
       // SECURITY: Get authenticated user
       const user = await (storage as any).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       // Validate required fields
       if (!fromCurrency || !toCurrency || !amount) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
-      
+
       // Mock exchange rate calculation - replace with real exchange rate API
       const exchangeRates: Record<string, number> = {
         'USD': 1.0,
@@ -890,12 +936,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         'CAD': 1.36,
         'CHF': 0.88
       };
-      
+
       const fromRate = exchangeRates[fromCurrency] || 1;
       const toRate = exchangeRates[toCurrency] || 1;
       const convertedAmount = (amount / fromRate) * toRate;
       const exchangeRate = toRate / fromRate;
-      
+
       res.json({
         success: true,
         fromCurrency,
@@ -919,15 +965,15 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       const messages = await storage.getUserMessages(user.id);
-      
+
       // Filter by conversationId if provided
       const conversationId = req.query.conversationId as string | undefined;
       const filteredMessages = conversationId 
         ? messages.filter(msg => msg.conversationId === conversationId)
         : messages;
-      
+
       res.json(filteredMessages);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -956,27 +1002,27 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       const { recipientId, conversationId, message: messageText } = req.body;
-      
+
       // SECURITY: Verify conversation ownership/participation
       // In a banking system, conversationId typically represents the customer's thread
       // Customers can only post to their own conversations (conversationId matches their ID)
       // Admins can post to any conversation (for customer support)
-      
+
       // Enforce that non-admin users can only create messages in their own conversation
       const isAdmin = req.user!.role === 'admin';
-      
+
       if (!isAdmin && conversationId && conversationId !== user.id.toString()) {
         console.warn(`🚫 Unauthorized conversation access: user ${req.user!.email} tried to post to conversation ${conversationId}`);
         return res.status(403).json({ error: 'Access denied: Cannot post to other users\' conversations' });
       }
-      
+
       // SECURITY: Derive senderRole and senderName from authenticated user (server-side only)
       // Never trust client-supplied role/name to prevent impersonation
       const senderRole = req.user!.role === 'admin' ? 'admin' : 'customer';
       const senderName = user.fullName || user.email;
-      
+
       // Create message with server-derived sender information
       const messageData = {
         senderId: user.id,
@@ -987,7 +1033,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         conversationId: conversationId || user.id.toString(), // Default to user's own conversation
         isRead: false,
       };
-      
+
       const createdMessage = await storage.createMessage(messageData);
       res.json(createdMessage);
     } catch (error) {
@@ -999,21 +1045,21 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.patch('/api/messages/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      
+
       // SECURITY: Only allow marking own messages as read
       const user = await (storage as any).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       const userMessages = await storage.getUserMessages(user.id);
       const ownsMessage = userMessages.some(msg => msg.id === id);
-      
+
       if (!ownsMessage) {
         console.warn(`🚫 Unauthorized message modification: user ${req.user!.email} tried to mark message ${id} as read`);
         return res.status(403).json({ error: 'Access denied' });
       }
-      
+
       const message = await storage.markMessageAsRead(id);
       res.json(message);
     } catch (error) {
@@ -1058,13 +1104,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       // Create alert with authenticated user's ID
       const alertData = {
         ...req.body,
         userId: user.id, // Override any client-supplied userId
       };
-      
+
       const alert = await storage.createAlert(alertData);
       res.json(alert);
     } catch (error) {
@@ -1076,22 +1122,22 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.delete('/api/alerts/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      
+
       // SECURITY: Only allow deleting own alerts
       const user = await (storage as any).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       // Verify alert belongs to user before deleting
       const alerts = await storage.getUserAlerts(user.id);
       const alert = alerts.find((a: any) => a.id === id);
-      
+
       if (!alert) {
         console.warn(`🚫 Unauthorized alert delete attempt: user ${req.user!.email} tried to delete alert ${id}`);
         return res.status(403).json({ error: 'Access denied' });
       }
-      
+
       await storage.deleteAlert(id);
       res.json({ success: true });
     } catch (error) {
@@ -1103,21 +1149,21 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.patch('/api/alerts/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      
+
       // SECURITY: Only allow marking own alerts as read
       const user = await (storage as any).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       const userAlerts = await storage.getUserAlerts(user.id);
       const ownsAlert = userAlerts.some(alert => alert.id === id);
-      
+
       if (!ownsAlert) {
         console.warn(`🚫 Unauthorized alert modification: user ${req.user!.email} tried to mark alert ${id} as read`);
         return res.status(403).json({ error: 'Access denied' });
       }
-      
+
       const alert = await storage.markAlertAsRead(id);
       res.json(alert);
     } catch (error) {
@@ -1133,12 +1179,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       // Admin can see all tickets, customers see only their own
       const tickets = user.role === 'admin' 
         ? await storage.getSupportTickets()  // No userId = get all
         : await storage.getSupportTickets(user.id);  // With userId = get user's tickets
-      
+
       res.json(tickets);
     } catch (error) {
       console.error('Error fetching support tickets:', error);
@@ -1152,7 +1198,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      
+
       const ticketData = {
         userId: user.id,
         subject: req.body.subject,
@@ -1161,7 +1207,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         status: 'open',
         category: req.body.category
       };
-      
+
       const ticket = await storage.createSupportTicket(ticketData);
       res.json(ticket);
     } catch (error) {
@@ -1174,7 +1220,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const updates = req.body;
-      
+
       const updatedTicket = await storage.updateSupportTicket(id, updates);
       res.json(updatedTicket);
     } catch (error) {
@@ -1242,7 +1288,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
-      
+
       const statements = await storage.getStatementsByUserId(userId);
       res.json(statements);
     } catch (error) {
@@ -1255,16 +1301,16 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       // Handle file upload for identity documents (ID cards, passports, etc.)
       // This endpoint accepts base64 encoded files or multipart form data
-      
+
       const { file, fileName, fileType } = req.body;
-      
+
       if (!file || !fileName) {
         return res.status(400).json({ error: 'Missing file or fileName' });
       }
-      
+
       // Generate unique file ID
       const fileId = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-      
+
       // Mock file storage - replace with actual object storage implementation
       // In production, this should upload to Supabase Storage or similar service
       const uploadResult = {
@@ -1276,12 +1322,63 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         url: `/uploads/${fileId}`, // Mock URL
         message: 'File uploaded successfully'
       };
-      
+
       console.log(`📤 File uploaded: ${fileName} (${fileId})`);
       res.json(uploadResult);
     } catch (error) {
       console.error('Error uploading file:', error);
       res.status(500).json({ error: 'Failed to upload file' });
+    }
+  });
+
+  // Admin login endpoint - Validates admin credentials from Supabase app_metadata
+  app.post('/api/admin/login', async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+
+      // Use Supabase Auth for admin authentication
+      const { createClient } = require('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error('Admin auth failed:', error);
+        return res.status(401).json({ error: 'Invalid admin credentials' });
+      }
+
+      // CRITICAL: Check admin role from app_metadata (server-controlled)
+      const role = data.user.app_metadata?.role || 'customer';
+
+      if (role !== 'admin') {
+        console.warn(`🚫 Non-admin login attempt by ${email}`);
+        return res.status(403).json({ error: 'Admin access required. Contact system administrator.' });
+      }
+
+      console.log(`✅ Admin login successful: ${email}`);
+
+      res.json({ 
+        token: data.session.access_token,
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          role: role
+        }
+      });
+    } catch (error) {
+      console.error('Admin login error:', error);
+      res.status(500).json({ error: 'Login failed' });
     }
   });
 
@@ -1295,47 +1392,47 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     console.log('WebSocket client attempting connection');
     let isAuthenticated = false;
     let clientId: string | null = null;
-    
+
     ws.on('message', async (message: string) => {
       try {
         const data = JSON.parse(message);
         console.log('WebSocket message received:', data.type);
-        
+
         if (data.type === 'auth') {
           // SECURITY: Validate JWT token before registering client
           const token = data.token;
-          
+
           if (!token) {
             console.warn('🚫 WebSocket auth attempt without token');
             ws.send(JSON.stringify({ type: 'error', message: 'Authentication required' }));
             ws.close();
             return;
           }
-          
+
           // Validate token using Supabase
           const { supabase } = await import('./supabase-public-storage');
           const { data: { user: authUser }, error } = await supabase.auth.getUser(token);
-          
+
           if (error || !authUser) {
             console.warn('🚫 WebSocket auth failed: Invalid token');
             ws.send(JSON.stringify({ type: 'error', message: 'Invalid authentication token' }));
             ws.close();
             return;
           }
-          
+
           // SECURITY: Derive role from app_metadata (immutable, server-controlled)
           const role = authUser.app_metadata?.role || 'customer';
-          
+
           // Fetch user from database to get userId
           const dbUser = await (storage as any).getUserByEmail(authUser.email);
-          
+
           if (!dbUser) {
             console.warn(`🚫 WebSocket auth failed: User ${authUser.email} not found in database`);
             ws.send(JSON.stringify({ type: 'error', message: 'User not found' }));
             ws.close();
             return;
           }
-          
+
           // Register authenticated client
           clientId = authUser.id;
           clients.set(clientId, {
@@ -1344,7 +1441,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             role: role as 'admin' | 'customer',
             email: authUser.email || ''
           });
-          
+
           isAuthenticated = true;
           console.log(`✅ WebSocket client authenticated: ${authUser.email} (${role})`);
           ws.send(JSON.stringify({ type: 'auth_success', role, userId: dbUser.id }));

@@ -73,10 +73,29 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
+      // STEP 1: Check if email already exists
+      const emailCheckResponse = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email })
+      });
+
+      const emailCheck = await emailCheckResponse.json();
+      
+      if (!emailCheck.available) {
+        toast({
+          title: t('registration_failed'),
+          description: emailCheck.message || 'This email is already registered. Please use a different email or try logging in.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const supabase = getSupabaseClient();
       let supabaseUserId = null;
 
-      // CRITICAL: Create user in Supabase Auth FIRST
+      // STEP 2: Create user in Supabase Auth
       if (!supabase) {
         throw new Error('Authentication service unavailable. Please try again later.');
       }
@@ -128,15 +147,41 @@ export default function RegisterPage() {
         balance: 0,
       };
 
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userProfile),
-      });
+      // STEP 3: Create user profile in database with retry logic
+      let retries = 3;
+      let profileCreated = false;
+      
+      while (retries > 0 && !profileCreated) {
+        try {
+          const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userProfile),
+          });
 
-      if (!response.ok) {
+          if (response.ok) {
+            profileCreated = true;
+            break;
+          } else if (retries > 1) {
+            // Wait 1 second before retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            retries--;
+          } else {
+            throw new Error('Failed to create user profile after retries');
+          }
+        } catch (error) {
+          if (retries > 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            retries--;
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      if (!profileCreated) {
         throw new Error('Failed to create user profile');
       }
 
