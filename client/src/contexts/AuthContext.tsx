@@ -56,6 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('🔍 Fetching fresh user data for:', currentUser.email);
 
+      // Wait a moment for trigger to complete if this is a new user
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const response = await fetch(`/api/users/supabase/${currentUser.id}`, {
         headers: {
           'Cache-Control': 'no-cache',
@@ -95,17 +98,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('✅ User profile loaded and updated');
         setUserProfile(userProfile);
       } else {
-        console.log('ℹ️ User not in banking system');
-        const minimalProfile: UserProfile = {
-          id: currentUser.id,
-          email: currentUser.email || '',
-          fullName: currentUser.user_metadata?.full_name || 'New User',
-          role: 'customer',
-          isVerified: false,
-          isActive: false,
-          isOnline: true
-        };
-        setUserProfile(minimalProfile);
+        console.log('⚠️ User not found in banking system after 500ms, retrying...');
+        
+        // Retry after another second for new users
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        const retryResponse = await fetch(`/api/users/supabase/${currentUser.id}`, {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        if (retryResponse.ok) {
+          const bankingUser = await retryResponse.json();
+          const userProfile: UserProfile = {
+            id: currentUser.id,
+            email: currentUser.email || '',
+            fullName: bankingUser.fullName,
+            phone: bankingUser.phone,
+            accountNumber: bankingUser.accountNumber,
+            accountId: bankingUser.accountId,
+            profession: bankingUser.profession,
+            dateOfBirth: bankingUser.dateOfBirth,
+            address: bankingUser.address,
+            city: bankingUser.city,
+            state: bankingUser.state,
+            country: bankingUser.country,
+            postalCode: bankingUser.postalCode,
+            annualIncome: bankingUser.annualIncome,
+            idType: bankingUser.idType,
+            idNumber: bankingUser.idNumber,
+            transferPin: bankingUser.transferPin,
+            role: bankingUser.role,
+            isVerified: bankingUser.isVerified,
+            isOnline: bankingUser.isOnline,
+            isActive: bankingUser.isActive,
+            avatarUrl: bankingUser.avatarUrl || currentUser.user_metadata?.avatar_url,
+            balance: bankingUser.balance
+          };
+          console.log('✅ User profile loaded on retry');
+          setUserProfile(userProfile);
+        } else {
+          console.error('❌ User still not in banking system after retries');
+          throw new Error('Banking user creation failed');
+        }
       }
     } catch (error) {
       console.error('❌ Failed to fetch user data:', error);

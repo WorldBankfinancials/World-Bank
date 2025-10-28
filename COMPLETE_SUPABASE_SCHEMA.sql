@@ -63,7 +63,7 @@ CREATE TABLE public.bank_users (
     annual_income VARCHAR(50),
     id_type VARCHAR(50),
     id_number VARCHAR(50),
-    transfer_pin VARCHAR(10) NOT NULL,
+    transfer_pin VARCHAR(10) NOT NULL DEFAULT '1234',
     role VARCHAR(20) DEFAULT 'customer',
     is_verified BOOLEAN DEFAULT true,
     is_online BOOLEAN DEFAULT true,
@@ -190,270 +190,7 @@ CREATE TABLE public.account_statements (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- ================================================================
--- STEP 3: Insert Wei Liu's banking data
--- ================================================================
-
-INSERT INTO public.bank_users (
-    supabase_user_id, 
-    username, 
-    full_name, 
-    email, 
-    phone, 
-    account_number, 
-    account_id, 
-    profession, 
-    date_of_birth,
-    address, 
-    city, 
-    state, 
-    country, 
-    postal_code, 
-    nationality,
-    annual_income, 
-    id_type, 
-    id_number, 
-    transfer_pin, 
-    balance,
-    last_login
-) VALUES (
-    '0633f82f-5306-41e9-9ed4-11ee555e5087',
-    'vaa33053',
-    'Wei Liu',
-    'vaa33053@gmail.com',
-    '+1 (234) 567-8900',
-    '4789-5532-1098-7654',
-    'WB-2025-8912',
-    'Software Engineer',
-    '1990-05-15',
-    '123 Tech Street, Suite 100',
-    'San Francisco',
-    'California',
-    'United States',
-    '94102',
-    'American',
-    '$75,000-$100,000',
-    'Passport',
-    'P123456789',
-    '0192',
-    15750.50,
-    NOW()
-);
-
--- Insert multiple bank accounts for Wei Liu
-INSERT INTO public.bank_accounts (user_id, account_number, account_type, balance, currency, interest_rate)
-SELECT 
-    bu.id,
-    account_data.account_number,
-    account_data.account_type,
-    account_data.balance,
-    account_data.currency,
-    account_data.interest_rate
-FROM public.bank_users bu
-CROSS JOIN (
-    VALUES 
-        ('4789-5532-1098-7654', 'checking', 15750.50, 'USD', 0.01),
-        ('4789-5532-1098-7655', 'savings', 25000.75, 'USD', 2.50),
-        ('4789-5532-1098-7656', 'investment', 45000.00, 'USD', 4.25),
-        ('4789-5532-1098-7657', 'business', 12500.25, 'USD', 1.75)
-) AS account_data(account_number, account_type, balance, currency, interest_rate)
-WHERE bu.email = 'vaa33053@gmail.com';
-
--- Insert sample transaction history
-INSERT INTO public.transactions (
-    from_account_id, 
-    to_account_id, 
-    from_account_number, 
-    to_account_number, 
-    amount, 
-    currency, 
-    description, 
-    transaction_type, 
-    status, 
-    processed_at,
-    created_at
-)
-SELECT 
-    ba1.id,
-    ba2.id,
-    '4789-5532-1098-7654',
-    '4789-5532-1098-7655',
-    transaction_data.amount,
-    'USD',
-    transaction_data.description,
-    'transfer',
-    'completed',
-    NOW() - INTERVAL '1 day' * transaction_data.days_ago,
-    NOW() - INTERVAL '1 day' * transaction_data.days_ago
-FROM public.bank_accounts ba1, public.bank_accounts ba2
-CROSS JOIN (
-    VALUES 
-        (1000.00, 'Monthly savings transfer', 1),
-        (2500.00, 'Investment contribution', 3),
-        (500.00, 'Emergency fund transfer', 7),
-        (1200.00, 'Quarterly investment', 14)
-) AS transaction_data(amount, description, days_ago)
-WHERE ba1.account_number = '4789-5532-1098-7654' 
-AND ba2.account_number = '4789-5532-1098-7655'
-LIMIT 4;
-
--- Insert sample beneficiaries
-INSERT INTO public.beneficiaries (user_id, beneficiary_name, account_number, bank_name, country, is_favorite)
-SELECT 
-    bu.id,
-    beneficiary_data.name,
-    beneficiary_data.account_number,
-    beneficiary_data.bank_name,
-    beneficiary_data.country,
-    beneficiary_data.is_favorite
-FROM public.bank_users bu
-CROSS JOIN (
-    VALUES 
-        ('John Smith', '1234-5678-9012-3456', 'Chase Bank', 'United States', true),
-        ('Maria Garcia', '9876-5432-1098-7654', 'Bank of America', 'United States', false),
-        ('Li Wei', '5555-4444-3333-2222', 'ICBC', 'China', true),
-        ('Sarah Johnson', '7777-8888-9999-0000', 'Wells Fargo', 'United States', false)
-) AS beneficiary_data(name, account_number, bank_name, country, is_favorite)
-WHERE bu.email = 'vaa33053@gmail.com';
-
--- ================================================================
--- STEP 4: Create indexes for optimal performance
--- ================================================================
-
--- User lookup indexes
-CREATE INDEX idx_bank_users_supabase_id ON public.bank_users(supabase_user_id);
-CREATE INDEX idx_bank_users_email ON public.bank_users(email);
-CREATE INDEX idx_bank_users_username ON public.bank_users(username);
-CREATE INDEX idx_bank_users_account_number ON public.bank_users(account_number);
-
--- Account indexes
-CREATE INDEX idx_bank_accounts_user_id ON public.bank_accounts(user_id);
-CREATE INDEX idx_bank_accounts_account_number ON public.bank_accounts(account_number);
-CREATE INDEX idx_bank_accounts_type ON public.bank_accounts(account_type);
-CREATE INDEX idx_bank_accounts_active ON public.bank_accounts(is_active);
-
--- Transaction indexes for fast queries
-CREATE INDEX idx_transactions_from_account ON public.transactions(from_account_id);
-CREATE INDEX idx_transactions_to_account ON public.transactions(to_account_id);
-CREATE INDEX idx_transactions_status ON public.transactions(status);
-CREATE INDEX idx_transactions_type ON public.transactions(transaction_type);
-CREATE INDEX idx_transactions_date ON public.transactions(created_at DESC);
-CREATE INDEX idx_transactions_reference ON public.transactions(reference_number);
-
--- Communication indexes
-CREATE INDEX idx_messages_sender ON public.messages(sender_id);
-CREATE INDEX idx_messages_recipient ON public.messages(recipient_id);
-CREATE INDEX idx_messages_conversation ON public.messages(conversation_id);
-CREATE INDEX idx_messages_created ON public.messages(created_at DESC);
-
--- Alert indexes
-CREATE INDEX idx_alerts_user ON public.alerts(user_id);
-CREATE INDEX idx_alerts_type ON public.alerts(type);
-CREATE INDEX idx_alerts_read ON public.alerts(is_read);
-CREATE INDEX idx_alerts_created ON public.alerts(created_at DESC);
-
--- Beneficiary indexes
-CREATE INDEX idx_beneficiaries_user ON public.beneficiaries(user_id);
-CREATE INDEX idx_beneficiaries_favorite ON public.beneficiaries(is_favorite);
-
--- ================================================================
--- STEP 5: Enable Row Level Security (RLS) for data protection
--- ================================================================
-
-ALTER TABLE public.bank_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.bank_accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.alerts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.beneficiaries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.account_statements ENABLE ROW LEVEL SECURITY;
-
--- ================================================================
--- STEP 6: Create comprehensive RLS policies
--- ================================================================
-
--- Bank Users policies
-CREATE POLICY "Users can view own profile" ON public.bank_users
-    FOR SELECT TO authenticated
-    USING (supabase_user_id = auth.uid());
-
-CREATE POLICY "Users can update own profile" ON public.bank_users
-    FOR UPDATE TO authenticated
-    USING (supabase_user_id = auth.uid());
-
--- Bank Accounts policies
-CREATE POLICY "Users can view own accounts" ON public.bank_accounts
-    FOR SELECT TO authenticated
-    USING (user_id = (SELECT id FROM public.bank_users WHERE supabase_user_id = auth.uid()));
-
-CREATE POLICY "Users can update own accounts" ON public.bank_accounts
-    FOR UPDATE TO authenticated
-    USING (user_id = (SELECT id FROM public.bank_users WHERE supabase_user_id = auth.uid()));
-
--- Transactions policies
-CREATE POLICY "Users can view own transactions" ON public.transactions
-    FOR SELECT TO authenticated
-    USING (
-        from_account_id IN (
-            SELECT ba.id FROM public.bank_accounts ba
-            JOIN public.bank_users bu ON ba.user_id = bu.id
-            WHERE bu.supabase_user_id = auth.uid()
-        )
-        OR to_account_id IN (
-            SELECT ba.id FROM public.bank_accounts ba
-            JOIN public.bank_users bu ON ba.user_id = bu.id
-            WHERE bu.supabase_user_id = auth.uid()
-        )
-    );
-
-CREATE POLICY "Users can create own transactions" ON public.transactions
-    FOR INSERT TO authenticated
-    WITH CHECK (
-        from_account_id IN (
-            SELECT ba.id FROM public.bank_accounts ba
-            JOIN public.bank_users bu ON ba.user_id = bu.id
-            WHERE bu.supabase_user_id = auth.uid()
-        )
-    );
-
--- Messages policies
-CREATE POLICY "Users can view own messages" ON public.messages
-    FOR SELECT TO authenticated
-    USING (sender_id = auth.uid() OR recipient_id = auth.uid());
-
-CREATE POLICY "Users can send messages" ON public.messages
-    FOR INSERT TO authenticated
-    WITH CHECK (sender_id = auth.uid());
-
--- Alerts policies
-CREATE POLICY "Users can view own alerts" ON public.alerts
-    FOR SELECT TO authenticated
-    USING (user_id = auth.uid());
-
-CREATE POLICY "Users can update own alerts" ON public.alerts
-    FOR UPDATE TO authenticated
-    USING (user_id = auth.uid());
-
--- Beneficiaries policies
-CREATE POLICY "Users can manage own beneficiaries" ON public.beneficiaries
-    FOR ALL TO authenticated
-    USING (user_id = (SELECT id FROM public.bank_users WHERE supabase_user_id = auth.uid()));
-
--- Account Statements policies
-CREATE POLICY "Users can view own statements" ON public.account_statements
-    FOR SELECT TO authenticated
-    USING (
-        account_id IN (
-            SELECT ba.id FROM public.bank_accounts ba
-            JOIN public.bank_users bu ON ba.user_id = bu.id
-            WHERE bu.supabase_user_id = auth.uid()
-        )
-    );
-
--- ================================================================
--- STEP 11: Cards table (MISSING - CRITICAL FIX)
--- ================================================================
-
+-- Cards table
 CREATE TABLE public.cards (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES public.bank_users(id) ON DELETE CASCADE,
@@ -472,61 +209,138 @@ CREATE TABLE public.cards (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Insert Wei Liu's cards
-INSERT INTO public.cards (user_id, card_number, card_name, card_type, balance, credit_limit, expiry_date, cvv, is_locked, daily_limit, contactless_enabled)
-SELECT 
-    bu.id,
-    card_data.card_number,
-    card_data.card_name,
-    card_data.card_type,
-    card_data.balance,
-    card_data.credit_limit,
-    card_data.expiry_date,
-    card_data.cvv,
-    card_data.is_locked,
-    card_data.daily_limit,
-    card_data.contactless_enabled
-FROM public.bank_users bu
-CROSS JOIN (
-    VALUES 
-        ('4532789012345678', 'World Bank Platinum', 'Platinum', 2500.00, 50000.00, '12/2028', '123', false, 10000.00, true),
-        ('5412345678901234', 'Business Corporate', 'Business', 1200.00, 100000.00, '06/2027', '456', false, 25000.00, true),
-        ('4916338506082832', 'Travel Rewards', 'Gold', 3400.00, 30000.00, '09/2029', '789', false, 7500.00, true)
-) AS card_data(card_number, card_name, card_type, balance, credit_limit, expiry_date, cvv, is_locked, daily_limit, contactless_enabled)
-WHERE bu.email = 'vaa33053@gmail.com';
+-- ================================================================
+-- STEP 3: AUTOMATIC USER CREATION TRIGGER (CRITICAL FIX)
+-- ================================================================
 
--- RLS for cards
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+    new_account_number VARCHAR(50);
+    new_account_id VARCHAR(50);
+BEGIN
+    -- Generate unique account identifiers
+    new_account_number := '4789-' || LPAD(FLOOR(RANDOM() * 10000)::TEXT, 4, '0') || '-' || 
+                         LPAD(FLOOR(RANDOM() * 10000)::TEXT, 4, '0') || '-' || 
+                         LPAD(FLOOR(RANDOM() * 10000)::TEXT, 4, '0');
+    new_account_id := 'WB-' || EXTRACT(YEAR FROM NOW()) || '-' || LPAD(FLOOR(RANDOM() * 10000)::TEXT, 4, '0');
+
+    -- Create bank user automatically
+    INSERT INTO public.bank_users (
+        supabase_user_id,
+        username,
+        full_name,
+        email,
+        phone,
+        account_number,
+        account_id,
+        transfer_pin,
+        role,
+        is_verified,
+        is_active,
+        balance
+    ) VALUES (
+        NEW.id,
+        SPLIT_PART(NEW.email, '@', 1),
+        COALESCE(NEW.raw_user_meta_data->>'full_name', 'Customer'),
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'phone', NULL),
+        new_account_number,
+        new_account_id,
+        '1234', -- Default PIN
+        'customer',
+        true,
+        true,
+        0.00
+    );
+
+    -- Create default checking account
+    INSERT INTO public.bank_accounts (
+        user_id,
+        account_number,
+        account_type,
+        balance,
+        currency
+    ) VALUES (
+        (SELECT id FROM public.bank_users WHERE supabase_user_id = NEW.id),
+        new_account_number,
+        'checking',
+        0.00,
+        'USD'
+    );
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create trigger for automatic user creation
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ================================================================
+-- STEP 4: Create indexes for optimal performance
+-- ================================================================
+
+CREATE INDEX idx_bank_users_supabase_id ON public.bank_users(supabase_user_id);
+CREATE INDEX idx_bank_users_email ON public.bank_users(email);
+CREATE INDEX idx_bank_users_username ON public.bank_users(username);
+CREATE INDEX idx_bank_users_account_number ON public.bank_users(account_number);
+CREATE INDEX idx_bank_accounts_user_id ON public.bank_accounts(user_id);
+CREATE INDEX idx_bank_accounts_account_number ON public.bank_accounts(account_number);
+CREATE INDEX idx_transactions_from_account ON public.transactions(from_account_id);
+CREATE INDEX idx_transactions_to_account ON public.transactions(to_account_id);
+CREATE INDEX idx_transactions_status ON public.transactions(status);
+CREATE INDEX idx_messages_sender ON public.messages(sender_id);
+CREATE INDEX idx_messages_recipient ON public.messages(recipient_id);
+CREATE INDEX idx_alerts_user ON public.alerts(user_id);
+CREATE INDEX idx_cards_user_id ON public.cards(user_id);
+
+-- ================================================================
+-- STEP 5: Enable Row Level Security (RLS)
+-- ================================================================
+
+ALTER TABLE public.bank_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bank_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cards ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view own cards" ON public.cards
+-- User policies
+CREATE POLICY "Users can view own profile" ON public.bank_users
+    FOR SELECT TO authenticated
+    USING (supabase_user_id = auth.uid());
+
+CREATE POLICY "Users can update own profile" ON public.bank_users
+    FOR UPDATE TO authenticated
+    USING (supabase_user_id = auth.uid());
+
+-- Account policies
+CREATE POLICY "Users can view own accounts" ON public.bank_accounts
     FOR SELECT TO authenticated
     USING (user_id = (SELECT id FROM public.bank_users WHERE supabase_user_id = auth.uid()));
 
-CREATE POLICY "Users can update own cards" ON public.cards
-    FOR UPDATE TO authenticated
-    USING (user_id = (SELECT id FROM public.bank_users WHERE supabase_user_id = auth.uid()));
+-- Transaction policies
+CREATE POLICY "Users can view own transactions" ON public.transactions
+    FOR SELECT TO authenticated
+    USING (
+        from_account_id IN (
+            SELECT ba.id FROM public.bank_accounts ba
+            JOIN public.bank_users bu ON ba.user_id = bu.id
+            WHERE bu.supabase_user_id = auth.uid()
+        )
+    );
 
-CREATE POLICY "Service role full access cards" ON public.cards 
-    FOR ALL USING (auth.role() = 'service_role');
-
--- Cards indexes
-CREATE INDEX idx_cards_user_id ON public.cards(user_id);
-CREATE INDEX idx_cards_active ON public.cards(is_active);
-
--- ================================================================
--- STEP 7: Admin/Service Role policies (full access)
--- ================================================================
-
+-- Service role full access
 CREATE POLICY "Service role full access users" ON public.bank_users FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Service role full access accounts" ON public.bank_accounts FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Service role full access transactions" ON public.transactions FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role full access messages" ON public.messages FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role full access alerts" ON public.alerts FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role full access beneficiaries" ON public.beneficiaries FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role full access statements" ON public.account_statements FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Service role full access cards" ON public.cards FOR ALL USING (auth.role() = 'service_role');
 
 -- ================================================================
--- STEP 8: Enable realtime subscriptions for live updates
+-- STEP 6: Enable realtime
 -- ================================================================
 
 ALTER PUBLICATION supabase_realtime ADD TABLE public.bank_users;
@@ -534,113 +348,3 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.bank_accounts;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.transactions;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.alerts;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.beneficiaries;
-
--- ================================================================
--- STEP 9: Grant proper permissions
--- ================================================================
-
-GRANT USAGE ON SCHEMA public TO authenticated;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
-
--- Grant specific permissions for anon users (if needed)
-GRANT USAGE ON SCHEMA public TO anon;
-GRANT SELECT ON public.bank_users TO anon;
-
--- ================================================================
--- STEP 10: Create database functions for common operations
--- ================================================================
-
--- Function to get user's total balance across all accounts
-CREATE OR REPLACE FUNCTION get_user_total_balance(user_uuid UUID)
-RETURNS DECIMAL(15,2) AS $$
-DECLARE
-    total_balance DECIMAL(15,2) := 0;
-BEGIN
-    SELECT COALESCE(SUM(ba.balance), 0) INTO total_balance
-    FROM public.bank_accounts ba
-    JOIN public.bank_users bu ON ba.user_id = bu.id
-    WHERE bu.supabase_user_id = user_uuid AND ba.is_active = true;
-    
-    RETURN total_balance;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function to create a new transaction
-CREATE OR REPLACE FUNCTION create_transaction(
-    from_account_number VARCHAR(50),
-    to_account_number VARCHAR(50),
-    transfer_amount DECIMAL(15,2),
-    transfer_description TEXT,
-    user_uuid UUID
-)
-RETURNS JSONB AS $$
-DECLARE
-    from_account_id BIGINT;
-    to_account_id BIGINT;
-    transaction_result JSONB;
-    new_transaction_id BIGINT;
-BEGIN
-    -- Get from account ID
-    SELECT ba.id INTO from_account_id
-    FROM public.bank_accounts ba
-    JOIN public.bank_users bu ON ba.user_id = bu.id
-    WHERE ba.account_number = from_account_number 
-    AND bu.supabase_user_id = user_uuid;
-    
-    -- Get to account ID
-    SELECT ba.id INTO to_account_id
-    FROM public.bank_accounts ba
-    WHERE ba.account_number = to_account_number;
-    
-    IF from_account_id IS NULL THEN
-        RETURN '{"success": false, "error": "From account not found or not owned by user"}'::JSONB;
-    END IF;
-    
-    IF to_account_id IS NULL THEN
-        RETURN '{"success": false, "error": "To account not found"}'::JSONB;
-    END IF;
-    
-    -- Create the transaction
-    INSERT INTO public.transactions (
-        from_account_id,
-        to_account_id,
-        from_account_number,
-        to_account_number,
-        amount,
-        description,
-        transaction_type,
-        status
-    ) VALUES (
-        from_account_id,
-        to_account_id,
-        from_account_number,
-        to_account_number,
-        transfer_amount,
-        transfer_description,
-        'transfer',
-        'pending'
-    ) RETURNING id INTO new_transaction_id;
-    
-    RETURN jsonb_build_object(
-        'success', true,
-        'transaction_id', new_transaction_id,
-        'status', 'pending',
-        'message', 'Transaction created successfully'
-    );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- ================================================================
--- VERIFICATION QUERY - Run this after setup to confirm everything works
--- ================================================================
-
--- Uncomment the lines below to verify your setup:
-/*
-SELECT 'Database Setup Complete!' as status;
-SELECT 'Users created: ' || COUNT(*) as user_count FROM public.bank_users;
-SELECT 'Accounts created: ' || COUNT(*) as account_count FROM public.bank_accounts;
-SELECT 'Total balance: $' || SUM(balance) as total_balance FROM public.bank_accounts;
-SELECT 'Wei Liu total balance: $' || get_user_total_balance('0633f82f-5306-41e9-9ed4-11ee555e5087') as wei_balance;
-*/

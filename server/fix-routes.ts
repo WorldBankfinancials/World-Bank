@@ -352,27 +352,28 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.post('/api/verify-pin', async (req: Request, res: Response) => {
     try {
-      const body = req.body as { username: string; pin: string };
-      console.log('PIN verification request:', { username: body.username, pin: body.pin });
+      const body = req.body as { email: string; pin: string };
+      console.log('🔐 PIN verification request for:', body.email);
       
-      // Try to find user by email (which is the primary method for login)
-      let user = await (storage as any).getUserByEmail?.(body.username);
+      // Always use email for lookup (primary login method)
+      const user = await (storage as any).getUserByEmail(body.email);
+      
       if (!user) {
-        // Fallback to username search
-        user = await storage.getUserByUsername(body.username);
+        console.log('❌ User not found for email:', body.email);
+        return res.status(404).json({ message: 'User not found', verified: false });
       }
       
-      console.log('Found user:', user ? { id: user.id, email: user.email, transferPin: user.transferPin } : 'No user found');
+      console.log('✅ Found user:', { id: user.id, email: user.email });
       
-      if (!user || user.transferPin !== body.pin) {
-        console.log('PIN mismatch:', { expected: user?.transferPin, provided: body.pin });
+      if (user.transferPin !== body.pin) {
+        console.log('❌ PIN mismatch - Expected:', user.transferPin, 'Got:', body.pin);
         return res.status(401).json({ message: 'Invalid PIN', verified: false });
       }
 
-      console.log('PIN verification successful');
+      console.log('✅ PIN verification successful');
       res.json({ success: true, verified: true });
     } catch (error) {
-      console.error('PIN verification error:', error);
+      console.error('❌ PIN verification error:', error);
       res.status(500).json({ error: 'Failed to verify PIN', verified: false });
     }
   });
