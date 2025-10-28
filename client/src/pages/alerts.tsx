@@ -121,13 +121,22 @@ export default function Alerts() {
     }));
   };
 
+  // Mutation for deleting alert
+  const deleteAlertMutation = useMutation({
+    mutationFn: async (alertId: number) => {
+      return apiRequest(`/api/alerts/${alertId}`, 'DELETE');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
+    },
+  });
+
   const markAsRead = (alertId: number) => {
     markAsReadMutation.mutate(alertId);
   };
 
   const deleteAlert = (alertId: number) => {
-    // TODO: Implement delete alert API endpoint
-    console.log('Delete alert:', alertId);
+    deleteAlertMutation.mutate(alertId);
   };
 
   // Helper function to get alert icon
@@ -159,18 +168,7 @@ export default function Alerts() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={{
-        id: 1,
-        username: "liu.wei",
-        password: "password123",
-        fullName: "Mr. Liu Wei",
-        accountNumber: "4789-6523-1087-9234",
-        accountId: "WB-2025-8912",
-        profession: "Marine Engineer at Oil Rig Company",
-        isVerified: true,
-        isOnline: true,
-        avatarUrl: null
-      }} />
+      <Header />
       
       <div className="px-4 py-6 pb-20">
         {/* Header Section */}

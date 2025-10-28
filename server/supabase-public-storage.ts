@@ -1195,6 +1195,16 @@ export class SupabasePublicStorage implements IStorage {
     return data as unknown as Alert;
   }
 
+  async deleteAlert(id: number): Promise<void> {
+    const { error } = await supabase.from('alerts')
+      .delete()
+      .eq('id', id);
+    if (error) {
+      console.error('Error deleting alert:', error);
+      throw new Error(`Failed to delete alert: ${error.message}`);
+    }
+  }
+
   // Branches and ATMs
   async getBranches(): Promise<any[]> {
     try {

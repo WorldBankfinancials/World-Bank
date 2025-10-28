@@ -946,6 +946,33 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/alerts/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // SECURITY: Only allow deleting own alerts
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Verify alert belongs to user before deleting
+      const alerts = await storage.getUserAlerts(user.id);
+      const alert = alerts.find((a: any) => a.id === id);
+      
+      if (!alert) {
+        console.warn(`🚫 Unauthorized alert delete attempt: user ${req.user!.email} tried to delete alert ${id}`);
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
+      await storage.deleteAlert(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting alert:', error);
+      res.status(500).json({ error: 'Failed to delete alert' });
+    }
+  });
+
   app.patch('/api/alerts/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = parseInt(req.params.id);

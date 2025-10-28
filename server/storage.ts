@@ -76,6 +76,7 @@ export interface IStorage {
   getUnreadAlerts(userId: number): Promise<Alert[]>;
   createAlert(alert: InsertAlert): Promise<Alert>;
   markAlertAsRead(id: number): Promise<Alert | undefined>;
+  deleteAlert(id: number): Promise<void>;
   
   // Branches and ATMs operations
   getBranches(): Promise<any[]>;
@@ -520,6 +521,11 @@ export class MemStorage implements IStorage {
     return { id, ...alert, createdAt: new Date() } as Alert;
   }
   async markAlertAsRead(id: number): Promise<Alert | undefined> { return undefined; }
+  
+  async deleteAlert(id: number): Promise<void> {
+    // Stub implementation - not used in production
+    return;
+  }
 
   // Branches, ATMs, Exchange Rates, Statements stubs
   async getBranches(): Promise<any[]> { return []; }
