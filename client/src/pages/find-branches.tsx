@@ -68,7 +68,7 @@ export default function FindBranches() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold wb-dark mb-4">Find Branches & ATMs</h1>
-          <p className="text-wb-text">Locate World Bank branches and ATMs worldwide</p>
+          <p className="text-wb-text">Locate Apex Banking Corporation branches and ATMs worldwide</p>
         </div>
 
         {/* Search Section */}

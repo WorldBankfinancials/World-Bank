@@ -670,14 +670,14 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header with World Bank Logo and Profile */}
+      {/* Header with Apex Banking Corporation Logo and Profile */}
       <div className="bg-white px-4 py-3 shadow-sm relative">
         <div className="flex items-center justify-between">
-          {/* World Bank Logo and Brand */}
+          {/* Apex Banking Corporation Logo and Brand */}
           <div className="flex items-center space-x-2">
             <img 
               src="/world-bank-logo.jpeg" 
-              alt="World Bank Logo" 
+              alt="Apex Banking Corporation Logo" 
               className="w-8 h-8 object-contain"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -685,7 +685,7 @@ export default function Dashboard() {
               }}
             />
             <div>
-              <div className="text-gray-900 font-semibold text-sm">WORLD BANK</div>
+              <div className="text-gray-900 font-semibold text-sm">APEX BANKING CORPORATION</div>
               <div className="text-xs text-gray-500">International Banking</div>
             </div>
           </div>

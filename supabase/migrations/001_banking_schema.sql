@@ -1,4 +1,4 @@
--- World Bank Digital Banking Platform
+-- Apex Banking Corporation
 -- Real Supabase database schema with UUIDs and realistic banking structure
 
 -- Enable UUID extension
@@ -40,7 +40,7 @@ CREATE TABLE public.bank_accounts (
   account_number TEXT UNIQUE NOT NULL,
   routing_number TEXT DEFAULT '123456789',
   iban TEXT UNIQUE,
-  swift_code TEXT DEFAULT 'WORLDBNK',
+  swift_code TEXT DEFAULT 'APEXBNK',
   account_type TEXT NOT NULL CHECK (account_type IN ('checking', 'savings', 'investment', 'business', 'foreign_exchange')),
   currency TEXT DEFAULT 'USD' CHECK (currency IN ('USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF')),
   balance DECIMAL(15,2) DEFAULT 0.00,

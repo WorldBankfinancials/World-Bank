@@ -96,14 +96,14 @@ export default function Header({}: HeaderProps) {
             <div className="flex items-center space-x-2 cursor-pointer">
               <img 
                 src="/world-bank-logo.jpeg" 
-                alt="World Bank Logo" 
+                alt="Apex Banking Corporation Logo" 
                 className="w-8 h-8 object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/8/80/World_Bank_Group_logo.svg/1200px-World_Bank_Group_logo.svg.png";
                 }}
               />
-              <div className="text-gray-900 font-bold text-sm tracking-wide">WORLD BANK</div>
+              <div className="text-gray-900 font-bold text-sm tracking-wide">APEX BANKING CORPORATION</div>
             </div>
           </Link>
 

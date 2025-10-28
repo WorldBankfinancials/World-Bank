@@ -110,7 +110,7 @@ export default function ProfileSettings() {
                       position: 'relative'
                     }}
                   >
-                    {displayUser?.fullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                    {displayUser?.fullName?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'U'}
                     <div 
                       style={{
                         position: 'absolute',

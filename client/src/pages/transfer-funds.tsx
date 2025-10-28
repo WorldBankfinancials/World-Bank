@@ -245,13 +245,13 @@ export default function TransferFunds() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header with World Bank Logo */}
+      {/* Header with Apex Banking Corporation Logo */}
       <div className="bg-white px-4 py-3 shadow-sm relative">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <img 
               src="/world-bank-logo.jpeg" 
-              alt="World Bank Logo" 
+              alt="Apex Banking Corporation Logo" 
               className="w-8 h-8 object-contain"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;

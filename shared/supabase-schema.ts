@@ -38,7 +38,7 @@ export const bankAccounts = pgTable('bank_accounts', {
   accountNumber: text('account_number').notNull().unique(),
   routingNumber: text('routing_number').default('123456789'),
   iban: text('iban').unique(),
-  swiftCode: text('swift_code').default('WORLDBNK'),
+  swiftCode: text('swift_code').default('APEXBNK'),
   accountType: text('account_type').notNull(),
   currency: text('currency').default('USD'),
   balance: decimal('balance', { precision: 15, scale: 2 }).default('0.00'),

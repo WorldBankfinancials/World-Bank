@@ -89,7 +89,7 @@ export default function DigitalWallet() {
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle className="text-xl mb-2">World Bank Digital Wallet</CardTitle>
+                <CardTitle className="text-xl mb-2">Apex Banking Corporation Digital Wallet</CardTitle>
                 <p className="text-blue-100">Available Balance</p>
               </div>
               <Button 

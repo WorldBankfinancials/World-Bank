@@ -62,7 +62,7 @@ export const config = {
 
 // Environment configuration display
 export function logConfiguration() {
-  console.log('\n🏦 World Bank Application Configuration:');
+  console.log('\n🏦 Apex Banking Corporation Application Configuration:');
   console.log(`📊 Environment: ${config.NODE_ENV}`);
   console.log(`💾 Data Source: ${config.getDataSource()}`);
   console.log(`🔐 Auth Source: ${config.getAuthSource()}`);

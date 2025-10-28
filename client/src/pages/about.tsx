@@ -24,7 +24,7 @@ export default function About() {
           </Button>
           <div className="flex items-center space-x-2">
             <BankLogo className="w-8 h-8" />
-            <span className="font-bold text-gray-900">WORLD BANK</span>
+            <span className="font-bold text-gray-900">APEX BANKING CORPORATION</span>
           </div>
         </div>
       </div>
@@ -41,7 +41,7 @@ export default function About() {
             </div>
           </div>
           <h1 className="text-5xl font-bold text-gray-900 mb-4 tracking-tight">
-            World Bank Digital Banking
+            Apex Banking Corporation
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
             Leading the future of international banking with secure, innovative, and accessible financial solutions for a connected world.
@@ -277,7 +277,7 @@ export default function About() {
 
         {/* Footer */}
         <div className="text-center mt-16 pt-8 border-t border-gray-200 text-sm text-gray-500 space-y-2">
-          <p>© 2025 World Bank Group. All rights reserved.</p>
+          <p>© 2025 Apex Banking Corporation Group. All rights reserved.</p>
           <p className="flex items-center justify-center space-x-1">
             <Shield className="w-3 h-3" />
             <span>Licensed and regulated financial institution. Member FDIC. SWIFT Member.</span>

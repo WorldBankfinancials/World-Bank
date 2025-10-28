@@ -1,4 +1,4 @@
-// Comprehensive list of countries worldwide for World Bank international banking
+// Comprehensive list of countries worldwide for Apex Banking Corporation international banking
 export const COUNTRIES = [
   // Asia-Pacific
   "Afghanistan",

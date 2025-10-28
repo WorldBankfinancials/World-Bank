@@ -1,8 +1,8 @@
-# World Bank Digital Banking Platform
+# Apex Banking Corporation
 
 ## Overview
 
-The World Bank Digital Banking Platform is a full-stack application providing secure international banking services. It enables customers to manage accounts, transfer funds globally, track investments, and access real-time support. Administrators are equipped with tools for customer management, transaction oversight, and system monitoring. The platform aims to deliver a modern, comprehensive banking experience with robust security and real-time capabilities.
+The Apex Banking Corporation is a full-stack application providing secure international banking services. It enables customers to manage accounts, transfer funds globally, track investments, and access real-time support. Administrators are equipped with tools for customer management, transaction oversight, and system monitoring. The platform aims to deliver a modern, comprehensive banking experience with robust security and real-time capabilities.
 
 ## User Preferences
 
@@ -12,7 +12,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend Architecture
 
-The frontend is a React 18+ single-page application (SPA) built with TypeScript and Vite. It uses Wouter for routing, TanStack Query for server state management, and Shadcn/ui (based on Radix UI) for components, styled with Tailwind CSS (custom World Bank theme). Global state is managed via `AuthContext` and `LanguageContext`, with custom hooks encapsulating reusable logic. The design is mobile-first, responsive, and implements protected routes and error boundaries.
+The frontend is a React 18+ single-page application (SPA) built with TypeScript and Vite. It uses Wouter for routing, TanStack Query for server state management, and Shadcn/ui (based on Radix UI) for components, styled with Tailwind CSS (custom Apex Banking Corporation theme). Global state is managed via `AuthContext` and `LanguageContext`, with custom hooks encapsulating reusable logic. The design is mobile-first, responsive, and implements protected routes and error boundaries.
 
 ### Backend Architecture
 

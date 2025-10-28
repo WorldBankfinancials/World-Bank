@@ -129,7 +129,7 @@ export const cards = pgTable("cards", {
   cardNumber: text("card_number").notNull(), // Store masked (last 4 digits)
   cardHolderName: text("card_holder_name").notNull(),
   cardType: text("card_type").notNull(), // 'credit', 'debit', 'platinum', 'business'
-  cardName: text("card_name").notNull(), // 'World Bank Platinum', etc.
+  cardName: text("card_name").notNull(), // 'Apex Banking Corporation Platinum', etc.
   expiryDate: text("expiry_date").notNull(),
   cvv: text("cvv"), // Encrypted in production
   balance: decimal("balance", { precision: 15, scale: 2 }).default("0"),

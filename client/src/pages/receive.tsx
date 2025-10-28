@@ -47,7 +47,7 @@ export default function Receive() {
     name: user?.fullName || "Account Holder",
     accountNumber: user?.accountNumber || t('loading'),
     accountId: (user as any)?.accountId || t('loading'),
-    bankName: "World Bank Group",
+    bankName: "Apex Banking Corporation Group",
     swiftCode: "WBGLUS33"
   };
 

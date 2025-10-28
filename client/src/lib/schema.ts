@@ -1,4 +1,4 @@
-// Client-side schema types for the World Bank app
+// Client-side schema types for the Apex Banking Corporation app
 export interface User {
   id: number;
   username: string;

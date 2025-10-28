@@ -654,7 +654,7 @@ export default function InternationalTransfer() {
             {/* Transfer Features */}
             <Card>
               <CardHeader>
-                <CardTitle>Why Choose World Bank?</CardTitle>
+                <CardTitle>Why Choose Apex Banking Corporation?</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-start space-x-3">

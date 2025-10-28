@@ -63,14 +63,14 @@ export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps)
             <div className="flex flex-col items-center">
               <img 
                 src="/world-bank-logo.jpeg" 
-                alt="World Bank Logo" 
+                alt="Apex Banking Corporation Logo" 
                 className="w-10 h-10 object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/8/80/World_Bank_Group_logo.svg/1200px-World_Bank_Group_logo.svg.png";
                 }}
               />
-              <span className="font-bold text-gray-900 text-sm mt-1">WORLD BANK</span>
+              <span className="font-bold text-gray-900 text-sm mt-1">APEX BANKING CORPORATION</span>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded">
               <X className="w-5 h-5" />

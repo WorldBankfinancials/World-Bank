@@ -1,4 +1,4 @@
-# World Bank Digital Banking Platform - Setup Guide
+# Apex Banking Corporation - Setup Guide
 
 ## 🏛️ Architecture Overview
 
