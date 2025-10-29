@@ -1,6 +1,5 @@
 import { Express, Request, Response, NextFunction } from 'express';
 import { Server, createServer } from 'http';
-import { WebSocketServer, WebSocket } from 'ws';
 import { storage } from './storage-factory';
 import { setupTransferRoutes } from './routes-transfer';
 import { config, logConfiguration } from './config';
@@ -2029,6 +2028,120 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Comprehensive user lookup - searches Supabase Auth, database, and all related banking data
+  app.post('/api/auth/comprehensive-lookup', authRateLimiter, async (req: Request, res: Response) => {
+    try {
+      const { identifier, password } = req.body;
+
+      if (!identifier || !password) {
+        return res.status(400).json({ error: 'Identifier and password are required' });
+      }
+
+      console.log(`🔍 Comprehensive auth lookup for: ${identifier}`);
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseClient = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.VITE_SUPABASE_ANON_KEY!
+      );
+
+      // STEP 1: Search Supabase Auth (try as email first)
+      const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+        email: identifier,
+        password
+      });
+
+      if (authError || !authData.user) {
+        return res.status(401).json({ 
+          error: 'Invalid credentials',
+          details: 'User not found in authentication system'
+        });
+      }
+
+      const authUser = authData.user;
+      const session = authData.session;
+
+      // STEP 2: Search database public schema for banking profile
+      const dbUser = await (storage as any).getUserByEmail(authUser.email);
+      
+      if (!dbUser) {
+        return res.status(404).json({ 
+          error: 'Account not found in banking system',
+          details: 'Please contact support'
+        });
+      }
+
+      // STEP 3: Get all related banking data from public schema tables
+      const [accounts, cards, transactions, investments, alerts, tickets] = await Promise.all([
+        storage.getUserAccounts(dbUser.id).catch(() => []),
+        (storage as any).getUserCards(dbUser.id).catch(() => []),
+        storage.getUserTransactions(dbUser.id).catch(() => []),
+        (storage as any).getUserInvestments(dbUser.id).catch(() => []),
+        (storage as any).getUserAlerts(dbUser.id).catch(() => []),
+        (storage as any).getUserTickets(dbUser.id).catch(() => [])
+      ]);
+
+      console.log(`✅ Comprehensive lookup complete for ${authUser.email}:`);
+      console.log(`   - DB User ID: ${dbUser.id}`);
+      console.log(`   - Supabase User ID: ${authUser.id}`);
+      console.log(`   - Accounts: ${accounts.length}`);
+      console.log(`   - Cards: ${cards.length}`);
+      console.log(`   - Transactions: ${transactions.length}`);
+      console.log(`   - Investments: ${investments.length}`);
+      console.log(`   - Active alerts: ${alerts.filter((a: any) => !a.isRead).length}`);
+      console.log(`   - Open tickets: ${tickets.filter((t: any) => t.status === 'open').length}`);
+
+      // STEP 4: Check account status
+      const role = authUser.app_metadata?.role || 'customer';
+      
+      if (role === 'customer' && !dbUser.isActive) {
+        return res.status(403).json({ 
+          error: 'Account pending approval',
+          details: 'Your account is being reviewed by our team. You will be notified once approved.',
+          code: 'ACCOUNT_PENDING_APPROVAL'
+        });
+      }
+
+      // Return comprehensive user data from all sources
+      res.json({
+        success: true,
+        auth: {
+          supabaseUserId: authUser.id,
+          email: authUser.email,
+          role: role,
+          token: session?.access_token
+        },
+        profile: {
+          id: dbUser.id,
+          username: dbUser.username,
+          fullName: dbUser.fullName,
+          email: dbUser.email,
+          phone: dbUser.phone,
+          accountNumber: dbUser.accountNumber,
+          isActive: dbUser.isActive,
+          isVerified: dbUser.isVerified,
+          balance: dbUser.balance
+        },
+        bankingData: {
+          accountsCount: accounts.length,
+          cardsCount: cards.length,
+          recentTransactionsCount: transactions.length,
+          investmentsCount: investments.length,
+          unreadAlertsCount: alerts.filter((a: any) => !a.isRead).length,
+          openTicketsCount: tickets.filter((t: any) => t.status === 'open').length,
+          totalBalance: accounts.reduce((sum: number, acc: any) => sum + parseFloat(acc.balance || 0), 0)
+        }
+      });
+
+    } catch (error: any) {
+      console.error('Comprehensive lookup error:', error);
+      res.status(500).json({ 
+        error: 'Authentication system error',
+        details: error.message 
+      });
+    }
+  });
+
   // Admin login endpoint - Validates admin credentials from Supabase app_metadata
   app.post('/api/admin/login', async (req: Request, res: Response) => {
     try {
@@ -2080,88 +2193,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ================================================================
+  // REMOVED: WebSocket server (replaced with Supabase Realtime)
+  // Supabase Realtime provides better scalability and works on Vercel
+  // All real-time features (chat, notifications, updates) use Supabase Realtime
+  // ================================================================
+
   // Return a dummy server that will be replaced by the main server
   const httpServer = createServer(app);
-
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  const clients = new Map<string, { ws: WebSocket; userId: string; role: 'admin' | 'customer'; email: string }>();
-
-  wss.on('connection', (ws: WebSocket) => {
-    console.log('WebSocket client attempting connection');
-    let isAuthenticated = false;
-    let clientId: string | null = null;
-
-    ws.on('message', async (message: string) => {
-      try {
-        const data = JSON.parse(message);
-        console.log('WebSocket message received:', data.type);
-
-        if (data.type === 'auth') {
-          // SECURITY: Validate JWT token before registering client
-          const token = data.token;
-
-          if (!token) {
-            console.warn('🚫 WebSocket auth attempt without token');
-            ws.send(JSON.stringify({ type: 'error', message: 'Authentication required' }));
-            ws.close();
-            return;
-          }
-
-          // Validate token using Supabase
-          const { supabase } = await import('./supabase-public-storage');
-          const { data: { user: authUser }, error } = await supabase.auth.getUser(token);
-
-          if (error || !authUser) {
-            console.warn('🚫 WebSocket auth failed: Invalid token');
-            ws.send(JSON.stringify({ type: 'error', message: 'Invalid authentication token' }));
-            ws.close();
-            return;
-          }
-
-          // SECURITY: Derive role from app_metadata (immutable, server-controlled)
-          const role = authUser.app_metadata?.role || 'customer';
-
-          // Fetch user from database to get userId
-          const dbUser = await (storage as any).getUserByEmail(authUser.email);
-
-          if (!dbUser) {
-            console.warn(`🚫 WebSocket auth failed: User ${authUser.email} not found in database`);
-            ws.send(JSON.stringify({ type: 'error', message: 'User not found' }));
-            ws.close();
-            return;
-          }
-
-          // Register authenticated client
-          clientId = authUser.id;
-          clients.set(clientId, {
-            ws,
-            userId: dbUser.id.toString(),
-            role: role as 'admin' | 'customer',
-            email: authUser.email || ''
-          });
-
-          isAuthenticated = true;
-          console.log(`✅ WebSocket client authenticated: ${authUser.email} (${role})`);
-          ws.send(JSON.stringify({ type: 'auth_success', role, userId: dbUser.id }));
-        } else if (!isAuthenticated) {
-          // Reject all messages until client authenticates
-          console.warn('🚫 WebSocket message rejected: Client not authenticated');
-          ws.send(JSON.stringify({ type: 'error', message: 'Must authenticate first' }));
-          ws.close();
-        }
-      } catch (error) {
-        console.error('WebSocket message error:', error);
-        ws.send(JSON.stringify({ type: 'error', message: 'Internal server error' }));
-      }
-    });
-
-    ws.on('close', () => {
-      console.log('WebSocket client disconnected');
-      if (clientId) {
-        clients.delete(clientId);
-      }
-    });
-  });
 
   // NOTE: Error handlers NOT registered here because Vite middleware
   // needs to handle frontend routes. Error handling is in index.ts
