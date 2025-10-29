@@ -30,7 +30,7 @@ export const users = pgTable("bank_users", {
   isActive: boolean("is_active"),
   avatarUrl: text("avatar_url"),
   balance: decimal("balance"),
-  supabaseUserId: text("supabase_user_id"),
+  supabaseUserId: varchar("supabase_user_id", { length: 36 }),
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
   lastLogin: timestamp("last_login"),

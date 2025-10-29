@@ -24,7 +24,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { data, error } = await supabase
         .from('bank_users')
         .select('id, full_name, email, balance')
-        .limit(5);
+        .order('id', { ascending: false })
+        .limit(10);
 
       if (error) {
         res.json({ 
@@ -114,6 +115,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // STEP 2: Create local database profile
       try {
+        console.log(`🔧 DEBUG: About to create user in database with supabaseUserId: ${supabaseUserId}`);
         const newUser = await storage.createUser({
           username: registrationData.email.split('@')[0],
           fullName: registrationData.fullName,
@@ -142,7 +144,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           balance: "0",
         });
 
+        console.log(`🔧 DEBUG: User created successfully, returned user ID: ${newUser.id}, email: ${newUser.email}`);
+
         // Create initial checking account
+        console.log(`🔧 DEBUG: About to create account for user ID: ${newUser.id}`);
         await storage.createAccount({
           userId: newUser.id,
           accountNumber: newUser.accountNumber || `${Math.floor(10000000 + Math.random() * 90000000)}`,
@@ -151,6 +156,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           currency: 'USD',
           isActive: false // Requires admin approval
         });
+
+        console.log(`🔧 DEBUG: Account created successfully`);
+        
+        // VERIFY user was actually saved
+        const verifyUser = await (storage as any).getUserByEmail(newUser.email);
+        console.log(`🔧 DEBUG: Verification - user exists in database:`, verifyUser ? 'YES' : 'NO');
+        if (verifyUser) {
+          console.log(`🔧 DEBUG: Verified user ID: ${verifyUser.id}, email: ${verifyUser.email}`);
+        } else {
+          console.error(`❌ CRITICAL BUG: User was created but not found in database!`);
+        }
 
         console.log(`✅ Complete registration successful: ${newUser.email}`);
 
