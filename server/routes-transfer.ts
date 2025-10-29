@@ -106,8 +106,8 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 
-  // Enhanced Transfer API with proper workflow
-  app.post('/api/transactions', async (req: Request, res: Response) => {
+  // Enhanced Transfer API with proper workflow - PROTECTED: requires authentication
+  app.post('/api/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = (req as any).session?.userId;
       if (!userId) {
@@ -166,8 +166,8 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 
-  // Admin approve transfer
-  app.post('/api/admin/transfers/:id/approve', async (req: Request, res: Response) => {
+  // Admin approve transfer - PROTECTED: requires admin role
+  app.post('/api/admin/transfers/:id/approve', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const transactionId = parseInt(req.params.id);
       const { notes } = req.body;
@@ -194,8 +194,8 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 
-  // Admin reject transfer with automatic support ticket creation
-  app.post('/api/admin/transfers/:id/reject', async (req: Request, res: Response) => {
+  // Admin reject transfer with automatic support ticket creation - PROTECTED: requires admin role
+  app.post('/api/admin/transfers/:id/reject', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const transactionId = parseInt(req.params.id);
       const { notes } = req.body;
@@ -235,8 +235,8 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 
-  // Get pending transfers for admin
-  app.get('/api/admin/pending-transfers', async (req: Request, res: Response) => {
+  // Get pending transfers for admin - PROTECTED: requires admin role
+  app.get('/api/admin/pending-transfers', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const pendingTransfers = await storage.getPendingTransactions();
       res.json(pendingTransfers);
