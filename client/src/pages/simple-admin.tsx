@@ -318,9 +318,9 @@ export default function SimpleAdmin() {
     }
   };
 
-  const [transfers, setTransfers] = useState(pendingTransfers);
-  const [tickets, setTickets] = useState(supportTickets);
-  const [customerList, setCustomerList] = useState(customers);
+  const [transfers, setTransfers] = useState<PendingTransfer[]>([]);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [customerList, setCustomerList] = useState<Customer[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [chatMessage, setChatMessage] = useState("");
   const [chatMessages, setChatMessages] = useState<Array<{

@@ -107,7 +107,7 @@ class RealtimeChat {
 
   unsubscribe() {
     if (this.channel) {
-      supabase.removeChannel(this.channel);
+      this.channel.unsubscribe();
       this.channel = null;
     }
   }
@@ -170,7 +170,7 @@ class RealtimeAlerts {
 
   unsubscribe() {
     if (this.channel) {
-      supabase.removeChannel(this.channel);
+      this.channel.unsubscribe();
       this.channel = null;
     }
   }
@@ -222,7 +222,7 @@ class RealtimeTransactions {
 
   unsubscribe() {
     if (this.channel) {
-      supabase.removeChannel(this.channel);
+      this.channel.unsubscribe();
       this.channel = null;
     }
   }
@@ -273,7 +273,7 @@ class RealtimeBankAccounts {
 
   unsubscribe() {
     if (this.channel) {
-      supabase.removeChannel(this.channel);
+      this.channel.unsubscribe();
       this.channel = null;
     }
   }
@@ -361,7 +361,7 @@ class RealtimeSupportTickets {
 
   unsubscribe() {
     if (this.channel) {
-      supabase.removeChannel(this.channel);
+      this.channel.unsubscribe();
       this.channel = null;
     }
   }
@@ -409,7 +409,7 @@ class RealtimeAdminActions {
 
   unsubscribe() {
     if (this.channel) {
-      supabase.removeChannel(this.channel);
+      this.channel.unsubscribe();
       this.channel = null;
     }
   }
