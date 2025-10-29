@@ -708,4 +708,15 @@ export class PostgresStorage implements IStorage {
     `;
     return result[0] as Alert | undefined;
   }
+
+  // Additional stub methods to satisfy IStorage interface
+  async deleteAlert(id: number): Promise<void> {
+    await sql`DELETE FROM public.alerts WHERE id = ${id}`;
+  }
+
+  async getBranches(): Promise<any[]> { return []; }
+  async getAtms(): Promise<any[]> { return []; }
+  async getExchangeRates(): Promise<any[]> { return []; }
+  async getStatementsByUserId(userId: number): Promise<any[]> { return []; }
+  async getMarketRates(): Promise<any[]> { return []; }
 }
