@@ -107,7 +107,7 @@ export class SupabaseStorage implements IStorage {
       .from('bank_users')
       .insert({
         username: user.username,
-        password_hash: user.password,
+        password_hash: user.passwordHash,
         full_name: user.fullName,
         email: user.email,
         phone: user.phone,
@@ -299,20 +299,30 @@ export class SupabaseStorage implements IStorage {
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
     // Map from schema to database columns
     const dbTransaction: any = {
-      account_id: transaction.accountId,
-      type: transaction.type,
+      from_account_id: transaction.fromAccountId,
+      to_account_id: transaction.toAccountId,
+      from_user_id: transaction.fromUserId,
+      to_user_id: transaction.toUserId,
+      transaction_id: transaction.transactionId,
+      transaction_type: transaction.transactionType,
       amount: transaction.amount,
       description: transaction.description,
-      date: transaction.date,
+      currency: transaction.currency,
+      created_at: transaction.createdAt || new Date(),
       status: transaction.status || 'pending',
+      reference_number: transaction.referenceNumber,
+      fee: transaction.fee,
+      exchange_rate: transaction.exchangeRate,
+      country_code: transaction.countryCode,
       recipient_name: transaction.recipientName,
+      recipient_account: transaction.recipientAccount,
+      recipient_address: transaction.recipientAddress,
       recipient_country: transaction.recipientCountry,
       bank_name: transaction.bankName,
       swift_code: transaction.swiftCode,
-      admin_notes: transaction.adminNotes,
-      category: transaction.category,
-      recipient_address: transaction.recipientAddress,
       transfer_purpose: transaction.transferPurpose,
+      category: transaction.category,
+      admin_notes: transaction.adminNotes,
       approved_by: transaction.approvedBy,
       approved_at: transaction.approvedAt,
       rejected_by: transaction.rejectedBy,
@@ -434,7 +444,7 @@ export class SupabaseStorage implements IStorage {
     return {
       id: data.id,
       username: data.username,
-      password: data.password_hash,
+      passwordHash: data.password_hash,
       fullName: data.full_name,
       email: data.email,
       phone: data.phone,
@@ -457,7 +467,7 @@ export class SupabaseStorage implements IStorage {
       isOnline: data.is_online,
       isActive: data.is_active,
       avatarUrl: data.avatar_url,
-      balance: parseFloat(data.balance || '0'),
+      balance: data.balance || '0',
       lastLogin: data.last_login || null,
       createdByAdmin: data.created_by_admin || null,
       modifiedByAdmin: data.modified_by_admin || null,
@@ -471,19 +481,28 @@ export class SupabaseStorage implements IStorage {
   private mapSupabaseTransaction(data: any): Transaction {
     return {
       id: data.id,
-      accountId: data.account_id,
-      type: data.type,
+      transactionId: data.transaction_id,
+      fromUserId: data.from_user_id,
+      toUserId: data.to_user_id,
+      fromAccountId: data.from_account_id,
+      toAccountId: data.to_account_id,
       amount: data.amount,
-      description: data.description,
-      category: data.category || null,
-      date: data.date,
+      currency: data.currency,
+      transactionType: data.transaction_type,
       status: data.status,
+      description: data.description,
       recipientName: data.recipient_name || null,
+      recipientAccount: data.recipient_account || null,
       recipientAddress: data.recipient_address || null,
       recipientCountry: data.recipient_country || null,
+      referenceNumber: data.reference_number || null,
+      fee: data.fee || null,
+      exchangeRate: data.exchange_rate || null,
+      countryCode: data.country_code || null,
       bankName: data.bank_name || null,
       swiftCode: data.swift_code || null,
       transferPurpose: data.transfer_purpose || null,
+      category: data.category || null,
       adminNotes: data.admin_notes || null,
       approvedBy: data.approved_by || null,
       approvedAt: data.approved_at || null,
@@ -493,4 +512,29 @@ export class SupabaseStorage implements IStorage {
       updatedAt: data.updated_at
     };
   }
+
+  // Additional stub methods to satisfy IStorage interface
+  async getUserCards(userId: number): Promise<any[]> { return []; }
+  async getCard(id: number): Promise<any | undefined> { return undefined; }
+  async createCard(card: any): Promise<any> { throw new Error('Not implemented'); }
+  async updateCard(id: number, updates: any): Promise<any | undefined> { return undefined; }
+  async deleteCard(id: number): Promise<void> {}
+  async getUserInvestments(userId: number): Promise<any[]> { return []; }
+  async getInvestment(id: number): Promise<any | undefined> { return undefined; }
+  async createInvestment(investment: any): Promise<any> { throw new Error('Not implemented'); }
+  async updateInvestment(id: number, updates: any): Promise<any | undefined> { return undefined; }
+  async getMessages(conversationId?: string): Promise<any[]> { return []; }
+  async getUserMessages(userId: number): Promise<any[]> { return []; }
+  async createMessage(message: any): Promise<any> { throw new Error('Not implemented'); }
+  async markMessageAsRead(id: number): Promise<any | undefined> { return undefined; }
+  async getUserAlerts(userId: number): Promise<any[]> { return []; }
+  async getUnreadAlerts(userId: number): Promise<any[]> { return []; }
+  async createAlert(alert: any): Promise<any> { throw new Error('Not implemented'); }
+  async markAlertAsRead(id: number): Promise<any | undefined> { return undefined; }
+  async deleteAlert(id: number): Promise<void> {}
+  async getBranches(): Promise<any[]> { return []; }
+  async getAtms(): Promise<any[]> { return []; }
+  async getExchangeRates(): Promise<any[]> { return []; }
+  async getStatementsByUserId(userId: number): Promise<any[]> { return []; }
+  async getMarketRates(): Promise<any[]> { return []; }
 }

@@ -161,6 +161,9 @@ export class PostgresStorage implements IStorage {
       const modifiedByAdminVal = user.modifiedByAdmin || null;
       const adminNotesVal = user.adminNotes || null;
       
+      const accountNumberVal = user.accountNumber || null;
+      const accountIdVal = user.accountId || null;
+      
       const result = await sql`
         INSERT INTO public.bank_users (
           username, password_hash, full_name, email, phone,
@@ -171,7 +174,7 @@ export class PostgresStorage implements IStorage {
           last_login, created_by_admin, modified_by_admin, admin_notes
         ) VALUES (
           ${user.username}, ${user.passwordHash}, ${user.fullName}, ${emailVal}, ${phoneVal},
-          ${user.accountNumber}, ${user.accountId}, ${professionVal}, ${dobVal},
+          ${accountNumberVal}, ${accountIdVal}, ${professionVal}, ${dobVal},
           ${addressVal}, ${cityVal}, ${stateVal}, ${countryVal}, ${postalCodeVal}, ${nationalityVal},
           ${annualIncomeVal}, ${idTypeVal}, ${idNumberVal}, ${transferPinVal}, ${roleVal},
           ${isVerifiedVal}, ${isOnlineVal}, ${isActiveVal}, ${avatarUrlVal}, ${balanceVal}, ${supabaseUserIdVal},
@@ -350,6 +353,10 @@ export class PostgresStorage implements IStorage {
       const rejectedByVal = transaction.rejectedBy || null;
       const rejectedAtVal = transaction.rejectedAt || null;
       
+      const fromAccountIdVal = transaction.fromAccountId || null;
+      const transactionTypeVal = transaction.transactionType || null;
+      const createdAtVal = transaction.createdAt || new Date();
+      
       const result = await sql`
         INSERT INTO public.transactions (
           from_account_id, transaction_type, amount, description, created_at, status,
@@ -357,7 +364,7 @@ export class PostgresStorage implements IStorage {
           bank_name, swift_code, transfer_purpose, admin_notes, category,
           approved_by, approved_at, rejected_by, rejected_at
         ) VALUES (
-          ${transaction.fromAccountId}, ${transaction.transactionType}, ${transaction.amount}, ${transaction.description}, ${transaction.createdAt || new Date()}, ${statusVal},
+          ${fromAccountIdVal}, ${transactionTypeVal}, ${transaction.amount}, ${transaction.description}, ${createdAtVal}, ${statusVal},
           ${recipientNameVal}, ${recipientAddressVal}, ${recipientCountryVal},
           ${bankNameVal}, ${swiftCodeVal}, ${transferPurposeVal}, ${adminNotesVal}, ${categoryVal},
           ${approvedByVal}, ${approvedAtVal}, ${rejectedByVal}, ${rejectedAtVal}
@@ -470,7 +477,7 @@ export class PostgresStorage implements IStorage {
     return {
       id: data.id,
       username: data.username,
-      password: data.password_hash,
+      passwordHash: data.password_hash,
       fullName: data.full_name,
       email: data.email,
       phone: data.phone,
@@ -493,7 +500,7 @@ export class PostgresStorage implements IStorage {
       isOnline: data.is_online,
       isActive: data.is_active,
       avatarUrl: data.avatar_url,
-      balance: parseFloat(data.balance || '0'),
+      balance: data.balance || '0',
       lastLogin: data.last_login || null,
       createdByAdmin: data.created_by_admin || null,
       modifiedByAdmin: data.modified_by_admin || null,
@@ -524,19 +531,28 @@ export class PostgresStorage implements IStorage {
   private mapDbTransaction(data: any): Transaction {
     return {
       id: data.id,
-      accountId: data.account_id,
-      type: data.type,
+      transactionId: data.transaction_id,
+      fromUserId: data.from_user_id,
+      toUserId: data.to_user_id,
+      fromAccountId: data.from_account_id,
+      toAccountId: data.to_account_id,
       amount: data.amount,
-      description: data.description,
-      category: data.category,
-      date: data.date,
+      currency: data.currency,
+      transactionType: data.transaction_type,
       status: data.status,
+      description: data.description,
       recipientName: data.recipient_name,
+      recipientAccount: data.recipient_account,
       recipientAddress: data.recipient_address,
       recipientCountry: data.recipient_country,
+      referenceNumber: data.reference_number,
+      fee: data.fee,
+      exchangeRate: data.exchange_rate,
+      countryCode: data.country_code,
       bankName: data.bank_name,
       swiftCode: data.swift_code,
       transferPurpose: data.transfer_purpose,
+      category: data.category,
       adminNotes: data.admin_notes,
       approvedBy: data.approved_by,
       approvedAt: data.approved_at,

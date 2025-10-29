@@ -212,8 +212,9 @@ export function setupTransferRoutes(app: Express) {
         });
 
         // Create automatic support ticket for rejected transfer
-        const account = await storage.getAccount(transaction.fromAccountId);
-        if (account) {
+        if (transaction.fromAccountId) {
+          const account = await storage.getAccount(transaction.fromAccountId);
+          if (account) {
           await storage.createSupportTicket({
             userId: account.userId,
             subject: `Transfer Rejection - Transaction #${transaction.id}`,
@@ -222,6 +223,7 @@ export function setupTransferRoutes(app: Express) {
             priority: 'high',
             status: 'open'
           });
+          }
         }
       }
 
