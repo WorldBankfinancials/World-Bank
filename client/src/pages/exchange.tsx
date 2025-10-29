@@ -13,10 +13,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Exchange() {
   const { userProfile } = useAuth();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [fromCurrency, setFromCurrency] = useState('USD');
   const [toCurrency, setToCurrency] = useState('EUR');
   const [amount, setAmount] = useState('1000');
@@ -61,14 +63,18 @@ export default function Exchange() {
       });
 
       if (response.ok) {
-        // Handle successful exchange
-        alert(`Successfully exchanged ${amount} ${fromCurrency} to ${convertedAmount.toFixed(2)} ${toCurrency}`);
-        // Refresh user balance
+        toast({
+          title: 'Exchange Successful',
+          description: `Successfully exchanged ${amount} ${fromCurrency} to ${convertedAmount.toFixed(2)} ${toCurrency}`
+        });
         queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       }
     } catch (error) {
-      
-      alert('Exchange failed. Please try again.');
+      toast({
+        title: 'Exchange Failed',
+        description: 'Unable to complete currency exchange. Please try again.',
+        variant: 'destructive'
+      });
     }
   };
 
