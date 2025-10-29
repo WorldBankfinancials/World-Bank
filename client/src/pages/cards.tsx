@@ -83,6 +83,67 @@ export default function Cards() {
     fetchCards();
   }, []);
 
+  // Real-time subscription for card updates
+  useEffect(() => {
+    if (!userProfile) return;
+
+    const channel = supabase
+      .channel('card-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'cards'
+      }, () => {
+        console.log('🔄 Card data changed, refreshing...');
+        // Refetch cards when data changes
+        async function refetchCards() {
+          try {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (!authUser) return;
+
+            const { data: bankUser } = await supabase
+              .from('bank_users')
+              .select('id')
+              .eq('supabase_user_id', authUser.id)
+              .single();
+
+            if (bankUser) {
+              const { data: cards, error } = await supabase
+                .from('cards')
+                .select('*')
+                .eq('user_id', bankUser.id);
+
+              if (!error) {
+                setCreditCards(cards?.map(card => ({
+                  id: card.id,
+                  name: card.card_name,
+                  number: card.card_number,
+                  type: card.card_type,
+                  balance: parseFloat(card.balance || '0'),
+                  limit: parseFloat(card.credit_limit || '0'),
+                  expiry: card.expiry_date,
+                  isLocked: card.is_locked,
+                  color: card.card_type === 'Platinum' ? 'bg-gradient-to-br from-gray-800 to-gray-900' :
+                         card.card_type === 'Business' ? 'bg-gradient-to-br from-blue-600 to-blue-800' :
+                         'bg-gradient-to-br from-yellow-600 to-yellow-800',
+                  dailyLimit: parseFloat(card.daily_limit || '5000'),
+                  contactlessEnabled: card.contactless_enabled
+                })) || []);
+              }
+            }
+          } catch (error) {
+            console.error('Error refetching cards:', error);
+          }
+        }
+        refetchCards();
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [userProfile]);
+
   // Show error message if cards fail to load
   useEffect(() => {
     if (cardsError) {

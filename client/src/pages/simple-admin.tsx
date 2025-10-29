@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { queryClient } from '@/lib/queryClient';
+import { supabase } from '@/lib/supabase';
 import { 
   Shield, 
   Clock, 
@@ -99,66 +100,7 @@ interface PendingRegistration {
   requiresPhotoUpload: boolean;
 }
 
-const pendingTransfers: PendingTransfer[] = [
-  {
-    id: 1,
-    amount: "15,000.00",
-    currency: "USD",
-    recipientName: "Chen Wei Corporation",
-    recipientBank: "Bank of China",
-    customerName: "Liu Wei",
-    customerEmail: "liu.wei@oilrig.com",
-    createdAt: "2024-12-15T10:30:00Z",
-    status: "pending_approval"
-  },
-  {
-    id: 2,
-    amount: "8,500.00",
-    currency: "USD", 
-    recipientName: "International Maritime Services",
-    recipientBank: "HSBC Hong Kong",
-    customerName: "Liu Wei",
-    customerEmail: "liu.wei@oilrig.com",
-    createdAt: "2024-12-15T14:15:00Z",
-    status: "pending_approval"
-  }
-];
-
-const supportTickets: SupportTicket[] = [
-  {
-    id: 1,
-    subject: "Mobile App Login Issues",
-    customerName: "Liu Wei", 
-    priority: "High",
-    status: "Open",
-    createdAt: "2024-12-15T09:45:00Z",
-    description: "Customer unable to access mobile banking app. Error message: 'Invalid credentials'"
-  },
-  {
-    id: 2,
-    subject: "Transfer Confirmation Delay",
-    customerName: "Liu Wei",
-    priority: "Medium", 
-    status: "In Progress",
-    createdAt: "2024-12-15T11:20:00Z",
-    description: "International transfer confirmation taking longer than expected. Customer requesting status update."
-  }
-];
-
-const customers: Customer[] = [
-  {
-    id: 1,
-    fullName: "Liu Wei",
-    email: "liu.wei@oilrig.com",
-    phone: "+86 138 0013 8000",
-    accountNumber: "4789-6523-1087-9234",
-    profession: "Marine Engineer",
-    isVerified: true,
-    isOnline: true,
-    avatarUrl: null,
-    balance: 2001382.65
-  }
-];
+// All data is now fetched from real APIs with real-time synchronization
 
 export default function SimpleAdmin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -213,10 +155,132 @@ export default function SimpleAdmin() {
     }
   };
 
+  const fetchPendingTransfers = async () => {
+    try {
+      const response = await fetch('/api/admin/pending-transfers');
+      if (response.ok) {
+        const data = await response.json();
+        setTransfers(data || []);
+      }
+    } catch (error) {
+      console.log('No pending transfers endpoint yet');
+      setTransfers([]);
+    }
+  };
+
+  const fetchSupportTickets = async () => {
+    try {
+      const response = await fetch('/api/admin/support-tickets');
+      if (response.ok) {
+        const data = await response.json();
+        setTickets(data || []);
+      }
+    } catch (error) {
+      console.log('Fetching support tickets from database');
+      try {
+        const response = await fetch('/api/support-tickets');
+        if (response.ok) {
+          const data = await response.json();
+          const formattedTickets = data.map((t: any) => ({
+            id: t.id,
+            subject: t.description?.substring(0, 50) || 'Support Ticket',
+            customerName: t.userId ? `User ${t.userId}` : 'Unknown',
+            priority: t.priority || 'Medium',
+            status: t.status || 'Open',
+            createdAt: t.createdAt,
+            description: t.description || ''
+          }));
+          setTickets(formattedTickets);
+        }
+      } catch (e) {
+        setTickets([]);
+      }
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const response = await fetch('/api/admin/customers');
+      if (response.ok) {
+        const data = await response.json();
+        setCustomerList(data || []);
+      } else {
+        console.log('Fetching all users as customers');
+        const response = await fetch('/api/users');
+        if (response.ok) {
+          const data = await response.json();
+          const formattedCustomers = data.map((u: any) => ({
+            id: u.id,
+            fullName: u.fullName || u.email,
+            email: u.email,
+            phone: u.phone || 'N/A',
+            accountNumber: u.accountNumber || 'N/A',
+            profession: u.profession || 'N/A',
+            isVerified: u.isVerified || false,
+            isOnline: u.isOnline || false,
+            avatarUrl: u.avatarUrl,
+            balance: parseFloat(u.balance || '0'),
+            accounts: [],
+            supabaseUserId: u.supabaseUserId,
+            adminNotes: u.adminNotes || '',
+            isActive: u.isActive !== false
+          }));
+          setCustomerList(formattedCustomers);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      setCustomerList([]);
+    }
+  };
+
+  // Real-time subscriptions setup
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // Subscribe to real-time updates via Supabase
+    const channel = supabase
+      .channel('admin-realtime-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bank_users' }, () => {
+        console.log('🔄 User data changed, refreshing customers');
+        fetchCustomers();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, () => {
+        console.log('🔄 Support ticket changed, refreshing tickets');
+        fetchSupportTickets();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+        console.log('🔄 Transaction changed, refreshing transfers');
+        fetchPendingTransfers();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bank_accounts' }, () => {
+        console.log('🔄 Account changed, refreshing customers');
+        fetchCustomers();
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [isAuthenticated]);
+
   useEffect(() => {
     fetchUserData();
     if (isAuthenticated) {
       fetchPendingRegistrations();
+      fetchPendingTransfers();
+      fetchSupportTickets();
+      fetchCustomers();
+      
+      // Refresh data every 30 seconds as backup
+      const interval = setInterval(() => {
+        fetchPendingRegistrations();
+        fetchPendingTransfers();
+        fetchSupportTickets();
+        fetchCustomers();
+      }, 30000);
+      
+      return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
 
@@ -328,12 +392,7 @@ export default function SimpleAdmin() {
     sender: "admin" | "customer";
     message: string;
     timestamp: string;
-  }>>([
-    { id: 1, sender: "customer", message: "Hi, I'm having trouble accessing my mobile app. It keeps showing an error when I try to log in.", timestamp: "10:15 AM" },
-    { id: 2, sender: "admin", message: "Hello Mr. Liu Wei, I can help you with that. Can you tell me what error message you're seeing exactly?", timestamp: "10:16 AM" },
-    { id: 3, sender: "customer", message: "It says 'Invalid credentials' but I'm sure my password is correct.", timestamp: "10:17 AM" },
-    { id: 4, sender: "admin", message: "Let me check your account status. Your account appears to be active. Try clearing your app cache and logging in again.", timestamp: "10:18 AM" }
-  ]);
+  }>>([]);
 
   // Customer editing states
   const [editingCustomer, setEditingCustomer] = useState<any>(null);

@@ -3,13 +3,17 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from "lucide-react";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 
 export default function InvestmentPortfolio() {
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
+  
   const { data: user, isLoading: userLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -19,6 +23,25 @@ export default function InvestmentPortfolio() {
     queryKey: ['/api/investments'],
     staleTime: 30000,
   });
+
+  // Real-time subscription for investment updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('investment-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'investments'
+      }, () => {
+        console.log('🔄 Investment data changed, refreshing...');
+        queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [queryClient]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

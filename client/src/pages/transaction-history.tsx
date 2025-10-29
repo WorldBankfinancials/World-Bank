@@ -70,6 +70,59 @@ export default function TransactionHistory() {
 
     fetchData();
   }, []);
+
+  // Real-time subscription for transaction updates
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('transaction-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'transactions'
+      }, () => {
+        console.log('🔄 Transaction data changed, refreshing...');
+        // Refetch data when transactions change
+        async function refetchData() {
+          try {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (!authUser) return;
+
+            const { data: bankUser } = await supabase
+              .from('bank_users')
+              .select('*')
+              .eq('supabase_user_id', authUser.id)
+              .single();
+
+            if (bankUser) {
+              const { data: accounts } = await supabase
+                .from('bank_accounts')
+                .select('id')
+                .eq('user_id', bankUser.id);
+
+              if (accounts && accounts.length > 0) {
+                const { data: txns } = await supabase
+                  .from('transactions')
+                  .select('*')
+                  .or(`from_account_id.eq.${accounts[0].id},to_account_id.eq.${accounts[0].id}`)
+                  .order('created_at', { ascending: false });
+
+                setTransactions(txns || []);
+              }
+            }
+          } catch (error) {
+            console.error('Error refetching transactions:', error);
+          }
+        }
+        refetchData();
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [user]);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
