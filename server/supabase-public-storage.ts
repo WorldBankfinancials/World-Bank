@@ -197,7 +197,6 @@ export class SupabasePublicStorage implements IStorage {
   }
 
   async getUserByPhone(phone: string): Promise<User | undefined> {
-    console.log('📱 Searching for user with phone:', phone);
     try {
       const { data: user, error } = await supabase
         .from('bank_users')
@@ -206,11 +205,9 @@ export class SupabasePublicStorage implements IStorage {
         .single();
       
       if (error || !user) {
-        console.log('❌ No user found with phone:', phone);
         return undefined;
       }
       
-      console.log('✅ Found user by phone in Supabase');
       return {
         id: user.id,
         username: user.username,
@@ -253,7 +250,6 @@ export class SupabasePublicStorage implements IStorage {
   }
 
   async getUserAccounts(userId: number): Promise<Account[]> {
-    console.log('🏦 Fetching accounts for user ID:', userId);
     try {
       const { data: accounts, error } = await supabase
         .from('bank_accounts')
@@ -268,11 +264,9 @@ export class SupabasePublicStorage implements IStorage {
       }
       
       if (!accounts || accounts.length === 0) {
-        console.log('❌ No accounts found for user ID:', userId);
         return [];
       }
       
-      console.log('✅ Found accounts in Supabase:', accounts);
       return accounts.map(account => ({
         id: account.id,
         userId: account.user_id,
@@ -568,13 +562,6 @@ export class SupabasePublicStorage implements IStorage {
   }
 
   async createUser(data: InsertUser): Promise<User> {
-    console.log('🔧 SupabasePublicStorage.createUser called with:', {
-      username: data.username,
-      email: data.email,
-      hasPasswordHash: !!data.passwordHash,
-      supabaseUserId: data.supabaseUserId
-    });
-    
     try {
       const { data: user, error } = await supabase
         .from('bank_users')
@@ -623,8 +610,6 @@ export class SupabasePublicStorage implements IStorage {
         console.error('❌ Supabase insert returned no user and no error');
         throw new Error('Failed to create user - no data returned');
       }
-      
-      console.log('✅ Supabase user created successfully:', user.id);
 
       return {
         id: user.id,
