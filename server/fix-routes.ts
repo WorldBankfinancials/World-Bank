@@ -796,10 +796,21 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Authentication endpoints with fixed typing
   app.post('/api/login', async (req: Request, res: Response) => {
     try {
-      const body = req.body as { username: string; password: string };
-      const user = await storage.getUserByUsername(body.username);
+      // Validate request body with Zod schema
+      const { loginSchema, validateRequest } = await import('./validation-schemas');
+      const validation = validateRequest(loginSchema, req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Validation failed",
+          errors: validation.errors
+        });
+      }
 
-      if (!user || user.passwordHash !== body.password) {
+      const { username, password } = validation.data;
+      const user = await storage.getUserByUsername(username);
+
+      if (!user || user.passwordHash !== password) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
@@ -812,8 +823,20 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.post('/api/verify-pin', async (req: Request, res: Response) => {
     try {
-      const body = req.body as { email?: string; username?: string; pin: string };
-      const identifier = body.email || body.username;
+      // Validate request body with Zod schema
+      const { pinVerificationSchema, validateRequest } = await import('./validation-schemas');
+      const validation = validateRequest(pinVerificationSchema, req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Validation failed",
+          errors: validation.errors,
+          verified: false
+        });
+      }
+
+      const { email, username, pin } = validation.data;
+      const identifier = email || username;
       console.log('🔐 PIN verification request for:', identifier);
 
       // Use email for lookup (supports both email and username fields for compatibility)
@@ -836,8 +859,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      if (user.transferPin !== body.pin) {
-        console.log('❌ PIN mismatch - Expected:', user.transferPin, 'Got:', body.pin);
+      if (user.transferPin !== pin) {
+        console.log('❌ PIN mismatch - Expected:', user.transferPin, 'Got:', pin);
         return res.status(401).json({ message: 'Invalid PIN', verified: false });
       }
 
@@ -1858,11 +1881,18 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // This is a one-time setup endpoint - should be secured in production
   app.post('/api/admin/create-admin-user', async (req: Request, res: Response) => {
     try {
-      const { email, password, fullName } = req.body;
-
-      if (!email || !password || !fullName) {
-        return res.status(400).json({ error: 'Email, password, and fullName are required' });
+      // Validate request body with Zod schema
+      const { adminUserCreationSchema, validateRequest } = await import('./validation-schemas');
+      const validation = validateRequest(adminUserCreationSchema, req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: "Validation failed",
+          details: validation.errors
+        });
       }
+
+      const { email, password, fullName } = validation.data;
 
       console.log(`🔧 Creating admin user: ${email}`);
 

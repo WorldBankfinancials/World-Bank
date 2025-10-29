@@ -116,6 +116,40 @@ export const pinChangeSchema = z.object({
     .refine(val => val !== '0000' && val !== '1234', 'PIN too simple')
 });
 
+export const pinVerificationSchema = z.object({
+  email: z.string().email('Invalid email').optional(),
+  username: z.string().min(1, 'Username required').optional(),
+  pin: z.string()
+    .length(4, 'PIN must be 4 digits')
+    .regex(/^[0-9]{4}$/, 'PIN must be 4 digits')
+}).refine(data => data.email || data.username, {
+  message: 'Either email or username is required'
+});
+
+// ==================== LOGIN VALIDATION ====================
+
+export const loginSchema = z.object({
+  username: z.string()
+    .min(1, 'Username is required')
+    .max(100, 'Username too long'),
+  password: z.string()
+    .min(1, 'Password is required')
+});
+
+// ==================== ADMIN USER CREATION VALIDATION ====================
+
+export const adminUserCreationSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+  fullName: z.string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name too long')
+});
+
 // ==================== HELPER FUNCTIONS ====================
 
 /**
