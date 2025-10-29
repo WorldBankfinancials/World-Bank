@@ -183,7 +183,8 @@ export default function AdminDashboard() {
   // Support ticket update mutation
   const updateTicketMutation = useMutation({
     mutationFn: async ({ ticketId, status, resolution }: { ticketId: number; status: string; resolution?: string }) => {
-      const response = await fetch(`/api/admin/support-tickets/${ticketId}`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/support-tickets/${ticketId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, resolution })

@@ -69,7 +69,10 @@ export default function History() {
       setLoading(true);
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const accountPromises = accounts.map(account => 
-        authenticatedFetch(`/api/accounts/${account.id}/transactions`).then(res => res.json())
+        authenticatedFetch(`/api/accounts/${account.id}/transactions`).then(async res => {
+          if (!res.ok) throw new Error(`Failed to fetch transactions for account ${account.id}`);
+          return res.json();
+        })
       );
       
       const allTransactionArrays = await Promise.all(accountPromises);

@@ -293,7 +293,8 @@ export default function SimpleAdmin() {
     if (!token) return; // Short-circuit if no token
     
     try {
-      const response = await fetch('/api/admin/customers', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/admin/customers', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -303,7 +304,8 @@ export default function SimpleAdmin() {
         setCustomerList(data || []);
       } else {
         // Try fallback endpoint
-        const response = await fetch('/api/users', {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/users', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -454,7 +456,8 @@ export default function SimpleAdmin() {
       }
 
       const token = sessionStorage.getItem('adminToken');
-      const response = await fetch(`/api/admin/approve-registration/${registrationId}`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/approve-registration/${registrationId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -501,7 +504,8 @@ export default function SimpleAdmin() {
       }
 
       const token = sessionStorage.getItem('adminToken');
-      const response = await fetch(`/api/admin/reject-registration/${registrationId}`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/reject-registration/${registrationId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -593,7 +597,8 @@ export default function SimpleAdmin() {
     // Fetch complete user data from API to populate edit form
     try {
       const token = sessionStorage.getItem('adminToken');
-      const response = await fetch('/api/user', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/user', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -642,7 +647,8 @@ export default function SimpleAdmin() {
     
     try {
       const token = sessionStorage.getItem('adminToken');
-      const response = await fetch(`/api/admin/customers/${editingCustomer.id}`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/customers/${editingCustomer.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -786,8 +792,9 @@ export default function SimpleAdmin() {
       const uploadCompressedImage = async (base64Image: string) => {
         try {
           const token = sessionStorage.getItem('adminToken');
+          const { authenticatedFetch } = await import('@/lib/queryClient');
           
-          const response = await fetch(`/api/admin/customers/${editingCustomer.id}`, {
+          const response = await authenticatedFetch(`/api/admin/customers/${editingCustomer.id}`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
@@ -853,7 +860,8 @@ export default function SimpleAdmin() {
   const handleTopUpBalance = async (customerId: number, amount: number) => {
     try {
       const token = sessionStorage.getItem('adminToken');
-      const response = await fetch(`/api/admin/customers/${customerId}/balance`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/customers/${customerId}/balance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -916,7 +924,8 @@ export default function SimpleAdmin() {
 
     try {
       const token = sessionStorage.getItem('adminToken');
-      const response = await fetch('/api/admin/create-transaction', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/admin/create-transaction', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -934,7 +943,8 @@ export default function SimpleAdmin() {
 
       if (response.ok) {
         const token = sessionStorage.getItem('adminToken');
-        const balanceResponse = await fetch(`/api/admin/customers/${selectedCustomerForTransaction}/balance`, {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const balanceResponse = await authenticatedFetch(`/api/admin/customers/${selectedCustomerForTransaction}/balance`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1007,7 +1017,8 @@ export default function SimpleAdmin() {
 
     try {
       const token = sessionStorage.getItem('adminToken');
-      const response = await fetch(`/api/admin/accounts/${accountId}/balance`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/accounts/${accountId}/balance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
