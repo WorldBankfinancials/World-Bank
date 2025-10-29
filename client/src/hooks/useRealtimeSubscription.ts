@@ -2,9 +2,79 @@ import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 
+// Shared channel registry for dynamic subscriptions
+class DynamicChannelRegistry {
+  private coreChannel: any = null;
+  private listeners: Map<string, Set<() => void>> = new Map();
+  
+  private initCoreChannel() {
+    if (this.coreChannel) return;
+    
+    this.coreChannel = supabase
+      .channel('dynamic-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: '*' },
+        (payload: any) => {
+          console.log(`🔄 Dynamic real-time update:`, payload);
+          
+          // Trigger all registered listeners for this specific table
+          const wildcardKey = `${payload.table}:all`;
+          const wildcardCallbacks = this.listeners.get(wildcardKey);
+          if (wildcardCallbacks) {
+            wildcardCallbacks.forEach(cb => cb());
+          }
+          
+          // Note: Individual filters are not easily detectable from payload
+          // so we trigger all listeners for the table
+          this.listeners.forEach((callbacks, key) => {
+            if (key.startsWith(`${payload.table}:`)) {
+              callbacks.forEach(cb => cb());
+            }
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔄 Dynamic realtime channel:', status);
+      });
+  }
+  
+  subscribe(table: string, filter: any, callback: () => void) {
+    const key = `${table}:${JSON.stringify(filter || 'all')}`;
+    
+    if (!this.listeners.has(key)) {
+      this.listeners.set(key, new Set());
+    }
+    
+    this.listeners.get(key)!.add(callback);
+    this.initCoreChannel();
+    
+    return () => {
+      const callbacks = this.listeners.get(key);
+      if (callbacks) {
+        callbacks.delete(callback);
+        if (callbacks.size === 0) {
+          this.listeners.delete(key);
+        }
+      }
+    };
+  }
+  
+  cleanup() {
+    if (this.coreChannel) {
+      this.coreChannel.unsubscribe();
+      this.coreChannel = null;
+    }
+    this.listeners.clear();
+  }
+}
+
+const dynamicChannels = new DynamicChannelRegistry();
+
 /**
  * Universal real-time subscription hook for Supabase tables
  * Automatically invalidates React Query cache when data changes
+ * NOW OPTIMIZED: Uses shared channel instead of creating individual channels
  * 
  * @param table - Supabase table name
  * @param queryKey - React Query key to invalidate on changes
@@ -20,42 +90,19 @@ export function useRealtimeSubscription(
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    // Create a unique channel name
-    const channelName = `realtime:${table}:${JSON.stringify(filter || 'all')}`;
-    
-    // Build the channel
-    let channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: table,
-          ...(filter && { filter: `${filter.column}=eq.${filter.value}` })
-        },
-        (payload) => {
-          console.log(`🔄 Real-time update on ${table}:`, payload);
-          
-          // Invalidate the query to trigger refetch
-          queryClient.invalidateQueries({ queryKey: Array.isArray(queryKey) ? queryKey : [queryKey] });
-        }
-      )
-      .subscribe((status) => {
-        console.log(`📡 Real-time subscription ${channelName}:`, status);
-      });
-
-    // Cleanup on unmount
-    return () => {
-      console.log(`🔌 Unsubscribing from ${channelName}`);
-      channel.unsubscribe();
+    const callback = () => {
+      queryClient.invalidateQueries({ queryKey: Array.isArray(queryKey) ? queryKey : [queryKey] });
     };
+    
+    const unsubscribe = dynamicChannels.subscribe(table, filter, callback);
+
+    return unsubscribe;
   }, [table, JSON.stringify(queryKey), JSON.stringify(filter), queryClient]);
 }
 
 /**
  * Multi-table real-time subscription hook
- * Useful for pages that need updates from multiple tables
+ * NOW OPTIMIZED: Reuses single shared channel for all tables
  */
 export function useRealtimeSubscriptions(
   subscriptions: Array<{
@@ -67,41 +114,23 @@ export function useRealtimeSubscriptions(
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const channels = subscriptions.map(({ table, queryKey, filter }) => {
-      const channelName = `realtime:${table}:${JSON.stringify(filter || 'all')}`;
+    const unsubscribers = subscriptions.map(({ table, queryKey, filter }) => {
+      const callback = () => {
+        queryClient.invalidateQueries({ queryKey: Array.isArray(queryKey) ? queryKey : [queryKey] });
+      };
       
-      return supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: table,
-            ...(filter && { filter: `${filter.column}=eq.${filter.value}` })
-          },
-          (payload) => {
-            console.log(`🔄 Real-time update on ${table}:`, payload);
-            queryClient.invalidateQueries({ queryKey: Array.isArray(queryKey) ? queryKey : [queryKey] });
-          }
-        )
-        .subscribe((status) => {
-          console.log(`📡 Real-time subscription ${channelName}:`, status);
-        });
+      return dynamicChannels.subscribe(table, filter, callback);
     });
 
-    // Cleanup on unmount
     return () => {
-      channels.forEach((channel, index) => {
-        console.log(`🔌 Unsubscribing from channel ${index}`);
-        channel.unsubscribe();
-      });
+      unsubscribers.forEach(unsub => unsub());
     };
   }, [JSON.stringify(subscriptions), queryClient]);
 }
 
 /**
  * Real-time presence hook for tracking online users
+ * Kept as separate channel for presence-specific features
  */
 export function useRealtimePresence(userId: number | undefined) {
   useEffect(() => {

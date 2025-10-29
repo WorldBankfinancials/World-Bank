@@ -43,20 +43,254 @@ export interface RealtimeBankAccount {
   updatedAt: Date;
 }
 
-class RealtimeChat {
-  private channel: any = null;
+export type RealtimeEventType = 'INSERT' | 'UPDATE' | 'DELETE';
 
-  subscribe(callback: (message: RealtimeMessage) => void) {
-    this.channel = supabase
-      .channel('chat-messages')
+export interface RealtimeSupportTicket {
+  id: number;
+  userId: number;
+  description: string;
+  status: string;
+  priority: string;
+  category: string;
+  createdAt: Date;
+  updatedAt: Date;
+  eventType?: RealtimeEventType;
+}
+
+export interface RealtimeAdminAction {
+  id: number;
+  adminId: number;
+  actionType: string;
+  targetId: string;
+  targetType: string;
+  description: string;
+  createdAt: Date;
+}
+
+// Shared channel registry to reduce connection count
+class SharedChannelRegistry {
+  private coreChannel: any = null;
+  private chatChannel: any = null;
+  private presenceChannel: any = null;
+  
+  // Callback registries for each table type
+  private alertCallbacks: Set<(alert: RealtimeAlert) => void> = new Set();
+  private transactionCallbacks: Set<(transaction: RealtimeTransaction) => void> = new Set();
+  private accountCallbacks: Set<(account: RealtimeBankAccount) => void> = new Set();
+  private ticketCallbacks: Set<(ticket: RealtimeSupportTicket) => void> = new Set();
+  private adminActionCallbacks: Set<(action: RealtimeAdminAction) => void> = new Set();
+
+  // Initialize the core channel with all listeners
+  private initCoreChannel() {
+    if (this.coreChannel) return;
+
+    this.coreChannel = supabase
+      .channel('core-realtime')
+      // Alerts listener
       .on(
         'postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'messages' 
-        },
+        { event: 'INSERT', schema: 'public', table: 'alerts' },
         (payload) => {
+          if (!payload.new) return;
+          try {
+            const alert: RealtimeAlert = {
+              id: payload.new.id,
+              userId: payload.new.user_id,
+              title: payload.new.title,
+              message: payload.new.message,
+              type: payload.new.type,
+              timestamp: new Date(payload.new.created_at),
+              isRead: payload.new.is_read
+            };
+            this.alertCallbacks.forEach(cb => cb(alert));
+          } catch (error) {
+            console.error('❌ Error processing realtime alert:', error);
+          }
+        }
+      )
+      // Transactions listener
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'transactions' },
+        (payload) => {
+          if (!payload.new) return;
+          try {
+            const transaction: RealtimeTransaction = {
+              id: payload.new.id,
+              fromAccountId: payload.new.from_account_id,
+              toAccountId: payload.new.to_account_id,
+              amount: payload.new.amount,
+              currency: payload.new.currency || 'USD',
+              transactionType: payload.new.transaction_type,
+              status: payload.new.status,
+              description: payload.new.description || '',
+              createdAt: new Date(payload.new.created_at)
+            };
+            this.transactionCallbacks.forEach(cb => cb(transaction));
+          } catch (error) {
+            console.error('❌ Error processing realtime transaction:', error);
+          }
+        }
+      )
+      // Bank accounts listener (UPDATE events for balance changes)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'bank_accounts' },
+        (payload) => {
+          if (!payload.new) return;
+          try {
+            const account: RealtimeBankAccount = {
+              id: payload.new.id,
+              userId: payload.new.user_id,
+              accountNumber: payload.new.account_number,
+              accountType: payload.new.account_type,
+              balance: payload.new.balance,
+              currency: payload.new.currency || 'USD',
+              isActive: payload.new.is_active !== false,
+              updatedAt: new Date(payload.new.updated_at || payload.new.created_at)
+            };
+            this.accountCallbacks.forEach(cb => cb(account));
+          } catch (error) {
+            console.error('❌ Error processing realtime account update:', error);
+          }
+        }
+      )
+      // Support tickets listener (all events)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'support_tickets' },
+        (payload) => {
+          const ticketData = (payload.new || payload.old) as Record<string, any> | null;
+          if (!ticketData) return;
+          try {
+            if (!ticketData.id || !ticketData.user_id) return;
+            const ticket: RealtimeSupportTicket = {
+              id: Number(ticketData.id),
+              userId: Number(ticketData.user_id),
+              description: String(ticketData.description || ''),
+              status: String(ticketData.status || 'open'),
+              priority: String(ticketData.priority || 'medium'),
+              category: String(ticketData.category || 'general'),
+              createdAt: new Date(ticketData.created_at),
+              updatedAt: new Date(ticketData.updated_at || ticketData.created_at),
+              eventType: payload.eventType as RealtimeEventType
+            };
+            this.ticketCallbacks.forEach(cb => cb(ticket));
+          } catch (error) {
+            console.error('❌ Error processing realtime support ticket:', error);
+          }
+        }
+      )
+      // Admin actions listener
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'admin_actions' },
+        (payload) => {
+          if (!payload.new) return;
+          try {
+            const action: RealtimeAdminAction = {
+              id: payload.new.id,
+              adminId: payload.new.admin_id,
+              actionType: payload.new.action_type,
+              targetId: payload.new.target_id || '',
+              targetType: payload.new.target_type || '',
+              description: payload.new.description || '',
+              createdAt: new Date(payload.new.created_at)
+            };
+            this.adminActionCallbacks.forEach(cb => cb(action));
+          } catch (error) {
+            console.error('❌ Error processing realtime admin action:', error);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔄 Core realtime channel:', status);
+      });
+  }
+
+  // Subscribe methods for each data type
+  subscribeToAlerts(callback: (alert: RealtimeAlert) => void) {
+    this.alertCallbacks.add(callback);
+    this.initCoreChannel();
+    return () => this.alertCallbacks.delete(callback);
+  }
+
+  subscribeToTransactions(callback: (transaction: RealtimeTransaction) => void) {
+    this.transactionCallbacks.add(callback);
+    this.initCoreChannel();
+    return () => this.transactionCallbacks.delete(callback);
+  }
+
+  subscribeToAccounts(callback: (account: RealtimeBankAccount) => void) {
+    this.accountCallbacks.add(callback);
+    this.initCoreChannel();
+    return () => this.accountCallbacks.delete(callback);
+  }
+
+  subscribeToTickets(callback: (ticket: RealtimeSupportTicket) => void) {
+    this.ticketCallbacks.add(callback);
+    this.initCoreChannel();
+    return () => this.ticketCallbacks.delete(callback);
+  }
+
+  subscribeToAdminActions(callback: (action: RealtimeAdminAction) => void) {
+    this.adminActionCallbacks.add(callback);
+    this.initCoreChannel();
+    return () => this.adminActionCallbacks.delete(callback);
+  }
+
+  // Get or create chat channel (kept separate for clarity)
+  getChatChannel() {
+    if (!this.chatChannel) {
+      this.chatChannel = supabase.channel('chat-messages');
+    }
+    return this.chatChannel;
+  }
+
+  // Get or create presence channel (kept separate for presence tracking)
+  getPresenceChannel() {
+    if (!this.presenceChannel) {
+      this.presenceChannel = supabase.channel('online-users');
+    }
+    return this.presenceChannel;
+  }
+
+  // Cleanup all channels
+  cleanup() {
+    if (this.coreChannel) {
+      this.coreChannel.unsubscribe();
+      this.coreChannel = null;
+    }
+    if (this.chatChannel) {
+      this.chatChannel.unsubscribe();
+      this.chatChannel = null;
+    }
+    if (this.presenceChannel) {
+      this.presenceChannel.unsubscribe();
+      this.presenceChannel = null;
+    }
+    this.alertCallbacks.clear();
+    this.transactionCallbacks.clear();
+    this.accountCallbacks.clear();
+    this.ticketCallbacks.clear();
+    this.adminActionCallbacks.clear();
+  }
+}
+
+// Singleton instance
+const sharedChannels = new SharedChannelRegistry();
+
+// Optimized classes using shared channels
+class RealtimeChat {
+  private cleanupFn: (() => void) | null = null;
+
+  subscribe(callback: (message: RealtimeMessage) => void) {
+    const channel = sharedChannels.getChatChannel();
+    channel
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload: any) => {
           const message: RealtimeMessage = {
             id: payload.new.id,
             senderId: payload.new.sender_id,
@@ -106,40 +340,18 @@ class RealtimeChat {
   }
 
   unsubscribe() {
-    if (this.channel) {
-      this.channel.unsubscribe();
-      this.channel = null;
+    if (this.cleanupFn) {
+      this.cleanupFn();
+      this.cleanupFn = null;
     }
   }
 }
 
 class RealtimeAlerts {
-  private channel: any = null;
+  private cleanupFn: (() => void) | null = null;
 
   subscribe(callback: (alert: RealtimeAlert) => void) {
-    this.channel = supabase
-      .channel('user-alerts')
-      .on(
-        'postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'alerts' 
-        },
-        (payload) => {
-          const alert: RealtimeAlert = {
-            id: payload.new.id,
-            userId: payload.new.user_id,
-            title: payload.new.title,
-            message: payload.new.message,
-            type: payload.new.type,
-            timestamp: new Date(payload.new.created_at),
-            isRead: payload.new.is_read
-          };
-          callback(alert);
-        }
-      )
-      .subscribe();
+    this.cleanupFn = sharedChannels.subscribeToAlerts(callback);
   }
 
   async getAlerts(userId?: string): Promise<RealtimeAlert[]> {
@@ -154,7 +366,6 @@ class RealtimeAlerts {
     }
 
     const { data, error } = await query;
-
     if (error) throw error;
 
     return data.map(alert => ({
@@ -169,248 +380,75 @@ class RealtimeAlerts {
   }
 
   unsubscribe() {
-    if (this.channel) {
-      this.channel.unsubscribe();
-      this.channel = null;
+    if (this.cleanupFn) {
+      this.cleanupFn();
+      this.cleanupFn = null;
     }
   }
 }
 
 class RealtimeTransactions {
-  private channel: any = null;
+  private cleanupFn: (() => void) | null = null;
 
   subscribe(callback: (transaction: RealtimeTransaction) => void, accountId?: number) {
-    this.channel = supabase
-      .channel('user-transactions')
-      .on(
-        'postgres_changes',
-        { 
-          event: 'INSERT', // Only listen to INSERT to avoid payload.new being null on DELETE
-          schema: 'public', 
-          table: 'transactions',
-          ...(accountId ? { filter: `from_account_id=eq.${accountId}` } : {})
-        },
-        (payload) => {
-          // Guard against missing payload.new
-          if (!payload.new) {
-            console.warn('⚠️ Realtime transaction event with null payload.new');
-            return;
-          }
-          
-          try {
-            const transaction: RealtimeTransaction = {
-              id: payload.new.id,
-              fromAccountId: payload.new.from_account_id,
-              toAccountId: payload.new.to_account_id,
-              amount: payload.new.amount,
-              currency: payload.new.currency || 'USD',
-              transactionType: payload.new.transaction_type,
-              status: payload.new.status,
-              description: payload.new.description || '',
-              createdAt: new Date(payload.new.created_at)
-            };
-            callback(transaction);
-          } catch (error) {
-            console.error('❌ Error processing realtime transaction:', error);
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('🔄 Realtime transactions subscription:', status);
-      });
+    // Note: Shared channel doesn't support per-account filtering yet
+    // All transactions are broadcast, components should filter client-side if needed
+    this.cleanupFn = sharedChannels.subscribeToTransactions(callback);
   }
 
   unsubscribe() {
-    if (this.channel) {
-      this.channel.unsubscribe();
-      this.channel = null;
+    if (this.cleanupFn) {
+      this.cleanupFn();
+      this.cleanupFn = null;
     }
   }
 }
 
 class RealtimeBankAccounts {
-  private channel: any = null;
+  private cleanupFn: (() => void) | null = null;
 
   subscribe(callback: (account: RealtimeBankAccount) => void, userId?: number) {
-    this.channel = supabase
-      .channel('user-accounts')
-      .on(
-        'postgres_changes',
-        { 
-          event: 'UPDATE', // Listen to balance updates
-          schema: 'public', 
-          table: 'bank_accounts',
-          ...(userId ? { filter: `user_id=eq.${userId}` } : {})
-        },
-        (payload) => {
-          // Guard against missing payload.new (replica identity issues)
-          if (!payload.new) {
-            console.warn('⚠️ Realtime bank account event with null payload.new');
-            return;
-          }
-          
-          try {
-            const account: RealtimeBankAccount = {
-              id: payload.new.id,
-              userId: payload.new.user_id,
-              accountNumber: payload.new.account_number,
-              accountType: payload.new.account_type,
-              balance: payload.new.balance,
-              currency: payload.new.currency || 'USD',
-              isActive: payload.new.is_active !== false,
-              updatedAt: new Date(payload.new.updated_at || payload.new.created_at)
-            };
-            callback(account);
-          } catch (error) {
-            console.error('❌ Error processing realtime account update:', error);
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('🔄 Realtime bank accounts subscription:', status);
-      });
+    // Note: Shared channel doesn't support per-user filtering yet
+    // All account updates are broadcast, components should filter client-side if needed
+    this.cleanupFn = sharedChannels.subscribeToAccounts(callback);
   }
 
   unsubscribe() {
-    if (this.channel) {
-      this.channel.unsubscribe();
-      this.channel = null;
+    if (this.cleanupFn) {
+      this.cleanupFn();
+      this.cleanupFn = null;
     }
   }
 }
 
-export type RealtimeEventType = 'INSERT' | 'UPDATE' | 'DELETE';
-
-export interface RealtimeSupportTicket {
-  id: number;
-  userId: number;
-  description: string;
-  status: string;
-  priority: string;
-  category: string;
-  createdAt: Date;
-  updatedAt: Date;
-  eventType?: RealtimeEventType; // Track event type for DELETE distinction
-}
-
-export interface RealtimeAdminAction {
-  id: number;
-  adminId: number;
-  actionType: string;
-  targetId: string;
-  targetType: string;
-  description: string;
-  createdAt: Date;
-}
-
 class RealtimeSupportTickets {
-  private channel: any = null;
+  private cleanupFn: (() => void) | null = null;
 
   subscribe(callback: (ticket: RealtimeSupportTicket) => void, userId?: number) {
-    this.channel = supabase
-      .channel('support-tickets')
-      .on(
-        'postgres_changes',
-        { 
-          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
-          schema: 'public', 
-          table: 'support_tickets',
-          ...(userId ? { filter: `user_id=eq.${userId}` } : {})
-        },
-        (payload) => {
-          if (!payload.new && payload.eventType !== 'DELETE') {
-            console.warn('⚠️ Realtime support ticket event with null payload.new');
-            return;
-          }
-          
-          try {
-            // Use Record type for safer typing than `as any`
-            const ticketData = (payload.new || payload.old) as Record<string, any> | null;
-            if (!ticketData) {
-              console.warn('⚠️ Realtime support ticket: no data in payload');
-              return;
-            }
-            
-            // Validate required fields before usage
-            if (!ticketData.id || !ticketData.user_id) {
-              console.error('❌ Invalid support ticket payload: missing required fields');
-              return;
-            }
-            
-            const ticket: RealtimeSupportTicket = {
-              id: Number(ticketData.id),
-              userId: Number(ticketData.user_id),
-              description: String(ticketData.description || ''),
-              status: String(ticketData.status || 'open'),
-              priority: String(ticketData.priority || 'medium'),
-              category: String(ticketData.category || 'general'),
-              createdAt: new Date(ticketData.created_at),
-              updatedAt: new Date(ticketData.updated_at || ticketData.created_at),
-              eventType: payload.eventType as RealtimeEventType // Pass event type for DELETE distinction
-            };
-            callback(ticket);
-          } catch (error) {
-            console.error('❌ Error processing realtime support ticket:', error, payload);
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('🔄 Realtime support tickets subscription:', status);
-      });
+    // Note: Shared channel doesn't support per-user filtering yet
+    // All tickets are broadcast, components should filter client-side if needed
+    this.cleanupFn = sharedChannels.subscribeToTickets(callback);
   }
 
   unsubscribe() {
-    if (this.channel) {
-      this.channel.unsubscribe();
-      this.channel = null;
+    if (this.cleanupFn) {
+      this.cleanupFn();
+      this.cleanupFn = null;
     }
   }
 }
 
 class RealtimeAdminActions {
-  private channel: any = null;
+  private cleanupFn: (() => void) | null = null;
 
   subscribe(callback: (action: RealtimeAdminAction) => void) {
-    this.channel = supabase
-      .channel('admin-actions')
-      .on(
-        'postgres_changes',
-        { 
-          event: 'INSERT',
-          schema: 'public', 
-          table: 'admin_actions'
-        },
-        (payload) => {
-          if (!payload.new) {
-            console.warn('⚠️ Realtime admin action event with null payload.new');
-            return;
-          }
-          
-          try {
-            const action: RealtimeAdminAction = {
-              id: payload.new.id,
-              adminId: payload.new.admin_id,
-              actionType: payload.new.action_type,
-              targetId: payload.new.target_id || '',
-              targetType: payload.new.target_type || '',
-              description: payload.new.description || '',
-              createdAt: new Date(payload.new.created_at)
-            };
-            callback(action);
-          } catch (error) {
-            console.error('❌ Error processing realtime admin action:', error);
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('🔄 Realtime admin actions subscription:', status);
-      });
+    this.cleanupFn = sharedChannels.subscribeToAdminActions(callback);
   }
 
   unsubscribe() {
-    if (this.channel) {
-      this.channel.unsubscribe();
-      this.channel = null;
+    if (this.cleanupFn) {
+      this.cleanupFn();
+      this.cleanupFn = null;
     }
   }
 }
