@@ -1,6 +1,7 @@
 import { Express, Request, Response } from 'express';
 import { storage } from './storage-factory';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
+import { transferSchema, validateRequest } from './validation-schemas';
 
 function generateReferenceNumber(): string {
   return `WB-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
@@ -10,6 +11,16 @@ export function setupTransferRoutes(app: Express) {
   // Regular Transfer API - PROTECTED: requires authentication
   app.post('/api/transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      // Validate request body with Zod schema
+      const validation = validateRequest(transferSchema, req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Validation failed",
+          errors: validation.errors
+        });
+      }
+
       const {
         amount,
         recipientName,
@@ -18,7 +29,7 @@ export function setupTransferRoutes(app: Express) {
         bankName,
         swiftCode,
         transferPin
-      } = req.body;
+      } = validation.data;
 
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
       const user = await (storage as any).getUserByEmail(req.user!.email);
@@ -32,9 +43,16 @@ export function setupTransferRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
       }
 
-      // Validate required fields
-      if (!amount || !recipientName || !recipientAccount) {
-        return res.status(400).json({ message: "Missing required transfer details" });
+      // Check if user has sufficient balance
+      const userAccounts = await (storage as any).getUserAccounts(user.id);
+      const totalBalance = userAccounts.reduce((sum: number, acc: any) => sum + parseFloat(acc.balance || '0'), 0);
+      
+      if (totalBalance < amount) {
+        return res.status(400).json({ 
+          message: "Insufficient balance. Please add funds to your account.",
+          availableBalance: totalBalance,
+          requestedAmount: amount
+        });
       }
 
       const transactionId = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
@@ -54,16 +72,27 @@ export function setupTransferRoutes(app: Express) {
   // International Transfer API - PROTECTED: requires authentication
   app.post('/api/international-transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      // Validate request body with Zod schema
+      const validation = validateRequest(transferSchema, {
+        ...req.body,
+        recipientAccount: req.body.accountNumber || req.body.recipientAccount || '0000000000'
+      });
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Validation failed",
+          errors: validation.errors
+        });
+      }
+
       const {
         amount,
         recipientName,
         recipientCountry,
         bankName,
         swiftCode,
-        accountNumber,
-        transferPurpose,
         transferPin
-      } = req.body;
+      } = validation.data;
 
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
       const user = await (storage as any).getUserByEmail(req.user!.email);
@@ -77,9 +106,16 @@ export function setupTransferRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
       }
 
-      // Validate required fields
-      if (!amount || !recipientName || !recipientCountry) {
-        return res.status(400).json({ message: "Missing required international transfer details" });
+      // Check if user has sufficient balance
+      const userAccounts = await (storage as any).getUserAccounts(user.id);
+      const totalBalance = userAccounts.reduce((sum: number, acc: any) => sum + parseFloat(acc.balance || '0'), 0);
+      
+      if (totalBalance < amount) {
+        return res.status(400).json({ 
+          message: "Insufficient balance. Please add funds to your account.",
+          availableBalance: totalBalance,
+          requestedAmount: amount
+        });
       }
 
       const transactionId = `INT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;

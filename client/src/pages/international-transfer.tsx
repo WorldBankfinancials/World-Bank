@@ -33,6 +33,12 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function InternationalTransfer() {
   const { t } = useLanguage();
+  
+  // CRITICAL FIX: Load user data FIRST before any other logic
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ['/api/user'],
+  });
+  
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [transferAmount, setTransferAmount] = useState('1000');
   const [fromCurrency, setFromCurrency] = useState('USD');
@@ -56,6 +62,12 @@ export default function InternationalTransfer() {
       setPinError("Please enter a 4-digit PIN");
       return;
     }
+    
+    // Ensure user is loaded before submission
+    if (!user || !user.email) {
+      setPinError("Unable to verify user. Please refresh and try again.");
+      return;
+    }
 
     setPinError("");
     setIsProcessing(true);
@@ -73,7 +85,7 @@ export default function InternationalTransfer() {
         accountNumber: "0000000000",
         transferPurpose: "International Transfer",
         transferPin: transferPin,
-        userEmail: user?.email!
+        userEmail: user.email
       };
       
       const response = await authenticatedFetch('/api/international-transfers', {
@@ -102,10 +114,6 @@ export default function InternationalTransfer() {
       setIsProcessing(false);
     }
   };
-
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user'],
-  });
 
   if (isLoading) {
     return (
