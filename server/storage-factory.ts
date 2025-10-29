@@ -1,5 +1,4 @@
 import { config } from './config';
-import { MemStorage } from './storage';
 import { PostgresStorage } from './postgres-storage';
 import { SupabasePublicStorage } from './supabase-public-storage';
 import type { IStorage } from './storage';
@@ -26,12 +25,8 @@ export function createStorage(): IStorage {
     return new PostgresStorage();
   }
   
-  switch (dataSource) {
-    case 'memory':
-    default:
-      console.log('Using in-memory storage for development');
-      return new MemStorage();
-  }
+  // PRODUCTION-READY: No fallback to mock data - database required
+  throw new Error('❌ CRITICAL: No database configured! Set DATABASE_URL or SUPABASE_DATABASE_URL environment variable. Mock/in-memory storage has been removed for production readiness.');
 }
 
 // Export singleton storage instance
