@@ -242,6 +242,62 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ADMIN: Reset user password in Supabase Auth
+  app.post('/api/admin/reset-user-password', async (req: Request, res: Response) => {
+    try {
+      const { email, newPassword } = req.body;
+
+      if (!email || !newPassword) {
+        return res.status(400).json({ error: 'Email and newPassword are required' });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      }
+
+      // Create Supabase admin client
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+
+      // Get user by email
+      const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError || !users) {
+        return res.status(500).json({ error: 'Failed to list users' });
+      }
+
+      const user = users.users.find((u: any) => u.email === email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found in authentication system' });
+      }
+
+      // Update password
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        user.id,
+        { password: newPassword }
+      );
+
+      if (updateError) {
+        console.error('Password update error:', updateError);
+        return res.status(500).json({ error: 'Failed to update password', details: updateError.message });
+      }
+
+      console.log(`✅ Password reset successful for: ${email}`);
+      res.json({ 
+        success: true, 
+        message: 'Password updated successfully',
+        email: email
+      });
+
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      res.status(500).json({ error: 'Password reset failed', details: error.message });
+    }
+  });
+
   // User registration endpoint - Creates user profile in local database
   // SECURITY: Password should NEVER be sent here - Supabase Auth handles passwords
   app.post('/api/auth/register', async (req: Request, res: Response) => {
