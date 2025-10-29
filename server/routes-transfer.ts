@@ -2,6 +2,9 @@ import { Express, Request, Response } from 'express';
 import { storage } from './storage-factory';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
 import { transferSchema, validateRequest } from './validation-schemas';
+import { atomicTransfer } from './transaction-wrapper';
+import { supabase } from './supabase-public-storage';
+import bcrypt from 'bcryptjs';
 
 function generateReferenceNumber(): string {
   return `WB-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
@@ -39,29 +42,91 @@ export function setupTransferRoutes(app: Express) {
       }
       
       // Validate PIN against real user data from Supabase
-      if (transferPin !== user.transferPin) {
+      // Check if PIN is hashed (starts with $2) or plaintext (for backwards compatibility)
+      let pinValid = false;
+      if (user.transferPin && user.transferPin.startsWith('$2')) {
+        // Hashed PIN - use bcrypt compare
+        pinValid = await bcrypt.compare(transferPin, user.transferPin);
+      } else {
+        // Plaintext PIN - direct comparison (legacy support)
+        pinValid = transferPin === user.transferPin;
+      }
+      
+      if (!pinValid) {
         return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
       }
 
-      // Check if user has sufficient balance
+      // Get user's primary account
       const userAccounts = await (storage as any).getUserAccounts(user.id);
-      const totalBalance = userAccounts.reduce((sum: number, acc: any) => sum + parseFloat(acc.balance || '0'), 0);
+      if (userAccounts.length === 0) {
+        return res.status(400).json({ message: "No account found for transfer" });
+      }
       
-      if (totalBalance < amount) {
+      const fromAccount = userAccounts[0];
+      const currentBalance = parseFloat(fromAccount.balance || '0');
+      
+      // Check sufficient balance
+      if (currentBalance < amount) {
         return res.status(400).json({ 
           message: "Insufficient balance. Please add funds to your account.",
-          availableBalance: totalBalance,
+          availableBalance: currentBalance,
           requestedAmount: amount
         });
       }
 
-      const transactionId = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      // CRITICAL: Look up recipient account by account number for domestic transfers
+      const { data: recipientAccountData } = await supabase
+        .from('bank_accounts')
+        .select('id, user_id, account_number, is_active')
+        .eq('account_number', recipientAccount)
+        .single();
+
+      if (!recipientAccountData) {
+        return res.status(404).json({ 
+          message: "Recipient account not found. Please verify the account number.",
+          error: "Invalid recipient account"
+        });
+      }
+
+      if (!recipientAccountData.is_active) {
+        return res.status(400).json({ 
+          message: "Recipient account is not active. Transfer cannot be completed.",
+          error: "Inactive recipient account"
+        });
+      }
+
+      // Prevent self-transfers
+      if (recipientAccountData.id === fromAccount.id) {
+        return res.status(400).json({ 
+          message: "Cannot transfer to your own account. Please use a different recipient.",
+          error: "Self-transfer not allowed"
+        });
+      }
+
+      // CRITICAL FIX: Actually move money using atomicTransfer with BOTH sender and recipient
+      const transferResult = await atomicTransfer({
+        fromAccountId: fromAccount.id,
+        toAccountId: recipientAccountData.id,  // CRITICAL: Credit recipient account
+        amount: amount,
+        transactionType: 'domestic_transfer',
+        description: `Transfer to ${recipientName} (${recipientAccount})`,
+        recipientName: recipientName,
+        recipientCountry: recipientCountry
+      });
+
+      if (!transferResult.success) {
+        return res.status(500).json({ 
+          message: "Transfer failed", 
+          error: transferResult.error 
+        });
+      }
 
       res.json({ 
-        message: "Transfer submitted successfully", 
-        transactionId: transactionId,
-        status: "processing",
-        amount: amount
+        message: "Transfer completed successfully", 
+        transactionId: transferResult.transaction?.id || `WB-${Date.now()}`,
+        status: "completed",
+        amount: amount,
+        newBalance: parseFloat(fromAccount.balance) - amount
       });
     } catch (error) {
       console.error("Regular transfer error:", error);
@@ -112,29 +177,61 @@ export function setupTransferRoutes(app: Express) {
       }
       
       // Validate PIN against real user data from Supabase
-      if (transferPin !== user.transferPin) {
+      // Check if PIN is hashed (starts with $2) or plaintext (for backwards compatibility)
+      let pinValid = false;
+      if (user.transferPin && user.transferPin.startsWith('$2')) {
+        // Hashed PIN - use bcrypt compare
+        pinValid = await bcrypt.compare(transferPin, user.transferPin);
+      } else {
+        // Plaintext PIN - direct comparison (legacy support)
+        pinValid = transferPin === user.transferPin;
+      }
+      
+      if (!pinValid) {
         return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
       }
 
-      // Check if user has sufficient balance
+      // Get user's primary account
       const userAccounts = await (storage as any).getUserAccounts(user.id);
-      const totalBalance = userAccounts.reduce((sum: number, acc: any) => sum + parseFloat(acc.balance || '0'), 0);
+      if (userAccounts.length === 0) {
+        return res.status(400).json({ message: "No account found for transfer" });
+      }
       
-      if (totalBalance < amount) {
+      const fromAccount = userAccounts[0];
+      const currentBalance = parseFloat(fromAccount.balance || '0');
+      
+      // Check sufficient balance
+      if (currentBalance < amount) {
         return res.status(400).json({ 
           message: "Insufficient balance. Please add funds to your account.",
-          availableBalance: totalBalance,
+          availableBalance: currentBalance,
           requestedAmount: amount
         });
       }
 
-      const transactionId = `INT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      // CRITICAL FIX: Actually move money using atomicTransfer
+      const transferResult = await atomicTransfer({
+        fromAccountId: fromAccount.id,
+        amount: amount,
+        transactionType: 'international_transfer',
+        description: `International transfer to ${recipientName} (${recipientAccount}) - ${bankName}, ${recipientCountry}`,
+        recipientName: recipientName,
+        recipientCountry: recipientCountry
+      });
+
+      if (!transferResult.success) {
+        return res.status(500).json({ 
+          message: "Transfer failed", 
+          error: transferResult.error 
+        });
+      }
 
       res.json({ 
-        message: "International transfer submitted successfully", 
-        id: transactionId,
-        status: "processing",
-        amount: amount
+        message: "International transfer completed successfully", 
+        id: transferResult.transaction?.id || `INT-${Date.now()}`,
+        status: "completed",
+        amount: amount,
+        newBalance: parseFloat(fromAccount.balance) - amount
       });
     } catch (error) {
       console.error("International transfer error:", error);

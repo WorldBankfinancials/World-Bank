@@ -139,6 +139,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // STEP 2: Create local database profile - USING VALIDATED DATA ONLY
       try {
+        // SECURITY: Hash the transfer PIN with bcrypt
+        const bcrypt = await import('bcryptjs');
+        const hashedPin = await bcrypt.default.hash(validatedData.transferPin, 10);
+
         console.log(`🔧 DEBUG: About to create user in database with supabaseUserId: ${supabaseUserId}`);
         const newUser = await storage.createUser({
           username: validatedData.email.split('@')[0],
@@ -160,7 +164,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
           accountId: `WB${Date.now()}`,
           passwordHash: 'supabase_auth',
-          transferPin: validatedData.transferPin,
+          transferPin: hashedPin,
           role: 'customer',
           isVerified: false,
           isOnline: false,
@@ -395,6 +399,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Unable to verify user in authentication system' });
       }
 
+      // SECURITY: Hash default PIN with bcrypt
+      const bcrypt = await import('bcryptjs');
+      const hashedDefaultPin = await bcrypt.default.hash('0000', 10);
+
       // SECURITY: Only accept whitelisted fields from client, hardcode privileged fields server-side
       const newUser = await storage.createUser({
         // WHITELISTED FIELDS (client-provided)
@@ -418,7 +426,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
         // SERVER-CONTROLLED FIELDS (never trust client)
         passwordHash: 'supabase_auth', // Marker indicating password is in Supabase Auth
-        transferPin: '0000', // Default PIN, user MUST change on first login
+        transferPin: hashedDefaultPin, // Hashed default PIN, user MUST change on first login
         role: 'customer', // Always customer for new registrations
         isVerified: false, // Admin must verify
         isOnline: true,
@@ -512,6 +520,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: authError.message });
         }
 
+        // SECURITY: Hash default PIN with bcrypt
+        const bcrypt = await import('bcryptjs');
+        const hashedTestPin = await bcrypt.default.hash('0000', 10);
+
         // Create user in local database with default values
         await storage.createUser({
           supabaseUserId: authData.user?.id,
@@ -522,7 +534,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           isVerified: true,
           isActive: true,
           balance: "0",
-          transferPin: '0000',
+          transferPin: hashedTestPin,
           passwordHash: 'supabase_auth', // Indicate password managed by Supabase Auth
           accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
           accountId: `WB${Date.now()}`,
@@ -859,8 +871,19 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      if (user.transferPin !== pin) {
-        console.log('❌ PIN mismatch - Expected:', user.transferPin, 'Got:', pin);
+      // Verify PIN - check if hashed or plaintext
+      let pinValid = false;
+      if (user.transferPin && user.transferPin.startsWith('$2')) {
+        // Hashed PIN - use bcrypt compare
+        const bcrypt = await import('bcryptjs');
+        pinValid = await bcrypt.default.compare(pin, user.transferPin);
+      } else {
+        // Plaintext PIN - direct comparison (legacy support)
+        pinValid = user.transferPin === pin;
+      }
+
+      if (!pinValid) {
+        console.log('❌ PIN mismatch for user:', identifier);
         return res.status(401).json({ message: 'Invalid PIN', verified: false });
       }
 
@@ -1090,7 +1113,18 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      if (user.transferPin !== currentPin) {
+      // Verify current PIN - check if hashed or plaintext
+      let currentPinValid = false;
+      if (user.transferPin && user.transferPin.startsWith('$2')) {
+        // Hashed PIN - use bcrypt compare
+        const bcrypt = await import('bcryptjs');
+        currentPinValid = await bcrypt.default.compare(currentPin, user.transferPin);
+      } else {
+        // Plaintext PIN - direct comparison (legacy support)
+        currentPinValid = user.transferPin === currentPin;
+      }
+
+      if (!currentPinValid) {
         return res.status(401).json({ message: 'Current PIN is incorrect' });
       }
 
@@ -1099,8 +1133,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'New PIN must be different from current PIN' });
       }
 
+      // SECURITY: Hash the new PIN with bcrypt
+      const bcrypt = await import('bcryptjs');
+      const hashedPin = await bcrypt.default.hash(newPin, 10);
+
       // Use authenticated user's ID (not hardcoded)
-      await storage.updateUser(user.id, { transferPin: newPin });
+      await storage.updateUser(user.id, { transferPin: hashedPin });
       console.log(`🔐 PIN updated successfully for user: ${req.user!.email}`);
       res.json({ success: true, message: 'PIN updated successfully' });
     } catch (error) {
@@ -1713,8 +1751,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== OBJECT STORAGE API ROUTES ====================
-  // Branches endpoint
-  app.get('/api/branches', async (req: Request, res: Response) => {
+  // Branches endpoint - PROTECTED: requires authentication to prevent abuse
+  app.get('/api/branches', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const branches = await storage.getBranches();
       res.json(branches);
@@ -1724,8 +1762,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ATMs endpoint
-  app.get('/api/atms', async (req: Request, res: Response) => {
+  // ATMs endpoint - PROTECTED: requires authentication to prevent abuse
+  app.get('/api/atms', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const atms = await storage.getAtms();
       res.json(atms);
@@ -1735,8 +1773,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Exchange rates endpoint
-  app.get('/api/exchange-rates', async (req: Request, res: Response) => {
+  // Exchange rates endpoint - PROTECTED: requires authentication to prevent abuse
+  app.get('/api/exchange-rates', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const rates = await storage.getExchangeRates();
       // Convert to object format: { EUR: 0.92, GBP: 0.79, ... }
@@ -1842,7 +1880,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/objects/upload', async (req: Request, res: Response) => {
+  // SECURITY: File upload requires authentication to prevent abuse
+  app.post('/api/objects/upload', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // Handle file upload for identity documents (ID cards, passports, etc.)
       // This endpoint accepts base64 encoded files or multipart form data
