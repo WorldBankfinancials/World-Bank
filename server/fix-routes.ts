@@ -20,10 +20,14 @@ import {
 } from './validation-schemas';
 import { BankingTransaction, atomicBalanceUpdate, atomicTransfer } from './transaction-wrapper';
 import { errorHandler, notFoundHandler, asyncHandler, createApiError } from './error-handler';
+import { runStartupChecks } from './startup-checks';
 
 // Fixed route handlers with proper typing
 export async function registerFixedRoutes(app: Express): Promise<Server> {
   logConfiguration();
+  
+  // CRITICAL: Run startup sanity checks to verify database functions
+  await runStartupChecks();
   // Health check endpoint
   app.get('/api/health', (req: Request, res: Response) => {
     res.json({ status: 'OK', timestamp: new Date() });
@@ -2158,6 +2162,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
     });
   });
+
+  // NOTE: Error handlers NOT registered here because Vite middleware
+  // needs to handle frontend routes. Error handling is in index.ts
 
   return httpServer;
 }

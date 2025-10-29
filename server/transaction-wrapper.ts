@@ -30,6 +30,11 @@ export class BankingTransaction {
    * If ANY step fails, ALL previous steps are rolled back
    */
   async execute<T = any>(): Promise<{ success: boolean; data?: T; error?: string }> {
+    // CRITICAL FIX: Reset internal state to prevent double-execution bugs
+    // This ensures clean state even if transaction instance is reused
+    this.results = [];
+    this.executedSteps = [];
+    
     try {
       console.log(`🔄 Starting atomic transaction with ${this.steps.length} steps`);
 

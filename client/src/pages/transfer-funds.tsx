@@ -526,6 +526,44 @@ export default function TransferFunds() {
                     </div>
                   </div>
 
+                  {/* CRITICAL FIX: Add missing Bank City and Bank Country fields required by validation */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="bank-city">Bank City *</Label>
+                      <Input 
+                        id="bank-city" 
+                        placeholder="Bank city" 
+                        value={formData.bankCity}
+                        onChange={(e) => handleInputChange('bankCity', e.target.value)}
+                        className={validationErrors.bankCity ? 'border-red-500' : ''}
+                      />
+                      {validationErrors.bankCity && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.bankCity}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="bank-country">Bank Country *</Label>
+                      <Select value={formData.bankCountry} onValueChange={(value) => handleInputChange('bankCountry', value)}>
+                        <SelectTrigger className={validationErrors.bankCountry ? 'border-red-500' : ''}>
+                          <SelectValue placeholder="Select country" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="us">United States</SelectItem>
+                          <SelectItem value="uk">United Kingdom</SelectItem>
+                          <SelectItem value="de">Germany</SelectItem>
+                          <SelectItem value="fr">France</SelectItem>
+                          <SelectItem value="cn">China</SelectItem>
+                          <SelectItem value="jp">Japan</SelectItem>
+                          <SelectItem value="au">Australia</SelectItem>
+                          <SelectItem value="ca">Canada</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {validationErrors.bankCountry && (
+                        <p className="text-red-500 text-xs mt-1">{validationErrors.bankCountry}</p>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="swift-code">SWIFT Code *</Label>
