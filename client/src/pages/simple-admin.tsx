@@ -29,6 +29,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { BankLogo } from '@/components/BankLogo';
+import { useToast } from '@/hooks/use-toast';
 
 interface PendingTransfer {
   id: number;
@@ -103,6 +104,7 @@ interface PendingRegistration {
 // All data is now fetched from real APIs with real-time synchronization
 
 export default function SimpleAdmin() {
+  const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -302,7 +304,11 @@ export default function SimpleAdmin() {
       
       if (!response.ok) {
         const error = await response.json();
-        alert('Invalid admin credentials: ' + (error.message || 'Authentication failed'));
+        toast({
+          title: 'Authentication Failed',
+          description: error.message || 'Invalid admin credentials. Please try again.',
+          variant: 'destructive'
+        });
         return;
       }
       
@@ -316,7 +322,11 @@ export default function SimpleAdmin() {
       console.log('✅ Admin authenticated:', data.user.email);
     } catch (error) {
       console.error('Login error:', error);
-      alert('Login failed. Please check your credentials and try again.');
+      toast({
+        title: 'Login Error',
+        description: 'Failed to authenticate. Please check your credentials and try again.',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -325,7 +335,11 @@ export default function SimpleAdmin() {
       const initialBalance = prompt("Set initial account balance (USD):", "5000");
       
       if (!initialBalance || isNaN(parseFloat(initialBalance))) {
-        alert("Valid initial balance is required");
+        toast({
+          title: 'Invalid Input',
+          description: 'Please enter a valid initial balance',
+          variant: 'destructive'
+        });
         return;
       }
 
@@ -339,15 +353,25 @@ export default function SimpleAdmin() {
 
       if (response.ok) {
         setPendingRegistrations(prev => prev.filter(r => r.id !== registrationId));
-        alert(`User registration ${registrationId} approved successfully! Account activated with $${initialBalance} balance.`);
+        toast({
+          title: 'Registration Approved',
+          description: `Account activated successfully with $${initialBalance} balance.`
+        });
         fetchPendingRegistrations();
       } else {
         const error = await response.json();
-        alert(`Failed to approve registration: ${error.message}`);
+        toast({
+          title: 'Approval Failed',
+          description: error.message || 'Failed to approve registration',
+          variant: 'destructive'
+        });
       }
     } catch (error) {
-      // console.error('Error approving registration:', error);
-      alert('Error approving registration');
+      toast({
+        title: 'Error',
+        description: 'Failed to approve registration. Please try again.',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -356,7 +380,11 @@ export default function SimpleAdmin() {
       const reason = prompt("Rejection reason (required):", "Incomplete documentation");
       
       if (!reason || reason.trim().length === 0) {
-        alert("Rejection reason is required");
+        toast({
+          title: 'Invalid Input',
+          description: 'Rejection reason is required',
+          variant: 'destructive'
+        });
         return;
       }
 
@@ -370,15 +398,25 @@ export default function SimpleAdmin() {
 
       if (response.ok) {
         setPendingRegistrations(prev => prev.filter(r => r.id !== registrationId));
-        alert(`User registration ${registrationId} rejected. Reason: ${reason}`);
+        toast({
+          title: 'Registration Rejected',
+          description: `User registration rejected. Reason: ${reason}`
+        });
         fetchPendingRegistrations();
       } else {
         const error = await response.json();
-        alert(`Failed to reject registration: ${error.message}`);
+        toast({
+          title: 'Rejection Failed',
+          description: error.message || 'Failed to reject registration',
+          variant: 'destructive'
+        });
       }
     } catch (error) {
-      // console.error('Error rejecting registration:', error);
-      alert('Error rejecting registration');
+      toast({
+        title: 'Error',
+        description: 'Failed to reject registration. Please try again.',
+        variant: 'destructive'
+      });
     }
   };
 

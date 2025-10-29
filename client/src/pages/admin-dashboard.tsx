@@ -67,37 +67,11 @@ export default function AdminDashboard() {
   useRealtimeTransactions(true);
   useRealtimeSupportTickets(true);
 
-  // Customer data for Profile Management tab
-  const customers = [
-    {
-      id: 1,
-      fullName: "Mr. Liu Wei",
-      email: "liu.wei@oilrig.com", 
-      username: "liu.wei",
-      phone: "+86 138 0013 8000",
-      accountNumber: "4789-6523-1087-9234",
-      accountId: "WB-2025-8912",
-      profession: "Marine Engineer",
-      isVerified: true,
-      isOnline: true,
-      avatarUrl: null,
-      role: "customer"
-    },
-    {
-      id: 2,
-      fullName: "Ms. Chen Li", 
-      email: "chen.li@example.com",
-      username: "chen.li",
-      phone: "+86 138 0013 8001",
-      accountNumber: "4789-6523-1087-9235", 
-      accountId: "WB-2025-8913",
-      profession: "Financial Analyst",
-      isVerified: false,
-      isOnline: false,
-      avatarUrl: null,
-      role: "customer"
-    }
-  ];
+  // Fetch real customer data from API
+  const { data: customers = [], isLoading: customersLoading } = useQuery<any[]>({
+    queryKey: ['/api/admin/customers'],
+    staleTime: 30000,
+  });
 
   // Fetch pending transfers
   const { data: pendingTransfers = [], isLoading: transfersLoading } = useQuery<PendingTransfer[]>({
@@ -114,8 +88,6 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/stats'],
   });
 
-  // Use customer data for management operations
-  const customersLoading = false;
 
   // Profile picture upload mutation
   const uploadProfilePicMutation = useMutation({
