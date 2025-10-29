@@ -5,6 +5,20 @@ import { storage } from './storage-factory';
 import { setupTransferRoutes } from './routes-transfer';
 import { config, logConfiguration } from './config';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
+import { 
+  authRateLimiter, 
+  registrationRateLimiter, 
+  transactionRateLimiter, 
+  generalRateLimiter 
+} from './rate-limiter';
+import { 
+  validateRequest, 
+  registrationSchema, 
+  approvalSchema,
+  balanceUpdateSchema,
+  pinChangeSchema
+} from './validation-schemas';
+import { BankingTransaction, atomicBalanceUpdate, atomicTransfer } from './transaction-wrapper';
 
 // Fixed route handlers with proper typing
 export async function registerFixedRoutes(app: Express): Promise<Server> {
@@ -69,16 +83,22 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // TRANSACTIONAL REGISTRATION ENDPOINT
   // This endpoint handles BOTH Supabase Auth AND local database creation atomically
   // If either step fails, it rolls back the other to prevent desynchronization
-  app.post('/api/auth/register-complete', async (req: Request, res: Response) => {
+  app.post('/api/auth/register-complete', registrationRateLimiter, async (req: Request, res: Response) => {
     let supabaseUserId: string | null = null;
 
     try {
       const registrationData = req.body;
 
-      // Validate required fields
-      if (!registrationData.email || !registrationData.password) {
-        return res.status(400).json({ error: 'Email and password are required' });
+      // SECURITY: Validate all input data with comprehensive schema
+      const validation = validateRequest(registrationSchema, registrationData);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: 'Invalid registration data', 
+          details: validation.errors 
+        });
       }
+
+      const validatedData = validation.data;
 
       // Create Supabase service client
       const { createClient } = await import('@supabase/supabase-js');
@@ -90,18 +110,18 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // STEP 1: Create Supabase Auth account
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: registrationData.email,
-        password: registrationData.password,
+        email: validatedData.email,
+        password: validatedData.password,
         email_confirm: true, // Auto-confirm for banking app
         user_metadata: {
-          full_name: registrationData.fullName,
-          phone: registrationData.phone,
+          full_name: validatedData.fullName,
+          phone: validatedData.phone,
           registration_date: new Date().toISOString()
         }
       });
 
       if (authError || !authData.user) {
-        console.error('❌ Supabase Auth creation failed for email:', registrationData.email);
+        console.error('❌ Supabase Auth creation failed for email:', validatedData.email);
         console.error('❌ Error details:', JSON.stringify(authError, null, 2));
         console.error('❌ Error message:', authError?.message);
         console.error('❌ Error status:', authError?.status);
@@ -113,30 +133,30 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       supabaseUserId = authData.user.id;
       console.log(`✅ Supabase Auth account created: ${supabaseUserId}`);
 
-      // STEP 2: Create local database profile
+      // STEP 2: Create local database profile - USING VALIDATED DATA ONLY
       try {
         console.log(`🔧 DEBUG: About to create user in database with supabaseUserId: ${supabaseUserId}`);
         const newUser = await storage.createUser({
-          username: registrationData.email.split('@')[0],
-          fullName: registrationData.fullName,
-          email: registrationData.email,
-          phone: registrationData.phone,
-          dateOfBirth: registrationData.dateOfBirth,
-          address: registrationData.address,
-          city: registrationData.city,
-          state: registrationData.state,
-          country: registrationData.country,
-          postalCode: registrationData.postalCode,
-          nationality: registrationData.nationality,
-          profession: registrationData.profession,
-          annualIncome: registrationData.annualIncome,
-          idType: registrationData.idType,
-          idNumber: registrationData.idNumber,
+          username: validatedData.email.split('@')[0],
+          fullName: validatedData.fullName,
+          email: validatedData.email,
+          phone: validatedData.phone,
+          dateOfBirth: validatedData.dateOfBirth,
+          address: validatedData.address,
+          city: validatedData.city,
+          state: validatedData.state,
+          country: validatedData.country,
+          postalCode: validatedData.postalCode,
+          nationality: validatedData.nationality,
+          profession: validatedData.profession,
+          annualIncome: validatedData.annualIncome,
+          idType: validatedData.idType,
+          idNumber: validatedData.idNumber,
           supabaseUserId: supabaseUserId,
           accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
           accountId: `WB${Date.now()}`,
           passwordHash: 'supabase_auth',
-          transferPin: registrationData.transferPin || '0000',
+          transferPin: validatedData.transferPin,
           role: 'customer',
           isVerified: false,
           isOnline: false,
@@ -889,27 +909,58 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/approve-registration/:registrationId', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const registrationId = parseInt(req.params.registrationId, 10);
-      const { initialBalance } = req.body;
 
-      // Activate user
-      const updatedUser = await storage.updateUser(registrationId, {
-        isActive: true,
-        isVerified: true
+      // SECURITY: Validate approval data
+      const validationData = { registrationId, ...req.body };
+      const validation = validateRequest(approvalSchema, validationData);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: 'Invalid approval data', 
+          details: validation.errors 
+        });
+      }
+
+      const { initialBalance } = validation.data;
+
+      // ATOMIC TRANSACTION: Approve user with all updates
+      const transaction = new BankingTransaction();
+      let updatedUser: any = null;
+
+      transaction.addStep({
+        name: 'Activate user account',
+        execute: async () => {
+          updatedUser = await storage.updateUser(registrationId, {
+            isActive: true,
+            isVerified: true
+          });
+          if (!updatedUser) throw new Error('Registration not found');
+          return updatedUser;
+        }
       });
 
-      if (!updatedUser) {
-        return res.status(404).json({ error: 'Registration not found' });
+      transaction.addStep({
+        name: 'Activate user bank accounts',
+        execute: async () => {
+          const accounts = await storage.getUserAccounts(registrationId);
+          for (const account of accounts) {
+            await storage.updateAccount?.(account.id, { isActive: true });
+          }
+          return accounts;
+        }
+      });
+
+      if (initialBalance && initialBalance > 0) {
+        transaction.addStep({
+          name: 'Set initial balance',
+          execute: async () => {
+            await storage.updateUserBalance(registrationId, initialBalance);
+          }
+        });
       }
 
-      // Set initial balance if provided
-      if (initialBalance && parseFloat(initialBalance) > 0) {
-        await storage.updateUserBalance(registrationId, parseFloat(initialBalance));
-      }
-
-      // Activate user's accounts
-      const accounts = await storage.getUserAccounts(registrationId);
-      for (const account of accounts) {
-        await storage.updateAccount?.(account.id, { isActive: true });
+      const result = await transaction.execute();
+      if (!result.success) {
+        return res.status(500).json({ error: result.error });
       }
 
       // AUDIT TRAIL: Log admin action
@@ -992,9 +1043,18 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   });
 
   // PIN management endpoints - PROTECTED with JWT authentication
-  app.post('/api/user/change-pin', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/user/change-pin', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const body = req.body as { currentPin: string; newPin: string };
+      // SECURITY: Validate PIN format
+      const validation = validateRequest(pinChangeSchema, req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: 'Invalid PIN format', 
+          details: validation.errors 
+        });
+      }
+
+      const { currentPin, newPin } = validation.data;
 
       // Get authenticated user (email from JWT token)
       const user = await (storage as any).getUserByEmail(req.user!.email);
@@ -1003,12 +1063,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      if (user.transferPin !== body.currentPin) {
+      if (user.transferPin !== currentPin) {
         return res.status(401).json({ message: 'Current PIN is incorrect' });
       }
 
+      // Prevent reusing the same PIN
+      if (currentPin === newPin) {
+        return res.status(400).json({ message: 'New PIN must be different from current PIN' });
+      }
+
       // Use authenticated user's ID (not hardcoded)
-      await storage.updateUser(user.id, { transferPin: body.newPin });
+      await storage.updateUser(user.id, { transferPin: newPin });
       console.log(`🔐 PIN updated successfully for user: ${req.user!.email}`);
       res.json({ success: true, message: 'PIN updated successfully' });
     } catch (error) {
