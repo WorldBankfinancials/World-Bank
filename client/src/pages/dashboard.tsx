@@ -613,8 +613,8 @@ export default function Dashboard() {
         .subscribe();
 
       return () => {
-        supabase.removeChannel(transactionChannel);
-        supabase.removeChannel(accountChannel);
+        transactionChannel.unsubscribe();
+        accountChannel.unsubscribe();
       };
     });
   }, [queryClient]);

@@ -71,17 +71,30 @@ export default function TransactionHistory() {
     fetchData();
   }, []);
 
-  // Real-time subscription for transaction updates
+  // Real-time subscription for transaction updates (row-level filtered)
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel('transaction-updates')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'transactions'
-      }, () => {
+    // Fetch account IDs first to set up row-level filter
+    async function setupRealtimeWithFilter() {
+      const { data: accounts } = await supabase
+        .from('bank_accounts')
+        .select('id')
+        .eq('user_id', user.id);
+
+      if (!accounts || accounts.length === 0) return;
+
+      const accountId = accounts[0].id;
+
+      // Subscribe with row-level filter to only receive updates for this user's transactions
+      const channel = supabase
+        .channel(`transaction-updates-${accountId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `from_account_id=eq.${accountId}`
+        }, () => {
         console.log('🔄 Transaction data changed, refreshing...');
         // Refetch data when transactions change
         async function refetchData() {
@@ -115,12 +128,18 @@ export default function TransactionHistory() {
             console.error('Error refetching transactions:', error);
           }
         }
-        refetchData();
-      })
-      .subscribe();
+          refetchData();
+        })
+        .subscribe();
 
+      return () => {
+        channel.unsubscribe();
+      };
+    }
+
+    const cleanup = setupRealtimeWithFilter();
     return () => {
-      channel.unsubscribe();
+      cleanup.then(cleanupFn => cleanupFn?.());
     };
   }, [user]);
   

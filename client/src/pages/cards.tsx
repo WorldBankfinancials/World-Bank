@@ -83,17 +83,31 @@ export default function Cards() {
     fetchCards();
   }, []);
 
-  // Real-time subscription for card updates
+  // Real-time subscription for card updates (row-level filtered)
   useEffect(() => {
     if (!userProfile) return;
 
-    const channel = supabase
-      .channel('card-updates')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'cards'
-      }, () => {
+    async function setupRealtimeWithFilter() {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
+      const { data: bankUser } = await supabase
+        .from('bank_users')
+        .select('id')
+        .eq('supabase_user_id', authUser.id)
+        .single();
+
+      if (!bankUser) return;
+
+      // Subscribe with row-level filter to only receive updates for this user's cards
+      const channel = supabase
+        .channel(`card-updates-${bankUser.id}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'cards',
+          filter: `user_id=eq.${bankUser.id}`
+        }, () => {
         console.log('🔄 Card data changed, refreshing...');
         // Refetch cards when data changes
         async function refetchCards() {
@@ -135,12 +149,18 @@ export default function Cards() {
             console.error('Error refetching cards:', error);
           }
         }
-        refetchCards();
-      })
-      .subscribe();
+          refetchCards();
+        })
+        .subscribe();
 
+      return () => {
+        channel.unsubscribe();
+      };
+    }
+
+    const cleanup = setupRealtimeWithFilter();
     return () => {
-      channel.unsubscribe();
+      cleanup.then(cleanupFn => cleanupFn?.());
     };
   }, [userProfile]);
 
