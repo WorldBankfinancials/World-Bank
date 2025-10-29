@@ -72,10 +72,20 @@ export function setupTransferRoutes(app: Express) {
   // International Transfer API - PROTECTED: requires authentication
   app.post('/api/international-transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      // SECURITY: Require real account number - no fallback values allowed
+      const recipientAccount = req.body.accountNumber || req.body.recipientAccount;
+      
+      if (!recipientAccount || recipientAccount.trim() === '') {
+        return res.status(400).json({ 
+          message: "Recipient account number is required",
+          error: "Missing required field: recipientAccount"
+        });
+      }
+
       // Validate request body with Zod schema
       const validation = validateRequest(transferSchema, {
         ...req.body,
-        recipientAccount: req.body.accountNumber || req.body.recipientAccount || '0000000000'
+        recipientAccount: recipientAccount
       });
       
       if (!validation.success) {

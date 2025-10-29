@@ -49,6 +49,17 @@ export default function InternationalTransfer() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showProcessingPage, setShowProcessingPage] = useState(false);
   const [transferId, setTransferId] = useState('');
+  
+  // Recipient banking details state
+  const [recipientFirstName, setRecipientFirstName] = useState('');
+  const [recipientLastName, setRecipientLastName] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientCountry, setRecipientCountry] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [swiftCode, setSwiftCode] = useState('');
+  const [purpose, setPurpose] = useState('');
 
   const handleInternationalTransfer = () => {
     setShowPinModal(true);
@@ -72,18 +83,26 @@ export default function InternationalTransfer() {
     setPinError("");
     setIsProcessing(true);
     
+    // Validate required fields before submission
+    const recipientFullName = `${recipientFirstName} ${recipientLastName}`.trim();
+    if (!recipientFullName || !recipientCountry || !bankName || !accountNumber || !swiftCode) {
+      setPinError("Please fill in all required recipient banking details");
+      setIsProcessing(false);
+      return;
+    }
+
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const transferData = {
         amount: parseFloat(transferAmount),
         fromCurrency: fromCurrency,
         toCurrency: toCurrency,
-        recipientName: "Recipient",
-        recipientCountry: "International",
-        bankName: "International Bank",
-        swiftCode: "INTBANK",
-        accountNumber: "0000000000",
-        transferPurpose: "International Transfer",
+        recipientName: recipientFullName,
+        recipientCountry: recipientCountry,
+        bankName: bankName,
+        swiftCode: swiftCode,
+        recipientAccount: accountNumber, // Use real account number from form
+        transferPurpose: purpose || "International Transfer",
         transferPin: transferPin,
         userEmail: user.email
       };
@@ -365,11 +384,23 @@ export default function InternationalTransfer() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label>First Name *</Label>
-                        <Input placeholder="Recipient's first name" className="mt-1" />
+                        <Input 
+                          placeholder="Recipient's first name" 
+                          className="mt-1"
+                          value={recipientFirstName}
+                          onChange={(e) => setRecipientFirstName(e.target.value)}
+                          data-testid="input-recipient-firstname"
+                        />
                       </div>
                       <div>
                         <Label>Last Name *</Label>
-                        <Input placeholder="Recipient's last name" className="mt-1" />
+                        <Input 
+                          placeholder="Recipient's last name" 
+                          className="mt-1"
+                          value={recipientLastName}
+                          onChange={(e) => setRecipientLastName(e.target.value)}
+                          data-testid="input-recipient-lastname"
+                        />
                       </div>
                     </div>
 
@@ -387,11 +418,24 @@ export default function InternationalTransfer() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label>Phone Number *</Label>
-                        <Input placeholder="Recipient's phone number" className="mt-1" />
+                        <Input 
+                          placeholder="Recipient's phone number" 
+                          className="mt-1"
+                          value={recipientPhone}
+                          onChange={(e) => setRecipientPhone(e.target.value)}
+                          data-testid="input-recipient-phone"
+                        />
                       </div>
                       <div>
                         <Label>Email Address</Label>
-                        <Input type="email" placeholder="recipient@email.com" className="mt-1" />
+                        <Input 
+                          type="email" 
+                          placeholder="recipient@email.com" 
+                          className="mt-1"
+                          value={recipientEmail}
+                          onChange={(e) => setRecipientEmail(e.target.value)}
+                          data-testid="input-recipient-email"
+                        />
                       </div>
                     </div>
 
@@ -421,8 +465,8 @@ export default function InternationalTransfer() {
 
                         <div>
                           <Label>Country *</Label>
-                          <Select>
-                            <SelectTrigger className="mt-1">
+                          <Select value={recipientCountry} onValueChange={setRecipientCountry}>
+                            <SelectTrigger className="mt-1" data-testid="select-recipient-country">
                               <SelectValue placeholder="Select recipient's country" />
                             </SelectTrigger>
                             <SelectContent>
@@ -441,7 +485,13 @@ export default function InternationalTransfer() {
                       <div className="space-y-4">
                         <div>
                           <Label>Bank Name *</Label>
-                          <Input placeholder="Recipient's bank name" className="mt-1" />
+                          <Input 
+                            placeholder="Recipient's bank name" 
+                            className="mt-1"
+                            value={bankName}
+                            onChange={(e) => setBankName(e.target.value)}
+                            data-testid="input-bank-name"
+                          />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -451,7 +501,10 @@ export default function InternationalTransfer() {
                               <Input 
                                 type={showAccountDetails ? "text" : "password"}
                                 placeholder="Account number or IBAN" 
-                                className="mt-1 pr-10" 
+                                className="mt-1 pr-10"
+                                value={accountNumber}
+                                onChange={(e) => setAccountNumber(e.target.value)}
+                                data-testid="input-account-number"
                               />
                               <button
                                 type="button"
@@ -464,7 +517,13 @@ export default function InternationalTransfer() {
                           </div>
                           <div>
                             <Label>SWIFT/BIC Code *</Label>
-                            <Input placeholder="Bank's SWIFT code" className="mt-1" />
+                            <Input 
+                              placeholder="Bank's SWIFT code" 
+                              className="mt-1"
+                              value={swiftCode}
+                              onChange={(e) => setSwiftCode(e.target.value)}
+                              data-testid="input-swift-code"
+                            />
                           </div>
                         </div>
 
