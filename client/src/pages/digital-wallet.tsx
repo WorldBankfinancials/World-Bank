@@ -26,10 +26,12 @@ import {
   ArrowDownRight,
   Scan
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 
 export default function DigitalWallet() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -78,7 +80,7 @@ export default function DigitalWallet() {
             <h1 className="text-xl font-semibold text-gray-900">Digital Wallet</h1>
             <p className="text-sm text-gray-600">Secure digital payments</p>
           </div>
-          <Button onClick={() => alert("Add funds feature")} className="bg-blue-600 text-white">
+          <Button onClick={() => toast({ title: 'Add Funds', description: 'Redirecting to add funds page...' })} className="bg-blue-600 text-white">
             <Plus className="w-4 h-4 mr-1" />
             Add Funds
           </Button>
@@ -189,7 +191,7 @@ export default function DigitalWallet() {
                     <p className="text-sm text-gray-600">Scan to pay instantly</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => alert("QR scanner opened")}>
+                <Button variant="outline" size="sm" onClick={() => toast({ title: 'QR Scanner', description: 'Opening QR code scanner...' })}>
                   <Scan className="w-4 h-4 mr-1" />
                   Scan
                 </Button>
@@ -202,7 +204,7 @@ export default function DigitalWallet() {
                     <p className="text-sm text-gray-600">Send to phone numbers</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => alert("Mobile transfer opened")}>
+                <Button variant="outline" size="sm" onClick={() => toast({ title: 'Mobile Transfer', description: 'Opening mobile transfer feature...' })}>
                   Send
                 </Button>
               </div>
@@ -214,7 +216,7 @@ export default function DigitalWallet() {
                     <p className="text-sm text-gray-600">Send money worldwide</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => alert("International transfer opened")}>
+                <Button variant="outline" size="sm" onClick={() => toast({ title: 'International Payment', description: 'Opening international transfer feature...' })}>
                   Transfer
                 </Button>
               </div>

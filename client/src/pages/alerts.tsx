@@ -27,10 +27,12 @@ import {
   Filter,
   Trash2
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 
 export default function Alerts() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -183,7 +185,7 @@ export default function Alerts() {
             <Button variant="outline" size="sm" onClick={() => console.log("Filter options")}>
               <Filter className="w-4 h-4" />
             </Button>
-            <Button variant="outline" size="sm" onClick={() => alert("Settings opened")}>
+            <Button variant="outline" size="sm" onClick={() => toast({ title: 'Settings', description: 'Alert settings opened.' })}>
               <Settings className="w-4 h-4" />
             </Button>
           </div>

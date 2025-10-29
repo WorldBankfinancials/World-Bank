@@ -31,6 +31,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useRealtimeTransactions, useRealtimeSupportTickets } from "@/hooks/useRealtimeTransactions";
 import type { Transaction, User } from "@shared/schema";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 
 interface SupportTicket {
@@ -58,6 +59,7 @@ interface PendingTransfer extends Transaction {
 }
 
 export default function AdminDashboard() {
+  const { toast } = useToast();
   const [selectedTab, setSelectedTab] = useState("transfers");
   const [adminNotes, setAdminNotes] = useState<{ [key: number]: string }>({});
   const queryClient = useQueryClient();
@@ -199,7 +201,11 @@ export default function AdminDashboard() {
   const handleReject = (transferId: number) => {
     const notes = adminNotes[transferId];
     if (!notes) {
-      alert('Please provide a reason for rejection');
+      toast({
+        title: 'Rejection Reason Required',
+        description: 'Please provide a reason for rejecting this transfer.',
+        variant: 'destructive',
+      });
       return;
     }
     rejectTransferMutation.mutate({ transferId, notes });

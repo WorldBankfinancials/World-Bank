@@ -11,10 +11,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Send, MessageSquare, Users, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 
 export default function CustomerSupport() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -27,7 +29,11 @@ export default function CustomerSupport() {
 
   const handleSubmitTicket = async () => {
     if (!subject || !category || !priority || !description) {
-      alert('Please fill in all required fields');
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in all required fields to submit your support ticket.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -57,14 +63,21 @@ export default function CustomerSupport() {
 
       if (error) throw error;
 
-      alert('Support ticket submitted successfully! Our team will contact you soon.');
+      toast({
+        title: 'Ticket Submitted',
+        description: 'Support ticket submitted successfully! Our team will contact you soon.',
+      });
       setSubject('');
       setCategory('');
       setPriority('');
       setDescription('');
     } catch (error: any) {
-      alert(error.message || 'Failed to submit support ticket. Please try again.');
-    } finally {
+      toast({
+        title: 'Submission Failed',
+        description: error.message || 'Failed to submit support ticket. Please try again.',
+        variant: 'destructive',
+      });
+    } finally{
       setIsSubmitting(false);
     }
   };

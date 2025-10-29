@@ -6,6 +6,7 @@ import RealtimeAlerts from "@/components/RealtimeAlerts";
 import { useUserData, useAccountData } from "@/hooks/useUserData";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User } from '@shared/schema';
+import { useToast } from "@/hooks/use-toast";
 
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -237,6 +238,7 @@ function ReceiveSection() {
 
 // Add Money Section Component
 function AddMoneySection() {
+  const { toast } = useToast();
   const [addAmount, setAddAmount] = useState("");
   const [selectedMethod, setSelectedMethod] = useState("");
   const [loading, setLoading] = useState(false);
@@ -251,12 +253,19 @@ function AddMoneySection() {
 
   const handleAddMoney = async () => {
     if (!selectedMethod || !addAmount) {
-      alert("Please select a method and enter an amount");
+      toast({
+        title: 'Missing Information',
+        description: 'Please select a payment method and enter an amount.',
+        variant: 'destructive',
+      });
       return;
     }
     setLoading(true);
     await new Promise(resolve => setTimeout(resolve, 2000));
-    alert(`Successfully added $${addAmount} via ${selectedMethod}`);
+    toast({
+      title: 'Money Added',
+      description: `Successfully added $${addAmount} via ${selectedMethod}.`,
+    });
     setAddAmount("");
     setSelectedMethod("");
     setLoading(false);
@@ -476,6 +485,7 @@ function AlertsSection() {
 
 export default function Dashboard() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const { userProfile } = useAuth();
   const [, setLocation] = useLocation();
   const [showBalance, setShowBalance] = useState(true);
@@ -944,7 +954,7 @@ export default function Dashboard() {
 
           {/* Account Statement */}
           <div 
-            onClick={() => alert('Generating account statement...')}
+            onClick={() => toast({ title: 'Account Statement', description: 'Generating account statement...' })}
             className="p-4 bg-white rounded-lg border hover:border-indigo-500 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center space-x-3">
@@ -960,7 +970,7 @@ export default function Dashboard() {
 
           {/* Currency Exchange */}
           <div 
-            onClick={() => alert('Currency exchange rates: USD 1.00 = CNY 7.24, EUR 1.00 = CNY 7.85')}
+            onClick={() => toast({ title: 'Currency Exchange', description: 'USD 1.00 = CNY 7.24, EUR 1.00 = CNY 7.85' })}
             className="p-4 bg-white rounded-lg border hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer"
           >
             <div className="flex items-center space-x-3">

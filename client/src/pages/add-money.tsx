@@ -21,10 +21,12 @@ import {
   Wallet,
   ArrowUpRight
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 
 export default function AddMoney() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: user, isLoading} = useQuery<User>({
     queryKey: ['/api/user'],
@@ -130,7 +132,11 @@ export default function AddMoney() {
 
   const handleAddMoney = async () => {
     if (!selectedMethod || !amount) {
-      alert('Please select a payment method and enter an amount');
+      toast({
+        title: 'Missing Information',
+        description: 'Please select a payment method and enter an amount.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -166,7 +172,10 @@ export default function AddMoney() {
           status: 'completed'
         });
 
-      alert(`Successfully added $${amount} to your account!`);
+      toast({
+        title: 'Money Added',
+        description: `Successfully added $${amount} to your account!`,
+      });
       setAmount("");
       setSelectedMethod("");
       
@@ -175,7 +184,11 @@ export default function AddMoney() {
       await queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
     } catch (error: any) {
-      alert(error.message || 'Failed to add money');
+      toast({
+        title: 'Operation Failed',
+        description: error.message || 'Failed to add money. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }

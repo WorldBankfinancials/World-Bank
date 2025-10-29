@@ -22,10 +22,12 @@ import {
   Mail,
   Wallet
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 
 export default function Receive() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -147,7 +149,7 @@ export default function Receive() {
                   <Download className="w-4 h-4 mr-1" />
                   Download
                 </Button>
-                <Button variant="outline" onClick={() => alert("QR code shared")}>
+                <Button variant="outline" onClick={() => toast({ title: 'QR Code Shared', description: 'Your QR code has been shared successfully.' })}>
                   <Share className="w-4 h-4 mr-1" />
                   Share
                 </Button>

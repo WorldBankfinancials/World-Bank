@@ -124,7 +124,11 @@ export default function FundManagement() {
 
   const handleAddFunds = async () => {
     if (!selectedCustomer || !amount || !description) {
-      alert("Please fill all required fields");
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -182,12 +186,19 @@ export default function FundManagement() {
             });
           }
 
-          alert(`${transactionType === "credit" ? "Funds added" : "Funds deducted"} successfully!`);
+          toast({
+            title: 'Transaction Complete',
+            description: `${transactionType === "credit" ? "Funds added" : "Funds deducted"} successfully!`,
+          });
         }
       }
     } catch (error) {
       // console.error('Failed to process transaction:', error);
-      alert('Failed to process transaction');
+      toast({
+        title: 'Transaction Failed',
+        description: 'Failed to process transaction. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit, Trash2, ArrowLeft } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface Account {
   id: number;
@@ -24,6 +25,7 @@ interface AccountManagementProps {
 }
 
 export default function AdminAccountManagement({ onBack }: AccountManagementProps) {
+  const { toast } = useToast();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -82,11 +84,18 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
           balance: '0.00',
           currency: 'USD'
         });
-        alert('Account created successfully!');
+        toast({
+          title: 'Account Created',
+          description: 'New account has been created successfully.',
+        });
       }
     } catch (error) {
       // console.error('Error creating account:', error);
-      alert('Failed to create account');
+      toast({
+        title: 'Creation Failed',
+        description: 'Failed to create account. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -109,11 +118,18 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
           acc.id === editingAccount.id ? editingAccount : acc
         ));
         setEditingAccount(null);
-        alert('Account updated successfully!');
+        toast({
+          title: 'Account Updated',
+          description: 'Account information has been updated successfully.',
+        });
       }
     } catch (error) {
       // console.error('Error updating account:', error);
-      alert('Failed to update account');
+      toast({
+        title: 'Update Failed',
+        description: 'Failed to update account. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -127,11 +143,18 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
 
       if (response.ok) {
         setAccounts(prev => prev.filter(acc => acc.id !== accountId));
-        alert('Account deleted successfully!');
+        toast({
+          title: 'Account Deleted',
+          description: 'Account has been deleted successfully.',
+        });
       }
     } catch (error) {
       // console.error('Error deleting account:', error);
-      alert('Failed to delete account');
+      toast({
+        title: 'Deletion Failed',
+        description: 'Failed to delete account. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 

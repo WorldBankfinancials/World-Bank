@@ -25,9 +25,11 @@ import {
   Check,
   ChevronDown
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function TransferFunds() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [transferType, setTransferType] = useState("international");
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState("EN");
@@ -116,7 +118,11 @@ export default function TransferFunds() {
 
   const handleContinueTransfer = async () => {
     if (!validateForm()) {
-      alert("Please fill in all required fields correctly.");
+      toast({
+        title: 'Incomplete Form',
+        description: 'Please fill in all required fields correctly.',
+        variant: 'destructive',
+      });
       return;
     }
     
@@ -164,7 +170,10 @@ export default function TransferFunds() {
       });
 
       if (response.ok) {
-        alert(`Transfer of $${amount.toFixed(2)} initiated successfully!`);
+        toast({
+          title: 'Transfer Initiated',
+          description: `Transfer of $${amount.toFixed(2)} has been initiated successfully.`,
+        });
         window.location.href = '/transfer-processing';
       } else {
         const errorData = await response.json();
@@ -172,7 +181,11 @@ export default function TransferFunds() {
       }
       
     } catch (error: any) {
-      alert(error.message || "Unable to process transfer. Please try again.");
+      toast({
+        title: 'Transfer Failed',
+        description: error.message || 'Unable to process transfer. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -180,7 +193,11 @@ export default function TransferFunds() {
 
   const saveAsTemplate = () => {
     if (!formData.recipientName.trim()) {
-      alert("Please enter recipient details to save as template");
+      toast({
+        title: 'Missing Information',
+        description: 'Please enter recipient details to save as template.',
+        variant: 'destructive',
+      });
       return;
     }
     
@@ -196,7 +213,10 @@ export default function TransferFunds() {
     templates.push(template);
     localStorage.setItem('transferTemplates', JSON.stringify(templates));
     
-    alert(`Template saved: "${template.name}"`);
+    toast({
+      title: 'Template Saved',
+      description: `Template saved: "${template.name}"`,
+    });
   };
 
   const languages = [

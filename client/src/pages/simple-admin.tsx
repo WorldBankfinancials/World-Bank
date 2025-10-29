@@ -662,13 +662,20 @@ export default function SimpleAdmin() {
         const updatedCustomer = await response.json();
         setCustomerList(prev => prev.map(c => c.id === editingCustomer.id ? { ...c, ...updatedCustomer } : c));
         setEditingCustomer(null);
-        alert('Customer information updated successfully!');
+        toast({
+          title: 'Customer Updated',
+          description: 'Customer information has been updated successfully.',
+        });
       } else {
         throw new Error('Failed to update customer');
       }
     } catch (error) {
       // console.error('Error updating customer:', error);
-      alert('Failed to update customer information');
+      toast({
+        title: 'Update Failed',
+        description: 'Unable to update customer information. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -695,12 +702,20 @@ export default function SimpleAdmin() {
       if (file.type.startsWith('image/')) {
         // Check file size (limit to 5MB)
         if (file.size > 5 * 1024 * 1024) {
-          alert('Please select an image smaller than 5MB');
+          toast({
+            title: 'File Too Large',
+            description: 'Please select an image smaller than 5MB.',
+            variant: 'destructive',
+          });
           return;
         }
         setSelectedFile(file);
       } else {
-        alert('Please select an image file');
+        toast({
+          title: 'Invalid File Type',
+          description: 'Please select an image file (JPG, PNG, etc.).',
+          variant: 'destructive',
+        });
       }
     }
   };
@@ -755,7 +770,11 @@ export default function SimpleAdmin() {
         } catch (uploadError: any) {
           // console.error('Upload error:', uploadError);
           setUploadingPhoto(false);
-          alert(`Failed to upload photo: ${uploadError?.message || 'Unknown error'}`);
+          toast({
+            title: 'Upload Failed',
+            description: `Failed to upload photo: ${uploadError?.message || 'Unknown error'}`,
+            variant: 'destructive',
+          });
         }
       };
       
@@ -783,7 +802,10 @@ export default function SimpleAdmin() {
             ));
             setSelectedFile(null);
             setUploadingPhoto(false);
-            alert('Profile photo uploaded successfully!');
+            toast({
+              title: 'Photo Uploaded',
+              description: 'Profile photo has been uploaded successfully.',
+            });
             
             // Invalidate user queries to trigger refetch in customer interface
             queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -796,17 +818,29 @@ export default function SimpleAdmin() {
         } catch (uploadError: any) {
           // console.error('Upload error:', uploadError);
           setUploadingPhoto(false);
-          alert(`Failed to upload photo: ${uploadError?.message || 'Unknown error'}`);
+          toast({
+            title: 'Upload Failed',
+            description: `Failed to upload photo: ${uploadError?.message || 'Unknown error'}`,
+            variant: 'destructive',
+          });
         }
       };
       reader.onerror = () => {
         setUploadingPhoto(false);
-        alert('Failed to read file');
+        toast({
+          title: 'File Read Error',
+          description: 'Failed to read the selected file. Please try again.',
+          variant: 'destructive',
+        });
       };
       reader.readAsDataURL(selectedFile);
     } catch (error) {
       // console.error('Error uploading photo:', error);
-      alert('Failed to upload photo');
+      toast({
+        title: 'Upload Error',
+        description: 'An unexpected error occurred while uploading the photo.',
+        variant: 'destructive',
+      });
       setUploadingPhoto(false);
     }
   };
@@ -832,7 +866,10 @@ export default function SimpleAdmin() {
           c.id === customerId ? { ...c, balance: result.user.balance } : c
         ));
         
-        alert(`Successfully added $${amount} to customer balance! New balance: $${result.user.balance}`);
+        toast({
+          title: 'Balance Updated',
+          description: `Successfully added $${amount} to customer balance! New balance: $${result.user.balance}`,
+        });
         
         // Invalidate queries to trigger refetch in customer dashboard
         queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -844,19 +881,31 @@ export default function SimpleAdmin() {
       }
     } catch (error: any) {
       // console.error('Error updating balance:', error);
-      alert(`Failed to update customer balance: ${error?.message || 'Unknown error'}`);
+      toast({
+        title: 'Balance Update Failed',
+        description: `Failed to update customer balance: ${error?.message || 'Unknown error'}`,
+        variant: 'destructive',
+      });
     }
   };
 
   const handleSubmitTransaction = async () => {
     if (!selectedCustomerForTransaction || !transactionAmount || !transactionDescription || !transactionCategory) {
-      alert("Please fill in all required fields");
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in all required fields to create the transaction.',
+        variant: 'destructive',
+      });
       return;
     }
 
     const amount = parseFloat(transactionAmount);
     if (isNaN(amount) || amount <= 0) {
-      alert("Please enter a valid amount");
+      toast({
+        title: 'Invalid Amount',
+        description: 'Please enter a valid amount greater than zero.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -894,7 +943,10 @@ export default function SimpleAdmin() {
 
         if (balanceResponse.ok) {
           // console.log(`Created ${transactionType} transaction of $${amount} for customer ${selectedCustomerForTransaction}`);
-          alert(`Transaction created successfully: ${transactionType} of $${amount.toFixed(2)}`);
+          toast({
+            title: 'Transaction Created',
+            description: `Successfully created ${transactionType} transaction of $${amount.toFixed(2)}.`,
+          });
           
           // Reset form
           setTransactionAmount('');
@@ -911,19 +963,31 @@ export default function SimpleAdmin() {
       }
     } catch (error) {
       // console.error('Transaction creation error:', error);
-      alert('Failed to create transaction. Please try again.');
+      toast({
+        title: 'Transaction Failed',
+        description: 'Failed to create transaction. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
   const handleFundSpecificAccount = async () => {
     if (!selectedAccountType || !fundAmount || !fundDescription) {
-      alert("Please fill in all fields");
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in all fields to process the fund operation.',
+        variant: 'destructive',
+      });
       return;
     }
 
     const amount = parseFloat(fundAmount);
     if (isNaN(amount) || amount <= 0) {
-      alert("Please enter a valid amount");
+      toast({
+        title: 'Invalid Amount',
+        description: 'Please enter a valid amount greater than zero.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -958,13 +1022,24 @@ export default function SimpleAdmin() {
         setFundDescription("");
         fetchUserData(); // Refresh the balance display
         const data = await response.json();
-        alert(`Successfully ${fundType === 'credit' ? 'added' : 'deducted'} $${amount} ${fundType === 'credit' ? 'to' : 'from'} ${selectedAccountType} account. New balance: $${data.newBalance}`);
+        toast({
+          title: 'Fund Operation Complete',
+          description: `Successfully ${fundType === 'credit' ? 'added' : 'deducted'} $${amount} ${fundType === 'credit' ? 'to' : 'from'} ${selectedAccountType} account. New balance: $${data.newBalance}`,
+        });
       } else {
-        alert('Failed to process fund operation');
+        toast({
+          title: 'Operation Failed',
+          description: 'Failed to process fund operation. Please try again.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       // console.error('Error processing fund operation:', error);
-      alert('Error processing fund operation');
+      toast({
+        title: 'Operation Error',
+        description: 'An error occurred while processing the fund operation.',
+        variant: 'destructive',
+      });
     }
   };
 

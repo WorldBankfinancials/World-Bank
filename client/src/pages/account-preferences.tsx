@@ -17,10 +17,12 @@ import {
   EyeOff,
   Save
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AccountPreferences() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { toast } = useToast();
   
   const [preferences, setPreferences] = useState({
     notifications: {
@@ -58,13 +60,24 @@ export default function AccountPreferences() {
         // Save to localStorage as backup
         localStorage.setItem('user_preferences', JSON.stringify(preferences));
         
-        alert(t('preferences_saved') || 'Preferences saved successfully');
+        toast({
+          title: 'Preferences Saved',
+          description: t('preferences_saved') || 'Preferences saved successfully.',
+        });
       } else {
-        alert('Failed to save preferences. Please try again.');
+        toast({
+          title: 'Save Failed',
+          description: 'Failed to save preferences. Please try again.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error('Error saving preferences:', error);
-      alert('Error saving preferences. Please try again.');
+      toast({
+        title: 'Error',
+        description: 'Error saving preferences. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
