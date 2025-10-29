@@ -1292,9 +1292,35 @@ export class SupabasePublicStorage implements IStorage {
   // Cards methods
   async getUserCards(userId: number): Promise<Card[]> {
     try {
-      const { data, error } = await supabase.from('cards').select('*').eq('user_id', userId);
+      // First get user's accounts, then get cards for those accounts
+      const accounts = await this.getUserAccounts(userId);
+      if (accounts.length === 0) return [];
+      
+      const accountIds = accounts.map(acc => acc.id);
+      const { data, error } = await supabase
+        .from('cards')
+        .select('*')
+        .in('account_id', accountIds);
+      
       if (error) throw error;
-      return (data || []) as unknown as Card[];
+      
+      return (data || []).map((card: any) => ({
+        id: card.id,
+        accountId: card.account_id,
+        cardNumber: card.card_number,
+        cardType: card.card_type,
+        expiryDate: card.expiry_date,
+        cvv: card.cvv,
+        cardholderName: card.cardholder_name,
+        isActive: card.is_active,
+        dailyLimit: card.daily_limit?.toString() || null,
+        monthlyLimit: card.monthly_limit?.toString() || null,
+        currentDailySpend: card.current_daily_spend?.toString() || '0',
+        currentMonthlySpend: card.current_monthly_spend?.toString() || '0',
+        isLocked: card.is_locked,
+        createdAt: card.created_at,
+        updatedAt: card.updated_at
+      }));
     } catch (error) {
       console.error('Error fetching cards:', error);
       return [];
@@ -1305,7 +1331,24 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('cards').select('*').eq('id', id).single();
       if (error) throw error;
-      return data as unknown as Card;
+      
+      return {
+        id: data.id,
+        accountId: data.account_id,
+        cardNumber: data.card_number,
+        cardType: data.card_type,
+        expiryDate: data.expiry_date,
+        cvv: data.cvv,
+        cardholderName: data.cardholder_name,
+        isActive: data.is_active,
+        dailyLimit: data.daily_limit?.toString() || null,
+        monthlyLimit: data.monthly_limit?.toString() || null,
+        currentDailySpend: data.current_daily_spend?.toString() || '0',
+        currentMonthlySpend: data.current_monthly_spend?.toString() || '0',
+        isLocked: data.is_locked,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
     } catch (error) {
       console.error('Error fetching card:', error);
       return undefined;
@@ -1313,15 +1356,77 @@ export class SupabasePublicStorage implements IStorage {
   }
 
   async createCard(card: InsertCard): Promise<Card> {
-    const { data, error } = await supabase.from('cards').insert(card as any).select().single();
+    const { data, error} = await supabase.from('cards').insert({
+      account_id: card.accountId,
+      card_number: card.cardNumber,
+      card_type: card.cardType,
+      expiry_date: card.expiryDate,
+      cvv: card.cvv,
+      cardholder_name: card.cardholderName,
+      is_active: card.isActive ?? true,
+      daily_limit: card.dailyLimit,
+      monthly_limit: card.monthlyLimit,
+      current_daily_spend: card.currentDailySpend || '0',
+      current_monthly_spend: card.currentMonthlySpend || '0',
+      is_locked: card.isLocked ?? false
+    }).select().single();
+    
     if (error) throw error;
-    return data as unknown as Card;
+    
+    return {
+      id: data.id,
+      accountId: data.account_id,
+      cardNumber: data.card_number,
+      cardType: data.card_type,
+      expiryDate: data.expiry_date,
+      cvv: data.cvv,
+      cardholderName: data.cardholder_name,
+      isActive: data.is_active,
+      dailyLimit: data.daily_limit?.toString() || null,
+      monthlyLimit: data.monthly_limit?.toString() || null,
+      currentDailySpend: data.current_daily_spend?.toString() || '0',
+      currentMonthlySpend: data.current_monthly_spend?.toString() || '0',
+      isLocked: data.is_locked,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
   }
 
   async updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined> {
-    const { data, error } = await supabase.from('cards').update(updates as any).eq('id', id).select().single();
+    const updateData: any = {};
+    if (updates.cardNumber !== undefined) updateData.card_number = updates.cardNumber;
+    if (updates.cardType !== undefined) updateData.card_type = updates.cardType;
+    if (updates.expiryDate !== undefined) updateData.expiry_date = updates.expiryDate;
+    if (updates.cvv !== undefined) updateData.cvv = updates.cvv;
+    if (updates.cardholderName !== undefined) updateData.cardholder_name = updates.cardholderName;
+    if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+    if (updates.dailyLimit !== undefined) updateData.daily_limit = updates.dailyLimit;
+    if (updates.monthlyLimit !== undefined) updateData.monthly_limit = updates.monthlyLimit;
+    if (updates.currentDailySpend !== undefined) updateData.current_daily_spend = updates.currentDailySpend;
+    if (updates.currentMonthlySpend !== undefined) updateData.current_monthly_spend = updates.currentMonthlySpend;
+    if (updates.isLocked !== undefined) updateData.is_locked = updates.isLocked;
+    updateData.updated_at = new Date().toISOString();
+    
+    const { data, error } = await supabase.from('cards').update(updateData).eq('id', id).select().single();
     if (error) throw error;
-    return data as unknown as Card;
+    
+    return {
+      id: data.id,
+      accountId: data.account_id,
+      cardNumber: data.card_number,
+      cardType: data.card_type,
+      expiryDate: data.expiry_date,
+      cvv: data.cvv,
+      cardholderName: data.cardholder_name,
+      isActive: data.is_active,
+      dailyLimit: data.daily_limit?.toString() || null,
+      monthlyLimit: data.monthly_limit?.toString() || null,
+      currentDailySpend: data.current_daily_spend?.toString() || '0',
+      currentMonthlySpend: data.current_monthly_spend?.toString() || '0',
+      isLocked: data.is_locked,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
   }
 
   // Investments methods
@@ -1329,7 +1434,19 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('investments').select('*').eq('user_id', userId);
       if (error) throw error;
-      return (data || []) as unknown as Investment[];
+      
+      return (data || []).map((inv: any) => ({
+        id: inv.id,
+        userId: inv.user_id,
+        investmentType: inv.investment_type,
+        amount: inv.amount?.toString() || '0',
+        currentValue: inv.current_value?.toString() || null,
+        returnRate: inv.return_rate?.toString() || null,
+        maturityDate: inv.maturity_date,
+        status: inv.status,
+        createdAt: inv.created_at,
+        updatedAt: inv.updated_at
+      }));
     } catch (error) {
       console.error('Error fetching investments:', error);
       return [];
@@ -1340,22 +1457,76 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('investments').select('*').eq('id', id).single();
       if (error) throw error;
-      return data as unknown as Investment;
+      
+      return {
+        id: data.id,
+        userId: data.user_id,
+        investmentType: data.investment_type,
+        amount: data.amount?.toString() || '0',
+        currentValue: data.current_value?.toString() || null,
+        returnRate: data.return_rate?.toString() || null,
+        maturityDate: data.maturity_date,
+        status: data.status,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
     } catch (error) {
       return undefined;
     }
   }
 
   async createInvestment(investment: InsertInvestment): Promise<Investment> {
-    const { data, error } = await supabase.from('investments').insert(investment as any).select().single();
+    const { data, error } = await supabase.from('investments').insert({
+      user_id: investment.userId,
+      investment_type: investment.investmentType,
+      amount: investment.amount,
+      current_value: investment.currentValue,
+      return_rate: investment.returnRate,
+      maturity_date: investment.maturityDate,
+      status: investment.status || 'active'
+    }).select().single();
+    
     if (error) throw error;
-    return data as unknown as Investment;
+    
+    return {
+      id: data.id,
+      userId: data.user_id,
+      investmentType: data.investment_type,
+      amount: data.amount?.toString() || '0',
+      currentValue: data.current_value?.toString() || null,
+      returnRate: data.return_rate?.toString() || null,
+      maturityDate: data.maturity_date,
+      status: data.status,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
   }
 
   async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> {
-    const { data, error } = await supabase.from('investments').update(updates as any).eq('id', id).select().single();
+    const updateData: any = {};
+    if (updates.investmentType !== undefined) updateData.investment_type = updates.investmentType;
+    if (updates.amount !== undefined) updateData.amount = updates.amount;
+    if (updates.currentValue !== undefined) updateData.current_value = updates.currentValue;
+    if (updates.returnRate !== undefined) updateData.return_rate = updates.returnRate;
+    if (updates.maturityDate !== undefined) updateData.maturity_date = updates.maturityDate;
+    if (updates.status !== undefined) updateData.status = updates.status;
+    updateData.updated_at = new Date().toISOString();
+    
+    const { data, error } = await supabase.from('investments').update(updateData).eq('id', id).select().single();
     if (error) throw error;
-    return data as unknown as Investment;
+    
+    return {
+      id: data.id,
+      userId: data.user_id,
+      investmentType: data.investment_type,
+      amount: data.amount?.toString() || '0',
+      currentValue: data.current_value?.toString() || null,
+      returnRate: data.return_rate?.toString() || null,
+      maturityDate: data.maturity_date,
+      status: data.status,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
   }
 
   // Messages methods
