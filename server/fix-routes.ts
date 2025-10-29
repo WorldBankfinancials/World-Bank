@@ -530,6 +530,19 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         await storage.updateUserBalance(customerIdNum, balanceChange);
       }
 
+      // AUDIT TRAIL: Log admin action
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      if (admin) {
+        await storage.createAdminAction({
+          adminId: admin.id,
+          actionType: 'create_transaction',
+          targetType: 'transaction',
+          targetId: transaction.id.toString(),
+          description: `Created ${body.type} transaction of $${body.amount} for customer ${customerIdNum}`,
+          metadata: JSON.stringify({ customerId: customerIdNum, amount: body.amount, type: body.type })
+        });
+      }
+
       res.json({ 
         success: true, 
         transaction,
@@ -560,7 +573,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       await storage.updateAccount?.(accountId, { balance: newBalance.toString() });
 
       // Create transaction record
-      await storage.createTransaction({
+      const transaction = await storage.createTransaction({
         fromAccountId: accountId,
         transactionType: body.type,
         amount: amountNum.toString(),
@@ -568,6 +581,19 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         status: 'completed',
         createdAt: new Date()
       });
+
+      // AUDIT TRAIL: Log admin action
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      if (admin) {
+        await storage.createAdminAction({
+          adminId: admin.id,
+          actionType: 'update_account_balance',
+          targetType: 'account',
+          targetId: accountId.toString(),
+          description: `${body.type === 'credit' ? 'Credited' : 'Debited'} $${body.amount} - ${body.description}`,
+          metadata: JSON.stringify({ accountId, amount: body.amount, type: body.type, oldBalance: account.balance, newBalance })
+        });
+      }
 
       res.json({ 
         success: true, 
@@ -588,10 +614,24 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const body = req.body as { amount: string; description: string };
 
       const amountNum = parseFloat(body.amount);
+      const oldUser = await (storage as any).getUser(customerId);
       const updatedUser = await storage.updateUserBalance(customerId, amountNum);
 
       if (!updatedUser) {
         return res.status(404).json({ error: 'Customer not found' });
+      }
+
+      // AUDIT TRAIL: Log admin action
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      if (admin) {
+        await storage.createAdminAction({
+          adminId: admin.id,
+          actionType: 'update_customer_balance',
+          targetType: 'user',
+          targetId: customerId.toString(),
+          description: `Updated customer balance by $${body.amount} - ${body.description}`,
+          metadata: JSON.stringify({ customerId, amount: body.amount, oldBalance: oldUser?.balance, newBalance: updatedUser.balance, description: body.description })
+        });
       }
 
       res.json({ 
@@ -621,6 +661,19 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`✅ ADMIN UPDATE SUCCESS: Customer ${customerId} updated successfully`);
+
+      // AUDIT TRAIL: Log admin action
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      if (admin) {
+        await storage.createAdminAction({
+          adminId: admin.id,
+          actionType: 'update_customer',
+          targetType: 'user',
+          targetId: customerId.toString(),
+          description: `Updated customer profile: ${Object.keys(updates).join(', ')}`,
+          metadata: JSON.stringify({ customerId, updates })
+        });
+      }
 
       res.json({ 
         success: true, 
@@ -752,11 +805,117 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/pending-registrations', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const users = await storage.getAllUsers();
-      const pending = users.filter(user => !user.isActive);
+      const pending = users.filter(user => !user.isActive && user.role === 'customer');
       res.json(pending);
     } catch (error) {
       console.error('Get pending registrations error:', error);
       res.status(500).json({ error: 'Failed to get pending registrations' });
+    }
+  });
+
+  // Approve registration - REQUIRES ADMIN ROLE
+  app.post('/api/admin/approve-registration/:registrationId', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const registrationId = parseInt(req.params.registrationId, 10);
+      const { initialBalance } = req.body;
+
+      // Activate user
+      const updatedUser = await storage.updateUser(registrationId, {
+        isActive: true,
+        isVerified: true
+      });
+
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'Registration not found' });
+      }
+
+      // Set initial balance if provided
+      if (initialBalance && parseFloat(initialBalance) > 0) {
+        await storage.updateUserBalance(registrationId, parseFloat(initialBalance));
+      }
+
+      // Activate user's accounts
+      const accounts = await storage.getUserAccounts(registrationId);
+      for (const account of accounts) {
+        await storage.updateAccount?.(account.id, { isActive: true });
+      }
+
+      // AUDIT TRAIL: Log admin action
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      if (admin) {
+        await storage.createAdminAction({
+          adminId: admin.id,
+          actionType: 'approve_registration',
+          targetType: 'user',
+          targetId: registrationId.toString(),
+          description: `Approved registration for ${updatedUser.fullName} (${updatedUser.email})`,
+          metadata: JSON.stringify({ userId: registrationId, initialBalance: initialBalance || 0 })
+        });
+      }
+
+      console.log(`✅ Registration approved for user ${registrationId} by admin ${admin?.fullName}`);
+      
+      res.json({ 
+        success: true,
+        message: 'Registration approved successfully',
+        user: updatedUser
+      });
+    } catch (error) {
+      console.error('Approve registration error:', error);
+      res.status(500).json({ error: 'Failed to approve registration' });
+    }
+  });
+
+  // Reject registration - REQUIRES ADMIN ROLE
+  app.post('/api/admin/reject-registration/:registrationId', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const registrationId = parseInt(req.params.registrationId, 10);
+      const { reason } = req.body;
+
+      const user = await (storage as any).getUser(registrationId);
+      if (!user) {
+        return res.status(404).json({ error: 'Registration not found' });
+      }
+
+      // Update user with rejection reason
+      await storage.updateUser(registrationId, {
+        isActive: false,
+        isVerified: false,
+        adminNotes: `Registration rejected: ${reason || 'No reason provided'}`
+      });
+
+      // Create support ticket for the user explaining rejection
+      await storage.createSupportTicket({
+        userId: registrationId,
+        subject: 'Registration Status - Action Required',
+        description: `Your registration has been reviewed. ${reason || 'Please contact support for more information.'}`,
+        category: 'account_verification',
+        priority: 'high',
+        status: 'open'
+      });
+
+      // AUDIT TRAIL: Log admin action
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      if (admin) {
+        await storage.createAdminAction({
+          adminId: admin.id,
+          actionType: 'reject_registration',
+          targetType: 'user',
+          targetId: registrationId.toString(),
+          description: `Rejected registration for ${user.fullName} (${user.email})`,
+          metadata: JSON.stringify({ userId: registrationId, reason })
+        });
+      }
+
+      console.log(`❌ Registration rejected for user ${registrationId} by admin ${admin?.fullName}`);
+      
+      res.json({ 
+        success: true,
+        message: 'Registration rejected successfully'
+      });
+    } catch (error) {
+      console.error('Reject registration error:', error);
+      res.status(500).json({ error: 'Failed to reject registration' });
     }
   });
 
