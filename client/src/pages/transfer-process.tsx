@@ -35,7 +35,8 @@ export default function TransferProcess({ transferData, onBack, onComplete }: Tr
   const handlePinSubmit = async () => {
     // Verify PIN with backend
     try {
-      const verifyResponse = await fetch('/api/verify-pin', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const verifyResponse = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin })
@@ -71,8 +72,9 @@ export default function TransferProcess({ transferData, onBack, onComplete }: Tr
     setTransactionId(txId);
 
     try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
       // Submit transfer for admin approval
-      const response = await fetch('/api/transactions', {
+      const response = await authenticatedFetch('/api/transactions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

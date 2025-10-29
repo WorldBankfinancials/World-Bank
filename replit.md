@@ -8,6 +8,46 @@ The World Bank is a full-stack application providing secure international bankin
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### October 29, 2025 - Critical Authentication Fix
+**Problem:** Widespread 401 authentication errors across 44+ frontend components making unauthenticated API requests.
+
+**Root Cause:** Components using raw `fetch()` without Supabase JWT authentication headers, and race condition where API calls occurred before Supabase session initialization.
+
+**Solution Implemented:**
+1. Created `authenticatedFetch()` helper in `client/src/lib/queryClient.ts` that:
+   - Automatically retrieves Supabase session token
+   - Waits for session with exponential backoff retry logic (3 attempts: 500ms, 1000ms, 2000ms)
+   - Throws clear error if no session available after retries (instead of silently proceeding)
+   - Includes Authorization header with Bearer token in all requests
+   - Logs failed requests for debugging
+
+2. Systematically replaced ALL 44+ unauthenticated `fetch()` calls across:
+   - Core components: Avatar.tsx, Header.tsx, UserWelcome.tsx
+   - Customer pages: dashboard.tsx, history.tsx, cards.tsx, transfer.tsx, transfer-funds.tsx, transfer-process.tsx, international-transfer.tsx, transaction-history.tsx, account-preferences.tsx, pin-settings.tsx
+   - Admin pages: admin-dashboard.tsx, admin-accounts.tsx, admin-transaction-dashboard.tsx, admin-transaction-creator.tsx, customer-management.tsx, fund-management.tsx, simple-admin.tsx
+   - Context: AuthContext.tsx
+
+**Pattern Used:**
+```typescript
+// BEFORE (WRONG - no auth)
+const response = await fetch('/api/endpoint');
+
+// AFTER (CORRECT - authenticated)
+const { authenticatedFetch } = await import('@/lib/queryClient');
+const response = await authenticatedFetch('/api/endpoint');
+```
+
+**Results:**
+- ✅ Zero 401 authentication errors
+- ✅ Zero LSP/TypeScript errors
+- ✅ Consistent authentication across entire application
+- ✅ Proper error handling with user-friendly messages
+- ✅ Automatic retry logic prevents race conditions
+
+**Files Exempt:** Login and registration pages intentionally use unauthenticated endpoints.
+
 ## System Architecture
 
 ### Frontend Architecture

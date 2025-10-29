@@ -94,10 +94,11 @@ export default function AdminDashboard() {
   // Profile picture upload mutation
   const uploadProfilePicMutation = useMutation({
     mutationFn: async ({ userId, imageFile }: { userId: number; imageFile: File }) => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
       const formData = new FormData();
       formData.append('profilePic', imageFile);
       
-      const response = await fetch(`/api/admin/customers/${userId}/profile-picture`, {
+      const response = await authenticatedFetch(`/api/admin/customers/${userId}/profile-picture`, {
         method: 'POST',
         body: formData,
       });
@@ -116,7 +117,8 @@ export default function AdminDashboard() {
   // Customer query response mutation
   const respondToQueryMutation = useMutation({
     mutationFn: async ({ ticketId, response }: { ticketId: number; response: string }) => {
-      const resp = await fetch(`/api/admin/tickets/${ticketId}/respond`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const resp = await authenticatedFetch(`/api/admin/tickets/${ticketId}/respond`, {
         method: 'POST',
         body: JSON.stringify({ response }),
         headers: { 'Content-Type': 'application/json' },
@@ -131,7 +133,8 @@ export default function AdminDashboard() {
   // Customer verification mutation
   const verifyCustomerMutation = useMutation({
     mutationFn: async ({ userId, verified }: { userId: number; verified: boolean }) => {
-      const response = await fetch(`/api/admin/customers/${userId}/verify`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/customers/${userId}/verify`, {
         method: 'POST',
         body: JSON.stringify({ verified }),
         headers: { 'Content-Type': 'application/json' },
@@ -146,7 +149,8 @@ export default function AdminDashboard() {
   // Transfer approval mutation
   const approveTransferMutation = useMutation({
     mutationFn: async ({ transferId, notes }: { transferId: number; notes?: string }) => {
-      const response = await fetch(`/api/admin/transfers/${transferId}/approve`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/transfers/${transferId}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes })
@@ -162,7 +166,8 @@ export default function AdminDashboard() {
   // Transfer rejection mutation
   const rejectTransferMutation = useMutation({
     mutationFn: async ({ transferId, notes }: { transferId: number; notes: string }) => {
-      const response = await fetch(`/api/admin/transfers/${transferId}/reject`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/transfers/${transferId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes })

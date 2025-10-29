@@ -137,6 +137,7 @@ export default function FundManagement() {
     setIsLoading(true);
     
     try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
       const transactionData = {
         customerId: selectedCustomer.id,
         type: transactionType,
@@ -148,7 +149,7 @@ export default function FundManagement() {
       };
 
       // Create transaction record
-      const transactionResponse = await fetch('/api/admin/create-transaction', {
+      const transactionResponse = await authenticatedFetch('/api/admin/create-transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(transactionData)
@@ -159,7 +160,7 @@ export default function FundManagement() {
         const balanceChange = transactionType === "credit" ? 
           parseFloat(amount) : -parseFloat(amount);
         
-        const balanceResponse = await fetch('/api/admin/update-balance', {
+        const balanceResponse = await authenticatedFetch('/api/admin/update-balance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

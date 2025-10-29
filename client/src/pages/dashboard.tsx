@@ -508,7 +508,8 @@ export default function Dashboard() {
       }
       
       try {
-        const response = await fetch(`/api/users/supabase/${userProfile.id}`, {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch(`/api/users/supabase/${userProfile.id}`, {
           headers: {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'
@@ -554,11 +555,12 @@ export default function Dashboard() {
       }
       
       try {
-        const userResponse = await fetch(`/api/users/supabase/${userProfile.id}`);
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const userResponse = await authenticatedFetch(`/api/users/supabase/${userProfile.id}`);
         if (!userResponse.ok) return;
         
         const user = await userResponse.json();
-        const response = await fetch(`/api/accounts?userId=${user.id}&t=${Date.now()}`, {
+        const response = await authenticatedFetch(`/api/accounts?userId=${user.id}&t=${Date.now()}`, {
           headers: {
             'Cache-Control': 'no-cache'
           }

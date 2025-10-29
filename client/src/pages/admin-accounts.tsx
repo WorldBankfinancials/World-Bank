@@ -105,7 +105,8 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
     if (!editingAccount) return;
 
     try {
-      const response = await fetch(`/api/admin/accounts/${editingAccount.id}`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/accounts/${editingAccount.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -139,7 +140,8 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
     if (!confirm('Are you sure you want to delete this account?')) return;
 
     try {
-      const response = await fetch(`/api/admin/accounts/${accountId}`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/accounts/${accountId}`, {
         method: 'DELETE'
       });
 

@@ -138,7 +138,8 @@ export default function SimpleAdmin() {
     if (!token) return; // Short-circuit if no token to avoid invalid Authorization headers
     
     try {
-      const response = await fetch('/api/user', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/user', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -167,7 +168,8 @@ export default function SimpleAdmin() {
     if (!token) return; // Short-circuit if no token
     
     try {
-      const response = await fetch('/api/admin/pending-registrations', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/admin/pending-registrations', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -196,7 +198,8 @@ export default function SimpleAdmin() {
     if (!token) return; // Short-circuit if no token
     
     try {
-      const response = await fetch('/api/admin/pending-transfers', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/admin/pending-transfers', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -227,7 +230,8 @@ export default function SimpleAdmin() {
     if (!token) return; // Short-circuit if no token
     
     try {
-      const response = await fetch('/api/admin/support-tickets', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/admin/support-tickets', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -238,8 +242,9 @@ export default function SimpleAdmin() {
       } else {
         // Try fallback endpoint
         try {
+          const { authenticatedFetch } = await import('@/lib/queryClient');
           const token = sessionStorage.getItem('adminToken');
-          const response = await fetch('/api/support-tickets', {
+          const response = await authenticatedFetch('/api/support-tickets', {
             headers: {
               'Authorization': `Bearer ${token}`
             }

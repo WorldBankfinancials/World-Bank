@@ -179,7 +179,8 @@ export default function Cards() {
     if (!selectedCard) return;
     
     try {
-      const response = await fetch('/api/verify-pin', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
@@ -221,7 +222,8 @@ export default function Cards() {
 
   const handleMobilePay = async () => {
     try {
-      const response = await fetch('/api/verify-pin', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
@@ -254,7 +256,8 @@ export default function Cards() {
 
   const handlePayBill = async () => {
     try {
-      const response = await fetch('/api/verify-pin', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })

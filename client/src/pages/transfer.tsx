@@ -38,7 +38,8 @@ export default function Transfer() {
     queryKey: ['/api/user', userProfile?.email],
     queryFn: async () => {
       if (!userProfile?.email) return null;
-      const response = await fetch(`/api/user?email=${encodeURIComponent(userProfile.email)}`);
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/user?email=${encodeURIComponent(userProfile.email)}`);
       if (!response.ok) throw new Error('Failed to fetch user');
       return response.json();
     },
@@ -115,7 +116,8 @@ export default function Transfer() {
 
     // Verify PIN with backend
     try {
-      const pinResponse = await fetch('/api/verify-pin', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const pinResponse = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -153,9 +155,9 @@ export default function Transfer() {
         requiresApproval: parseFloat(amount) >= 10000 // Transfers over $10k require support team approval
       };
       
-      
+      const { authenticatedFetch } = await import('@/lib/queryClient');
 
-      const response = await fetch('/api/transfers', {
+      const response = await authenticatedFetch('/api/transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(transferData)

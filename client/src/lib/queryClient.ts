@@ -11,23 +11,35 @@ async function throwIfResNotOk(res: Response) {
 /**
  * Helper to get Authorization header with Supabase token
  * EXPORTED for use in components that need direct fetch() calls
+ * CRITICAL FIX: Waits for session with retry logic instead of proceeding without auth
  */
-export async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (!session?.access_token) {
-    console.warn(`⚠️ No Supabase session available for API call`);
-    return {};
+export async function getAuthHeaders(retries = 3, delayMs = 500): Promise<Record<string, string>> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.access_token) {
+      return {
+        'Authorization': `Bearer ${session.access_token}`
+      };
+    }
+    
+    // If no session and not last attempt, wait and retry
+    if (attempt < retries - 1) {
+      console.warn(`⚠️ No Supabase session on attempt ${attempt + 1}/${retries}, retrying in ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+      delayMs *= 2; // Exponential backoff
+    }
   }
   
-  return {
-    'Authorization': `Bearer ${session.access_token}`
-  };
+  // After all retries failed, throw error instead of returning empty headers
+  console.error('❌ CRITICAL: No Supabase session after all retries - authentication required');
+  throw new Error('Authentication required: No valid session available. Please log in.');
 }
 
 /**
  * CRITICAL FIX: Authenticated fetch wrapper
  * Use this instead of raw fetch() to ensure authentication headers are included
+ * Automatically waits for Supabase session with retry logic
  * 
  * @example
  * const response = await authenticatedFetch('/api/user');
@@ -37,16 +49,28 @@ export async function authenticatedFetch(
   url: string,
   options?: RequestInit
 ): Promise<Response> {
-  const authHeaders = await getAuthHeaders();
-  
-  return fetch(url, {
-    ...options,
-    headers: {
-      ...authHeaders,
-      ...options?.headers,
-    },
-    credentials: "include",
-  });
+  try {
+    const authHeaders = await getAuthHeaders();
+    
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...authHeaders,
+        ...options?.headers,
+      },
+      credentials: "include",
+    });
+    
+    // Log failed requests for debugging
+    if (!response.ok) {
+      console.error(`❌ API request failed: ${options?.method || 'GET'} ${url} - ${response.status} ${response.statusText}`);
+    }
+    
+    return response;
+  } catch (error) {
+    console.error(`❌ Authentication error for ${url}:`, error);
+    throw error;
+  }
 }
 
 export async function apiRequest(

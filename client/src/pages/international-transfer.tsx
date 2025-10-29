@@ -61,6 +61,7 @@ export default function InternationalTransfer() {
     setIsProcessing(true);
     
     try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
       const transferData = {
         amount: parseFloat(transferAmount),
         fromCurrency: fromCurrency,
@@ -75,7 +76,7 @@ export default function InternationalTransfer() {
         userEmail: user?.email!
       };
       
-      const response = await fetch('/api/international-transfers', {
+      const response = await authenticatedFetch('/api/international-transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(transferData)

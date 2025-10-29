@@ -58,7 +58,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Wait a moment for trigger to complete if this is a new user
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      const response = await fetch(`/api/users/supabase/${currentUser.id}`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/users/supabase/${currentUser.id}`, {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
@@ -102,7 +103,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Retry after another second for new users
         await new Promise(resolve => setTimeout(resolve, 1500));
 
-        const retryResponse = await fetch(`/api/users/supabase/${currentUser.id}`, {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const retryResponse = await authenticatedFetch(`/api/users/supabase/${currentUser.id}`, {
           headers: {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'
