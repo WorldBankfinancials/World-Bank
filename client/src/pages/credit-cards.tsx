@@ -12,22 +12,13 @@ import { useQuery } from "@tanstack/react-query";
 
 export default function CreditCards() {
   const { t } = useLanguage();
+  
+  // CRITICAL FIX: Move ALL hooks before ANY conditional returns
+  // Prevents "Rendered more hooks than during the previous render" error
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
-  const [showCardNumbers, setShowCardNumbers] = useState(false);
-  const [selectedCard, setSelectedCard] = useState(0);
-  const [showTransactions, setShowTransactions] = useState(true);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">{t('loading')}</div>
-      </div>
-    );
-  }
-
-  // Fetch real credit card data from Supabase
+  
   const { data: creditCards } = useQuery({
     queryKey: ['/api/cards'],
     staleTime: 30000
@@ -37,6 +28,19 @@ export default function CreditCards() {
     queryKey: ['/api/card-transactions'],
     staleTime: 30000
   });
+
+  const [showCardNumbers, setShowCardNumbers] = useState(false);
+  const [selectedCard, setSelectedCard] = useState(0);
+  const [showTransactions, setShowTransactions] = useState(true);
+
+  // NOW safe to return early - all hooks are called
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">{t('loading')}</div>
+      </div>
+    );
+  }
 
   const quickActions = [
     { icon: Lock, label: t('lock_card'), action: () => console.log("Card locked") },

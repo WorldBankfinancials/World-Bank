@@ -19,6 +19,7 @@ import {
   pinChangeSchema
 } from './validation-schemas';
 import { BankingTransaction, atomicBalanceUpdate, atomicTransfer } from './transaction-wrapper';
+import { errorHandler, notFoundHandler, asyncHandler, createApiError } from './error-handler';
 
 // Fixed route handlers with proper typing
 export async function registerFixedRoutes(app: Express): Promise<Server> {
