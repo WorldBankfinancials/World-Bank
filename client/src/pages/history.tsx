@@ -41,7 +41,8 @@ export default function History() {
 
   const fetchAccounts = async () => {
     try {
-      const response = await fetch('/api/accounts');
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/accounts');
       if (response.ok) {
         const data = await response.json();
         setAccounts(data);
@@ -66,8 +67,9 @@ export default function History() {
   const fetchAllTransactions = async () => {
     try {
       setLoading(true);
+      const { authenticatedFetch } = await import('@/lib/queryClient');
       const accountPromises = accounts.map(account => 
-        fetch(`/api/accounts/${account.id}/transactions`).then(res => res.json())
+        authenticatedFetch(`/api/accounts/${account.id}/transactions`).then(res => res.json())
       );
       
       const allTransactionArrays = await Promise.all(accountPromises);

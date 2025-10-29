@@ -10,8 +10,9 @@ async function throwIfResNotOk(res: Response) {
 
 /**
  * Helper to get Authorization header with Supabase token
+ * EXPORTED for use in components that need direct fetch() calls
  */
-async function getAuthHeaders(): Promise<Record<string, string>> {
+export async function getAuthHeaders(): Promise<Record<string, string>> {
   const { data: { session } } = await supabase.auth.getSession();
   
   if (!session?.access_token) {
@@ -22,6 +23,30 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return {
     'Authorization': `Bearer ${session.access_token}`
   };
+}
+
+/**
+ * CRITICAL FIX: Authenticated fetch wrapper
+ * Use this instead of raw fetch() to ensure authentication headers are included
+ * 
+ * @example
+ * const response = await authenticatedFetch('/api/user');
+ * const data = await response.json();
+ */
+export async function authenticatedFetch(
+  url: string,
+  options?: RequestInit
+): Promise<Response> {
+  const authHeaders = await getAuthHeaders();
+  
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...authHeaders,
+      ...options?.headers,
+    },
+    credentials: "include",
+  });
 }
 
 export async function apiRequest(

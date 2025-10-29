@@ -18,7 +18,8 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
   useEffect(() => {
     const fetchFreshUserData = async () => {
       try {
-        const response = await fetch('/api/user', {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/user', {
           headers: {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'

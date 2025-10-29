@@ -1017,7 +1017,8 @@ export default function Dashboard() {
               useEffect(() => {
                 const fetchRecentTransactions = async () => {
                   try {
-                    const response = await fetch('/api/accounts/1/transactions');
+                    const { authenticatedFetch } = await import('@/lib/queryClient');
+                    const response = await authenticatedFetch('/api/accounts/1/transactions');
                     if (response.ok) {
                       const data = await response.json();
                       setRecentTransactions(data.slice(0, 5));

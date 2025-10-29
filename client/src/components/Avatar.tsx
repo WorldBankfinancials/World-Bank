@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { authenticatedFetch } from '@/lib/queryClient';
 
 export function Avatar({ size = 48 }: { size?: number }) {
   const [profileImageData, setProfileImageData] = useState<string>("");
 
   useEffect(() => {
-    // Fetch the latest profile image from API
-    fetch('/api/user')
+    // CRITICAL FIX: Use authenticatedFetch instead of raw fetch to include auth headers
+    authenticatedFetch('/api/user')
       .then(res => res.json())
       .then(data => {
         if (data.avatarUrl && data.avatarUrl.startsWith('data:image/')) {
