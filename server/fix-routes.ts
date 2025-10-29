@@ -145,7 +145,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         // Create initial checking account
         await storage.createAccount({
           userId: newUser.id,
-          accountNumber: newUser.accountNumber,
+          accountNumber: newUser.accountNumber || `${Math.floor(10000000 + Math.random() * 90000000)}`,
           accountType: 'checking',
           balance: '0.00',
           currency: 'USD',
@@ -321,13 +321,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         accountId: userData.accountId || `WB${Date.now()}`,
 
         // SERVER-CONTROLLED FIELDS (never trust client)
-        password: 'supabase_auth', // Marker indicating password is in Supabase Auth
+        passwordHash: 'supabase_auth', // Marker indicating password is in Supabase Auth
         transferPin: '0000', // Default PIN, user MUST change on first login
         role: 'customer', // Always customer for new registrations
         isVerified: false, // Admin must verify
         isOnline: true,
         isActive: false, // Admin must activate
-        balance: 0, // Always start at 0
+        balance: "0", // Always start at 0
       });
 
       // Create initial checking account
@@ -425,9 +425,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           role: 'customer',
           isVerified: true,
           isActive: true,
-          balance: 0,
+          balance: "0",
           transferPin: '0000',
-          password: 'supabase_auth', // Indicate password managed by Supabase Auth
+          passwordHash: 'supabase_auth', // Indicate password managed by Supabase Auth
           accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
           accountId: `WB${Date.now()}`,
         });
@@ -514,14 +514,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const primaryAccount = accounts[0];
 
       const transaction = await storage.createTransaction({
-        accountId: primaryAccount.id,
-        type: body.type,
+        fromAccountId: primaryAccount.id,
+        transactionType: body.type,
         amount: body.amount,
         description: body.description,
-        category: body.category || 'admin',
         status: body.status || 'completed',
         adminNotes: `Admin created transaction: ${body.description}`,
-        date: new Date()
+        createdAt: new Date()
       });
 
       // Update account balance if it's a credit/debit
@@ -562,13 +561,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Create transaction record
       await storage.createTransaction({
-        accountId: accountId,
-        type: body.type,
+        fromAccountId: accountId,
+        transactionType: body.type,
         amount: amountNum.toString(),
         description: body.description,
-        category: 'admin',
         status: 'completed',
-        date: new Date()
+        createdAt: new Date()
       });
 
       res.json({ 
@@ -652,7 +650,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const body = req.body as { username: string; password: string };
       const user = await storage.getUserByUsername(body.username);
 
-      if (!user || user.password !== body.password) {
+      if (!user || user.passwordHash !== body.password) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
@@ -824,7 +822,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Card not found' });
       }
 
-      if (card.userId !== user.id) {
+      // SECURITY: Verify card's account belongs to user
+      const account = await storage.getAccount(card.accountId);
+      if (!account || account.userId !== user.id) {
         console.warn(`🚫 Unauthorized card access: user ${req.user!.email} tried to access card ${cardId}`);
         return res.status(403).json({ error: 'Access denied' });
       }
@@ -847,7 +847,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const card = await storage.getCard(cardId);
-      if (!card || card.userId !== user.id) {
+      if (!card) {
+        return res.status(404).json({ error: 'Card not found' });
+      }
+
+      // SECURITY: Verify card's account belongs to user
+      const account = await storage.getAccount(card.accountId);
+      if (!account || account.userId !== user.id) {
         console.warn(`🚫 Unauthorized card lock attempt: user ${req.user!.email} tried to lock card ${cardId}`);
         return res.status(403).json({ error: 'Access denied' });
       }
@@ -871,7 +877,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const card = await storage.getCard(cardId);
-      if (!card || card.userId !== user.id) {
+      if (!card) {
+        return res.status(404).json({ error: 'Card not found' });
+      }
+
+      // SECURITY: Verify card's account belongs to user
+      const account = await storage.getAccount(card.accountId);
+      if (!account || account.userId !== user.id) {
         console.warn(`🚫 Unauthorized card settings update: user ${req.user!.email} tried to update card ${cardId}`);
         return res.status(403).json({ error: 'Access denied' });
       }
@@ -1105,13 +1117,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const messages = await storage.getUserMessages(user.id);
 
-      // Filter by conversationId if provided
-      const conversationId = req.query.conversationId as string | undefined;
-      const filteredMessages = conversationId 
-        ? messages.filter(msg => msg.conversationId === conversationId)
-        : messages;
-
-      res.json(filteredMessages);
+      // Note: Messages schema doesn't have conversationId, so we return all user messages
+      res.json(messages);
     } catch (error) {
       console.error('Error fetching messages:', error);
       res.status(500).json({ error: 'Failed to fetch messages' });
@@ -1160,14 +1167,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const senderRole = req.user!.role === 'admin' ? 'admin' : 'customer';
       const senderName = user.fullName || user.email;
 
-      // Create message with server-derived sender information
+      // Create message with correct schema properties
       const messageData = {
-        senderId: user.id,
-        senderName: senderName,
-        senderRole: senderRole,
-        recipientId: recipientId,
-        message: messageText,
-        conversationId: conversationId || user.id.toString(), // Default to user's own conversation
+        fromUserId: user.id,
+        toUserId: recipientId,
+        content: messageText,
         isRead: false,
       };
 
@@ -1521,13 +1525,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           supabaseUserId: authData.user.id,
           accountNumber: `ADMIN-${Math.floor(10000000 + Math.random() * 90000000)}`,
           accountId: `WB-ADMIN-${Date.now()}`,
-          password: 'supabase_auth', // Marker
+          passwordHash: 'supabase_auth', // Marker
           transferPin: '9999', // Admin PIN
           role: 'admin', // ADMIN ROLE
           isVerified: true,
           isOnline: true,
           isActive: true,
-          balance: 0,
+          balance: "0",
           dateOfBirth: '1990-01-01',
           address: 'World Bank HQ',
           city: 'Washington',
