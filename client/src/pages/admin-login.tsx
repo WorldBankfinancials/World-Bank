@@ -93,10 +93,9 @@ export default function AdminLogin() {
             </Button>
           </form>
 
-          <div className="mt-6 p-3 bg-blue-50 rounded-md">
-            <p className="text-sm text-blue-700 font-medium">Admin Credentials:</p>
-            <p className="text-sm text-blue-600">Username: admin</p>
-            <p className="text-sm text-blue-600">Password: admin123</p>
+          <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-yellow-800 font-medium">⚠️ Secure Access Required</p>
+            <p className="text-sm text-yellow-700">Contact your system administrator for admin credentials.</p>
           </div>
         </CardContent>
       </Card>
