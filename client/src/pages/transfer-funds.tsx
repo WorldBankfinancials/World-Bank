@@ -116,7 +116,7 @@ export default function TransferFunds() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleContinueTransfer = async () => {
+  const handleContinueTransfer = () => {
     if (!validateForm()) {
       toast({
         title: 'Incomplete Form',
@@ -126,6 +126,21 @@ export default function TransferFunds() {
       return;
     }
     
+    // Show PIN verification modal instead of directly submitting
+    setShowPinModal(true);
+  };
+  
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [transferPin, setTransferPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  
+  const handlePinSubmit = async () => {
+    if (!transferPin || transferPin.length !== 4) {
+      setPinError("Please enter a 4-digit PIN");
+      return;
+    }
+    
+    setPinError("");
     setIsProcessing(true);
     
     try {
@@ -149,7 +164,7 @@ export default function TransferFunds() {
       
       const total = amount + fee;
       
-      // Create the transfer
+      // Create the transfer with validated PIN
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/transfers', {
         method: 'POST',
@@ -166,11 +181,13 @@ export default function TransferFunds() {
           swiftCode: formData.swiftCode,
           purpose: formData.purpose,
           reference: formData.reference,
-          transferPin: null // PIN verified separately via /api/verify-pin
+          transferPin: transferPin
         })
       });
 
       if (response.ok) {
+        setShowPinModal(false);
+        setTransferPin('');
         toast({
           title: 'Transfer Initiated',
           description: `Transfer of $${amount.toFixed(2)} has been initiated successfully.`,
@@ -178,15 +195,11 @@ export default function TransferFunds() {
         window.location.href = '/transfer-processing';
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Transfer failed');
+        setPinError(errorData.message || 'Transfer failed');
       }
       
     } catch (error: any) {
-      toast({
-        title: 'Transfer Failed',
-        description: error.message || 'Unable to process transfer. Please try again.',
-        variant: 'destructive',
-      });
+      setPinError(error.message || 'Unable to process transfer. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -765,6 +778,61 @@ export default function TransferFunds() {
           </CardContent>
         </Card>
       </div>
+
+      {/* PIN Verification Modal */}
+      {showPinModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <CardTitle>Verify Transfer PIN</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="pin">Enter your 4-digit transfer PIN</Label>
+                <Input
+                  id="pin"
+                  type="password"
+                  maxLength={4}
+                  placeholder="••••"
+                  value={transferPin}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setTransferPin(value);
+                    setPinError('');
+                  }}
+                  className={pinError ? 'border-red-500' : ''}
+                  data-testid="input-pin"
+                />
+                {pinError && <p className="text-red-500 text-sm mt-1">{pinError}</p>}
+              </div>
+              
+              <div className="flex space-x-3">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => {
+                    setShowPinModal(false);
+                    setTransferPin('');
+                    setPinError('');
+                  }}
+                  disabled={isProcessing}
+                  data-testid="button-cancel-pin"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  onClick={handlePinSubmit}
+                  disabled={isProcessing || transferPin.length !== 4}
+                  data-testid="button-verify-pin"
+                >
+                  {isProcessing ? 'Verifying...' : 'Verify & Transfer'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <BottomNavigation />
     </div>
