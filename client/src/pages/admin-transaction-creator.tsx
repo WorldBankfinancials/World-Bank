@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { authenticatedFetch } from '@/lib/queryClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +36,7 @@ export default function AdminTransactionCreator() {
 
   const fetchAccounts = async () => {
     try {
-      const response = await fetch('/api/accounts');
+      const response = await authenticatedFetch('/api/accounts');
       if (response.ok) {
         const data = await response.json();
         setAccounts(data);
@@ -87,7 +88,7 @@ export default function AdminTransactionCreator() {
 
     try {
       // Create transaction using account-specific endpoint
-      const response = await fetch(`/api/admin/accounts/${selectedAccountId}/balance`, {
+      const response = await authenticatedFetch(`/api/admin/accounts/${selectedAccountId}/balance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

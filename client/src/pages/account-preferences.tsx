@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { authenticatedFetch } from '@/lib/queryClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import Header from '../components/Header';
@@ -50,7 +51,7 @@ export default function AccountPreferences() {
 
   const handleSave = async () => {
     try {
-      const response = await fetch('/api/user/preferences', {
+      const response = await authenticatedFetch('/api/user/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(preferences)

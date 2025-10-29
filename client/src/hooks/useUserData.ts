@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { authenticatedFetch } from '@/lib/queryClient';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface UserProfile {
@@ -39,7 +40,7 @@ export function useUserData() {
       if (!user?.email) return null;
       
       // Fetch user profile from backend based on authenticated email
-      const response = await fetch('/api/user/profile', {
+      const response = await authenticatedFetch('/api/user/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email })
@@ -67,7 +68,7 @@ export function useAccountData() {
     queryFn: async () => {
       if (!user?.email) return [];
       
-      const response = await fetch('/api/accounts/user', {
+      const response = await authenticatedFetch('/api/accounts/user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email })

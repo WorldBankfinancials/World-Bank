@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { authenticatedFetch } from '@/lib/queryClient';
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,7 @@ export default function FundManagement() {
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch('/api/admin/customers');
+      const response = await authenticatedFetch('/api/admin/customers');
       if (response.ok) {
         const data = await response.json();
         setCustomers(data);
@@ -94,7 +95,7 @@ export default function FundManagement() {
 
   const fetchTransactions = async () => {
     try {
-      const response = await fetch('/api/admin/transactions');
+      const response = await authenticatedFetch('/api/admin/transactions');
       if (response.ok) {
         const data = await response.json();
         setTransactions(data);
@@ -146,7 +147,7 @@ export default function FundManagement() {
       };
 
       // Create transaction record
-      const transactionResponse = await fetch('/api/admin/create-transaction', {
+      const transactionResponse = await authenticatedFetch('/api/admin/create-transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(transactionData)
@@ -157,7 +158,7 @@ export default function FundManagement() {
         const balanceChange = transactionType === "credit" ? 
           parseFloat(amount) : -parseFloat(amount);
         
-        const balanceResponse = await fetch('/api/admin/update-balance', {
+        const balanceResponse = await authenticatedFetch('/api/admin/update-balance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

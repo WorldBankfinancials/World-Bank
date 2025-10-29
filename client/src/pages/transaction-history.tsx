@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { authenticatedFetch } from '@/lib/queryClient';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -157,7 +158,7 @@ export default function TransactionHistory() {
 
   const createTransactionMutation = useMutation({
     mutationFn: async (data: TransactionFormData) => {
-      const response = await fetch('/api/admin/create-transaction', {
+      const response = await authenticatedFetch('/api/admin/create-transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
