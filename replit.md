@@ -11,19 +11,14 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### October 29, 2025 - Vercel-Ready Deployment Preparation
-**Objective:** Remove WebSocket server, implement Supabase Realtime exclusively, enable RLS policies, and create comprehensive authentication lookup.
+**Objective:** Remove WebSocket server, implement Supabase Realtime exclusively, enable RLS policies.
 
 **Accomplishments:**
 1. **WebSocket Server Removed** - Eliminated standalone WebSocket server (incompatible with Vercel)
 2. **Supabase Realtime Only** - All real-time features now use Supabase Realtime (Vercel-compatible)
 3. **Documents Table Created** - Added verification document upload table with proper schema
-4. **Comprehensive Authentication** - New `/api/auth/comprehensive-lookup` endpoint that searches:
-   - Supabase Auth for user authentication
-   - Database public schema for banking profile
-   - All related tables (accounts, cards, transactions, investments, alerts, tickets)
-   - Returns complete user data in single request
-5. **RLS Policies Ready** - Complete Row Level Security policies for all 15 tables
-6. **Zero Unused Tables** - All database tables verified as actively used
+4. **RLS Policies Ready** - Complete Row Level Security policies for all 15 tables
+5. **Zero Unused Tables** - All database tables verified as actively used
 
 **Database Tables (15 total, all used):**
 - bank_users, bank_accounts, transactions, cards, investments
