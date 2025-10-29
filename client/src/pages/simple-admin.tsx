@@ -134,81 +134,175 @@ export default function SimpleAdmin() {
   const [user, setUser] = useState<any>(null);
 
   const fetchUserData = async () => {
+    const token = sessionStorage.getItem('adminToken');
+    if (!token) return; // Short-circuit if no token to avoid invalid Authorization headers
+    
     try {
-      const response = await fetch('/api/user');
+      const response = await fetch('/api/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
+      } else {
+        toast({
+          title: 'Data Fetch Failed',
+          description: 'Unable to load user profile data. Please refresh the page.',
+          variant: 'destructive'
+        });
       }
     } catch (error) {
-      // console.error('Failed to fetch user data:', error);
+      toast({
+        title: 'Connection Error',
+        description: 'Failed to connect to server. Please check your connection and try again.',
+        variant: 'destructive'
+      });
     }
   };
 
   const fetchPendingRegistrations = async () => {
+    const token = sessionStorage.getItem('adminToken');
+    if (!token) return; // Short-circuit if no token
+    
     try {
-      const response = await fetch('/api/admin/pending-registrations');
+      const response = await fetch('/api/admin/pending-registrations', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setPendingRegistrations(data);
+      } else {
+        toast({
+          title: 'Data Fetch Failed',
+          description: 'Unable to load pending registrations. Please refresh the page.',
+          variant: 'destructive'
+        });
       }
     } catch (error) {
-      // console.error('Error fetching pending registrations:', error);
+      toast({
+        title: 'Connection Error',
+        description: 'Failed to load pending registrations. Please check your connection.',
+        variant: 'destructive'
+      });
     }
   };
 
   const fetchPendingTransfers = async () => {
+    const token = sessionStorage.getItem('adminToken');
+    if (!token) return; // Short-circuit if no token
+    
     try {
-      const response = await fetch('/api/admin/pending-transfers');
+      const response = await fetch('/api/admin/pending-transfers', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setTransfers(data || []);
+      } else {
+        setTransfers([]);
+        toast({
+          title: 'Data Fetch Failed',
+          description: 'Unable to load pending transfers. Showing empty list.',
+          variant: 'destructive'
+        });
       }
     } catch (error) {
-      console.log('No pending transfers endpoint yet');
       setTransfers([]);
+      toast({
+        title: 'Connection Error',
+        description: 'Failed to load pending transfers. Please check your connection.',
+        variant: 'destructive'
+      });
     }
   };
 
   const fetchSupportTickets = async () => {
+    const token = sessionStorage.getItem('adminToken');
+    if (!token) return; // Short-circuit if no token
+    
     try {
-      const response = await fetch('/api/admin/support-tickets');
+      const response = await fetch('/api/admin/support-tickets', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setTickets(data || []);
+      } else {
+        // Try fallback endpoint
+        try {
+          const token = sessionStorage.getItem('adminToken');
+          const response = await fetch('/api/support-tickets', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            const formattedTickets = data.map((t: any) => ({
+              id: t.id,
+              subject: t.description?.substring(0, 50) || 'Support Ticket',
+              customerName: t.userId ? `User ${t.userId}` : 'Unknown',
+              priority: t.priority || 'Medium',
+              status: t.status || 'Open',
+              createdAt: t.createdAt,
+              description: t.description || ''
+            }));
+            setTickets(formattedTickets);
+          } else {
+            setTickets([]);
+            toast({
+              title: 'Data Fetch Failed',
+              description: 'Unable to load support tickets. Please refresh the page.',
+              variant: 'destructive'
+            });
+          }
+        } catch (e) {
+          setTickets([]);
+          toast({
+            title: 'Connection Error',
+            description: 'Failed to load support tickets. Please check your connection.',
+            variant: 'destructive'
+          });
+        }
       }
     } catch (error) {
-      console.log('Fetching support tickets from database');
-      try {
-        const response = await fetch('/api/support-tickets');
-        if (response.ok) {
-          const data = await response.json();
-          const formattedTickets = data.map((t: any) => ({
-            id: t.id,
-            subject: t.description?.substring(0, 50) || 'Support Ticket',
-            customerName: t.userId ? `User ${t.userId}` : 'Unknown',
-            priority: t.priority || 'Medium',
-            status: t.status || 'Open',
-            createdAt: t.createdAt,
-            description: t.description || ''
-          }));
-          setTickets(formattedTickets);
-        }
-      } catch (e) {
-        setTickets([]);
-      }
+      setTickets([]);
+      toast({
+        title: 'Connection Error',
+        description: 'Failed to load support tickets. Please check your connection.',
+        variant: 'destructive'
+      });
     }
   };
 
   const fetchCustomers = async () => {
+    const token = sessionStorage.getItem('adminToken');
+    if (!token) return; // Short-circuit if no token
+    
     try {
-      const response = await fetch('/api/admin/customers');
+      const response = await fetch('/api/admin/customers', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setCustomerList(data || []);
       } else {
-        console.log('Fetching all users as customers');
-        const response = await fetch('/api/users');
+        // Try fallback endpoint
+        const response = await fetch('/api/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (response.ok) {
           const data = await response.json();
           const formattedCustomers = data.map((u: any) => ({
@@ -228,11 +322,22 @@ export default function SimpleAdmin() {
             isActive: u.isActive !== false
           }));
           setCustomerList(formattedCustomers);
+        } else {
+          setCustomerList([]);
+          toast({
+            title: 'Data Fetch Failed',
+            description: 'Unable to load customer list. Please refresh the page.',
+            variant: 'destructive'
+          });
         }
       }
     } catch (error) {
-      console.error('Error fetching customers:', error);
       setCustomerList([]);
+      toast({
+        title: 'Data Fetch Failed',
+        description: 'Unable to load customer list. Please refresh the page.',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -267,8 +372,8 @@ export default function SimpleAdmin() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    fetchUserData();
     if (isAuthenticated) {
+      fetchUserData();
       fetchPendingRegistrations();
       fetchPendingTransfers();
       fetchSupportTickets();
@@ -343,10 +448,12 @@ export default function SimpleAdmin() {
         return;
       }
 
+      const token = sessionStorage.getItem('adminToken');
       const response = await fetch(`/api/admin/approve-registration/${registrationId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ initialBalance: parseFloat(initialBalance) })
       });
@@ -388,10 +495,12 @@ export default function SimpleAdmin() {
         return;
       }
 
+      const token = sessionStorage.getItem('adminToken');
       const response = await fetch(`/api/admin/reject-registration/${registrationId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ reason })
       });
@@ -478,7 +587,12 @@ export default function SimpleAdmin() {
   const handleEditCustomer = async (customer: Customer) => {
     // Fetch complete user data from API to populate edit form
     try {
-      const response = await fetch('/api/user');
+      const token = sessionStorage.getItem('adminToken');
+      const response = await fetch('/api/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         const userData = await response.json();
         setEditingCustomer(customer);
@@ -522,10 +636,12 @@ export default function SimpleAdmin() {
     if (!editingCustomer) return;
     
     try {
+      const token = sessionStorage.getItem('adminToken');
       const response = await fetch(`/api/admin/customers/${editingCustomer.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           fullName: editForm.fullName,
@@ -645,12 +761,13 @@ export default function SimpleAdmin() {
       
       const uploadCompressedImage = async (base64Image: string) => {
         try {
-          // console.log(`Uploading photo for customer ${editingCustomer.id}...`);
+          const token = sessionStorage.getItem('adminToken');
           
           const response = await fetch(`/api/admin/customers/${editingCustomer.id}`, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
               avatarUrl: base64Image
@@ -696,10 +813,12 @@ export default function SimpleAdmin() {
 
   const handleTopUpBalance = async (customerId: number, amount: number) => {
     try {
+      const token = sessionStorage.getItem('adminToken');
       const response = await fetch(`/api/admin/customers/${customerId}/balance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ amount, description: `Admin balance top-up: $${amount}` })
       });
@@ -742,10 +861,12 @@ export default function SimpleAdmin() {
     }
 
     try {
+      const token = sessionStorage.getItem('adminToken');
       const response = await fetch('/api/admin/create-transaction', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           customerId: selectedCustomerForTransaction,
@@ -758,10 +879,12 @@ export default function SimpleAdmin() {
       });
 
       if (response.ok) {
+        const token = sessionStorage.getItem('adminToken');
         const balanceResponse = await fetch(`/api/admin/customers/${selectedCustomerForTransaction}/balance`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ 
             amount: transactionType === 'credit' ? amount : -amount,
@@ -814,11 +937,12 @@ export default function SimpleAdmin() {
     const accountId = accountIdMap[selectedAccountType as keyof typeof accountIdMap];
 
     try {
-      // Use the correct account-specific endpoint
+      const token = sessionStorage.getItem('adminToken');
       const response = await fetch(`/api/admin/accounts/${accountId}/balance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           amount: amount.toString(),
