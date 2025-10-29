@@ -47,7 +47,6 @@ export default function History() {
         const data = await response.json();
         setAccounts(data);
       } else {
-        console.error('Failed to fetch accounts:', await response.text());
         toast({
           title: 'Error loading accounts',
           description: 'Unable to load your accounts. Please try again.',
@@ -55,7 +54,6 @@ export default function History() {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch accounts:', error);
       toast({
         title: 'Network error',
         description: 'Unable to connect to the server. Please check your connection.',
@@ -83,7 +81,6 @@ export default function History() {
       
       setTransactions(allTransactions);
     } catch (error) {
-      console.error('Failed to fetch transactions:', error);
       toast({
         title: 'Error loading transactions',
         description: 'Unable to load transaction history. Please try again.',

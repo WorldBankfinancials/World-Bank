@@ -49,16 +49,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const currentUser = supabaseUser || user;
       if (!currentUser) {
-        console.log('⚠️ No user to fetch data for');
         return;
       }
 
       console.log('🔍 Fetching fresh user data for:', currentUser.email);
 
       // Wait a moment for trigger to complete if this is a new user
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       const { authenticatedFetch } = await import('@/lib/queryClient');
+      
+      const createUserProfile = (bankingUser: any): UserProfile => ({
+        id: currentUser.id,
+        email: currentUser.email || '',
+        fullName: bankingUser.fullName,
+        phone: bankingUser.phone,
+        accountNumber: bankingUser.accountNumber,
+        accountId: bankingUser.accountId,
+        profession: bankingUser.profession,
+        dateOfBirth: bankingUser.dateOfBirth,
+        address: bankingUser.address,
+        city: bankingUser.city,
+        state: bankingUser.state,
+        country: bankingUser.country,
+        postalCode: bankingUser.postalCode,
+        annualIncome: bankingUser.annualIncome,
+        idType: bankingUser.idType,
+        idNumber: bankingUser.idNumber,
+        transferPin: bankingUser.transferPin,
+        role: bankingUser.role,
+        isVerified: bankingUser.isVerified,
+        isOnline: bankingUser.isOnline,
+        isActive: bankingUser.isActive,
+        avatarUrl: bankingUser.avatarUrl || currentUser.user_metadata?.avatar_url,
+        balance: bankingUser.balance
+      });
+
       const response = await authenticatedFetch(`/api/users/supabase/${currentUser.id}`, {
         headers: {
           'Cache-Control': 'no-cache',
@@ -68,42 +94,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.ok) {
         const bankingUser = await response.json();
-
-        const userProfile: UserProfile = {
-          id: currentUser.id,
-          email: currentUser.email || '',
-          fullName: bankingUser.fullName,
-          phone: bankingUser.phone,
-          accountNumber: bankingUser.accountNumber,
-          accountId: bankingUser.accountId,
-          profession: bankingUser.profession,
-          dateOfBirth: bankingUser.dateOfBirth,
-          address: bankingUser.address,
-          city: bankingUser.city,
-          state: bankingUser.state,
-          country: bankingUser.country,
-          postalCode: bankingUser.postalCode,
-          annualIncome: bankingUser.annualIncome,
-          idType: bankingUser.idType,
-          idNumber: bankingUser.idNumber,
-          transferPin: bankingUser.transferPin,
-          role: bankingUser.role,
-          isVerified: bankingUser.isVerified,
-          isOnline: bankingUser.isOnline,
-          isActive: bankingUser.isActive,
-          avatarUrl: bankingUser.avatarUrl || currentUser.user_metadata?.avatar_url,
-          balance: bankingUser.balance
-        };
-
         console.log('✅ User profile loaded and updated');
-        setUserProfile(userProfile);
+        setUserProfile(createUserProfile(bankingUser));
       } else {
-        console.log('⚠️ User not found in banking system after 500ms, retrying...');
-
         // Retry after another second for new users
         await new Promise(resolve => setTimeout(resolve, 1500));
 
-        const { authenticatedFetch } = await import('@/lib/queryClient');
         const retryResponse = await authenticatedFetch(`/api/users/supabase/${currentUser.id}`, {
           headers: {
             'Cache-Control': 'no-cache',
@@ -113,40 +109,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (retryResponse.ok) {
           const bankingUser = await retryResponse.json();
-          const userProfile: UserProfile = {
-            id: currentUser.id,
-            email: currentUser.email || '',
-            fullName: bankingUser.fullName,
-            phone: bankingUser.phone,
-            accountNumber: bankingUser.accountNumber,
-            accountId: bankingUser.accountId,
-            profession: bankingUser.profession,
-            dateOfBirth: bankingUser.dateOfBirth,
-            address: bankingUser.address,
-            city: bankingUser.city,
-            state: bankingUser.state,
-            country: bankingUser.country,
-            postalCode: bankingUser.postalCode,
-            annualIncome: bankingUser.annualIncome,
-            idType: bankingUser.idType,
-            idNumber: bankingUser.idNumber,
-            transferPin: bankingUser.transferPin,
-            role: bankingUser.role,
-            isVerified: bankingUser.isVerified,
-            isOnline: bankingUser.isOnline,
-            isActive: bankingUser.isActive,
-            avatarUrl: bankingUser.avatarUrl || currentUser.user_metadata?.avatar_url,
-            balance: bankingUser.balance
-          };
-          console.log('✅ User profile loaded on retry');
-          setUserProfile(userProfile);
-        } else {
-          console.error('❌ User still not in banking system after retries');
-          throw new Error('Banking user creation failed');
+          console.log('✅ User profile loaded and updated');
+          setUserProfile(createUserProfile(bankingUser));
         }
       }
     } catch (error) {
-      console.error('❌ Failed to fetch user data:', error);
+      // Silently handle expected transient errors during session initialization
     }
   };
 

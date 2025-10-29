@@ -13,7 +13,7 @@ async function throwIfResNotOk(res: Response) {
  * EXPORTED for use in components that need direct fetch() calls
  * CRITICAL FIX: Waits for session with retry logic instead of proceeding without auth
  */
-export async function getAuthHeaders(retries = 3, delayMs = 500): Promise<Record<string, string>> {
+export async function getAuthHeaders(retries = 5, delayMs = 300): Promise<Record<string, string>> {
   for (let attempt = 0; attempt < retries; attempt++) {
     const { data: { session } } = await supabase.auth.getSession();
     
@@ -25,14 +25,12 @@ export async function getAuthHeaders(retries = 3, delayMs = 500): Promise<Record
     
     // If no session and not last attempt, wait and retry
     if (attempt < retries - 1) {
-      console.warn(`⚠️ No Supabase session on attempt ${attempt + 1}/${retries}, retrying in ${delayMs}ms...`);
       await new Promise(resolve => setTimeout(resolve, delayMs));
-      delayMs *= 2; // Exponential backoff
+      delayMs = Math.min(delayMs * 1.5, 2000); // Exponential backoff with cap
     }
   }
   
   // After all retries failed, throw error instead of returning empty headers
-  console.error('❌ CRITICAL: No Supabase session after all retries - authentication required');
   throw new Error('Authentication required: No valid session available. Please log in.');
 }
 
@@ -61,14 +59,8 @@ export async function authenticatedFetch(
       credentials: "include",
     });
     
-    // Log failed requests for debugging
-    if (!response.ok) {
-      console.error(`❌ API request failed: ${options?.method || 'GET'} ${url} - ${response.status} ${response.statusText}`);
-    }
-    
     return response;
   } catch (error) {
-    console.error(`❌ Authentication error for ${url}:`, error);
     throw error;
   }
 }

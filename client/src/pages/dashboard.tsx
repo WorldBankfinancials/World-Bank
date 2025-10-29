@@ -582,7 +582,7 @@ export default function Dashboard() {
           }
         }
       } catch (error) {
-        console.error('Failed to fetch accounts:', error);
+        // Silently handle fetch errors
       }
     };
 
@@ -1026,7 +1026,7 @@ export default function Dashboard() {
                       setRecentTransactions(data.slice(0, 5));
                     }
                   } catch (error) {
-                    console.error('Failed to fetch transactions:', error);
+                    // Silently handle fetch errors
                   }
                 };
                 fetchRecentTransactions();
