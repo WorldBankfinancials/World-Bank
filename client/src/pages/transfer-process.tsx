@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { authenticatedFetch } from '@/lib/queryClient';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,7 @@ export default function TransferProcess({ transferData, onBack, onComplete }: Tr
   const handlePinSubmit = async () => {
     // Verify PIN with backend
     try {
-      const verifyResponse = await authenticatedFetch('/api/verify-pin', {
+      const verifyResponse = await fetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin })
@@ -73,7 +72,7 @@ export default function TransferProcess({ transferData, onBack, onComplete }: Tr
 
     try {
       // Submit transfer for admin approval
-      const response = await authenticatedFetch('/api/transactions', {
+      const response = await fetch('/api/transactions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

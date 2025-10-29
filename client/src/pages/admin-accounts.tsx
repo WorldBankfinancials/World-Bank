@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { authenticatedFetch } from '@/lib/queryClient';
 
 import { useEffect } from "react";
 import { Button } from '@/components/ui/button';
@@ -44,7 +43,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
 
   const fetchAccounts = async () => {
     try {
-      const response = await authenticatedFetch('/api/accounts');
+      const response = await fetch('/api/accounts');
       if (response.ok) {
         const accountsData = await response.json();
         setAccounts(accountsData);
@@ -68,7 +67,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
         isActive: true
       };
 
-      const response = await authenticatedFetch('/api/admin/accounts', {
+      const response = await fetch('/api/admin/accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(accountData)
@@ -104,7 +103,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
     if (!editingAccount) return;
 
     try {
-      const response = await authenticatedFetch(`/api/admin/accounts/${editingAccount.id}`, {
+      const response = await fetch(`/api/admin/accounts/${editingAccount.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -138,7 +137,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
     if (!confirm('Are you sure you want to delete this account?')) return;
 
     try {
-      const response = await authenticatedFetch(`/api/admin/accounts/${accountId}`, {
+      const response = await fetch(`/api/admin/accounts/${accountId}`, {
         method: 'DELETE'
       });
 

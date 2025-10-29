@@ -1,5 +1,4 @@
 import Header from "@/components/Header";
-import { authenticatedFetch } from '@/lib/queryClient';
 import BottomNavigation from "@/components/BottomNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +38,7 @@ export default function Transfer() {
     queryKey: ['/api/user', userProfile?.email],
     queryFn: async () => {
       if (!userProfile?.email) return null;
-      const response = await authenticatedFetch(`/api/user?email=${encodeURIComponent(userProfile.email)}`);
+      const response = await fetch(`/api/user?email=${encodeURIComponent(userProfile.email)}`);
       if (!response.ok) throw new Error('Failed to fetch user');
       return response.json();
     },
@@ -116,7 +115,7 @@ export default function Transfer() {
 
     // Verify PIN with backend
     try {
-      const pinResponse = await authenticatedFetch('/api/verify-pin', {
+      const pinResponse = await fetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -156,7 +155,7 @@ export default function Transfer() {
       
       
 
-      const response = await authenticatedFetch('/api/transfers', {
+      const response = await fetch('/api/transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(transferData)

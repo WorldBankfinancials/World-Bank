@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { authenticatedFetch } from '@/lib/queryClient';
 import { 
   Plus, 
   DollarSign, 
@@ -40,7 +39,7 @@ export default function AdminTransactionDashboard() {
   const fetchTransactions = async () => {
     setLoading(true);
     try {
-      const response = await authenticatedFetch('/api/admin/transactions');
+      const response = await fetch('/api/admin/transactions');
       if (response.ok) {
         const data = await response.json();
         setTransactions(data);
@@ -70,7 +69,7 @@ export default function AdminTransactionDashboard() {
 
   const createTransaction = async () => {
     try {
-      const response = await authenticatedFetch('/api/admin/create-transaction', {
+      const response = await fetch('/api/admin/create-transaction', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

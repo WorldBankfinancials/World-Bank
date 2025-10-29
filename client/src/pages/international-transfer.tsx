@@ -1,5 +1,4 @@
 import type { User } from "@shared/schema";
-import { authenticatedFetch } from '@/lib/queryClient';
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -76,7 +75,7 @@ export default function InternationalTransfer() {
         userEmail: user?.email!
       };
       
-      const response = await authenticatedFetch('/api/international-transfers', {
+      const response = await fetch('/api/international-transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(transferData)
