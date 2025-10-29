@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/lib/supabase";
@@ -25,6 +25,7 @@ import {
 
 export default function AddMoney() {
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
   const { data: user, isLoading} = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -169,7 +170,10 @@ export default function AddMoney() {
       setAmount("");
       setSelectedMethod("");
       
-      window.location.reload();
+      // Invalidate queries to refetch fresh data instead of reloading
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
     } catch (error: any) {
       alert(error.message || 'Failed to add money');
     } finally {
