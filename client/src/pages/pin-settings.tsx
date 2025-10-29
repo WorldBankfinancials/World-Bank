@@ -81,7 +81,8 @@ export default function PinSettings() {
     setShowConfirmDialog(false);
 
     try {
-      const response = await fetch('/api/user/change-pin', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/user/change-pin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

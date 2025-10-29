@@ -37,9 +37,10 @@ export default function AdminTransactionDashboard() {
   });
 
   const fetchTransactions = async () => {
+    const { authenticatedFetch } = await import('@/lib/queryClient');
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/transactions');
+      const response = await authenticatedFetch('/api/admin/transactions');
       if (response.ok) {
         const data = await response.json();
         setTransactions(data);
@@ -68,8 +69,9 @@ export default function AdminTransactionDashboard() {
   }, []);
 
   const createTransaction = async () => {
+    const { authenticatedFetch } = await import('@/lib/queryClient');
     try {
-      const response = await fetch('/api/admin/create-transaction', {
+      const response = await authenticatedFetch('/api/admin/create-transaction', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

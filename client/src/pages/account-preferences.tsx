@@ -49,8 +49,9 @@ export default function AccountPreferences() {
   });
 
   const handleSave = async () => {
+    const { authenticatedFetch } = await import('@/lib/queryClient');
     try {
-      const response = await fetch('/api/user/preferences', {
+      const response = await authenticatedFetch('/api/user/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(preferences)

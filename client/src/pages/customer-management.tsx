@@ -96,7 +96,8 @@ export default function CustomerManagement() {
   // Verify customer mutation
   const verifyCustomerMutation = useMutation({
     mutationFn: async (customerId: number) => {
-      const response = await fetch(`/api/admin/customers/${customerId}/verify`, {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/customers/${customerId}/verify`, {
         method: "POST"
       });
       return response.json();

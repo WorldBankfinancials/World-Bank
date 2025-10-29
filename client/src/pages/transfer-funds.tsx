@@ -150,7 +150,8 @@ export default function TransferFunds() {
       const total = amount + fee;
       
       // Create the transfer
-      const response = await fetch('/api/transfers', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

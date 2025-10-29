@@ -70,7 +70,8 @@ export default function FundManagement() {
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch('/api/admin/customers');
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/admin/customers');
       if (response.ok) {
         const data = await response.json();
         setCustomers(data);
@@ -94,7 +95,8 @@ export default function FundManagement() {
 
   const fetchTransactions = async () => {
     try {
-      const response = await fetch('/api/admin/transactions');
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/admin/transactions');
       if (response.ok) {
         const data = await response.json();
         setTransactions(data);

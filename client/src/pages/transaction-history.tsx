@@ -157,7 +157,8 @@ export default function TransactionHistory() {
 
   const createTransactionMutation = useMutation({
     mutationFn: async (data: TransactionFormData) => {
-      const response = await fetch('/api/admin/create-transaction', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/admin/create-transaction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

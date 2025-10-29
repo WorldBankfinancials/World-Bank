@@ -43,7 +43,8 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
 
   const fetchAccounts = async () => {
     try {
-      const response = await fetch('/api/accounts');
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/accounts');
       if (response.ok) {
         const accountsData = await response.json();
         setAccounts(accountsData);
@@ -67,7 +68,8 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
         isActive: true
       };
 
-      const response = await fetch('/api/admin/accounts', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/admin/accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(accountData)
