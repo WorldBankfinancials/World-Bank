@@ -17,16 +17,11 @@ export function setupTransferRoutes(app: Express) {
         recipientCountry,
         bankName,
         swiftCode,
-        transferPin,
-        userEmail
+        transferPin
       } = req.body;
 
-      // Require user email for authentication
-      if (!userEmail) {
-        return res.status(401).json({ message: "User email required for authentication" });
-      }
-      
-      const user = await (storage as any).getUserByEmail(userEmail);
+      // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
+      const user = await (storage as any).getUserByEmail(req.user!.email);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -67,16 +62,11 @@ export function setupTransferRoutes(app: Express) {
         swiftCode,
         accountNumber,
         transferPurpose,
-        transferPin,
-        userEmail
+        transferPin
       } = req.body;
 
-      // Require user email for authentication
-      if (!userEmail) {
-        return res.status(401).json({ message: "User email required for authentication" });
-      }
-      
-      const user = await (storage as any).getUserByEmail(userEmail);
+      // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
+      const user = await (storage as any).getUserByEmail(req.user!.email);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
