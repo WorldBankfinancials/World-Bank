@@ -1588,6 +1588,68 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   });
 
   // Admin customers endpoint
+  // Get all pending transfers for admin review
+  app.get('/api/admin/pending-transfers', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const allTransfers = await storage.getAllTransactions();
+      const transfers = allTransfers.filter((t: any) => t.status === 'pending');
+      
+      // Format for admin dashboard
+      const formattedTransfers = transfers.map((t: any) => ({
+        id: t.id,
+        amount: t.amount,
+        currency: t.currency || 'USD',
+        recipientName: t.recipientName || 'Unknown',
+        recipientBank: t.recipientBank || 'Unknown',
+        customerName: t.fromAccountId ? `Account ${t.fromAccountId}` : 'Unknown',
+        customerEmail: 'customer@worldbank.com', // Would need to join with users table
+        createdAt: t.createdAt,
+        status: t.status
+      }));
+
+      res.json(formattedTransfers);
+    } catch (error: any) {
+      console.error('Error fetching pending transfers:', error);
+      res.status(500).json({ message: 'Failed to fetch pending transfers', error: error.message });
+    }
+  });
+
+  // Get all support tickets for admin view
+  app.get('/api/admin/support-tickets', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const tickets = await storage.getSupportTickets();
+      
+      // Format for admin dashboard
+      const formattedTickets = await Promise.all(tickets.map(async (t) => {
+        // Try to get user info
+        let customerName = `User ${t.userId}`;
+        try {
+          const user = await storage.getUser(t.userId);
+          if (user) {
+            customerName = user.fullName || user.email || customerName;
+          }
+        } catch (e) {
+          // Use default
+        }
+
+        return {
+          id: t.id,
+          subject: t.description?.substring(0, 50) || 'Support Ticket',
+          customerName,
+          priority: t.priority || 'Medium',
+          status: t.status || 'Open',
+          createdAt: t.createdAt,
+          description: t.description || ''
+        };
+      }));
+
+      res.json(formattedTickets);
+    } catch (error: any) {
+      console.error('Error fetching support tickets:', error);
+      res.status(500).json({ message: 'Failed to fetch support tickets', error: error.message });
+    }
+  });
+
   app.get('/api/admin/customers', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const customers = await storage.getAllUsers();
