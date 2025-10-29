@@ -26,9 +26,9 @@ export async function createTransferForApproval(data: TransferApprovalData) {
 
     // Create transaction record
     const transaction = await storage.createTransaction({
-      date: new Date(),
-      accountId: fromAccount.id,
-      type: data.transferType,
+      createdAt: new Date(),
+      fromAccountId: fromAccount.id,
+      transactionType: data.transferType,
       amount: data.amount.toString(),
       description: `Transfer to ${data.recipientName} - ${data.purpose}`,
       status: 'pending_approval',
@@ -36,6 +36,7 @@ export async function createTransferForApproval(data: TransferApprovalData) {
       recipientCountry: 'Unknown',
       bankName: data.bankName,
       swiftCode: '',
+      transferPurpose: data.purpose,
       adminNotes: null
     });
 

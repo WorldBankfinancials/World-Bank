@@ -216,7 +216,7 @@ export class MemStorage implements IStorage {
     const user: User = {
       id,
       username: userData.username || '',
-      password: userData.password || '',
+      passwordHash: userData.passwordHash || '',
       fullName: userData.fullName || '',
       email: userData.email || '',
       phone: userData.phone || '',
@@ -239,7 +239,7 @@ export class MemStorage implements IStorage {
       isOnline: userData.isOnline || false,
       isActive: userData.isActive || false,
       avatarUrl: userData.avatarUrl || null,
-      balance: userData.balance || 0,
+      balance: userData.balance || "0.00",
       supabaseUserId: userData.supabaseUserId || null,
       lastLogin: userData.lastLogin || null,
       createdByAdmin: userData.createdByAdmin || null,
@@ -276,7 +276,7 @@ export class MemStorage implements IStorage {
   async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
     const user = this.users.get(id);
     if (user) {
-      const updatedUser = { ...user, balance: amount, updatedAt: new Date() };
+      const updatedUser = { ...user, balance: amount.toString(), updatedAt: new Date() };
       this.users.set(id, updatedUser);
       await this.savePersistedData();
       return updatedUser;
@@ -342,7 +342,7 @@ export class MemStorage implements IStorage {
 
   async getAccountTransactions(accountId: number, limit?: number): Promise<Transaction[]> {
     let txns = Array.from(this.transactions.values())
-      .filter(t => t.accountId === accountId)
+      .filter(t => t.fromAccountId === accountId || t.toAccountId === accountId)
       .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
     
     if (limit) {
@@ -356,14 +356,25 @@ export class MemStorage implements IStorage {
     const id = this.currentTransactionId++;
     const transaction: Transaction = {
       id,
-      accountId: transactionData.accountId || 0,
-      type: transactionData.type || 'debit',
+      fromAccountId: transactionData.fromAccountId || null,
+      toAccountId: transactionData.toAccountId || null,
+      fromUserId: transactionData.fromUserId || null,
+      toUserId: transactionData.toUserId || null,
+      transactionId: transactionData.transactionId || null,
+      transactionType: transactionData.transactionType || null,
       amount: transactionData.amount || '0',
-      description: transactionData.description || '',
+      description: transactionData.description || null,
+      currency: transactionData.currency || null,
       category: transactionData.category || null,
-      date: transactionData.date || new Date(),
+      createdAt: transactionData.createdAt || new Date(),
+      updatedAt: new Date(),
       status: transactionData.status || 'pending',
+      referenceNumber: transactionData.referenceNumber || null,
+      fee: transactionData.fee || null,
+      exchangeRate: transactionData.exchangeRate || null,
+      countryCode: transactionData.countryCode || null,
       recipientName: transactionData.recipientName || null,
+      recipientAccount: transactionData.recipientAccount || null,
       recipientAddress: transactionData.recipientAddress || null,
       recipientCountry: transactionData.recipientCountry || null,
       bankName: transactionData.bankName || null,
@@ -373,9 +384,7 @@ export class MemStorage implements IStorage {
       approvedBy: transactionData.approvedBy || null,
       approvedAt: transactionData.approvedAt || null,
       rejectedBy: transactionData.rejectedBy || null,
-      rejectedAt: transactionData.rejectedAt || null,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      rejectedAt: transactionData.rejectedAt || null
     };
     
     this.transactions.set(id, transaction);
@@ -392,9 +401,9 @@ export class MemStorage implements IStorage {
       ...transaction,
       status,
       adminNotes: notes || transaction.adminNotes,
-      approvedBy: status === 'approved' ? adminId.toString() : transaction.approvedBy,
+      approvedBy: status === 'approved' ? adminId : transaction.approvedBy,
       approvedAt: status === 'approved' ? now : transaction.approvedAt,
-      rejectedBy: status === 'rejected' ? adminId.toString() : transaction.rejectedBy,
+      rejectedBy: status === 'rejected' ? adminId : transaction.rejectedBy,
       rejectedAt: status === 'rejected' ? now : transaction.rejectedAt,
       updatedAt: now
     };

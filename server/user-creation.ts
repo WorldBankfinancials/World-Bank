@@ -19,7 +19,7 @@ export async function createNewUserWithUniqueData(userData: Partial<InsertUser> 
   // Create new user with unique data - NO automatic accounts
   const newUser = await storage.createUser({
     username: userData.username || `user_${userId}`,
-    password: userData.password || "password123",
+    passwordHash: userData.passwordHash || "password123",
     fullName: userData.fullName || `New Customer ${userId}`,
     email: userData.email || `user${userId}@example.com`,
     phone: userData.phone || `+1-555-${String(userId).slice(-4)}`,
@@ -37,7 +37,7 @@ export async function createNewUserWithUniqueData(userData: Partial<InsertUser> 
     idNumber: userData.idNumber || `DL${userId}`,
     transferPin: userData.transferPin || "1234",
     role: userData.role || "customer",
-    balance: userData.balance || 0.00,
+    balance: userData.balance || "0.00",
     isVerified: false,
     isOnline: false,
     isActive: false,

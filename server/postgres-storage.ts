@@ -170,7 +170,7 @@ export class PostgresStorage implements IStorage {
           is_verified, is_online, is_active, avatar_url, balance, supabase_user_id,
           last_login, created_by_admin, modified_by_admin, admin_notes
         ) VALUES (
-          ${user.username}, ${user.password}, ${user.fullName}, ${emailVal}, ${phoneVal},
+          ${user.username}, ${user.passwordHash}, ${user.fullName}, ${emailVal}, ${phoneVal},
           ${user.accountNumber}, ${user.accountId}, ${professionVal}, ${dobVal},
           ${addressVal}, ${cityVal}, ${stateVal}, ${countryVal}, ${postalCodeVal}, ${nationalityVal},
           ${annualIncomeVal}, ${idTypeVal}, ${idNumberVal}, ${transferPinVal}, ${roleVal},
@@ -352,12 +352,12 @@ export class PostgresStorage implements IStorage {
       
       const result = await sql`
         INSERT INTO public.transactions (
-          account_id, type, amount, description, date, status,
+          from_account_id, transaction_type, amount, description, created_at, status,
           recipient_name, recipient_address, recipient_country, 
           bank_name, swift_code, transfer_purpose, admin_notes, category,
           approved_by, approved_at, rejected_by, rejected_at
         ) VALUES (
-          ${transaction.accountId}, ${transaction.type}, ${transaction.amount}, ${transaction.description}, ${transaction.date}, ${statusVal},
+          ${transaction.fromAccountId}, ${transaction.transactionType}, ${transaction.amount}, ${transaction.description}, ${transaction.createdAt || new Date()}, ${statusVal},
           ${recipientNameVal}, ${recipientAddressVal}, ${recipientCountryVal},
           ${bankNameVal}, ${swiftCodeVal}, ${transferPurposeVal}, ${adminNotesVal}, ${categoryVal},
           ${approvedByVal}, ${approvedAtVal}, ${rejectedByVal}, ${rejectedAtVal}
