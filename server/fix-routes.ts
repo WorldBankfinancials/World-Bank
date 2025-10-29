@@ -2072,14 +2072,20 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // STEP 3: Get all related banking data from public schema tables
-      const [accounts, cards, transactions, investments, alerts, tickets] = await Promise.all([
+      const [accounts, cards, allTransactions, investments, alerts, tickets] = await Promise.all([
         storage.getUserAccounts(dbUser.id).catch(() => []),
         (storage as any).getUserCards(dbUser.id).catch(() => []),
-        storage.getUserTransactions(dbUser.id).catch(() => []),
+        storage.getAllTransactions().catch(() => []),
         (storage as any).getUserInvestments(dbUser.id).catch(() => []),
         (storage as any).getUserAlerts(dbUser.id).catch(() => []),
         (storage as any).getUserTickets(dbUser.id).catch(() => [])
       ]);
+
+      // Filter transactions for this user
+      const userAccountIds = accounts.map((acc: any) => acc.id);
+      const transactions = allTransactions.filter((tx: any) => 
+        userAccountIds.includes(tx.fromAccountId) || userAccountIds.includes(tx.toAccountId)
+      );
 
       console.log(`✅ Comprehensive lookup complete for ${authUser.email}:`);
       console.log(`   - DB User ID: ${dbUser.id}`);
