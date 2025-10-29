@@ -109,9 +109,10 @@ export function setupTransferRoutes(app: Express) {
   // Enhanced Transfer API with proper workflow - PROTECTED: requires authentication
   app.post('/api/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = (req as any).session?.userId;
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
+      // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
 
       const {
@@ -134,7 +135,7 @@ export function setupTransferRoutes(app: Express) {
       }
 
       // Get user accounts
-      const accounts = await storage.getUserAccounts(userId);
+      const accounts = await storage.getUserAccounts(user.id);
       if (accounts.length === 0) {
         return res.status(400).json({ message: "No account found" });
       }
@@ -143,9 +144,9 @@ export function setupTransferRoutes(app: Express) {
 
       // Create transaction record for admin approval (all transfers require approval)
       const transaction = await storage.createTransaction({
-        date: new Date(),
-        accountId: fromAccount.id,
-        type: transferType || "international_transfer",
+        createdAt: new Date(),
+        fromAccountId: fromAccount.id,
+        transactionType: transferType || "international_transfer",
         amount: amount.toString(),
         description: `Transfer to ${recipientName}`,
         recipientName: recipientName,
@@ -171,7 +172,10 @@ export function setupTransferRoutes(app: Express) {
     try {
       const transactionId = parseInt(req.params.id);
       const { notes } = req.body;
-      const adminId = (req as any).session?.userId || 1; // Default admin
+      
+      // SECURITY: Get admin user from authenticated JWT
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const adminId = admin?.id || 1;
 
       const transaction = await storage.updateTransactionStatus(transactionId, 'approved', adminId, notes);
       
@@ -199,7 +203,10 @@ export function setupTransferRoutes(app: Express) {
     try {
       const transactionId = parseInt(req.params.id);
       const { notes } = req.body;
-      const adminId = (req as any).session?.userId || 1; // Default admin
+      
+      // SECURITY: Get admin user from authenticated JWT
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const adminId = admin?.id || 1;
 
       const transaction = await storage.updateTransactionStatus(transactionId, 'rejected', adminId, notes);
       
@@ -215,7 +222,7 @@ export function setupTransferRoutes(app: Express) {
         });
 
         // Create automatic support ticket for rejected transfer
-        const account = await storage.getAccount(transaction.accountId);
+        const account = await storage.getAccount(transaction.fromAccountId);
         if (account) {
           await storage.createSupportTicket({
             userId: account.userId,
