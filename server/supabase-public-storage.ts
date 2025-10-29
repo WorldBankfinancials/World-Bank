@@ -1207,6 +1207,27 @@ export class SupabasePublicStorage implements IStorage {
     }
   }
 
+  async getSupportTicket(id: number): Promise<SupportTicket | undefined> {
+    const { data, error } = await supabase.from('support_tickets').select('*').eq('id', id).single();
+    if (error || !data) return undefined;
+    
+    return {
+      id: data.id,
+      userId: data.user_id,
+      subject: data.subject,
+      description: data.description,
+      priority: data.priority,
+      status: data.status,
+      category: data.category,
+      assignedTo: data.assigned_to,
+      adminNotes: data.admin_notes,
+      resolution: data.resolution,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
+      resolvedAt: data.resolved_at ? new Date(data.resolved_at) : null,
+    } as SupportTicket;
+  }
+
   async getSupportTickets(userId?: number): Promise<SupportTicket[]> {
     let query = supabase.from('support_tickets').select('*').order('created_at', { ascending: false });
     

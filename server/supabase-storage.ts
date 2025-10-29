@@ -430,6 +430,11 @@ export class SupabaseStorage implements IStorage {
     throw new Error('Support tickets not implemented yet');
   }
 
+  async getSupportTicket(id: number): Promise<SupportTicket | undefined> {
+    // Implementation for support tickets would go here
+    return undefined;
+  }
+
   async getSupportTickets(userId?: number): Promise<SupportTicket[]> {
     // Implementation for support tickets would go here  
     return [];

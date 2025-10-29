@@ -1521,7 +1521,26 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const updates = req.body;
 
+      const ticket = await storage.getSupportTicket(id);
       const updatedTicket = await storage.updateSupportTicket(id, updates);
+
+      // AUDIT TRAIL: Log admin action for ticket updates
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      if (admin && updatedTicket) {
+        const actionDescription = updates.status 
+          ? `Updated ticket #${id} status to ${updates.status}`
+          : `Updated ticket #${id}`;
+        
+        await storage.createAdminAction({
+          adminId: admin.id,
+          actionType: 'update_support_ticket',
+          targetType: 'support_ticket',
+          targetId: id.toString(),
+          description: actionDescription,
+          metadata: JSON.stringify({ ticketId: id, updates, previousStatus: ticket?.status })
+        });
+      }
+
       res.json(updatedTicket);
     } catch (error) {
       console.error('Error updating support ticket:', error);

@@ -49,6 +49,7 @@ export interface IStorage {
   createAdminAction(action: InsertAdminAction): Promise<AdminAction>;
   getAdminActions(adminId?: number): Promise<AdminAction[]>;
   createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket>;
+  getSupportTicket(id: number): Promise<SupportTicket | undefined>;
   getSupportTickets(userId?: number): Promise<SupportTicket[]>;
   updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined>;
   getAllTransactions(): Promise<Transaction[]>;
@@ -468,6 +469,10 @@ export class MemStorage implements IStorage {
     this.supportTickets.set(id, ticket);
     await this.savePersistedData();
     return ticket;
+  }
+
+  async getSupportTicket(id: number): Promise<SupportTicket | undefined> {
+    return this.supportTickets.get(id);
   }
 
   async getSupportTickets(userId?: number): Promise<SupportTicket[]> {

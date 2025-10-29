@@ -340,22 +340,24 @@ export class PostgresStorage implements IStorage {
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
     try {
       const statusVal = transaction.status || 'pending';
-      const recipientNameVal = transaction.recipientName || null;
-      const recipientAddressVal = transaction.recipientAddress || null;
-      const recipientCountryVal = transaction.recipientCountry || null;
-      const bankNameVal = transaction.bankName || null;
-      const swiftCodeVal = transaction.swiftCode || null;
-      const transferPurposeVal = transaction.transferPurpose || null;
-      const adminNotesVal = transaction.adminNotes || null;
-      const categoryVal = transaction.category || null;
-      const approvedByVal = transaction.approvedBy || null;
-      const approvedAtVal = transaction.approvedAt || null;
-      const rejectedByVal = transaction.rejectedBy || null;
-      const rejectedAtVal = transaction.rejectedAt || null;
+      const recipientNameVal = transaction.recipientName ?? null;
+      const recipientAddressVal = transaction.recipientAddress ?? null;
+      const recipientCountryVal = transaction.recipientCountry ?? null;
+      const bankNameVal = transaction.bankName ?? null;
+      const swiftCodeVal = transaction.swiftCode ?? null;
+      const transferPurposeVal = transaction.transferPurpose ?? null;
+      const adminNotesVal = transaction.adminNotes ?? null;
+      const categoryVal = transaction.category ?? null;
+      const approvedByVal = transaction.approvedBy ?? null;
+      const approvedAtVal = transaction.approvedAt ?? null;
+      const rejectedByVal = transaction.rejectedBy ?? null;
+      const rejectedAtVal = transaction.rejectedAt ?? null;
       
-      const fromAccountIdVal = transaction.fromAccountId || null;
-      const transactionTypeVal = transaction.transactionType || null;
+      const fromAccountIdVal = transaction.fromAccountId ?? null;
+      const transactionTypeVal = transaction.transactionType ?? null;
       const createdAtVal = transaction.createdAt || new Date();
+      const descriptionVal = transaction.description ?? null;
+      const amountVal = transaction.amount ?? '0';
       
       const result = await sql`
         INSERT INTO public.transactions (
@@ -364,7 +366,7 @@ export class PostgresStorage implements IStorage {
           bank_name, swift_code, transfer_purpose, admin_notes, category,
           approved_by, approved_at, rejected_by, rejected_at
         ) VALUES (
-          ${fromAccountIdVal}, ${transactionTypeVal}, ${transaction.amount}, ${transaction.description}, ${createdAtVal}, ${statusVal},
+          ${fromAccountIdVal}, ${transactionTypeVal}, ${amountVal}, ${descriptionVal}, ${createdAtVal}, ${statusVal},
           ${recipientNameVal}, ${recipientAddressVal}, ${recipientCountryVal},
           ${bankNameVal}, ${swiftCodeVal}, ${transferPurposeVal}, ${adminNotesVal}, ${categoryVal},
           ${approvedByVal}, ${approvedAtVal}, ${rejectedByVal}, ${rejectedAtVal}
@@ -463,6 +465,10 @@ export class PostgresStorage implements IStorage {
 
   async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> {
     throw new Error('Support tickets not implemented yet');
+  }
+
+  async getSupportTicket(id: number): Promise<SupportTicket | undefined> {
+    return undefined;
   }
 
   async getSupportTickets(userId?: number): Promise<SupportTicket[]> {
