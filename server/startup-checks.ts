@@ -5,6 +5,7 @@
  */
 
 import { supabase } from './supabase-public-storage';
+import { initializeDatabase } from './init-database';
 
 /**
  * Verify atomic_balance_update function exists and works correctly
@@ -51,6 +52,9 @@ export async function runStartupChecks(): Promise<void> {
   }
   
   console.log('🚀 Running startup sanity checks...');
+  
+  // Run database initialization (RLS policy check)
+  await initializeDatabase();
   
   const checks = [
     { name: 'Atomic Balance Function', test: verifyAtomicBalanceFunction }
