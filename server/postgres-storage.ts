@@ -185,7 +185,7 @@ export class PostgresStorage implements IStorage {
       return this.mapDbUser(result[0]);
     } catch (error) {
       console.error('❌ Error creating user:', error);
-      throw new Error(`Failed to create user: ${error}`);
+      throw new Error(Failed to create user: ${error});
     }
   }
 
@@ -317,7 +317,7 @@ export class PostgresStorage implements IStorage {
       return this.mapDbAccount(result[0]);
     } catch (error) {
       console.error('❌ Error creating account:', error);
-      throw new Error(`Failed to create account: ${error}`);
+      throw new Error(Failed to create account: ${error});
     }
   }
 
@@ -376,7 +376,7 @@ export class PostgresStorage implements IStorage {
       return this.mapDbTransaction(result[0]);
     } catch (error) {
       console.error('❌ Error creating transaction:', error);
-      throw new Error(`Failed to create transaction: ${error}`);
+      throw new Error(Failed to create transaction: ${error});
     }
   }
 
