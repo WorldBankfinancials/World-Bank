@@ -607,7 +607,6 @@ export class PostgresStorage implements IStorage {
     return result[0] as Card | undefined;
   }
 
-  // Investments methods
   async getUserInvestments(userId: number): Promise<Investment[]> {
     try {
       const result = await sql`SELECT * FROM public.investments WHERE user_id = ${userId}`;
