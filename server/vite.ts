@@ -15,7 +15,6 @@ export function log(message: string, source = "express") {
     second: "2-digit",
     hour12: true,
   });
-
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
@@ -31,24 +30,21 @@ export async function setupVite(app: Express, server: Server) {
       },
     },
     server: {
-      middlewareMode: "ssr", // ✅ Type-safe value
-      hmr: { server: server as any }, // ✅ Cast safely
-      fs: {
-        strict: false, // ✅ Allow serving outside root
-      },
+      middlewareMode: "ssr",
+      hmr: { server: server as any },
+      fs: { strict: false },
       watch: {},
       open: false,
     },
-    appType: "custom", // ✅ Top-level, not inside server
+    appType: "custom",
   };
 
   const vite = await createViteServer(viteOptions);
 
   app.use(vite.middlewares);
 
+  // Catch-all for HTML requests
   app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
-
     try {
       const clientTemplate = path.resolve(
         path.dirname(new URL(import.meta.url).pathname),
@@ -59,13 +55,10 @@ export async function setupVite(app: Express, server: Server) {
 
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
 
-      // Add cache-busting
-      template = template.replace(
-       ` src="/src/main.tsx"`,
-       ` src="/src/main.tsx?v=${nanoid()}"`
-      );
+      // Ensure cache-busting works regardless of spacing
+      template = template.replace(/src="\/src\/main\.tsx"/, `src="/src/main.tsx?v=${nanoid()}"`);
 
-      const page = await vite.transformIndexHtml(url, template);
+      const page = await vite.transformIndexHtml(req.originalUrl, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
