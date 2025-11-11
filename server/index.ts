@@ -45,8 +45,8 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
-  });
+  // throw err; <-- remove in production
+});
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

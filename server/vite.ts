@@ -3,6 +3,7 @@ import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
+import { fileURLToPath } from "url"; // ✅ Windows-safe path handling
 import { createLogger, createServer as createViteServer, type InlineConfig, type Logger } from "vite";
 import viteConfig from "../vite.config";
 
@@ -40,18 +41,13 @@ export async function setupVite(app: Express, server: Server) {
   };
 
   const vite = await createViteServer(viteOptions);
-
   app.use(vite.middlewares);
 
   // Catch-all for HTML requests
   app.use("*", async (req, res, next) => {
     try {
-      const clientTemplate = path.resolve(
-        path.dirname(new URL(import.meta.url).pathname),
-        "..",
-        "client",
-        "index.html"
-      );
+      const __dirname = path.dirname(fileURLToPath(import.meta.url)); // ✅ Windows-safe __dirname
+      const clientTemplate = path.resolve(__dirname, "..", "client", "index.html");
 
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
 
@@ -68,10 +64,8 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(
-    path.dirname(new URL(import.meta.url).pathname),
-    "public"
-  );
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const distPath = path.resolve(__dirname, "public");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
