@@ -3,9 +3,7 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 2021,
     sourceType: 'module',
-    ecmaFeatures: {
-      jsx: true
-    }
+    ecmaFeatures: { jsx: true },
   },
   plugins: ['@typescript-eslint', 'react', 'react-hooks', 'prettier'],
   extends: [
@@ -22,17 +20,15 @@ module.exports = {
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     'no-console': ['warn', { allow: ['warn', 'error'] }],
-    'prettier/prettier': ['error', { endOfLine: 'auto' }]
+    'prettier/prettier': ['error', { endOfLine: 'lf' }]
   },
   settings: {
-    react: {
-      version: 'detect'
-    }
+    react: { version: 'detect' },
   },
   env: {
     browser: true,
     es2021: true,
-    node: true
+    node: true,
   },
-  ignorePatterns: ['dist', 'node_modules', '.config.js', '.config.ts']
+  ignorePatterns: ['dist', 'node_modules', '.config.js', '.config.ts'],
 };
