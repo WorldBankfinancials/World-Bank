@@ -62,8 +62,9 @@ app.use((req, res, next) => {
   // It is the only port that is not firewalled.
   const port = 5000;
   server.listen({
-    port,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  port,
+  host: "0.0.0.0", // listen on all interfaces
+}, () => {
+  log(`serving on http://localhost:${port}`);
+});
 })();
