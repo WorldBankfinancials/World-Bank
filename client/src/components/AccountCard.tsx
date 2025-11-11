@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { CreditCard, Eye, EyeOff } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
+import { CreditCard, Eye, EyeOff } from 'lucide-react';
 
 interface Account {
   id: string;
@@ -27,20 +27,18 @@ interface AccountCardProps {
   onToggleBalance?: () => void;
 }
 
-export default function AccountCard({ 
-  account, 
-  transactions = [], 
-  showBalance = true, 
-  onToggleBalance 
+export default function AccountCard({
+  account,
+  transactions = [],
+  showBalance = true,
+  onToggleBalance,
 }: AccountCardProps) {
   const { userProfile } = useAuth();
   if (!account) {
     return (
       <Card className="mb-4">
         <CardContent className="p-6">
-          <div className="text-center text-gray-500">
-            Loading account information...
-          </div>
+          <div className="text-center text-gray-500">Loading account information...</div>
         </CardContent>
       </Card>
     );
@@ -63,8 +61,8 @@ export default function AccountCard({
             <CreditCard className="w-5 h-5 text-blue-600" />
             <span>{account.account_name || `${account.account_type} Account`}</span>
           </div>
-          <Badge variant={account.is_active ? "default" : "secondary"}>
-            {account.is_active ? "Active" : "Inactive"}
+          <Badge variant={account.is_active ? 'default' : 'secondary'}>
+            {account.is_active ? 'Active' : 'Inactive'}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -79,14 +77,13 @@ export default function AccountCard({
             <div>
               <p className="text-sm text-gray-600">Available Balance</p>
               <p className="text-2xl font-bold text-green-600">
-                {showBalance ? formatCurrency(userProfile?.balance || account.balance, account.currency) : "••••••"}
+                {showBalance
+                  ? formatCurrency(userProfile?.balance || account.balance, account.currency)
+                  : '••••••'}
               </p>
             </div>
             {onToggleBalance && (
-              <button
-                onClick={onToggleBalance}
-                className="p-2 hover:bg-gray-100 rounded-full"
-              >
+              <button onClick={onToggleBalance} className="p-2 hover:bg-gray-100 rounded-full">
                 {showBalance ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             )}
@@ -99,8 +96,11 @@ export default function AccountCard({
                 {recentTransactions.map((transaction) => (
                   <div key={transaction.id} className="flex justify-between text-sm">
                     <span className="text-gray-700">{transaction.description}</span>
-                    <span className={`font-medium ${transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {transaction.amount >= 0 ? '+' : ''}{formatCurrency(Math.abs(transaction.amount))}
+                    <span
+                      className={`font-medium ${transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                    >
+                      {transaction.amount >= 0 ? '+' : ''}
+                      {formatCurrency(Math.abs(transaction.amount))}
                     </span>
                   </div>
                 ))}
