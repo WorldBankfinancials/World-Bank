@@ -295,31 +295,23 @@ export type InsertStatement = typeof statements.$inferInsert;
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
+  lastLogin: true,
 });
 
 export const insertAccountSchema = createInsertSchema(accounts).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
 });
 
 export const insertTransactionSchema = createInsertSchema(transactions).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
 });
 
 export const insertAdminActionSchema = createInsertSchema(adminActions).omit({
   id: true,
-  createdAt: true,
 });
 
 export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
   resolvedAt: true,
 });
 

@@ -276,13 +276,13 @@ export function setupTransferRoutes(app: Express) {
       const fromAccount = accounts[0];
 
       // Create transaction record for admin approval (all transfers require approval)
-      const transaction = await storage.createTransaction({
+      const transaction = await (storage as any).createTransaction({
         fromAccountId: fromAccount.id,
         transactionType: transferType || "international_transfer",
         amount: amount.toString(),
         description: `Transfer to ${recipientName}`,
         status: "pending_approval" // All transfers require admin approval
-      });
+      }) as any);
 
       res.json({ 
         message: "Transfer submitted for approval", 

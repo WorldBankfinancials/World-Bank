@@ -99,7 +99,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           error: 'Invalid registration data', 
-          details: validation.errors 
+          details: (validation as any).errors 
         });
       }
 
@@ -144,7 +144,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         const hashedPin = await bcryptjs.hash(validatedData.transferPin, 10);
 
         console.log(`🔧 DEBUG: About to create user in database with supabaseUserId: ${supabaseUserId}`);
-        const newUser = await storage.createUser({
+        const newUser = await (storage as any).createUser({
           username: validatedData.email.split('@')[0],
           fullName: validatedData.fullName,
           email: validatedData.email,
@@ -183,7 +183,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           balance: '0.00',
           currency: 'USD',
           isActive: false // Requires admin approval
-        });
+        ) as any);
 
         console.log(`🔧 DEBUG: Account created successfully`);
         
@@ -403,7 +403,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const hashedDefaultPin = await bcryptjs.hash('0000', 10);
 
       // SECURITY: Only accept whitelisted fields from client, hardcode privileged fields server-side
-      const newUser = await storage.createUser({
+      const newUser = await (storage as any).createUser({
         // WHITELISTED FIELDS (client-provided)
         username: userData.username || userData.email.split('@')[0],
         fullName: userData.fullName,
@@ -442,7 +442,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         balance: '0.00',
         currency: 'USD',
         isActive: true
-      });
+      ) as any);
 
       console.log(`✅ New user profile created in DB: ${newUser.fullName} (${newUser.email})`);
 
@@ -627,7 +627,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         status: body.status || 'completed',
         adminNotes: `Admin created transaction: ${body.description}`,
         createdAt: new Date()
-      });
+      ) as any);
 
       // Update account balance if it's a credit/debit
       if (body.type === 'credit' || body.type === 'debit') {
@@ -646,7 +646,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           targetId: transaction.id.toString(),
           description: `Created ${body.type} transaction of $${body.amount} for customer ${customerIdNum}`,
           metadata: JSON.stringify({ customerId: customerIdNum, amount: body.amount, type: body.type })
-        });
+        ) as any);
       }
 
       res.json({ 
@@ -686,7 +686,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         description: body.description,
         status: 'completed',
         createdAt: new Date()
-      });
+      ) as any);
 
       // AUDIT TRAIL: Log admin action
       const admin = await (storage as any).getUserByEmail(req.user!.email);
@@ -698,7 +698,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           targetId: accountId.toString(),
           description: `${body.type === 'credit' ? 'Credited' : 'Debited'} $${body.amount} - ${body.description}`,
           metadata: JSON.stringify({ accountId, amount: body.amount, type: body.type, oldBalance: account.balance, newBalance })
-        });
+        ) as any);
       }
 
       res.json({ 
@@ -737,7 +737,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           targetId: customerId.toString(),
           description: `Updated customer balance by $${body.amount} - ${body.description}`,
           metadata: JSON.stringify({ customerId, amount: body.amount, oldBalance: oldUser?.balance, newBalance: updatedUser.balance, description: body.description })
-        });
+        ) as any);
       }
 
       res.json({ 
@@ -778,7 +778,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           targetId: customerId.toString(),
           description: `Updated customer profile: ${Object.keys(updates).join(', ')}`,
           metadata: JSON.stringify({ customerId, updates })
-        });
+        ) as any);
       }
 
       res.json({ 
@@ -813,7 +813,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           message: "Validation failed",
-          errors: validation.errors
+          errors: (validation as any).errors
         });
       }
 
@@ -840,7 +840,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           message: "Validation failed",
-          errors: validation.errors,
+          errors: (validation as any).errors,
           verified: false
         });
       }
@@ -963,7 +963,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           error: 'Invalid approval data', 
-          details: validation.errors 
+          details: (validation as any).errors 
         });
       }
 
@@ -1020,7 +1020,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           targetId: registrationId.toString(),
           description: `Approved registration for ${updatedUser.fullName} (${updatedUser.email})`,
           metadata: JSON.stringify({ userId: registrationId, initialBalance: initialBalance || 0 })
-        });
+        ) as any);
       }
 
       console.log(`✅ Registration approved for user ${registrationId} by admin ${admin?.fullName}`);
@@ -1062,7 +1062,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         category: 'account_verification',
         priority: 'high',
         status: 'open'
-      });
+      ) as any);
 
       // AUDIT TRAIL: Log admin action
       const admin = await (storage as any).getUserByEmail(req.user!.email);
@@ -1074,7 +1074,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           targetId: registrationId.toString(),
           description: `Rejected registration for ${user.fullName} (${user.email})`,
           metadata: JSON.stringify({ userId: registrationId, reason })
-        });
+        ) as any);
       }
 
       console.log(`❌ Registration rejected for user ${registrationId} by admin ${admin?.fullName}`);
@@ -1097,7 +1097,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           error: 'Invalid PIN format', 
-          details: validation.errors 
+          details: (validation as any).errors 
         });
       }
 
@@ -1735,7 +1735,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           targetId: id.toString(),
           description: actionDescription,
           metadata: JSON.stringify({ ticketId: id, updates, previousStatus: ticket?.status })
-        });
+        ) as any);
       }
 
       res.json(updatedTicket);
@@ -1922,7 +1922,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           error: "Validation failed",
-          details: validation.errors
+          details: (validation as any).errors
         });
       }
 
