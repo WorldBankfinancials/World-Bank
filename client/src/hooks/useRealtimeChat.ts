@@ -40,18 +40,22 @@ export function useRealtimeChat(
       };
 
       wsRef.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+        try {
+          const data = JSON.parse(event.data);
 
-        if (data.type === 'chat_message' && onMessageReceived) {
-          onMessageReceived(data.data);
-        }
+          if (data.type === 'chat_message' && onMessageReceived && data.data) {
+            onMessageReceived(data.data);
+          }
 
-        if (data.type === 'user_typing' && onTyping) {
-          onTyping(data.userId);
-        }
+          if (data.type === 'user_typing' && onTyping && data.userId) {
+            onTyping(data.userId);
+          }
 
-        if (data.type === 'presence_update' && onPresence) {
-          onPresence(data.activeUsers);
+          if (data.type === 'presence_update' && onPresence && typeof data.activeUsers === 'number') {
+            onPresence(data.activeUsers);
+          }
+        } catch (error) {
+          console.error('❌ WebSocket message parse error:', error);
         }
       };
 

@@ -39,13 +39,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check localStorage on mount
+    // Check localStorage on mount with proper error handling
     const savedToken = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
     if (savedToken && savedUser) {
       try {
-        setUser(JSON.parse(savedUser));
+        const parsedUser = JSON.parse(savedUser);
+        if (parsedUser?.id && parsedUser?.email) {
+          setUser(parsedUser);
+        } else {
+          throw new Error('Invalid user format');
+        }
       } catch (e) {
+        console.error('❌ Auth init error:', e);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
@@ -53,18 +59,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchUserData = useCallback(async (user: User) => {
-    if (!user) return;
+    if (!user?.id) {
+      console.error('❌ Invalid user for fetchUserData');
+      return;
+    }
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token');
+      }
+
       const response = await fetch(`/api/users/${user.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (response.ok) {
-        const profile = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const profile = await response.json();
+      if (profile && typeof profile === 'object') {
         setUserProfile(profile);
       }
     } catch (error) {
-      console.error('Fetch user data error:', error);
+      console.error('❌ Fetch user data error:', error);
     }
   }, []);
 
@@ -78,26 +96,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password })
       });
 
-      const data = await response.json();
-
-      if (!response.ok || data.error) {
+      if (!response.ok) {
         setLoading(false);
-        return { error: data.error || 'Login failed' };
+        const errorData = await response.json().catch(() => ({ error: 'Login failed' }));
+        return { error: errorData.error || `Login failed (${response.status})` };
       }
 
-      if (data.token) {
+      const data = await response.json();
+
+      if (!data || data.error) {
+        setLoading(false);
+        return { error: data?.error || 'Login failed' };
+      }
+
+      if (data.token && data.user) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        setUser({ id: data.user.id, email: data.user.email } as any);
+        setUser({ id: data.user.id, email: data.user.email } as User);
         setLoading(false);
         return {};
       }
 
       setLoading(false);
-      return { error: 'Authentication failed' };
+      return { error: 'Authentication failed - invalid response' };
     } catch (error: any) {
       setLoading(false);
-      return { error: error.message || 'Network error' };
+      console.error('❌ Sign in error:', error);
+      return { error: error?.message || 'Network error' };
     }
   };
 
@@ -126,14 +151,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Signup failed' }));
+        return { error: errorData?.error || `Signup failed (${response.status})` };
+      }
+
       const data = await response.json();
-      if (!response.ok || data.error) {
-        return { error: data.error || 'Signup failed' };
+      if (data?.error) {
+        return { error: data.error };
       }
 
       return {};
     } catch (error: any) {
-      return { error: error.message || 'Signup failed' };
+      console.error('❌ Sign up error:', error);
+      return { error: error?.message || 'Signup failed' };
     }
   };
 
@@ -144,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setUserProfile(null);
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('❌ Sign out error:', error);
     }
   };
 
