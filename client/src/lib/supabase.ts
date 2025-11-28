@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-let supabaseClient: any = null;
+let supabaseInstance: any = null;
 
 async function initializeSupabase() {
-  if (supabaseClient) return supabaseClient;
+  if (supabaseInstance) return supabaseInstance;
 
   let supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   let supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -26,7 +26,7 @@ async function initializeSupabase() {
     throw new Error('Supabase credentials not available');
   }
 
-  supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
@@ -40,7 +40,7 @@ async function initializeSupabase() {
     },
   });
 
-  return supabaseClient;
+  return supabaseInstance;
 }
 
 // Initialize on first import
@@ -51,14 +51,14 @@ initializeSupabase().catch(error => {
 // Export a proxy that waits for initialization
 export const supabase = new Proxy({}, {
   get: (target, prop) => {
-    if (!supabaseClient) {
+    if (!supabaseInstance) {
       throw new Error('Supabase not initialized');
     }
-    return (supabaseClient as any)[prop];
+    return (supabaseInstance as any)[prop];
   },
 }) as any;
 
-export const supabaseClient_ = supabase;
+export const supabaseClient = supabase;
 
 export { supabase as default };
 

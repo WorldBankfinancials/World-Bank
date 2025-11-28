@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { supabaseClient } from '@/lib/supabase';
+import { supabase as supabaseClient } from '@/lib/supabase';
 
 // Use the centralized Supabase client to avoid "Multiple GoTrueClient instances" warning
 const supabase = supabaseClient;
@@ -30,7 +30,7 @@ export function usePresence(userId: number | undefined, userName: string | undef
       .on('presence', { event: 'sync' }, () => {
         console.log('Presence synced');
       })
-      .subscribe(async (status) => {
+      .subscribe(async (status: any) => {
         if (status === 'SUBSCRIBED') {
           // Broadcast presence
           await channel.track({

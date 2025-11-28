@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BankLogo } from '@/components/BankLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabaseClient } from '@/lib/supabase';
+import { supabase as supabaseClient } from '@/lib/supabase';
 
 // Use the centralized Supabase client to avoid "Multiple GoTrueClient instances" warning
 const getSupabaseClient = () => supabaseClient;
