@@ -131,20 +131,7 @@ export class SupabasePublicStorage implements IStorage {
         return [];
       }
       
-      return accounts.map(account => ({
-        id: account.id,
-        userId: account.user_id,
-        accountNumber: account.account_number,
-        accountType: account.account_type,
-        accountName: account.account_name,
-        balance: account.balance.toString(),
-        currency: account.currency,
-        isActive: account.is_active,
-        createdAt: account.created_at,
-        updatedAt: account.updated_at,
-        interestRate: account.interest_rate?.toString() || null,
-        minimumBalance: account.minimum_balance?.toString() || null
-      }));
+      return accounts.map(acc => ({ id: acc.id, userId: acc.user_id, accountNumber: acc.account_number, accountType: acc.account_type, balance: acc.balance?.toString() || '0', currency: acc.currency, status: acc.status || 'active', createdAt: acc.created_at, updatedAt: acc.updated_at } as any));
     } catch (error) {
       console.error('❌ Error fetching accounts:', error);
       return [];
@@ -166,20 +153,7 @@ export class SupabasePublicStorage implements IStorage {
         return [];
       }
       
-      return (accounts || []).map(account => ({
-        id: account.id,
-        userId: account.user_id,
-        accountNumber: account.account_number,
-        accountType: account.account_type,
-        accountName: account.account_name,
-        balance: account.balance.toString(),
-        currency: account.currency,
-        isActive: account.is_active,
-        createdAt: account.created_at,
-        updatedAt: account.updated_at,
-        interestRate: account.interest_rate?.toString() || null,
-        minimumBalance: account.minimum_balance?.toString() || null
-      }));
+      return (accounts || []).map(acc => ({ id: acc.id, userId: acc.user_id, accountNumber: acc.account_number, accountType: acc.account_type, balance: acc.balance?.toString() || '0', currency: acc.currency, status: acc.status || 'active', createdAt: acc.created_at, updatedAt: acc.updated_at } as any));
     } catch (error) {
       console.error('Error getting accounts:', error);
       return [];
