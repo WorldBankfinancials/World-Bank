@@ -71,7 +71,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Get user by Supabase UUID
   app.get('/api/users/supabase/:supabaseId', async (req: Request, res: Response) => {
     try {
-      const {supabaseId } = req.params;
+      const { supabaseId } = req.params;
+
+      if (!supabaseId) {
+        return res.status(400).json({ error: 'Supabase ID required' });
+      }
 
       const user = await (storage).getUserBySupabaseId(supabaseId);
       if (!user) {
@@ -79,8 +83,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       res.json(user);
-    } catch (error) {
-      console.error('Get user by Supabase ID error:', error);
+    } catch (error: unknown) {
       res.status(500).json({ error: 'Failed to get user' });
     }
   });
@@ -178,13 +181,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           isActive: false // Requires admin approval
         });
 
-        console.log(`🔧 DEBUG: Account created successfully`);
         
         // VERIFY user was actually saved
         const verifyUser = await (storage).getUserByEmail(newUser.email);
-        if (verifyUser) {
-        } else {
-          console.error(`❌ CRITICAL BUG: User was created but not found in database!`);
+        if (!verifyUser) {
+          throw new Error('User created but not found in database');
         }
 
 
@@ -255,6 +256,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Use admin API to check if user exists
       const { data: users, error } = await supabase.auth.admin.listUsers();
+      if (!users) { return res.status(500).json({ error: "Failed to fetch users" }); }
 
       if (!error && users) {
         const emailExists = users.users.some((u: any) => u.email === email);
@@ -678,7 +680,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const customerId = parseInt(req.params.id, 10);
       const updates = req.body as Record<string, any>;
 
-      console.log(`🔄 ADMIN UPDATE: Updating customer ${customerId} with:`, updates);
 
       const updatedUser = await storage.updateUser(customerId, updates);
 
@@ -743,7 +744,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const body = req.body as { email?: string; username?: string; pin: string };
       const identifier = body.email || body.username;
-      console.log('🔐 PIN verification request for:', identifier);
 
       // Use email for lookup (supports both email and username fields for compatibility)
       const user = await (storage).getUserByEmail(identifier);
@@ -755,7 +755,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // SECURITY: Check if account is active (approved by admin)
       if (!user.isActive) {
-        console.log('🚫 PIN verification blocked - account pending approval:', user.email);
         return res.status(403).json({ 
           message: 'Your account is pending approval by our customer support team. You will receive a notification once your account is activated.',
           verified: false,
@@ -797,7 +796,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const accounts = await storage.getUserAccounts(user.id);
-      console.log('🔐 Authenticated access to accounts for:', req.user!.email);
       res.json(accounts);
     } catch (error: any) {
       console.error('❌ Failed to get accounts:', error);
@@ -824,7 +822,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const transactions = await storage.getAccountTransactions(accountId);
-      console.log(`🔐 Authorized transaction access for account: ${accountId}`);
       res.json(transactions);
     } catch (error) {
       console.error('Get account transactions error:', error);
@@ -1011,7 +1008,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Use authenticated user's ID (not hardcoded)
       await storage.updateUser(user.id, { transferPin: newPin });
-      console.log(`🔐 PIN updated successfully for user: ${req.user!.email}`);
       res.json({ success: true, message: 'PIN updated successfully' });
     } catch (error) {
       console.error('Change PIN error:', error);
@@ -1778,7 +1774,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         message: 'File uploaded successfully'
       };
 
-      console.log(`📤 File uploaded: ${fileName} (${fileId})`);
       res.json(uploadResult);
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -1797,7 +1792,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Email, password, and fullName are required' });
       }
 
-      console.log(`🔧 Creating admin user: ${email}`);
 
       // Create Supabase admin client
       const { createClient } = await import('@supabase/supabase-js');
@@ -1857,8 +1851,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           idNumber: 'ADMIN-001'
         });
 
-        console.log(`📧 Email: ${email}`);
-        console.log(`👤 Role: admin`);
         // SECURITY: NEVER log passwords
 
         res.status(201).json({ 
@@ -1904,7 +1896,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Email and password are required' });
       }
 
-      console.log(`🔐 Customer login attempt: ${email}`);
 
       // Authenticate with Supabase
       const { createClient } = await import('@supabase/supabase-js');
@@ -1929,14 +1920,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // SECURITY: Check if user account is active (approved by admin)
       const dbUser = await storage.getUserByEmail(email);
       if (!dbUser) {
-        console.error(`❌ User authenticated but not found in database: ${email}`);
         return res.status(403).json({ 
           error: 'Account not found. Please contact support.' 
         });
       }
 
       if (!dbUser.isActive) {
-        console.log(`🚫 Login blocked - account pending approval: ${email}`);
         return res.status(403).json({ 
           error: 'Your account is pending approval by our customer support team. You will receive a notification once your account is activated.' 
         });
@@ -2014,14 +2003,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   const clients = new Map<string, { ws: WebSocket; userId: string; role: 'admin' | 'customer'; email: string }>();
 
   wss.on('connection', (ws: WebSocket) => {
-    console.log('WebSocket client attempting connection');
     let isAuthenticated = false;
     let clientId: string | null = null;
 
     ws.on('message', async (message: string) => {
       try {
         const data = JSON.parse(message);
-        console.log('WebSocket message received:', data.type);
 
         if (data.type === 'auth') {
           // SECURITY: Validate JWT token before registering client
@@ -2082,7 +2069,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     });
 
     ws.on('close', () => {
-      console.log('WebSocket client disconnected');
       if (clientId) {
         clients.delete(clientId);
       }

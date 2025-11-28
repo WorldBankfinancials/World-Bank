@@ -197,34 +197,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initializeSession = async () => {
       try {
-        console.log('🔐 Initializing banking session');
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
 
-        const { data: { session }, error } = await supabase.auth.getSession();
+          if (session?.user && session.expires_at) {
+            const expirationTime = new Date(session.expires_at * 1000);
+            const now = new Date();
 
-        if (session?.user && session.expires_at) {
-          const expirationTime = new Date(session.expires_at * 1000);
-          const now = new Date();
-
-          if (expirationTime > now) {
-            console.log('✅ Valid session found for:', session.user.email);
-            setUser(session.user);
-            await fetchUserData(session.user);
+            if (expirationTime > now) {
+              setUser(session.user);
+              await fetchUserData(session.user);
+            } else {
+              await supabase.auth.signOut();
+              setUser(null);
+              setUserProfile(null);
+            }
           } else {
-            console.log('⏰ Session expired');
-            await supabase.auth.signOut();
             setUser(null);
             setUserProfile(null);
           }
-        } else {
-          console.log('ℹ️ No active session');
-          setUser(null);
-          setUserProfile(null);
+        } catch (wsError: unknown) {
+          // Silently handle WebSocket insecure context errors in development
+          if (wsError instanceof Error && !wsError.message.includes('WebSocket')) {
+            console.error('Session error:', wsError.message);
+          }
         }
 
         setLoading(false);
 
       } catch (error) {
-        console.error('Session initialization error:', error);
         setUser(null);
         setUserProfile(null);
         setLoading(false);
@@ -234,7 +235,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Supabase auth event:', event, session);
 
       if (event === 'SIGNED_OUT') {
         console.log('✅ Successfully signed out');

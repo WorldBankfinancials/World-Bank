@@ -210,9 +210,13 @@ export default function TransferFunds() {
     };
     
     // Save to localStorage
-    const templates = JSON.parse(localStorage.getItem('transferTemplates') || '[]');
-    templates.push(template);
-    localStorage.setItem('transferTemplates', JSON.stringify(templates));
+    try {
+      const templates = JSON.parse(localStorage.getItem('transferTemplates') || '[]');
+      templates.push(template);
+      localStorage.setItem('transferTemplates', JSON.stringify(templates));
+    } catch (e) {
+      console.warn('Failed to save template to localStorage');
+    }
     
     toast({
       title: 'Template Saved',

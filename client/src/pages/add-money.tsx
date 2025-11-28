@@ -105,7 +105,7 @@ export default function AddMoney() {
             .select('id')
             .eq('user_id', bankUser.id);
 
-          if (accounts && accounts.length > 0) {
+          if (accounts && accounts.length > 0 && accounts[0]) {
             const { data: deposits } = await supabase
               .from('transactions')
               .select('*')
