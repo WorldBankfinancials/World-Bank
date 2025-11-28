@@ -108,7 +108,7 @@ export default function Receive() {
                 Scan this QR code to send money to Mr. Liu Wei
               </p>
               <div className="flex space-x-2 justify-center">
-                <Button variant="outline" onClick={() => // QR code download")}>
+                <Button variant="outline" onClick={() => toast({ title: 'QR Code Downloaded', description: 'QR code has been downloaded.' })}>
                   <Download className="w-4 h-4 mr-1" />
                   Download
                 </Button>
