@@ -129,9 +129,10 @@ export default function AdminTransactionCreator() {
         
         // Navigate to specified page if selected
         if (redirectPage) {
-          setTimeout(() => {
+          const timeout = setTimeout(() => {
             setLocation(redirectPage);
           }, 1500); // Brief delay to show success message
+          return () => clearTimeout(timeout);
         }
         
         // Refresh accounts to show updated balances

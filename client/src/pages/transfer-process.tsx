@@ -88,10 +88,11 @@ export default function TransferProcess({ transferData, onBack, onComplete }: Tr
 
       if (response.ok) {
         // Processing complete, move to pending
-        setTimeout(() => {
+        const timeout = setTimeout(() => {
           setIsProcessing(false);
           setCurrentStep(3); // Move to pending status
         }, 2000);
+        return () => clearTimeout(timeout);
       } else {
         const errorText = await response.text();
         console.error('Transfer submission failed:', errorText);

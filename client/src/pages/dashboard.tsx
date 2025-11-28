@@ -495,6 +495,7 @@ export default function Dashboard() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showNotifications] = useState(false);
   const [userData, setUserData] = useState<any>(null);
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const queryClient = useQueryClient();
 
   // Track user presence for real-time online/offline status
@@ -596,10 +597,29 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [userProfile]);
 
-  // Real-time subscription for transactions and admin changes
+  // Fetch recent transactions at top level
   useEffect(() => {
-      // Subscribe to transaction changes
-  }, [queryClient]);
+    const fetchRecentTransactions = async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/accounts/1/transactions');
+        if (response.ok) {
+          try {
+            const data = await response.json();
+            setRecentTransactions(data.slice(0, 5));
+          } catch (e) {
+            console.error('Failed to parse transactions');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+      }
+    };
+
+    fetchRecentTransactions();
+    const interval = setInterval(fetchRecentTransactions, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const profileMenuItems = [
     { 
@@ -983,57 +1003,32 @@ export default function Dashboard() {
             <CardTitle className="text-lg">Recent Transactions</CardTitle>
           </CardHeader>
           <CardContent>
-            {(() => {
-              const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
-
-              useEffect(() => {
-                const fetchRecentTransactions = async () => {
-                  try {
-                    const { authenticatedFetch } = await import('@/lib/queryClient');
-                    const response = await authenticatedFetch('/api/accounts/1/transactions');
-                    if (response.ok) {
-                      const data = await response.json();
-                      setRecentTransactions(data.slice(0, 5));
-                    }
-                  } catch (error) {
-                    // Silently handle fetch errors
-                  }
-                };
-                fetchRecentTransactions();
-                // Refresh every 30 seconds
-                const interval = setInterval(fetchRecentTransactions, 30000);
-                return () => clearInterval(interval);
-              }, []);
-
-              return (
-                <div className="space-y-4">
-                  {recentTransactions.length > 0 ? (
-                    recentTransactions.map((tx) => (
-                      <div key={tx.id} className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-10 h-10 ${tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center`}>
-                            {tx.type === 'credit' ? (
-                              <ArrowDownRight className="w-5 h-5 text-green-600" />
-                            ) : (
-                              <ArrowUpRight className="w-5 h-5 text-red-600" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium">{tx.description}</p>
-                            <p className="text-sm text-gray-500">{new Date(tx.date || tx.created_at).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                        <span className={`font-medium ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-                          {tx.type === 'credit' ? '+' : '-'}${parseFloat(tx.amount).toFixed(2)}
-                        </span>
+            <div className="space-y-4">
+              {recentTransactions.length > 0 ? (
+                recentTransactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-10 h-10 ${tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center`}>
+                        {tx.type === 'credit' ? (
+                          <ArrowDownRight className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <ArrowUpRight className="w-5 h-5 text-red-600" />
+                        )}
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-4 text-gray-500">No recent transactions</div>
-                  )}
-                </div>
-              );
-            })()}
+                      <div>
+                        <p className="font-medium">{tx.description}</p>
+                        <p className="text-sm text-gray-500">{new Date(tx.date || tx.created_at).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <span className={`font-medium ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                      {tx.type === 'credit' ? '+' : '-'}${parseFloat(tx.amount).toFixed(2)}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4 text-gray-500">No recent transactions</div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
