@@ -41,24 +41,6 @@ export default function CustomerSupport() {
       const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
       if (!authUser) throw new Error('Not authenticated');
 
-      const { data: bankUser } = await supabase
-        .from('bank_users')
-        .select('id')
-        .eq('supabase_user_id', authUser.id)
-        .single();
-
-      if (!bankUser) throw new Error('User not found');
-
-      const { error } = await supabase
-        .from('support_tickets')
-        .insert({
-          user_id: bankUser.id,
-          subject,
-          category,
-          priority,
-          description,
-          status: 'open'
-        });
 
       if (error) throw error;
 
