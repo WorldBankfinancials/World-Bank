@@ -495,11 +495,11 @@ export default function Dashboard() {
   const [userData, setUserData] = useState<any>(null);
   const queryClient = useQueryClient();
 
-  // Track user presence for real-time online/offline status
-  usePresence(
-    userProfile?.id ? (typeof userProfile.id === 'number' ? userProfile.id : parseInt(userProfile.id)) : undefined,
-    userProfile?.fullName || userProfile?.email
-  );
+  // Track user presence disabled - WebSocket not available on HTTP
+  // usePresence(
+  //   userProfile?.id ? (typeof userProfile.id === 'number' ? userProfile.id : parseInt(userProfile.id)) : undefined,
+  //   userProfile?.fullName || userProfile?.email
+  // );
 
   useEffect(() => {
     const fetchUserData = async () => {
