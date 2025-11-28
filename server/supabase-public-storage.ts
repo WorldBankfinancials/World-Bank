@@ -135,6 +135,7 @@ export class SupabasePublicStorage implements IStorage {
     }
   }
 
+  async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
     try {
       const { data: user, error } = await supabase
         .from('bank_users')
