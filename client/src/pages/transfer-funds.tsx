@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import * as React from "react";
+import { useState } from "react";
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -26,6 +27,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { transferFormSchema, type TransferForm } from '@shared/schema';
 
 export default function TransferFunds() {
   const { t } = useLanguage();
@@ -34,102 +36,33 @@ export default function TransferFunds() {
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState("EN");
   
-  // Form state
-  const [formData, setFormData] = useState({
-    amount: "",
-    currency: "usd",
-    recipientName: "",
-    recipientCountry: "",
-    recipientAddress: "",
-    recipientCity: "",
-    recipientState: "",
-    recipientPostalCode: "",
-    recipientEmail: "",
-    recipientPhone: "",
-    bankName: "",
-    bankAddress: "",
-    bankCity: "",
-    bankState: "",
-    bankPostalCode: "",
-    bankCountry: "",
-    swiftCode: "",
-    ibanNumber: "",
-    accountNumber: "",
-    routingNumber: "",
-    branchCode: "",
-    cardNumber: "",
-    mobileNumber: "",
-    mobileProvider: "",
-    purpose: "",
-    reference: ""
+  const form = useForm<TransferForm>({
+    resolver: zodResolver(transferFormSchema),
+    defaultValues: {
+      amount: 0,
+      recipientName: "",
+      recipientCountry: "",
+      recipientAddress: "",
+      recipientCity: "",
+      bankName: "",
+      bankAddress: "",
+      bankCity: "",
+      bankCountry: "",
+      swiftCode: "",
+      accountNumber: "",
+      routingNumber: "",
+      cardNumber: "",
+      mobileNumber: "",
+      mobileProvider: "",
+      purpose: "",
+      reference: ""
+    }
   });
-  
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  const handleInputChange = (field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear validation error when user starts typing
-    if (validationErrors[field]) {
-      const newErrors = { ...validationErrors };
-      delete newErrors[field];
-      setValidationErrors(newErrors);
-    }
-  };
-
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-    
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      errors.amount = "Please enter a valid amount";
-    }
-    
-    if (!formData.recipientName.trim()) {
-      errors.recipientName = "Recipient name is required";
-    }
-    
-    if (transferType === "international") {
-      if (!formData.recipientCountry) errors.recipientCountry = "Recipient country is required";
-      if (!formData.recipientAddress.trim()) errors.recipientAddress = "Recipient address is required";
-      if (!formData.recipientCity.trim()) errors.recipientCity = "Recipient city is required";
-      if (!formData.bankName.trim()) errors.bankName = "Bank name is required";
-      if (!formData.bankAddress.trim()) errors.bankAddress = "Bank address is required";
-      if (!formData.bankCity.trim()) errors.bankCity = "Bank city is required";
-      if (!formData.bankCountry) errors.bankCountry = "Bank country is required";
-      if (!formData.swiftCode.trim()) errors.swiftCode = "SWIFT/BIC code is required";
-      if (!formData.accountNumber.trim()) errors.accountNumber = "Account number is required";
-    } else if (transferType === "domestic") {
-      if (!formData.routingNumber.trim()) errors.routingNumber = "Routing number is required";
-      if (!formData.accountNumber.trim()) errors.accountNumber = "Account number is required";
-    } else if (transferType === "card") {
-      if (!formData.cardNumber.trim()) errors.cardNumber = "Card number is required";
-    } else if (transferType === "mobile") {
-      if (!formData.mobileNumber.trim()) errors.mobileNumber = "Mobile number is required";
-      if (!formData.mobileProvider) errors.mobileProvider = "Provider is required";
-    }
-    
-    if (!formData.purpose) {
-      errors.purpose = "Purpose of transfer is required";
-    }
-    
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleContinueTransfer = async () => {
-    if (!validateForm()) {
-      toast({
-        title: 'Incomplete Form',
-        description: 'Please fill in all required fields correctly.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    setIsProcessing(true);
-    
+  const handleContinueTransfer = async (data: TransferForm) => {
     try {
-      const amount = parseFloat(formData.amount);
+    
+      const amount = data.amount;
       let fee = 0;
       
       switch (transferType) {
@@ -159,14 +92,14 @@ export default function TransferFunds() {
           fee: fee,
           total: total,
           transferType: transferType,
-          recipientName: formData.recipientName,
-          recipientCountry: formData.recipientCountry,
-          recipientAccount: formData.accountNumber,
-          bankName: formData.bankName,
-          swiftCode: formData.swiftCode,
-          purpose: formData.purpose,
-          reference: formData.reference,
-          transferPin: null // PIN verified separately via /api/verify-pin
+          recipientName: data.recipientName,
+          recipientCountry: data.recipientCountry,
+          recipientAccount: data.accountNumber,
+          bankName: data.bankName,
+          swiftCode: data.swiftCode,
+          purpose: data.purpose,
+          reference: data.reference,
+          transferPin: null
         })
       });
 
@@ -180,20 +113,18 @@ export default function TransferFunds() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Transfer failed');
       }
-      
     } catch (error: any) {
       toast({
         title: 'Transfer Failed',
         description: error.message || 'Unable to process transfer. Please try again.',
         variant: 'destructive',
       });
-    } finally {
-      setIsProcessing(false);
     }
   };
 
   const saveAsTemplate = () => {
-    if (!formData.recipientName.trim()) {
+    const formData = form.getValues();
+    if (!formData.recipientName?.trim()) {
       toast({
         title: 'Missing Information',
         description: 'Please enter recipient details to save as template.',
@@ -209,19 +140,21 @@ export default function TransferFunds() {
       created: new Date().toISOString()
     };
     
-    // Save to localStorage
     try {
       const templates = JSON.parse(localStorage.getItem('transferTemplates') || '[]');
       templates.push(template);
       localStorage.setItem('transferTemplates', JSON.stringify(templates));
+      toast({
+        title: 'Template Saved',
+        description: `Template saved: "${template.name}"`,
+      });
     } catch (e) {
-      console.warn('Failed to save template to localStorage');
+      toast({
+        title: 'Error',
+        description: 'Failed to save template',
+        variant: 'destructive',
+      });
     }
-    
-    toast({
-      title: 'Template Saved',
-      description: `Template saved: "${template.name}"`,
-    });
   };
 
   const languages = [

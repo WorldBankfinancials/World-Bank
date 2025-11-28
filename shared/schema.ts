@@ -259,3 +259,41 @@ export const insertAlertSchema = createInsertSchema(alerts).omit({
   id: true,
   createdAt: true,
 });
+
+// ==================== FORM VALIDATION SCHEMAS ====================
+// Unified schemas for all forms - single source of truth
+
+export const transferFormSchema = z.object({
+  amount: z.number().positive('Amount must be positive').max(1000000, 'Amount exceeds maximum transfer limit'),
+  recipientName: z.string().min(2, 'Recipient name must be at least 2 characters').max(100, 'Recipient name too long'),
+  recipientCountry: z.string().optional(),
+  recipientAddress: z.string().optional(),
+  recipientCity: z.string().optional(),
+  bankName: z.string().optional(),
+  bankAddress: z.string().optional(),
+  bankCity: z.string().optional(),
+  bankCountry: z.string().optional(),
+  swiftCode: z.string().optional(),
+  accountNumber: z.string().min(5, 'Account number must be at least 5 digits'),
+  routingNumber: z.string().optional(),
+  cardNumber: z.string().optional(),
+  mobileNumber: z.string().optional(),
+  mobileProvider: z.string().optional(),
+  purpose: z.string().min(2, 'Purpose required'),
+  reference: z.string().optional()
+});
+
+export const pinVerificationSchema = z.object({
+  pin: z.string().length(4, 'PIN must be 4 digits').regex(/^[0-9]{4}$/, 'PIN must be 4 digits')
+});
+
+export const balanceUpdateSchema = z.object({
+  accountId: z.number().int().positive('Invalid account ID'),
+  amount: z.number().refine(val => Math.abs(val) <= 1000000, 'Amount exceeds maximum limit'),
+  reason: z.string().min(5, 'Reason must be at least 5 characters')
+});
+
+// Type exports for forms
+export type TransferForm = z.infer<typeof transferFormSchema>;
+export type PinVerification = z.infer<typeof pinVerificationSchema>;
+export type BalanceUpdate = z.infer<typeof balanceUpdateSchema>;
