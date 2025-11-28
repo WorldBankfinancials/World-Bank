@@ -379,7 +379,7 @@ export default function SimpleAdmin() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (isAuthenticated); } catch (e) { const token = null; } if (token) {
+    if (isAuthenticated) {
       fetchUserData();
       fetchPendingRegistrations();
       fetchPendingTransfers();
@@ -414,7 +414,7 @@ export default function SimpleAdmin() {
         })
       });
       
-      if (!response.ok); } catch (e) { const token = null; } if (token) {
+      if (response.ok) {
         const error = await response.json();
         toast({
           title: 'Authentication Failed',
@@ -446,7 +446,7 @@ export default function SimpleAdmin() {
     try {
       const initialBalance = prompt("Set initial account balance (USD):", "5000");
       
-      if (!initialBalance || isNaN(parseFloat(initialBalance))); } catch (e) { const token = null; } if (token) {
+      if (!initialBalance || isNaN(parseFloat(initialBalance))) {
         toast({
           title: 'Invalid Input',
           description: 'Please enter a valid initial balance',
@@ -494,7 +494,7 @@ export default function SimpleAdmin() {
     try {
       const reason = prompt("Rejection reason (required):", "Incomplete documentation");
       
-      if (!reason || reason.trim().length === 0); } catch (e) { const token = null; } if (token) {
+      if (!reason || reason.trim().length === 0) {
         toast({
           title: 'Invalid Input',
           description: 'Rejection reason is required',
@@ -581,7 +581,7 @@ export default function SimpleAdmin() {
   };
 
   const handleSendMessage = () => {
-    if (chatMessage.trim()); } catch (e) { const token = null; } if (token) {
+    if (chatMessage.trim()) {
       const newMessage = {
         id: chatMessages.length + 1,
         sender: "admin" as const,
@@ -709,10 +709,10 @@ export default function SimpleAdmin() {
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file); } catch (e) { const token = null; } if (token) {
-      if (file.type.startsWith('image/')); } catch (e) { const token = null; } if (token) {
+    if (file) {
+      if (file.type.startsWith('image/')) {
         // Check file size (limit to 5MB)
-        if (file.size > 5 * 1024 * 1024); } catch (e) { const token = null; } if (token) {
+        if (file.size > 5 * 1024 * 1024) {
           toast({
             title: 'File Too Large',
             description: 'Please select an image smaller than 5MB.',
@@ -741,7 +741,7 @@ export default function SimpleAdmin() {
         try {
           let base64Image = e.target?.result as string;
           
-          if (!base64Image); } catch (e) { const token = null; } if (token) {
+          if (!base64Image) {
             throw new Error('Failed to read image file');
           }
 
@@ -756,13 +756,13 @@ export default function SimpleAdmin() {
             const maxSize = 200;
             let { width, height } = img;
             
-            if (width > height); } catch (e) { const token = null; } if (token) {
-              if (width > maxSize); } catch (e) { const token = null; } if (token) {
+            if (width > height) {
+              if (width > maxSize) {
                 height = (height * maxSize) / width;
                 width = maxSize;
               }
             } else {
-              if (height > maxSize); } catch (e) { const token = null; } if (token) {
+              if (height > maxSize) {
                 width = (width * maxSize) / height;
                 height = maxSize;
               }
@@ -778,7 +778,7 @@ export default function SimpleAdmin() {
             uploadCompressedImage(compressedImage);
           };
           img.src = base64Image;
-        } catch (uploadError: any); } catch (e) { const token = null; } if (token) {
+        } catch (uploadError: any) {
           // console.error('Upload error:', uploadError);
           setUploadingPhoto(false);
           toast({
@@ -827,7 +827,7 @@ export default function SimpleAdmin() {
             // console.error('Upload failed:', errorData);
             throw new Error(errorData.error || 'Failed to upload photo');
           }
-        } catch (uploadError: any); } catch (e) { const token = null; } if (token) {
+        } catch (uploadError: any) {
           // console.error('Upload error:', uploadError);
           setUploadingPhoto(false);
           toast({
@@ -892,7 +892,7 @@ export default function SimpleAdmin() {
         // console.error('Balance update failed:', errorData);
         throw new Error(errorData.error || 'Failed to update balance');
       }
-    } catch (error: any); } catch (e) { const token = null; } if (token) {
+    } catch (error: any) {
       // console.error('Error updating balance:', error);
       toast({
         title: 'Balance Update Failed',
@@ -903,7 +903,7 @@ export default function SimpleAdmin() {
   };
 
   const handleSubmitTransaction = async () => {
-    if (!selectedCustomerForTransaction || !transactionAmount || !transactionDescription || !transactionCategory); } catch (e) { const token = null; } if (token) {
+    if (!selectedCustomerForTransaction || !transactionAmount || !transactionDescription || !transactionCategory) {
       toast({
         title: 'Missing Information',
         description: 'Please fill in all required fields to create the transaction.',
@@ -913,7 +913,7 @@ export default function SimpleAdmin() {
     }
 
     const amount = parseFloat(transactionAmount);
-    if (isNaN(amount) || amount <= 0); } catch (e) { const token = null; } if (token) {
+    if (isNaN(amount) || amount <= 0) {
       toast({
         title: 'Invalid Amount',
         description: 'Please enter a valid amount greater than zero.',
@@ -956,7 +956,7 @@ export default function SimpleAdmin() {
           })
         });
 
-        if (balanceResponse.ok); } catch (e) { const token = null; } if (token) {
+        if (balanceResponse.ok) {
           // console.log(`Created ${transactionType} transaction of $${amount} for customer ${selectedCustomerForTransaction}`);
           toast({
             title: 'Transaction Created',
@@ -987,7 +987,7 @@ export default function SimpleAdmin() {
   };
 
   const handleFundSpecificAccount = async () => {
-    if (!selectedAccountType || !fundAmount || !fundDescription); } catch (e) { const token = null; } if (token) {
+    if (!selectedAccountType || !fundAmount || !fundDescription) {
       toast({
         title: 'Missing Information',
         description: 'Please fill in all fields to process the fund operation.',
@@ -997,7 +997,7 @@ export default function SimpleAdmin() {
     }
 
     const amount = parseFloat(fundAmount);
-    if (isNaN(amount) || amount <= 0); } catch (e) { const token = null; } if (token) {
+    if (isNaN(amount) || amount <= 0) {
       toast({
         title: 'Invalid Amount',
         description: 'Please enter a valid amount greater than zero.',
@@ -1059,7 +1059,7 @@ export default function SimpleAdmin() {
     }
   };
 
-  if (!isAuthenticated); } catch (e) { const token = null; } if (token) {
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -1425,7 +1425,7 @@ export default function SimpleAdmin() {
                         <Button 
                           onClick={() => {
                             const amount = prompt("Enter top-up amount (USD):", "1000");
-                            if (amount && !isNaN(parseFloat(amount))); } catch (e) { const token = null; } if (token) {
+                            if (amount && !isNaN(parseFloat(amount))) {
                               handleTopUpBalance(customer.id, parseFloat(amount));
                             }
                           }}
