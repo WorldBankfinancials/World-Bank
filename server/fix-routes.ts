@@ -748,23 +748,22 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Verify PIN endpoint - REQUIRES EMAIL & PIN (used during login, not protected by JWT)
+  // Verify PIN endpoint - Used after password verification, needs email + pin
   app.post('/api/verify-pin', authRateLimiter, async (req: Request, res: Response) => {
     try {
       const body = req.body as { email?: string; username?: string; pin: string };
       const identifier = body.email || body.username;
 
-      if (!identifier) {
-        return res.status(400).json({ message: 'Email or username required', verified: false });
+      if (!identifier || !body.pin) {
+        return res.status(400).json({ message: 'Email and PIN required', verified: false });
       }
 
-      // Use email for lookup (supports both email and username fields for compatibility)
-      const user = await (storage).getUserByEmail(identifier);
+      // Lookup user by email
+      const user = await storage.getUserByEmail(identifier);
 
       if (!user) {
         return res.status(404).json({ message: 'User not found', verified: false });
       }
-
 
       // SECURITY: Check if account is active (approved by admin)
       if (!user.isActive) {
@@ -785,11 +784,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
       
       // SECURITY: Use bcrypt to compare hashed PIN
-      // DEBUG: Log PIN comparison
-      console.log('🔐 PIN Verification Debug:');
-      console.log('Provided PIN:', body.pin);
-      console.log('Stored hash length:', user.transferPin?.length);
-      console.log('Is hash:', user.transferPin?.startsWith('$2'));
+      console.log('🔐 PIN Verification for:', identifier);
       
       let pinMatch = false;
       
@@ -798,16 +793,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         pinMatch = await bcrypt.compare(body.pin, user.transferPin);
         console.log('✅ bcrypt comparison result:', pinMatch);
       } else if (user.transferPin === body.pin) {
-        // Fallback for plaintext (shouldn't happen, but for compatibility)
+        // Fallback for plaintext (legacy compatibility)
         pinMatch = true;
-        console.log('⚠️  PIN matched as plaintext (legacy)');
+        console.log('⚠️  PIN matched as plaintext');
       }
       
       if (!pinMatch) {
-        console.log('❌ PIN mismatch');
+        console.log('❌ PIN mismatch for:', identifier);
         return res.status(401).json({ message: 'Invalid PIN', verified: false });
       }
 
+      console.log('✅ PIN verified for:', identifier);
       res.json({ success: true, verified: true });
     } catch (error) {
       console.error('❌ PIN verification error:', error);
@@ -1942,37 +1938,62 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CUSTOMER LOGIN ENDPOINT
+  // CUSTOMER LOGIN ENDPOINT - Uses Supabase Auth for JWT tokens
   app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
-      console.log('Login attempt:', email);
+      console.log('🔐 Login attempt:', email);
       if (!email || !password) {
         return res.status(400).json({ error: 'Email and password required' });
       }
 
-      // Check user in database
-      const dbUser = await storage.getUserByEmail(email);
-      console.log('User lookup result:', dbUser?.email);
-      if (!dbUser) {
-        console.log('User not found:', email);
+      // Use Supabase Auth for authentication (returns proper JWT)
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+
+      const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error || !data.session) {
+        console.log('❌ Supabase auth failed:', error?.message);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      // Generate token
-      const token = Buffer.from(`${email}:${Date.now()}`).toString('base64');
-      console.log('Login successful for:', email);
+      // Verify customer exists in database and is active
+      const dbUser = await storage.getUserByEmail(email);
+      console.log('✅ User found:', dbUser?.email);
+
+      if (!dbUser) {
+        console.log('❌ User not found in database:', email);
+        return res.status(401).json({ error: 'Account not found in database' });
+      }
+
+      if (!dbUser.isActive) {
+        console.log('⚠️  Account pending approval:', email);
+        return res.status(403).json({ 
+          error: 'Account pending approval',
+          message: 'Your account is pending approval. Please check your email for updates.'
+        });
+      }
+
+      console.log('✅ Login successful for:', email);
       res.json({ 
-        token,
+        token: data.session.access_token,
         user: {
           id: dbUser.id,
           email: dbUser.email,
-          role: 'customer'
+          role: dbUser.role || 'customer'
         }
       });
     } catch (error: any) {
-      console.error('Login error:', error);
-      res.status(500).json({ error: 'Login failed' });
+      console.error('❌ Login error:', error);
+      res.status(500).json({ error: 'Login failed', details: error.message });
     }
   });
 
