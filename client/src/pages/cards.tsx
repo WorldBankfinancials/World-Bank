@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/Header';
 import BottomNavigation from '@/components/BottomNavigation';
 import QuickActions from '@/components/QuickActions';
@@ -19,6 +19,7 @@ import { Card as CardType, ApiError } from '@/types';
 export default function Cards() {
   const { userProfile } = useAuth();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [showBalance, setShowBalance] = useState(false);
   const [lockDialogOpen, setLockDialogOpen] = useState(false);
   const [mobilePayDialogOpen, setMobilePayDialogOpen] = useState(false);
@@ -47,7 +48,7 @@ export default function Cards() {
   // Show error message if cards fail to load
   useEffect(() => {
     if (cardsError) {
-      toast({
+      toastFunction({
         title: t('error') || 'Error',
         description: 'Failed to load cards. Please refresh the page.',
         variant: 'destructive'
@@ -84,7 +85,7 @@ export default function Cards() {
         // Refresh cards data
         queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
         
-        toast({
+        toastFunction({
           title: selectedCard.isLocked ? t('card_unlocked') || 'Card Unlocked' : t('card_locked') || 'Card Locked',
           description: selectedCard.isLocked 
             ? t('card_unlocked_desc') || 'Your card has been unlocked successfully'
@@ -93,14 +94,14 @@ export default function Cards() {
         setLockDialogOpen(false);
         setPin('');
       } else {
-        toast({
+        toastFunction({
           title: t('invalid_pin') || 'Invalid PIN',
           description: t('please_enter_correct_pin') || 'Please enter your correct 4-digit PIN',
           variant: 'destructive'
         });
       }
     } catch (error) {
-      toast({
+      toastFunction({
         title: t('error') || 'Error',
         description: t('operation_failed') || 'Operation failed. Please try again.',
         variant: 'destructive'
@@ -118,7 +119,7 @@ export default function Cards() {
       });
 
       if (response.ok) {
-        toast({
+        toastFunction({
           title: t('mobile_payment_sent') || 'Mobile Payment Sent',
           description: `${t('sent') || 'Sent'} $${amount} ${t('to') || 'to'} ${phoneNumber}`,
         });
@@ -127,14 +128,14 @@ export default function Cards() {
         setAmount('');
         setPhoneNumber('');
       } else {
-        toast({
+        toastFunction({
           title: t('invalid_pin') || 'Invalid PIN',
           description: t('please_enter_correct_pin') || 'Please enter your correct 4-digit PIN',
           variant: 'destructive'
         });
       }
     } catch (error) {
-      toast({
+      toastFunction({
         title: t('error') || 'Error',
         description: t('payment_failed') || 'Payment failed. Please try again.',
         variant: 'destructive'
@@ -152,7 +153,7 @@ export default function Cards() {
       });
 
       if (response.ok) {
-        toast({
+        toastFunction({
           title: t('bill_payment_successful') || 'Bill Payment Successful',
           description: `${t('paid') || 'Paid'} $${amount} ${t('to') || 'to'} ${billProvider}`,
         });
@@ -162,14 +163,14 @@ export default function Cards() {
         setBillProvider('');
         setAccountNumber('');
       } else {
-        toast({
+        toastFunction({
           title: t('invalid_pin') || 'Invalid PIN',
           description: t('please_enter_correct_pin') || 'Please enter your correct 4-digit PIN',
           variant: 'destructive'
         });
       }
     } catch (error) {
-      toast({
+      toastFunction({
         title: t('error') || 'Error',
         description: t('payment_failed') || 'Payment failed. Please try again.',
         variant: 'destructive'
@@ -188,14 +189,14 @@ export default function Cards() {
       // Refresh cards data
       queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
       
-      toast({
+      toastFunction({
         title: t('settings_updated') || 'Settings Updated',
         description: t('card_settings_updated') || 'Your card settings have been updated successfully',
       });
       setSettingsDialogOpen(false);
       setAmount('');
     } catch (error) {
-      toast({
+      toastFunction({
         title: t('error') || 'Error',
         description: t('operation_failed') || 'Failed to update settings',
         variant: 'destructive'
