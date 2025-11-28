@@ -166,7 +166,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       try {
         const newUser = await storage.createUser({
           username: validatedData.email.split('@')[0],
-          fullName: validatedData.fullName,
+          firstName: validatedData.firstName || validatedData.email.split('@')[0],
+          lastName: validatedData.lastName || 'User',
           email: validatedData.email,
           phone: validatedData.phone,
           dateOfBirth: validatedData.dateOfBirth,
@@ -175,20 +176,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           state: validatedData.state,
           country: validatedData.country,
           postalCode: validatedData.postalCode,
-          nationality: validatedData.nationality,
           profession: validatedData.profession,
           annualIncome: validatedData.annualIncome,
           idType: validatedData.idType,
           idNumber: validatedData.idNumber,
-          supabaseUserId: supabaseUserId,
           accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
-          accountId: `WB${Date.now()}`,
-          passwordHash: 'supabase_auth',
+          accountId: Date.now(),
+          password: 'supabase_auth',
           transferPin: validatedData.transferPin,
           role: 'customer',
           isVerified: false,
-          isOnline: false,
-          isActive: false, // Requires admin approval
+          isActive: false,
           balance: "0",
         });
 
@@ -200,7 +198,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           accountType: 'checking',
           balance: '0.00',
           currency: 'USD',
-          isActive: false // Requires admin approval
+          status: 'pending'
         });
 
         
@@ -216,7 +214,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           message: 'Registration successful. Awaiting admin approval.',
           user: {
             email: newUser.email,
-            fullName: newUser.fullName
+            firstName: newUser.firstName,
+            lastName: newUser.lastName
           }
         });
 
@@ -565,7 +564,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const transaction = await storage.createTransaction({
         fromAccountId: primaryAccount.id,
-        transactionType: body.type,
+        type: body.type,
         amount: body.amount,
         description: body.description,
         status: body.status || 'completed',
@@ -625,7 +624,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // Create transaction record
       const transaction = await storage.createTransaction({
         fromAccountId: accountId,
-        transactionType: body.type,
+        type: body.type,
         amount: amountNum.toString(),
         description: body.description,
         status: 'completed',
@@ -751,7 +750,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const body = req.body as { username: string; password: string };
       const user = await storage.getUserByUsername(body.username);
 
-      if (!user || user.passwordHash !== body.password) {
+      if (!user || user.password !== body.password) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
