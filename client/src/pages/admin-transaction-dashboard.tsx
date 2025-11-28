@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from '@/hooks/use-toast';
-import { DollarSign, RefreshCw, Filter, Search } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { DollarSign, RefreshCw, Search } from 'lucide-react';
 
 interface Transaction {
   id: string;
@@ -20,17 +21,22 @@ interface Transaction {
 
 export default function AdminTransactionDashboard() {
   const { toast } = useToast();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  
+  const { data: transactions = [] } = useQuery<Transaction[]>({
+    queryKey: ['/api/admin/transactions'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/admin/transactions');
+      return response.ok ? response.json() : [];
+    }
+  });
 
   const handleRefresh = async () => {
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/admin/transactions');
       if (!response.ok) throw new Error('Failed to fetch');
-      const data = await response.json();
-      setTransactions(Array.isArray(data) ? data : []);
     } catch (error) {
       toast({
         title: "Error",
@@ -83,7 +89,7 @@ export default function AdminTransactionDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <DollarSign className="w-5 h-5 text-green-600" />
-              <span>Recent Transactions</span>
+              <span>Recent Transactions ({(transactions as Transaction[]).length})</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -99,10 +105,10 @@ export default function AdminTransactionDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.length === 0 ? (
+                  {(transactions as Transaction[]).length === 0 ? (
                     <tr><td colSpan={5} className="p-4 text-center text-gray-500">No transactions</td></tr>
                   ) : (
-                    transactions.map(tx => (
+                    (transactions as Transaction[]).map((tx: Transaction) => (
                       <tr key={tx.id} className="border-b hover:bg-gray-50">
                         <td className="p-3">{tx.customer_name}</td>
                         <td className="p-3 font-medium">${tx.amount}</td>

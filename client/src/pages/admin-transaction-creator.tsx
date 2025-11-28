@@ -3,12 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useLocation } from 'wouter';
-import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, DollarSign } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 
 interface Account {
   id: number;
@@ -20,9 +19,15 @@ interface Account {
 
 export default function AdminTransactionCreator() {
   const { t } = useLanguage();
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const { data: accounts = [] } = useQuery<Account[]>({
+    queryKey: ['/api/accounts'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/accounts');
+      return response.ok ? response.json() : [];
+    }
+  });
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
@@ -96,7 +101,7 @@ export default function AdminTransactionCreator() {
                   <SelectValue placeholder="Choose account..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {accounts.map(acc => (
+                  {(accounts as Account[]).map((acc: Account) => (
                     <SelectItem key={acc.id} value={acc.id.toString()}>
                       {acc.accountName} - {acc.accountNumber}
                     </SelectItem>

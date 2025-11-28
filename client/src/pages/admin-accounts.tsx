@@ -1,11 +1,11 @@
 import { useState } from "react";
-
 import { useEffect } from "react";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit, Trash2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -26,38 +26,25 @@ interface AccountManagementProps {
 
 export default function AdminAccountManagement({ onBack }: AccountManagementProps) {
   const { toast } = useToast();
-  const { data: accounts = [] } = useQuery({ queryKey: ['/api/accounts'], queryFn: async () => { const { authenticatedFetch } = await import('@/lib/queryClient'); const response = await authenticatedFetch('/api/accounts'); return response.ok ? response.json() : []; } });
-  // OLD: const [accounts, setAccounts] = useState<Account[]>([]);
+  const queryClient = useQueryClient();
+  const { data: accounts = [] } = useQuery<Account[]>({
+    queryKey: ['/api/accounts'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/accounts');
+      return response.ok ? response.json() : [];
+    }
+  });
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [formData, setFormData] = useState({
-    userId: 1, // Liu Wei's user ID
+    userId: 1,
     accountType: 'checking' as 'checking' | 'savings' | 'investment',
     accountName: '',
     balance: '0.00',
     currency: 'USD'
   });
-
-  useEffect(() => {
-    fetchAccounts();
-  }, []);
-
-  const fetchAccounts = async () => {
-    try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/accounts');
-      if (response.ok) {
-        try {
-          const accountsData = await response.json();
-          setAccounts(accountsData);
-        } catch (e) {
-          throw new Error('Failed to parse accounts');
-        }
-      } else {
-      }
-    } catch (error) {
-    }
-  };
 
   const generateAccountNumber = () => {
     const timestamp = Date.now().toString().slice(-6);
@@ -81,13 +68,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
       });
 
       if (response.ok) {
-        let newAccount;
-        try {
-          newAccount = await response.json();
-        } catch (e) {
-          throw new Error('Failed to parse new account response');
-        }
-        setAccounts(prev => [...prev, newAccount]);
+        queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
         setShowCreateForm(false);
         setFormData({
           userId: 1,
@@ -101,6 +82,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
           description: 'New account has been created successfully.',
         });
       } else {
+        throw new Error('Failed to create account');
       }
     } catch (error) {
       toast({
@@ -127,15 +109,14 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
       });
 
       if (response.ok) {
-        setAccounts(prev => prev.map(acc => 
-          acc.id === editingAccount.id ? editingAccount : acc
-        ));
+        queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
         setEditingAccount(null);
         toast({
           title: 'Account Updated',
           description: 'Account information has been updated successfully.',
         });
       } else {
+        throw new Error('Failed to update account');
       }
     } catch (error) {
       toast({
@@ -156,12 +137,13 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
       });
 
       if (response.ok) {
-        setAccounts(prev => prev.filter(acc => acc.id !== accountId));
+        queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
         toast({
           title: 'Account Deleted',
           description: 'Account has been deleted successfully.',
         });
       } else {
+        throw new Error('Failed to delete account');
       }
     } catch (error) {
       toast({
@@ -190,9 +172,8 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
         </Button>
       </div>
 
-      {/* Account List */}
       <div className="grid gap-4 mb-6">
-        {accounts.map((account) => (
+        {(accounts as Account[]).map((account: Account) => (
           <Card key={account.id}>
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
@@ -233,7 +214,6 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
         ))}
       </div>
 
-      {/* Create Account Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <Card className="w-full max-w-md">
@@ -243,7 +223,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
             <CardContent className="space-y-4">
               <div>
                 <Label>Account Type</Label>
-                <Select value={formData.accountType} onValueChange={(value: any) => 
+                <Select value={formData.accountType} onValueChange={(value: any) =>
                   setFormData(prev => ({ ...prev, accountType: value }))
                 }>
                   <SelectTrigger>
@@ -256,7 +236,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label>Account Name</Label>
                 <Input
@@ -265,7 +245,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
                   placeholder="e.g., Primary Checking"
                 />
               </div>
-              
+
               <div>
                 <Label>Initial Balance</Label>
                 <Input
@@ -273,15 +253,16 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
                   step="0.01"
                   value={formData.balance}
                   onChange={(e) => setFormData(prev => ({ ...prev, balance: e.target.value }))}
+                  placeholder="0.00"
                 />
               </div>
-              
-              <div className="flex gap-2 pt-4">
+
+              <div className="flex gap-2">
+                <Button onClick={handleCreateAccount} className="flex-1 bg-blue-600">
+                  Create
+                </Button>
                 <Button onClick={() => setShowCreateForm(false)} variant="outline" className="flex-1">
                   Cancel
-                </Button>
-                <Button onClick={handleCreateAccount} className="flex-1 bg-blue-600 hover:bg-blue-700">
-                  Create Account
                 </Button>
               </div>
             </CardContent>
@@ -289,7 +270,6 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
         </div>
       )}
 
-      {/* Edit Account Modal */}
       {editingAccount && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <Card className="w-full max-w-md">
@@ -301,48 +281,41 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
                 <Label>Account Name</Label>
                 <Input
                   value={editingAccount.accountName}
-                  onChange={(e) => setEditingAccount(prev => prev ? 
-                    { ...prev, accountName: e.target.value } : null
-                  )}
+                  onChange={(e) => setEditingAccount({ ...editingAccount, accountName: e.target.value })}
                 />
               </div>
-              
+
               <div>
                 <Label>Balance</Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={editingAccount.balance}
-                  onChange={(e) => setEditingAccount(prev => prev ? 
-                    { ...prev, balance: e.target.value } : null
-                  )}
+                  onChange={(e) => setEditingAccount({ ...editingAccount, balance: e.target.value })}
                 />
               </div>
-              
+
               <div>
-                <Label>Status</Label>
-                <Select 
-                  value={editingAccount.isActive ? 'active' : 'inactive'} 
-                  onValueChange={(value) => setEditingAccount(prev => prev ? 
-                    { ...prev, isActive: value === 'active' } : null
-                  )}
-                >
+                <Label>Active</Label>
+                <Select value={editingAccount.isActive ? "true" : "false"} onValueChange={(value) =>
+                  setEditingAccount({ ...editingAccount, isActive: value === "true" })
+                }>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="true">Active</SelectItem>
+                    <SelectItem value="false">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div className="flex gap-2 pt-4">
+
+              <div className="flex gap-2">
+                <Button onClick={handleEditAccount} className="flex-1 bg-blue-600">
+                  Update
+                </Button>
                 <Button onClick={() => setEditingAccount(null)} variant="outline" className="flex-1">
                   Cancel
-                </Button>
-                <Button onClick={handleEditAccount} className="flex-1 bg-green-600 hover:bg-green-700">
-                  Save Changes
                 </Button>
               </div>
             </CardContent>

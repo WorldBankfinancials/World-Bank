@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 import { Plus, Minus, DollarSign, Search } from "lucide-react";
 
 interface Customer {
@@ -17,10 +18,18 @@ interface Customer {
 
 export default function FundManagement() {
   const { toast } = useToast();
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [adjustAmount, setAdjustAmount] = useState("");
+
+  const { data: customers = [] } = useQuery<Customer[]>({
+    queryKey: ['/api/admin/customers'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/admin/customers');
+      return response.ok ? response.json() : [];
+    }
+  });
 
   const handleAdjustBalance = async (type: 'add' | 'subtract') => {
     if (!selectedCustomer || !adjustAmount) {
@@ -154,10 +163,10 @@ export default function FundManagement() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {customers.length === 0 ? (
+              {(customers as Customer[]).length === 0 ? (
                 <p className="text-center text-gray-500 py-8">No customers found</p>
               ) : (
-                customers.map(customer => (
+                (customers as Customer[]).map((customer: Customer) => (
                   <div
                     key={customer.id}
                     onClick={() => setSelectedCustomer(customer)}
