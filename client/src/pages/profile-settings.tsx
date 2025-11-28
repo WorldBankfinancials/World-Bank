@@ -14,10 +14,10 @@ import { useLanguage } from "@/contexts/LanguageContext";
 export default function ProfileSettings() {
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading } = useQuery<any>({
     queryKey: ['/api/user'],
   });
-  const displayUser = user;
+  const displayUser = user || {};
   const loading = isLoading;
 
   if (loading) {
@@ -114,7 +114,7 @@ export default function ProfileSettings() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('email_address')}</label>
-                  <p className="text-gray-900">{displayUser?.email || 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.email || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('phone')}</label>
@@ -159,7 +159,7 @@ export default function ProfileSettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Account Number</label>
-                  <p className="text-gray-900 font-mono">{displayUser?.accountNumber || 'Not assigned'}</p>
+                  <p className="text-gray-900 font-mono">{(displayUser as any)?.accountNumber || 'Not assigned'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Account ID</label>

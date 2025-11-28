@@ -333,34 +333,10 @@ export default function SimpleAdmin() {
     }
   };
 
-  // Real-time subscriptions setup
+  // Real-time subscriptions setup (polling instead)
   useEffect(() => {
     if (!isAuthenticated) return;
-
-    // Subscribe to real-time updates via Supabase
-    const channel = supabase
-      .channel('admin-realtime-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bank_users' }, () => {
-        console.log('🔄 User data changed, refreshing customers');
-        fetchCustomers();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, () => {
-        console.log('🔄 Support ticket changed, refreshing tickets');
-        fetchSupportTickets();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
-        console.log('🔄 Transaction changed, refreshing transfers');
-        fetchPendingTransfers();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bank_accounts' }, () => {
-        console.log('🔄 Account changed, refreshing customers');
-        fetchCustomers();
-      })
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
+    // Realtime disabled - using polling with interval refresh
   }, [isAuthenticated]);
 
   useEffect(() => {
