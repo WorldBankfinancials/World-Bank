@@ -53,7 +53,7 @@ export const balanceUpdateSchema = z.object({
 export const registrationSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string()
-    .min(8, 'Password must be at least 8 characters')
+    .min(12, 'Password must be at least 12 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number')
@@ -113,8 +113,14 @@ export const pinChangeSchema = z.object({
   newPin: z.string()
     .length(4, 'New PIN must be 4 digits')
     .regex(/^[0-9]{4}$/, 'PIN must be 4 digits')
-    .refine(val => val !== '0000' && val !== '1234', 'PIN too simple')
+    .refine(val => val !== '0000' && val !== '1111' && val !== '2222' && val !== '3333' && val !== '4444' && val !== '5555' && val !== '6666' && val !== '7777' && val !== '8888' && val !== '9999' && val !== '1234' && val !== '4321', 'PIN cannot be sequential or repeated digits')
 });
+
+// SECURITY: PIN cannot be weak patterns
+export const securePinValidator = (pin: string): boolean => {
+  const weakPatterns = ['0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999', '1234', '4321', '0123', '1357', '2468'];
+  return !weakPatterns.includes(pin);
+};
 
 // ==================== HELPER FUNCTIONS ====================
 
