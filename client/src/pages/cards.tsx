@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { Card as CardType, ApiError } from '@/types';
 
 export default function Cards() {
   const { userProfile } = useAuth();
@@ -23,7 +24,7 @@ export default function Cards() {
   const [mobilePayDialogOpen, setMobilePayDialogOpen] = useState(false);
   const [payBillDialogOpen, setPayBillDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<any>(null);
+  const [selectedCard, setSelectedCard] = useState<CardType | null>(null);
   const [pin, setPin] = useState('');
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -31,9 +32,9 @@ export default function Cards() {
   const [accountNumber, setAccountNumber] = useState('');
 
   const queryClient = useQueryClient();
-  const [creditCards, setCreditCards] = useState<any[]>([]);
+  const [creditCards, setCreditCards] = useState<CardType[]>([]);
   const [cardsLoading, setCardsLoading] = useState(true);
-  const [cardsError, setCardsError] = useState<any>(null);
+  const [cardsError, setCardsError] = useState<ApiError | null>(null);
 
 
   // Show error message if cards fail to load

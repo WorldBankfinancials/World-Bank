@@ -20,11 +20,11 @@ import {
   ArrowDownRight,
   DollarSign 
 } from "lucide-react";
-
+import { Investment } from "@/types";
 
 export default function InvestmentTrading() {
   const { t } = useLanguage();
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading } = useQuery<any>({
     queryKey: ['/api/user'],
   });
 
@@ -44,14 +44,22 @@ export default function InvestmentTrading() {
     staleTime: 30000,
   });
 
-  const { data: investments = [] } = useQuery<any[]>({
+  const { data: investments = [] } = useQuery<Investment[]>({
     queryKey: ['/api/investments'],
     staleTime: 30000,
   });
 
   // Calculate real portfolio statistics from investments
-  const totalPortfolioValue = investments.reduce((sum: number, inv: any) => sum + parseFloat(inv.total_value || inv.totalValue || 0), 0);
-  const totalGainLoss = investments.reduce((sum: number, inv: any) => sum + parseFloat(inv.gain_loss || inv.gainLoss || 0), 0);
+  const totalPortfolioValue = investments.reduce((sum: number, inv: Investment) => {
+    const value = inv.total_value || inv.totalValue || 0;
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    return sum + (isNaN(num) ? 0 : num);
+  }, 0);
+  const totalGainLoss = investments.reduce((sum: number, inv: Investment) => {
+    const loss = inv.gain_loss || inv.gainLoss || 0;
+    const num = typeof loss === 'string' ? parseFloat(loss) : loss;
+    return sum + (isNaN(num) ? 0 : num);
+  }, 0);
   // Guard against division by zero: use cost basis (totalPortfolioValue - totalGainLoss)
   const costBasis = totalPortfolioValue - totalGainLoss;
   const gainLossPercent = costBasis > 0 ? (totalGainLoss / costBasis) * 100 : 0;

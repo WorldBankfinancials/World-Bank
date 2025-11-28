@@ -8,6 +8,7 @@ import BottomNavigation from '@/components/BottomNavigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery } from '@tanstack/react-query';
+import { AccountData } from '@/types';
 
 export default function Investment() {
   const { userProfile } = useAuth();
@@ -15,7 +16,7 @@ export default function Investment() {
   const [selectedTimeframe, setSelectedTimeframe] = useState('1M');
 
   interface InvestmentData {
-    accounts: any[];
+    accounts: AccountData[];
   }
 
   interface MarketRate {
@@ -45,7 +46,10 @@ export default function Investment() {
   });
 
   const investmentAccounts = investmentData?.accounts || [];
-  const totalInvestmentValue = investmentAccounts.reduce((total: number, account: any) => total + account.balance, 0);
+  const totalInvestmentValue = investmentAccounts.reduce((total: number, account: AccountData) => {
+    const balance = typeof account.balance === 'string' ? parseFloat(account.balance) : account.balance;
+    return total + (isNaN(balance) ? 0 : balance);
+  }, 0);
   
   const marketRates: MarketData = marketData || {
     stocks: { change: 2.4, trending: 'up' },
