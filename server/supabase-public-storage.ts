@@ -92,10 +92,16 @@ export class SupabasePublicStorage implements IStorage {
       const { data: user, error } = await supabase
         .from('bank_users')
         .select('id, full_name, email, balance, created_at, updated_at')
-        .eq('email', email)
-        .single();
-      if (error || !user) return undefined;
-      return mapUser(user);
+        .eq('email', email);
+      if (error) {
+        console.error('Supabase error for email:', email, error);
+        return undefined;
+      }
+      if (!user || user.length === 0) {
+        console.log('No user found for email:', email);
+        return undefined;
+      }
+      return mapUser(user[0]);
     } catch (error) {
       console.error('Error getting user by email:', error);
       return undefined;

@@ -1894,18 +1894,22 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
+      console.log('Login attempt:', email);
       if (!email || !password) {
         return res.status(400).json({ error: 'Email and password required' });
       }
 
       // Check user in database
       const dbUser = await storage.getUserByEmail(email);
+      console.log('User lookup result:', dbUser?.email);
       if (!dbUser) {
+        console.log('User not found:', email);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       // Generate token
       const token = Buffer.from(`${email}:${Date.now()}`).toString('base64');
+      console.log('Login successful for:', email);
       res.json({ 
         token,
         user: {
@@ -1914,7 +1918,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           role: 'customer'
         }
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Login error:', error);
       res.status(500).json({ error: 'Login failed' });
     }
   });
