@@ -48,11 +48,10 @@ export async function approveTransfer(transactionId: number, adminId: number, no
       // Log admin action
       await storage.createAdminAction({
         adminId: adminId,
-        actionType: 'approve_transfer',
+        action: 'approve_transfer',
         targetType: 'transaction',
         targetId: transactionId,
-        description: `Approved transfer #${transactionId}`,
-        metadata: notes ? JSON.stringify({ notes }) : null
+        details: notes ? { notes } : {}
       });
     }
 
@@ -72,11 +71,10 @@ export async function rejectTransfer(transactionId: number, adminId: number, not
       // Log admin action
       await storage.createAdminAction({
         adminId: adminId,
-        actionType: 'reject_transfer',
+        action: 'reject_transfer',
         targetType: 'transaction',
         targetId: transactionId,
-        description: `Rejected transfer #${transactionId}`,
-        metadata: JSON.stringify({ notes })
+        details: { notes }
       });
 
       // Create automatic support ticket for rejected transfer

@@ -966,7 +966,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         userId: registrationId,
         subject: 'Registration Status - Action Required',
         description: `Your registration has been reviewed. ${reason || 'Please contact support for more information.'}`,
-        category: 'account_verification',
+        // category removed,
         priority: 'high',
         status: 'open'
       });
