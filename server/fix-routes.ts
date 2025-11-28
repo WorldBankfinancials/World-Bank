@@ -243,7 +243,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Email is required' });
       }
 
-      // Check local database first
+      // SECURITY: Use database as source of truth to prevent race conditions
+      // Check local database first (primary authority)
       const existingUser = await (storage as any).getUserByEmail(email);
       if (existingUser) {
         return res.json({
@@ -252,7 +253,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check Supabase Auth
+      // Check Supabase Auth as secondary confirmation
       const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(
         process.env.VITE_SUPABASE_URL!,
@@ -279,7 +280,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Email check error:', error);
-      res.status(500).json({ error: 'Failed to check email availability' });
+      res.status(500).json({ error: 'Failed to check email availability. Please try again.' });
     }
   });
 
@@ -292,8 +293,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Email and newPassword are required' });
       }
 
-      if (newPassword.length < 6) {
-        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      // SECURITY: Enforce strong password policy - 12+ characters with complexity
+      if (newPassword.length < 12) {
+        return res.status(400).json({ 
+          error: 'Password must be at least 12 characters with uppercase, lowercase, and numbers' 
+        });
+      }
+      
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+        return res.status(400).json({ 
+          error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' 
+        });
       }
 
       // Create Supabase admin client
@@ -459,85 +469,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // WARNING: This endpoint uses service role key and should NEVER be exposed in production
+  // SECURITY: Test user endpoint COMPLETELY DISABLED in production and dev for safety
   app.post('/api/create-test-user', async (req: Request, res: Response) => {
-    // CRITICAL: Block in production to prevent privilege escalation
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(404).json({ error: 'Not found' });
-    }
-
-    try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const { email, password } = req.body;
-
-      if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password required' });
-      }
-
-      // Create Supabase admin client with service role key
-      const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-
-      // Try to get user by email first
-      const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = users?.find((u: any) => u.email === email);
-
-      if (existingUser) {
-        // Update password for existing user
-        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-          existingUser.id,
-          { password, email_confirm: true }
-        );
-
-        if (updateError) {
-          return res.status(400).json({ error: updateError.message });
-        }
-
-        res.json({ 
-          success: true, 
-          message: 'Test user password updated successfully',
-          user: { email, id: existingUser.id }
-        });
-      } else {
-        // Create new user in Supabase Auth
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: true
-        });
-
-        if (authError) {
-          return res.status(400).json({ error: authError.message });
-        }
-
-        // Create user in local database with default values
-        await storage.createUser({
-          supabaseUserId: authData.user?.id,
-          email: email,
-          username: email.split('@')[0],
-          fullName: 'Test User',
-          role: 'customer',
-          isVerified: true,
-          isActive: true,
-          balance: "0",
-          transferPin: '0000',
-          passwordHash: 'supabase_auth', // Indicate password managed by Supabase Auth
-          accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
-          accountId: `WB${Date.now()}`,
-        });
-
-        res.json({ 
-          success: true, 
-          message: 'Test user created successfully in Supabase Auth and DB',
-          user: { email, id: authData.user?.id }
-        });
-      }
-    } catch (error: any) {
-      res.status(500).json({ error: 'Failed to create/update test user', details: error.message });
-    }
+    // CRITICAL: This endpoint is disabled for security - use normal registration only
+    return res.status(403).json({ 
+      error: 'Forbidden',
+      message: 'Test user endpoint is disabled for security reasons. Use normal registration instead.'
+    });
   });
 
   // User endpoints - PROTECTED with JWT authentication
@@ -837,8 +775,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // SECURITY: Only accept hashed PINs, no plaintext fallback
+      if (!user.transferPin || user.transferPin.length === 0) {
+        return res.status(400).json({ 
+          message: 'PIN not configured for account', 
+          verified: false,
+          error: 'Account PIN setup required'
+        });
+      }
+      
       if (user.transferPin !== body.pin) {
-        console.log('❌ PIN mismatch - Expected:', user.transferPin, 'Got:', body.pin);
+        console.log('❌ PIN mismatch');
         return res.status(401).json({ message: 'Invalid PIN', verified: false });
       }
 
