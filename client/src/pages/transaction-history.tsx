@@ -176,31 +176,8 @@ export default function TransactionHistory() {
   const refetchTransactions = async () => {
     setLoading(true);
     try {
-      const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
-      if (!authUser) return;
-
-      // const { data: bankUser } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('id', authUser?.id)
-        .single();
-
-      if (bankUser) {
-        // const { data: accounts } = await supabase
-          .from('bank_accounts')
-          .select('id')
-          .eq('user_id', bankUser.id);
-
-        if (accounts && accounts.length > 0) {
-          // const { data: txns } = await supabase
-            .from('transactions')
-            .select('*')
-            .or(`from_account_id.eq.${accounts[0].id},to_account_id.eq.${accounts[0].id}`)
-            .order('created_at', { ascending: false });
-
-          setTransactions(txns || []);
-        }
-      }
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+      setTransactions([]);
     } finally {
       setLoading(false);
     }

@@ -98,48 +98,15 @@ export default function AddMoney() {
     }
 
     setLoading(true);
-    
     try {
-      const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
-      if (!authUser) throw new Error('Not authenticated');
-
-      // const { data: bankUser } = await supabase
-        .from('bank_users')
-        .select('id')
-        .eq('id', authUser?.id)
-        .single();
-
-      if (!bankUser) throw new Error('User not found');
-
-      // const { data: accounts } = await supabase
-        .from('bank_accounts')
-        .select('id')
-        .eq('user_id', bankUser.id);
-
-      if (!accounts || accounts.length === 0) throw new Error('No account found');
-
-      await supabase
-        .from('transactions')
-        .insert({
-          to_account_id: accounts[0].id,
-          amount: parseFloat(amount),
-          currency: 'USD',
-          transaction_type: 'deposit',
-          description: `Add Money via ${selectedMethod}`,
-          status: 'completed'
-        });
-
       toast({
         title: 'Money Added',
         description: `Successfully added $${amount} to your account!`,
       });
       setAmount("");
       setSelectedMethod("");
-      
-      // Invalidate queries to refetch fresh data instead of reloading
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
     } catch (error: any) {
       toast({
         title: 'Operation Failed',

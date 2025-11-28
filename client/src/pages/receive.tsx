@@ -56,7 +56,6 @@ export default function Receive() {
 
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
-
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareLink);
     setCopied(true);

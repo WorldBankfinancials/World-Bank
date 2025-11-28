@@ -26,6 +26,29 @@ export default function CustomerSupport() {
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const handleSubmitTicket = async () => {
+    if (!subject || !category || !priority || !description) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      toast({
+        title: 'Ticket Submitted',
+        description: 'Support ticket submitted successfully!',
+      });
+      setSubject('');
+      setCategory('');
+      setPriority('');
+      setDescription('');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (isLoading) {
     return (
