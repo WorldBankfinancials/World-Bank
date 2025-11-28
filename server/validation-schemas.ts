@@ -58,10 +58,14 @@ export const registrationSchema = z.object({
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number')
     .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
-  fullName: z.string()
-    .min(2, 'Name must be at least 2 characters')
-    .max(100, 'Name too long')
-    .regex(/^[a-zA-Z\s\-'.]+$/, 'Name contains invalid characters'),
+  firstName: z.string()
+    .min(2, 'First name must be at least 2 characters')
+    .max(50, 'First name too long')
+    .regex(/^[a-zA-Z\s\-'.]+$/, 'First name contains invalid characters'),
+  lastName: z.string()
+    .min(2, 'Last name must be at least 2 characters')
+    .max(50, 'Last name too long')
+    .regex(/^[a-zA-Z\s\-'.]+$/, 'Last name contains invalid characters'),
   phone: z.string()
     .regex(/^\+?[0-9\-\s()]+$/, 'Invalid phone number format')
     .min(10, 'Phone number too short'),
@@ -74,14 +78,14 @@ export const registrationSchema = z.object({
   postalCode: z.string()
     .min(3, 'Postal code too short')
     .max(10, 'Postal code too long'),
-  nationality: z.string().min(2, 'Nationality too short').max(50, 'Nationality too long'),
-  profession: z.string().min(2, 'Profession too short').max(100, 'Profession too long'),
-  annualIncome: z.string().min(1, 'Annual income required'),
-  idType: z.string().min(2, 'ID type required'),
+  profession: z.string().min(2, 'Profession too short').max(100, 'Profession too long').optional(),
+  annualIncome: z.string().min(1, 'Annual income required').optional(),
+  idType: z.string().min(2, 'ID type required').optional(),
   idNumber: z.string()
     .min(5, 'ID number too short')
     .max(30, 'ID number too long')
-    .regex(/^[A-Z0-9\-]+$/i, 'ID number contains invalid characters'),
+    .regex(/^[A-Z0-9\-]+$/i, 'ID number contains invalid characters')
+    .optional(),
   transferPin: z.string()
     .length(4, 'PIN must be exactly 4 digits')
     .regex(/^[0-9]{4}$/, 'PIN must be 4 digits')

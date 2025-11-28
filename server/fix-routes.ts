@@ -144,7 +144,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         password: validatedData.password,
         email_confirm: true, // Auto-confirm for banking app
         user_metadata: {
-          full_name: validatedData.fullName,
+          first_name: validatedData.firstName,
+          last_name: validatedData.lastName,
           phone: validatedData.phone,
           registration_date: new Date().toISOString()
         }
@@ -425,9 +426,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // SECURITY: Only accept whitelisted fields from client, hardcode privileged fields server-side
       const newUser = await storage.createUser({
-        // WHITELISTED FIELDS (client-provided)
         username: userData.username || userData.email.split('@')[0],
-        fullName: userData.fullName,
+        firstName: userData.firstName || userData.email.split('@')[0],
+        lastName: userData.lastName || 'User',
         email: userData.email,
         phone: userData.phone,
         dateOfBirth: userData.dateOfBirth,
@@ -440,18 +441,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         annualIncome: userData.annualIncome,
         idType: userData.idType,
         idNumber: userData.idNumber,
-        supabaseUserId: userData.supabaseUserId, // This should be the ID from Supabase Auth
         accountNumber: userData.accountNumber || `${Math.floor(10000000 + Math.random() * 90000000)}`,
-        accountId: userData.accountId || `WB${Date.now()}`,
-
-        // SERVER-CONTROLLED FIELDS (never trust client)
-        passwordHash: 'supabase_auth', // Marker indicating password is in Supabase Auth
-        transferPin: newUserPin, // Secure random PIN, not hardcoded
-        role: 'customer', // Always customer for new registrations
-        isVerified: false, // Admin must verify
-        isOnline: true,
-        isActive: false, // Admin must activate
-        balance: "0", // Always start at 0
+        accountId: Date.now(),
+        password: 'supabase_auth',
+        transferPin: newUserPin,
+        role: 'customer',
+        isVerified: false,
+        isActive: false,
+        balance: "0",
       });
 
       // Create initial checking account
@@ -462,7 +459,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         accountType: 'checking',
         balance: '0.00',
         currency: 'USD',
-        isActive: true
+        status: 'pending'
       });
 
 
@@ -472,7 +469,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         user: {
           id: newUser.id,
           email: newUser.email,
-          fullName: newUser.fullName,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
           role: newUser.role
         }
       });
@@ -568,7 +566,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         amount: body.amount,
         description: body.description,
         status: body.status || 'completed',
-        adminNotes: `Admin created transaction: ${body.description}`,
         createdAt: new Date()
       });
 
@@ -586,7 +583,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           adminId: admin.id,
           actionType: 'create_transaction',
           targetType: 'transaction',
-          targetId: transaction.id.toString(),
+          targetId: transaction.id,
           description: `Created ${body.type} transaction of $${body.amount} for customer ${customerIdNum}`,
           metadata: JSON.stringify({ customerId: customerIdNum, amount: body.amount, type: body.type })
         });
@@ -891,7 +888,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         name: 'Activate user account',
         execute: async () => {
           updatedUser = await storage.updateUser(registrationId, {
-            isActive: true,
+            status: 'active',
             isVerified: true
           });
           if (!updatedUser) throw new Error('Registration not found');
@@ -931,7 +928,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           adminId: admin.id,
           actionType: 'approve_registration',
           targetType: 'user',
-          targetId: registrationId.toString(),
+          targetId: registrationId,
           description: `Approved registration for ${updatedUser.fullName} (${updatedUser.email})`,
           metadata: JSON.stringify({ userId: registrationId, initialBalance: initialBalance || 0 })
         });
@@ -962,9 +959,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Update user with rejection reason
       await storage.updateUser(registrationId, {
-        isActive: false,
+        status: 'pending',
         isVerified: false,
-        adminNotes: `Registration rejected: ${reason || 'No reason provided'}`
       });
 
       // Create support ticket for the user explaining rejection
@@ -984,7 +980,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           adminId: admin.id,
           actionType: 'reject_registration',
           targetType: 'user',
-          targetId: registrationId.toString(),
+          targetId: registrationId,
           description: `Rejected registration for ${user.fullName} (${user.email})`,
           metadata: JSON.stringify({ userId: registrationId, reason })
         });
@@ -1856,13 +1852,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           phone: '+1-000-000-0000',
           supabaseUserId: authData.user.id,
           accountNumber: `ADMIN-${Math.floor(10000000 + Math.random() * 90000000)}`,
-          accountId: `WB-ADMIN-${Date.now()}`,
+          accountId: Date.now()`WB-ADMIN-${Date.now()}`,
           passwordHash: 'supabase_auth', // Marker
           transferPin: Math.floor(Math.random() * 9000 + 1000).toString(), // Secure random PIN, not hardcoded
           role: 'admin', // ADMIN ROLE
           isVerified: true,
           isOnline: true,
-          isActive: true,
+          status: 'active',
           balance: "0",
           dateOfBirth: '1990-01-01',
           address: 'World Bank HQ',
