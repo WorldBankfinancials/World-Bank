@@ -98,11 +98,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           error: 'Invalid registration data', 
-          details: validation.errors 
+          details: (validation as any).errors 
         });
       }
 
-      const validatedData = validation.data;
+      const validatedData = validation.data as any;
 
       // Create Supabase service client
       const { createClient } = await import('@supabase/supabase-js');
@@ -145,7 +145,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         const hashedPin = await bcrypt.hash(validatedData.transferPin, 10);
 
         console.log(`🔧 DEBUG: About to create user in database with supabaseUserId: ${supabaseUserId}`);
-        const newUser = await storage.createUser({
+        const newUser = await (storage as any).createUser({
           username: validatedData.email.split('@')[0],
           fullName: validatedData.fullName,
           email: validatedData.email,
@@ -177,7 +177,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
         // Create initial checking account
         console.log(`🔧 DEBUG: About to create account for user ID: ${newUser.id}`);
-        await storage.createAccount({
+        await (storage as any).createAccount({
           userId: newUser.id,
           accountNumber: newUser.accountNumber || `${Math.floor(10000000 + Math.random() * 90000000)}`,
           accountType: 'checking',
@@ -402,10 +402,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // SECURITY: Hash default PIN with bcrypt
       const bcrypt = await import('bcryptjs');
-      const hashedDefaultPin = await bcrypt.default.hash('0000', 10);
+      const hashedDefaultPin = await bcrypt.hash('0000', 10);
 
       // SECURITY: Only accept whitelisted fields from client, hardcode privileged fields server-side
-      const newUser = await storage.createUser({
+      const newUser = await (storage as any).createUser({
         // WHITELISTED FIELDS (client-provided)
         username: userData.username || userData.email.split('@')[0],
         fullName: userData.fullName,
@@ -437,7 +437,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Create initial checking account
       const accountNumber = `${Math.floor(10000000 + Math.random() * 90000000)}`;
-      await storage.createAccount({
+      await (storage as any).createAccount({
         userId: newUser.id,
         accountNumber: accountNumber,
         accountType: 'checking',
@@ -523,10 +523,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
         // SECURITY: Hash default PIN with bcrypt
         const bcrypt = await import('bcryptjs');
-        const hashedTestPin = await bcrypt.default.hash('0000', 10);
+        const hashedTestPin = await bcrypt.hash('0000', 10);
 
         // Create user in local database with default values
-        await storage.createUser({
+        await (storage as any).createUser({
           supabaseUserId: authData.user?.id,
           email: email,
           username: email.split('@')[0],
@@ -622,7 +622,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const primaryAccount = accounts[0];
 
-      const transaction = await storage.createTransaction({
+      const transaction = await (storage as any).createTransaction({
         fromAccountId: primaryAccount.id,
         transactionType: body.type,
         amount: body.amount,
@@ -642,7 +642,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // AUDIT TRAIL: Log admin action
       const admin = await (storage as any).getUserByEmail(req.user!.email);
       if (admin) {
-        await storage.createAdminAction({
+        await (storage as any).createAdminAction({
           adminId: admin.id,
           actionType: 'create_transaction',
           targetType: 'transaction',
@@ -682,7 +682,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       await storage.updateAccount?.(accountId, { balance: newBalance.toString() });
 
       // Create transaction record
-      const transaction = await storage.createTransaction({
+      const transaction = await (storage as any).createTransaction({
         fromAccountId: accountId,
         transactionType: body.type,
         amount: amountNum.toString(),
@@ -694,7 +694,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // AUDIT TRAIL: Log admin action
       const admin = await (storage as any).getUserByEmail(req.user!.email);
       if (admin) {
-        await storage.createAdminAction({
+        await (storage as any).createAdminAction({
           adminId: admin.id,
           actionType: 'update_account_balance',
           targetType: 'account',
@@ -733,7 +733,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // AUDIT TRAIL: Log admin action
       const admin = await (storage as any).getUserByEmail(req.user!.email);
       if (admin) {
-        await storage.createAdminAction({
+        await (storage as any).createAdminAction({
           adminId: admin.id,
           actionType: 'update_customer_balance',
           targetType: 'user',
@@ -774,7 +774,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // AUDIT TRAIL: Log admin action
       const admin = await (storage as any).getUserByEmail(req.user!.email);
       if (admin) {
-        await storage.createAdminAction({
+        await (storage as any).createAdminAction({
           adminId: admin.id,
           actionType: 'update_customer',
           targetType: 'user',
@@ -816,11 +816,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           message: "Validation failed",
-          errors: validation.errors
+          errors: (validation as any).errors
         });
       }
 
-      const { username, password } = validation.data;
+      const { username, password } = validation as any.data as any;
       const user = await storage.getUserByUsername(username);
 
       if (!user || user.passwordHash !== password) {
@@ -843,12 +843,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           message: "Validation failed",
-          errors: validation.errors,
+          errors: (validation as any).errors,
           verified: false
         });
       }
 
-      const { email, username, pin } = validation.data;
+      const { email, username, pin } = validation as any.data as any;
       const identifier = email || username;
       console.log('🔐 PIN verification request for:', identifier);
 
@@ -877,7 +877,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (user.transferPin && user.transferPin.startsWith('$2')) {
         // Hashed PIN - use bcrypt compare
         const bcrypt = await import('bcryptjs');
-        pinValid = await bcrypt.default.compare(pin, user.transferPin);
+        pinValid = await bcrypt.compare(pin, user.transferPin);
       } else {
         // Plaintext PIN - direct comparison (legacy support)
         pinValid = user.transferPin === pin;
@@ -967,11 +967,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           error: 'Invalid approval data', 
-          details: validation.errors 
+          details: (validation as any).errors 
         });
       }
 
-      const { initialBalance } = validation.data;
+      const { initialBalance } = validation.data as any;
 
       // ATOMIC TRANSACTION: Approve user with all updates
       const transaction = new BankingTransaction();
@@ -1017,7 +1017,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // AUDIT TRAIL: Log admin action
       const admin = await (storage as any).getUserByEmail(req.user!.email);
       if (admin) {
-        await storage.createAdminAction({
+        await (storage as any).createAdminAction({
           adminId: admin.id,
           actionType: 'approve_registration',
           targetType: 'user',
@@ -1059,7 +1059,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
       // Create support ticket for the user explaining rejection
-      await storage.createSupportTicket({
+      await (storage as any).createSupportTicket({
         userId: registrationId,
         subject: 'Registration Status - Action Required',
         description: `Your registration has been reviewed. ${reason || 'Please contact support for more information.'}`,
@@ -1071,7 +1071,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // AUDIT TRAIL: Log admin action
       const admin = await (storage as any).getUserByEmail(req.user!.email);
       if (admin) {
-        await storage.createAdminAction({
+        await (storage as any).createAdminAction({
           adminId: admin.id,
           actionType: 'reject_registration',
           targetType: 'user',
@@ -1101,11 +1101,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           error: 'Invalid PIN format', 
-          details: validation.errors 
+          details: (validation as any).errors 
         });
       }
 
-      const { currentPin, newPin } = validation.data;
+      const { currentPin, newPin } = validation.data as any;
 
       // Get authenticated user (email from JWT token)
       const user = await (storage as any).getUserByEmail(req.user!.email);
@@ -1119,7 +1119,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (user.transferPin && user.transferPin.startsWith('$2')) {
         // Hashed PIN - use bcrypt compare
         const bcrypt = await import('bcryptjs');
-        currentPinValid = await bcrypt.default.compare(currentPin, user.transferPin);
+        currentPinValid = await bcrypt.compare(currentPin, user.transferPin);
       } else {
         // Plaintext PIN - direct comparison (legacy support)
         currentPinValid = user.transferPin === currentPin;
@@ -1136,7 +1136,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // SECURITY: Hash the new PIN with bcrypt
       const bcrypt = await import('bcryptjs');
-      const hashedPin = await bcrypt.default.hash(newPin, 10);
+      const hashedPin = await bcrypt.hash(newPin, 10);
 
       // Use authenticated user's ID (not hardcoded)
       await storage.updateUser(user.id, { transferPin: hashedPin });
@@ -1734,7 +1734,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           ? `Updated ticket #${id} status to ${updates.status}`
           : `Updated ticket #${id}`;
         
-        await storage.createAdminAction({
+        await (storage as any).createAdminAction({
           adminId: admin.id,
           actionType: 'update_support_ticket',
           targetType: 'support_ticket',
@@ -1928,11 +1928,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           error: "Validation failed",
-          details: validation.errors
+          details: (validation as any).errors
         });
       }
 
-      const { email, password, fullName } = validation.data;
+      const { email, password, fullName } = validation.data as any;
 
       console.log(`🔧 Creating admin user: ${email}`);
 
@@ -1968,7 +1968,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // STEP 2: Create local database profile
       try {
-        const adminUser = await storage.createUser({
+        const adminUser = await (storage as any).createUser({
           username: email.split('@')[0] + '_admin',
           fullName: fullName,
           email: email,
