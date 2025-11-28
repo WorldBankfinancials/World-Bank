@@ -199,6 +199,45 @@ export default function SimpleAdmin() {
 
   // No longer needed - useQuery handles fetching
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: username, password: password })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Authentication failed' }));
+        toast({
+          title: 'Authentication Failed',
+          description: error.message || 'Invalid admin credentials. Please try again.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      const data = await response.json().catch(() => {
+        toast({ title: 'Parse Error', description: 'Failed to parse login response', variant: 'destructive' });
+        return null;
+      });
+      
+      if (!data) return;
+      
+      sessionStorage.setItem('adminToken', data.token);
+      sessionStorage.setItem('adminUser', JSON.stringify(data.user));
+      setIsAuthenticated(true);
+    } catch (error) {
+      toast({
+        title: 'Login Error',
+        description: 'Failed to authenticate. Please check your credentials and try again.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const fetchSupportTickets = async () => {
     const token = sessionStorage.getItem('adminToken');
     if (!token) return; // Short-circuit if no token
@@ -512,7 +551,10 @@ export default function SimpleAdmin() {
 
       if (response.ok) {
         const updatedCustomer = await response.json();
-        setCustomerList(prev => prev.map(c => c.id === editingCustomer.id ? { ...c, ...updatedCustomer } : c));
+        // Optimistic update - customer data will refresh from API
+        if (typeof setCustomerList === 'function') {
+          setCustomerList((prev: Customer[]) => prev.map((c: Customer) => c.id === editingCustomer.id ? { ...c, ...updatedCustomer } : c));
+        }
         setEditingCustomer(null);
         toast({
           title: 'Customer Updated',
@@ -646,9 +688,12 @@ export default function SimpleAdmin() {
           if (response.ok) {
             const result = await response.json();
             
-            setCustomerList(prev => prev.map(c => 
-              c.id === editingCustomer.id ? { ...c, avatarUrl: base64Image } : c
-            ));
+            // Optimistic update
+            if (typeof setCustomerList === 'function') {
+              setCustomerList((prev: Customer[]) => prev.map((c: Customer) => 
+                c.id === editingCustomer.id ? { ...c, avatarUrl: base64Image } : c
+              ));
+            }
             setSelectedFile(null);
             setUploadingPhoto(false);
             toast({
@@ -708,9 +753,11 @@ export default function SimpleAdmin() {
         const result = await response.json();
         
         // Update the local state with new balance
-        setCustomerList(prev => prev.map(c => 
-          c.id === customerId ? { ...c, balance: result.user.balance } : c
-        ));
+        if (typeof setCustomerList === 'function') {
+          setCustomerList((prev: Customer[]) => prev.map((c: Customer) => 
+            c.id === customerId ? { ...c, balance: result.user.balance } : c
+          ));
+        }
         
         toast({
           title: 'Balance Updated',
