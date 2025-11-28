@@ -9,11 +9,12 @@ export default function TransferProcessing() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
+    let timeout: NodeJS.Timeout | null = null;
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
           clearInterval(interval);
-          setTimeout(() => {
+          timeout = setTimeout(() => {
             setLocation("/transfer-pending");
           }, 1000);
           return 100;
@@ -22,7 +23,10 @@ export default function TransferProcessing() {
       });
     }, 500);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (timeout) clearTimeout(timeout);
+    };
   }, [setLocation]);
 
   return (

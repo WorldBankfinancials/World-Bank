@@ -59,7 +59,8 @@ export default function Receive() {
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareLink);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const timeout = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timeout);
   };
 
   const handleCopyDetails = (text: string) => {

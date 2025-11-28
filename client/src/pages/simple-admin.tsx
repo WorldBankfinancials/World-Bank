@@ -375,8 +375,8 @@ export default function SimpleAdmin() {
         })
       });
       
-      if (response.ok) {
-        const error = await response.json();
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Authentication failed' }));
         toast({
           title: 'Authentication Failed',
           description: error.message || 'Invalid admin credentials. Please try again.',
@@ -385,7 +385,16 @@ export default function SimpleAdmin() {
         return;
       }
       
-      const data = await response.json();
+      const data = await response.json().catch(() => {
+        toast({
+          title: 'Parse Error',
+          description: 'Failed to parse login response',
+          variant: 'destructive'
+        });
+        return null;
+      });
+      
+      if (!data) return;
       
       // Store admin token in sessionStorage for subsequent API requests
       sessionStorage.setItem('adminToken', data.token);
