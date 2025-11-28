@@ -1,21 +1,21 @@
 import { Settings, User, LogOut, Shield, Check, Download, Building2, RotateCcw, TrendingUp, HelpCircle, CreditCard, ArrowUpRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link } from "wouter";
-import type { User as UserType } from "../../../shared/schema";
+import type { User as UserType } from "@shared/schema";
 import NavigationMenu from "./NavigationMenu";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar } from './Avatar';
 
 interface HeaderProps {
-  user?: UserType | any;
+  user?: UserType;
 }
 
 export default function Header({}: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { userProfile } = useAuth();
-  const [freshUserData, setFreshUserData] = useState<any>(null);
+  const [freshUserData, setFreshUserData] = useState<UserType | null>(null);
 
   // Fetch fresh user data once only
   useEffect(() => {

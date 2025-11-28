@@ -1,4 +1,5 @@
 import { Facebook, Twitter, Linkedin, Instagram } from "lucide-react";
+import { Link } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Footer() {
@@ -16,36 +17,36 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold wb-dark mb-3">{t('banking_services')}</h3>
             <ul className="space-y-2 text-sm wb-text">
-              <li><a href="#" className="hover:text-blue-600">{t('personal_banking')}</a></li>
-              <li><a href="#" className="hover:text-blue-600">{t('business_banking')}</a></li>
-              <li><a href="#" className="hover:text-blue-600">{t('investment_services')}</a></li>
-              <li><a href="#" className="hover:text-blue-600">{t('loans_credit')}</a></li>
+              <li><Link href="/personal-banking" className="hover:text-blue-600">{t('personal_banking')}</Link></li>
+              <li><Link href="/business-banking" className="hover:text-blue-600">{t('business_banking')}</Link></li>
+              <li><Link href="/investment-portfolio" className="hover:text-blue-600">{t('investment_services')}</Link></li>
+              <li><Link href="/credit-cards" className="hover:text-blue-600">{t('loans_credit')}</Link></li>
             </ul>
           </div>
           
           <div>
             <h3 className="font-semibold wb-dark mb-3">{t('support')}</h3>
             <ul className="space-y-2 text-sm wb-text">
-              <li><a href="#" className="hover:text-blue-600">{t('help_center')}</a></li>
-              <li><a href="#" className="hover:text-blue-600">{t('contact_us')}</a></li>
-              <li><a href="#" className="hover:text-blue-600">{t('security_center')}</a></li>
-              <li><a href="#" className="hover:text-blue-600">{t('privacy_policy')}</a></li>
+              <li><Link href="/support-center" className="hover:text-blue-600">{t('help_center')}</Link></li>
+              <li><Link href="/customer-support" className="hover:text-blue-600">{t('contact_us')}</Link></li>
+              <li><Link href="/security-center" className="hover:text-blue-600">{t('security_center')}</Link></li>
+              <li><Link href="/privacy-policy" className="hover:text-blue-600">{t('privacy_policy')}</Link></li>
             </ul>
           </div>
           
           <div>
             <h3 className="font-semibold wb-dark mb-3">{t('connect')}</h3>
             <div className="flex space-x-4">
-              <a href="#" className="wb-text hover:text-blue-600">
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="wb-text hover:text-blue-600" aria-label="Facebook">
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="#" className="wb-text hover:text-blue-600">
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="wb-text hover:text-blue-600" aria-label="Twitter">
                 <Twitter className="w-5 h-5" />
               </a>
-              <a href="#" className="wb-text hover:text-blue-600">
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="wb-text hover:text-blue-600" aria-label="LinkedIn">
                 <Linkedin className="w-5 h-5" />
               </a>
-              <a href="#" className="wb-text hover:text-blue-600">
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="wb-text hover:text-blue-600" aria-label="Instagram">
                 <Instagram className="w-5 h-5" />
               </a>
             </div>

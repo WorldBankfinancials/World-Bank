@@ -1,4 +1,4 @@
-import type { User } from "@/lib/schema";
+import type { User } from "@shared/schema";
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ export default function Alerts() {
   // useRealtimeAlerts will be re-enabled when deploying to production with WebSocket support
 
   // Fetch real alerts from database
-  const { data: alerts, isLoading: alertsLoading } = useQuery<any[]>({
+  const { data: alerts = [], isLoading: alertsLoading } = useQuery<Array<{ id: number; alert_type: string; message: string; is_read: boolean }>>({
     queryKey: ['/api/alerts'],
     enabled: !!user,
   });
@@ -110,9 +110,9 @@ export default function Alerts() {
 
   const filteredAlerts = activeTab === 'all' 
     ? alertsList 
-    : alertsList.filter((alert: any) => alert.alert_type === activeTab);
+    : alertsList.filter((alert) => alert.alert_type === activeTab);
 
-  const unreadCount = alertsList.filter((alert: any) => !alert.is_read).length;
+  const unreadCount = alertsList.filter((alert) => !alert.is_read).length;
 
   const handleNotificationToggle = (key: keyof typeof notifications) => {
     setNotifications(prev => ({
@@ -195,9 +195,9 @@ export default function Alerts() {
             <div className="flex space-x-2 overflow-x-auto">
               {[
                 { key: 'all', label: 'All', count: alertsList.length },
-                { key: 'transaction', label: 'Transactions', count: alertsList.filter((a: any) => a.alert_type === 'transaction').length },
-                { key: 'security', label: 'Security', count: alertsList.filter((a: any) => a.alert_type === 'security').length },
-                { key: 'statement', label: 'Statements', count: alertsList.filter((a: any) => a.alert_type === 'statement').length }
+                { key: 'transaction', label: 'Transactions', count: alertsList.filter((a) => a.alert_type === 'transaction').length },
+                { key: 'security', label: 'Security', count: alertsList.filter((a) => a.alert_type === 'security').length },
+                { key: 'statement', label: 'Statements', count: alertsList.filter((a) => a.alert_type === 'statement').length }
               ].map((tab) => (
                 <Button
                   key={tab.key}
@@ -228,7 +228,7 @@ export default function Alerts() {
                   <p className="text-sm">You're all caught up!</p>
                 </div>
               ) : (
-                filteredAlerts.map((alertItem: any) => {
+                filteredAlerts.map((alertItem) => {
                   const IconComponent = getAlertIcon(alertItem.alert_type);
                   const { color, bgColor } = getAlertStyle(alertItem.alert_type);
                   const timeAgo = new Date(alertItem.created_at).toLocaleString();
