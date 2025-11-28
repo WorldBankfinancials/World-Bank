@@ -525,9 +525,41 @@ export default function SimpleAdmin() {
     }
   };
 
-  const [transfers, setTransfers] = useState<PendingTransfer[]>([]);
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  const [customerList, setCustomerList] = useState<Customer[]>([]);
+  // Fetch real data from APIs
+  const { data: transfers = [] } = useQuery<PendingTransfer[]>({
+    queryKey: ['/api/admin/pending-transfers'],
+    queryFn: async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/admin/pending-transfers');
+        return response.ok ? response.json() : [];
+      } catch { return []; }
+    },
+    refetchInterval: 10000
+  });
+
+  const { data: tickets = [] } = useQuery<SupportTicket[]>({
+    queryKey: ['/api/admin/support-tickets'],
+    queryFn: async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/admin/support-tickets');
+        return response.ok ? response.json() : [];
+      } catch { return []; }
+    },
+    refetchInterval: 10000
+  });
+
+  const { data: customerList = [] } = useQuery<Customer[]>({
+    queryKey: ['/api/admin/customers-list'],
+    queryFn: async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/admin/customers-list');
+        return response.ok ? response.json() : [];
+      } catch { return []; }
+    }
+  });
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [chatMessage, setChatMessage] = useState("");
   const [chatMessages, setChatMessages] = useState<Array<{
@@ -537,12 +569,28 @@ export default function SimpleAdmin() {
     timestamp: string;
   }>>([]);
 
-  const handleApproveTransfer = (transferId: number) => {
-    setTransfers(prev => prev.filter(t => t.id !== transferId));
+  const handleApproveTransfer = async (transferId: number) => {
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/transfers/${transferId}/approve`, { method: 'POST' });
+      if (response.ok) {
+        toast({ title: 'Transfer Approved' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', variant: 'destructive' });
+    }
   };
 
-  const handleRejectTransfer = (transferId: number) => {
-    setTransfers(prev => prev.filter(t => t.id !== transferId));
+  const handleRejectTransfer = async (transferId: number) => {
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/transfers/${transferId}/reject`, { method: 'POST' });
+      if (response.ok) {
+        toast({ title: 'Transfer Rejected' });
+      }
+    } catch (error) {
+      toast({ title: 'Error', variant: 'destructive' });
+    }
   };
 
   const handleOpenChat = (ticket: SupportTicket) => {

@@ -57,6 +57,21 @@ export default function TransactionRouter() {
   });
 
   const [isCreating, setIsCreating] = useState(false);
+  
+  const handleDeleteRoute = (routeId: string) => {
+    // Delete route via API
+    const deleteRoute = async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        await authenticatedFetch(`/api/admin/transaction-routes/${routeId}`, {
+          method: 'DELETE'
+        });
+      } catch (error) {
+        console.error('Failed to delete route:', error);
+      }
+    };
+    deleteRoute();
+  };
 
   const pageOptions = [
     { value: '/dashboard', label: 'Customer Dashboard' },
@@ -120,9 +135,6 @@ export default function TransactionRouter() {
     setIsCreating(false);
   };
 
-  const handleDeleteRoute = (routeId: string) => {
-    setRoutes(routes.filter(route => route.id !== routeId));
-  };
 
   const handleTestRoute = (targetPage: string) => {
     setLocation(targetPage);

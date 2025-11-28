@@ -73,7 +73,7 @@ export default function AdminLiveChat() {
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'message') {
-          setMessages(prev => [...prev, data.message]);
+          setMessages((prev: Message[]) => [...prev, data.message]);
         }
       } catch (error) {
       }
@@ -103,7 +103,7 @@ export default function AdminLiveChat() {
       timestamp: new Date().toISOString()
     };
 
-    setMessages(prev => [...prev, message]);
+    setMessages((prev: Message[]) => [...prev, message]);
     wsRef.current?.send(JSON.stringify({
       type: 'message',
       sessionId: selectedSession.id,

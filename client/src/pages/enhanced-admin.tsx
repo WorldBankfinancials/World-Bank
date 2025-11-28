@@ -59,7 +59,6 @@ interface Document {
 }
 
 export default function EnhancedAdmin() {
-  const { useQuery } = require('@tanstack/react-query');
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerProfile | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('accounts');
@@ -202,11 +201,11 @@ export default function EnhancedAdmin() {
 
               <div className="space-y-3">
                 {customers
-                  .filter(customer => 
+                  .filter((customer: CustomerProfile) => 
                     customer.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     customer.email.toLowerCase().includes(searchTerm.toLowerCase())
                   )
-                  .map(customer => (
+                  .map((customer: CustomerProfile) => (
                     <div
                       key={customer.id}
                       className={`p-3 rounded-lg border cursor-pointer transition-colors ${
