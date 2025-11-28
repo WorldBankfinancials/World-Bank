@@ -6,6 +6,7 @@ import RegistrationStep3 from './register/step3';
 import RegistrationStep4 from './register/step4';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { publicPost } from '@/lib/fetch-client';
 
 type RegistrationData = {
   // Step 1
@@ -70,23 +71,20 @@ export default function MultiStepRegisterPage() {
       if (idCardFile) {
         try {
           // Get upload URL from server
-          const uploadResponse = await fetch('/api/objects/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          });
-          
+          const uploadResponse = await publicPost('/api/objects/upload', {});
+
           if (uploadResponse.ok) {
             const { uploadURL } = await uploadResponse.json();
-            
+
             // Upload file to object storage
             const uploadFileResponse = await fetch(uploadURL, {
               method: 'PUT',
               body: idCardFile,
               headers: {
-                'Content-Type': idCardFile.type
-              }
+                'Content-Type': idCardFile.type,
+              },
             });
-            
+
             if (uploadFileResponse.ok) {
               idCardUrl = uploadURL.split('?')[0]; // Remove query params to get file URL
             }
@@ -103,12 +101,7 @@ export default function MultiStepRegisterPage() {
       // Call the transactional registration endpoint
       // This atomically creates BOTH Supabase Auth account AND local database profile
       // If either fails, it rolls back the other to prevent desynchronization
-      const response = await fetch('/api/auth/register-complete', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const response = await publicPost('/api/auth/register-complete', {
           email: completeData.email,
           password: completeData.password,
           fullName: `${completeData.firstName} ${completeData.lastName}`,
@@ -129,7 +122,6 @@ export default function MultiStepRegisterPage() {
           idNumber: completeData.idNumber,
           transferPin: completeData.transferPin,
           idCardUrl: idCardUrl,
-        }),
       });
 
       const result = await response.json();

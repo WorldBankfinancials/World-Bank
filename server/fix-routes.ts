@@ -76,11 +76,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // SECURITY: Test user creation endpoint - DEVELOPMENT ONLY
-
-
-  // TEST: Create test user for development
-  app.post('/api/admin/create-test-user', async (req: Request, res: Response) => {
+  // SECURITY: Test user creation endpoint - ADMIN ONLY
+  app.post('/api/admin/create-test-user', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const testUser = await storage.createUser({
         username: 'testuser',
@@ -312,8 +309,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ADMIN: Reset user password in Supabase Auth
-  app.post('/api/admin/reset-user-password', async (req: Request, res: Response) => {
+  // ADMIN: Reset user password in Supabase Auth - ADMIN ONLY
+  app.post('/api/admin/reset-user-password', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { email, newPassword } = req.body;
 
@@ -1791,7 +1788,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/objects/upload', async (req: Request, res: Response) => {
+  app.post('/api/objects/upload', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // Handle file upload for identity documents (ID cards, passports, etc.)
       // This endpoint accepts base64 encoded files or multipart form data
@@ -1824,10 +1821,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ADMIN USER CREATION ENDPOINT
+  // ADMIN USER CREATION ENDPOINT - ADMIN ONLY
   // Creates a complete admin user in both Supabase Auth and local database
   // This is a one-time setup endpoint - should be secured in production
-  app.post('/api/admin/create-admin-user', async (req: Request, res: Response) => {
+  app.post('/api/admin/create-admin-user', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { email, password, fullName } = req.body;
 

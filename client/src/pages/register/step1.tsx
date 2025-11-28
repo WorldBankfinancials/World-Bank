@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { BankLogo } from '@/components/BankLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
+import { publicFetch } from '@/lib/fetch-client';
 import { ArrowRight, User } from 'lucide-react';
 
 const step1Schema = z.object({
@@ -45,11 +46,8 @@ export default function RegistrationStep1({ initialData = {}, onNext }: Step1Pro
     setIsLoading(true);
     try {
       // Check if email already exists via server API
-      const response = await fetch('/api/auth/check-email', {
+      const response = await publicFetch('/api/auth/check-email', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ email: data.email }),
       });
       
