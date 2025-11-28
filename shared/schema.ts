@@ -1,185 +1,125 @@
-import { pgTable, text, serial, integer, boolean, decimal, timestamp, varchar } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
+import { pgTable, text, serial, decimal, timestamp, boolean, jsonb } from 'drizzle-orm/pg-core';
+import { createInsertSchema } from 'drizzle-zod';
+import { z } from 'zod';
 
-// Users table - matches bank_users in database
-export const users = pgTable("bank_users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
-  fullName: text("full_name").notNull(),
-  email: text("email").unique(),
-  phone: text("phone"),
-  accountNumber: text("account_number"),
-  accountId: text("account_id"),
-  profession: text("profession"),
-  dateOfBirth: text("date_of_birth"),
-  address: text("address"),
-  city: text("city"),
-  state: text("state"),
-  country: text("country"),
-  postalCode: text("postal_code"),
-  nationality: text("nationality"),
-  annualIncome: text("annual_income"),
-  idType: text("id_type"),
-  idNumber: text("id_number"),
-  transferPin: text("transfer_pin"),
-  role: text("role"),
-  isVerified: boolean("is_verified"),
-  isOnline: boolean("is_online"),
-  isActive: boolean("is_active"),
-  avatarUrl: text("avatar_url"),
-  balance: decimal("balance"),
-  supabaseUserId: varchar("supabase_user_id", { length: 36 }),
-  createdAt: timestamp("created_at"),
-  updatedAt: timestamp("updated_at"),
-  lastLogin: timestamp("last_login"),
-  createdByAdmin: text("created_by_admin"),
-  modifiedByAdmin: text("modified_by_admin"),
-  adminNotes: text("admin_notes"),
+// ==================== CORE TABLES ====================
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  password: text('password').notNull(),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  username: text('username').notNull().unique(),
+  phone: text('phone'),
+  profession: text('profession'),
+  accountId: serial('account_id'),
+  accountNumber: text('account_number'),
+  balance: decimal('balance', { precision: 15, scale: 2 }).default('0.00'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-// Accounts table - matches bank_accounts in database
-export const accounts = pgTable("bank_accounts", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  accountNumber: text("account_number").notNull(),
-  accountType: text("account_type").notNull(),
-  balance: decimal("balance", { precision: 15, scale: 2 }).notNull(),
-  currency: text("currency"),
-  isActive: boolean("is_active"),
-  createdAt: timestamp("created_at"),
-  updatedAt: timestamp("updated_at"),
-  accountName: text("account_name"),
-  interestRate: decimal("interest_rate", { precision: 5, scale: 2 }),
-  minimumBalance: decimal("minimum_balance", { precision: 15, scale: 2 }),
+export const accounts = pgTable('accounts', {
+  id: serial('id').primaryKey(),
+  userId: serial('user_id').notNull(),
+  accountNumber: text('account_number').notNull().unique(),
+  accountType: text('account_type').notNull(),
+  currency: text('currency').default('USD'),
+  balance: decimal('balance', { precision: 15, scale: 2 }).default('0.00'),
+  status: text('status').default('active'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-// Transactions table - matches transactions in database  
-export const transactions = pgTable("transactions", {
-  id: serial("id").primaryKey(),
-  transactionId: text("transaction_id"),
-  fromUserId: integer("from_user_id"),
-  toUserId: integer("to_user_id"),
-  fromAccountId: integer("from_account_id"),
-  toAccountId: integer("to_account_id"),
-  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
-  currency: text("currency"),
-  transactionType: text("transaction_type"),
-  status: text("status"),
-  description: text("description"),
-  recipientName: text("recipient_name"),
-  recipientAccount: text("recipient_account"),
-  recipientCountry: text("recipient_country"),
-  recipientAddress: text("recipient_address"),
-  referenceNumber: text("reference_number"),
-  fee: decimal("fee", { precision: 15, scale: 2 }),
-  exchangeRate: decimal("exchange_rate", { precision: 15, scale: 6 }),
-  countryCode: text("country_code"),
-  bankName: text("bank_name"),
-  swiftCode: text("swift_code"),
-  transferPurpose: text("transfer_purpose"),
-  category: text("category"),
-  approvedBy: integer("approved_by"),
-  approvedAt: timestamp("approved_at"),
-  rejectedBy: integer("rejected_by"),
-  rejectedAt: timestamp("rejected_at"),
-  adminNotes: text("admin_notes"),
-  createdAt: timestamp("created_at"),
-  updatedAt: timestamp("updated_at"),
+export const transactions = pgTable('transactions', {
+  id: serial('id').primaryKey(),
+  fromAccountId: serial('from_account_id'),
+  toAccountId: serial('to_account_id'),
+  amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
+  currency: text('currency').notNull().default('USD'),
+  type: text('type').notNull(),
+  status: text('status').default('pending'),
+  description: text('description'),
+  referenceNumber: text('reference_number').unique(),
+  fee: decimal('fee', { precision: 15, scale: 2 }).default('0.00'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-// Admin actions table for audit trail
-export const adminActions = pgTable("admin_actions", {
-  id: serial("id").primaryKey(),
-  adminId: integer("admin_id").notNull(),
-  actionType: text("action_type").notNull(),
-  targetId: text("target_id").notNull(),
-  targetType: text("target_type").notNull(),
-  description: text("description").notNull(),
-  metadata: text("metadata"),
-  createdAt: timestamp("created_at").defaultNow(),
+export const adminActions = pgTable('admin_actions', {
+  id: serial('id').primaryKey(),
+  adminId: serial('admin_id'),
+  action: text('action').notNull(),
+  targetId: serial('target_id'),
+  targetType: text('target_type'),
+  details: jsonb('details'),
+  createdAt: timestamp('created_at').defaultNow(),
 });
 
-// Customer support tickets
-export const supportTickets = pgTable("support_tickets", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  subject: text("subject").notNull(),
-  description: text("description").notNull(),
-  priority: text("priority").default("medium"),
-  status: text("status").default("open"),
-  category: text("category"),
-  assignedTo: integer("assigned_to"),
-  adminNotes: text("admin_notes"),
-  resolution: text("resolution"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  resolvedAt: timestamp("resolved_at"),
+export const supportTickets = pgTable('support_tickets', {
+  id: serial('id').primaryKey(),
+  userId: serial('user_id'),
+  subject: text('subject').notNull(),
+  description: text('description').notNull(),
+  status: text('status').default('open'),
+  priority: text('priority').default('normal'),
+  resolvedAt: timestamp('resolved_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-export const documents = pgTable("documents", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  documentType: text("document_type").notNull(),
-  fileName: text("file_name").notNull(),
-  fileUrl: text("file_url").notNull(),
-  uploadedAt: timestamp("uploaded_at").defaultNow(),
-  verifiedAt: timestamp("verified_at"),
-  status: text("status").default("pending"),
+export const documents = pgTable('documents', {
+  id: serial('id').primaryKey(),
+  userId: serial('user_id'),
+  documentType: text('document_type').notNull(),
+  url: text('url').notNull(),
+  status: text('status').default('pending'),
+  uploadedAt: timestamp('uploaded_at').defaultNow(),
+  verifiedAt: timestamp('verified_at'),
 });
 
-export const cards = pgTable("cards", {
-  id: serial("id").primaryKey(),
-  accountId: integer("account_id").notNull(),
-  cardNumber: text("card_number").notNull().unique(),
-  cardType: text("card_type").notNull(),
-  expiryDate: text("expiry_date").notNull(),
-  cvv: text("cvv").notNull(),
-  cardholderName: text("cardholder_name").notNull(),
-  isActive: boolean("is_active").default(true),
-  dailyLimit: decimal("daily_limit", { precision: 15, scale: 2 }),
-  monthlyLimit: decimal("monthly_limit", { precision: 15, scale: 2 }),
-  currentDailySpend: decimal("current_daily_spend", { precision: 15, scale: 2 }).default("0"),
-  currentMonthlySpend: decimal("current_monthly_spend", { precision: 15, scale: 2 }).default("0"),
-  isLocked: boolean("is_locked").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+export const cards = pgTable('cards', {
+  id: serial('id').primaryKey(),
+  accountId: serial('account_id'),
+  cardNumber: text('card_number').notNull(),
+  cardType: text('card_type').notNull(),
+  status: text('status').default('active'),
+  expiryMonth: text('expiry_month'),
+  expiryYear: text('expiry_year'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-export const investments = pgTable("investments", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  investmentType: text("investment_type").notNull(),
-  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
-  currentValue: decimal("current_value", { precision: 15, scale: 2 }),
-  returnRate: decimal("return_rate", { precision: 5, scale: 2 }),
-  maturityDate: timestamp("maturity_date"),
-  status: text("status").default("active"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+export const investments = pgTable('investments', {
+  id: serial('id').primaryKey(),
+  userId: serial('user_id'),
+  type: text('type').notNull(),
+  amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
+  rate: decimal('rate', { precision: 5, scale: 2 }).default('0.00'),
+  status: text('status').default('active'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-export const messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
-  fromUserId: integer("from_user_id").notNull(),
-  toUserId: integer("to_user_id").notNull(),
-  content: text("content").notNull(),
-  isRead: boolean("is_read").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
+export const messages = pgTable('messages', {
+  id: serial('id').primaryKey(),
+  senderId: serial('sender_id'),
+  content: text('content').notNull(),
+  isRead: boolean('is_read').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
 });
 
-export const alerts = pgTable("alerts", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  title: text("title").notNull(),
-  message: text("message").notNull(),
-  type: text("type").notNull(),
-  isRead: boolean("is_read").default(false),
-  createdAt: timestamp("created_at").defaultNow(),
+export const alerts = pgTable('alerts', {
+  id: serial('id').primaryKey(),
+  userId: serial('user_id'),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  type: text('type').notNull(),
+  isRead: boolean('is_read').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
 });
 
-// Type exports
+// ==================== DRIZZLE TYPE EXPORTS ====================
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Account = typeof accounts.$inferSelect;
@@ -201,7 +141,7 @@ export type InsertMessage = typeof messages.$inferInsert;
 export type Alert = typeof alerts.$inferSelect;
 export type InsertAlert = typeof alerts.$inferInsert;
 
-// Zod schemas for validation
+// ==================== ZOD VALIDATION SCHEMAS ====================
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -293,7 +233,7 @@ export const balanceUpdateSchema = z.object({
   reason: z.string().min(5, 'Reason must be at least 5 characters')
 });
 
-// Type exports for forms
+// ==================== FORM TYPE EXPORTS ====================
 export type TransferForm = z.infer<typeof transferFormSchema>;
 export type PinVerification = z.infer<typeof pinVerificationSchema>;
 export type BalanceUpdate = z.infer<typeof balanceUpdateSchema>;
