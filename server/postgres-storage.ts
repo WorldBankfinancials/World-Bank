@@ -134,7 +134,7 @@ export class PostgresStorage implements IStorage {
         SELECT * FROM public.bank_users ORDER BY created_at DESC
       `;
       
-      return result.map(user => this.mapDbUser(user));
+      return result.map((user: any) => this.mapDbUser(user));
     } catch (error) {
       console.error('❌ Error fetching all users:', error);
       return [];
@@ -268,7 +268,7 @@ export class PostgresStorage implements IStorage {
       }
       
       console.log('✅ Found accounts in database:', result);
-      return result.map(account => this.mapDbAccount(account));
+      return result.map((account: any) => this.mapDbAccount(account));
     } catch (error) {
       console.error('❌ Database error fetching accounts:', error);
       return [];
@@ -323,7 +323,7 @@ export class PostgresStorage implements IStorage {
         LIMIT ${limit}
       `;
       
-      return result.map(tx => this.mapDbTransaction(tx));
+      return result.map((tx: any) => this.mapDbTransaction(tx));
     } catch (error) {
       console.error('❌ Error fetching account transactions:', error);
       return [];
@@ -401,7 +401,7 @@ export class PostgresStorage implements IStorage {
         ORDER BY created_at DESC
       `;
       
-      return result.map(tx => this.mapDbTransaction(tx));
+      return result.map((tx: any) => this.mapDbTransaction(tx));
     } catch (error) {
       console.error('❌ Error fetching pending transactions:', error);
       return [];
@@ -415,7 +415,7 @@ export class PostgresStorage implements IStorage {
         ORDER BY created_at DESC
       `;
       
-      return result.map(tx => this.mapDbTransaction(tx));
+      return result.map((tx: any) => this.mapDbTransaction(tx));
     } catch (error) {
       console.error('❌ Error fetching all transactions:', error);
       return [];
