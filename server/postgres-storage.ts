@@ -591,7 +591,7 @@ export class PostgresStorage implements IStorage {
 
   async createCard(card: InsertCard): Promise<Card> {
     const result = await sql`
-      INSERT INTO public.cards ${sql(card as any)}
+      INSERT INTO public.cards ${sql(card)}
       RETURNING *
     `;
     return result[0] as Card;
@@ -600,7 +600,7 @@ export class PostgresStorage implements IStorage {
   async updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined> {
     const result = await sql`
       UPDATE public.cards 
-      SET ${sql(updates as any)}
+      SET ${sql(updates)}
       WHERE id = ${id}
       RETURNING *
     `;
@@ -629,7 +629,7 @@ export class PostgresStorage implements IStorage {
 
   async createInvestment(investment: InsertInvestment): Promise<Investment> {
     const result = await sql`
-      INSERT INTO public.investments ${sql(investment as any)}
+      INSERT INTO public.investments ${sql(investment)}
       RETURNING *
     `;
     return result[0] as Investment;
@@ -638,7 +638,7 @@ export class PostgresStorage implements IStorage {
   async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> {
     const result = await sql`
       UPDATE public.investments 
-      SET ${sql(updates as any)}
+      SET ${sql(updates)}
       WHERE id = ${id}
       RETURNING *
     `;
@@ -674,7 +674,7 @@ export class PostgresStorage implements IStorage {
 
   async createMessage(message: InsertMessage): Promise<Message> {
     const result = await sql`
-      INSERT INTO public.messages ${sql(message as any)}
+      INSERT INTO public.messages ${sql(message)}
       RETURNING *
     `;
     return result[0] as Message;
@@ -715,7 +715,7 @@ export class PostgresStorage implements IStorage {
 
   async createAlert(alert: InsertAlert): Promise<Alert> {
     const result = await sql`
-      INSERT INTO public.alerts ${sql(alert as any)}
+      INSERT INTO public.alerts ${sql(alert)}
       RETURNING *
     `;
     return result[0] as Alert;

@@ -1565,7 +1565,7 @@ export class SupabasePublicStorage implements IStorage {
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {
-    const { data, error } = await supabase.from('messages').insert(message as any).select().single();
+    const { data, error } = await supabase.from('messages').insert(message).select().single();
     if (error) throw error;
     return data as unknown as Message;
   }
@@ -1603,7 +1603,7 @@ export class SupabasePublicStorage implements IStorage {
   }
 
   async createAlert(alert: InsertAlert): Promise<Alert> {
-    const { data, error } = await supabase.from('alerts').insert(alert as any).select().single();
+    const { data, error } = await supabase.from('alerts').insert(alert).select().single();
     if (error) throw error;
     return data as unknown as Alert;
   }

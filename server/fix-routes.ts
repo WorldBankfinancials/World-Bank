@@ -73,7 +73,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const {supabaseId } = req.params;
 
-      const user = await (storage as any).getUserBySupabaseId(supabaseId);
+      const user = await (storage).getUserBySupabaseId(supabaseId);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -136,11 +136,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       supabaseUserId = authData.user.id;
-      console.log(`✅ Supabase Auth account created: ${supabaseUserId}`);
 
       // STEP 2: Create local database profile - USING VALIDATED DATA ONLY
       try {
-        console.log(`🔧 DEBUG: About to create user in database with supabaseUserId: ${supabaseUserId}`);
         const newUser = await storage.createUser({
           username: validatedData.email.split('@')[0],
           fullName: validatedData.fullName,
@@ -169,10 +167,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           balance: "0",
         });
 
-        console.log(`🔧 DEBUG: User created successfully, returned user ID: ${newUser.id}, email: ${newUser.email}`);
 
         // Create initial checking account
-        console.log(`🔧 DEBUG: About to create account for user ID: ${newUser.id}`);
         await storage.createAccount({
           userId: newUser.id,
           accountNumber: newUser.accountNumber || `${Math.floor(10000000 + Math.random() * 90000000)}`,
@@ -185,15 +181,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         console.log(`🔧 DEBUG: Account created successfully`);
         
         // VERIFY user was actually saved
-        const verifyUser = await (storage as any).getUserByEmail(newUser.email);
-        console.log(`🔧 DEBUG: Verification - user exists in database:`, verifyUser ? 'YES' : 'NO');
+        const verifyUser = await (storage).getUserByEmail(newUser.email);
         if (verifyUser) {
-          console.log(`🔧 DEBUG: Verified user ID: ${verifyUser.id}, email: ${verifyUser.email}`);
         } else {
           console.error(`❌ CRITICAL BUG: User was created but not found in database!`);
         }
 
-        console.log(`✅ Complete registration successful: ${newUser.email}`);
 
         res.status(201).json({ 
           success: true,
@@ -214,7 +207,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             console.error('⚠️ Failed to rollback Supabase Auth account:', deleteError);
             console.error(`⚠️ ORPHANED ACCOUNT: ${registrationData.email} (${supabaseUserId})`);
           } else {
-            console.log(`✅ Rolled back Supabase Auth account: ${supabaseUserId}`);
           }
         }
 
@@ -245,7 +237,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // SECURITY: Use database as source of truth to prevent race conditions
       // Check local database first (primary authority)
-      const existingUser = await (storage as any).getUserByEmail(email);
+      const existingUser = await (storage).getUserByEmail(email);
       if (existingUser) {
         return res.json({
           available: false,
@@ -336,7 +328,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to update password', details: updateError.message });
       }
 
-      console.log(`✅ Password reset successful for: ${email}`);
       res.json({ 
         success: true, 
         message: 'Password updated successfully',
@@ -379,7 +370,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user already exists in local database
-      const existingUser = await (storage as any).getUserByEmail(userData.email);
+      const existingUser = await (storage).getUserByEmail(userData.email);
       if (existingUser) {
         return res.status(409).json({ error: 'User already exists' });
       }
@@ -451,7 +442,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         isActive: true
       });
 
-      console.log(`✅ New user profile created in DB: ${newUser.fullName} (${newUser.email})`);
 
       res.status(201).json({ 
         success: true,
@@ -484,7 +474,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // User endpoints - PROTECTED with JWT authentication
   app.get('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -497,12 +487,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Real user profile endpoint - PROTECTED with JWT authentication
   app.post('/api/user/profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      console.log('🔍 Fetching authenticated user profile for:', req.user!.email);
       res.json(user);
     } catch (error) {
       console.error('Get user profile error:', error);
@@ -513,13 +502,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Real user accounts endpoint - PROTECTED with JWT authentication
   app.post('/api/accounts/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
 
       const accounts = await storage.getUserAccounts(user.id);
-      console.log('🏦 Fetching authenticated account data for user:', user.id);
       res.json(accounts);
     } catch (error) {
       console.error('Get user accounts error:', error);
@@ -569,7 +557,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // AUDIT TRAIL: Log admin action
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user!.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -621,7 +609,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
       // AUDIT TRAIL: Log admin action
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user!.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -652,7 +640,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const body = req.body as { amount: string; description: string };
 
       const amountNum = parseFloat(body.amount);
-      const oldUser = await (storage as any).getUser(customerId);
+      const oldUser = await (storage).getUser(customerId);
       const updatedUser = await storage.updateUserBalance(customerId, amountNum);
 
       if (!updatedUser) {
@@ -660,7 +648,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // AUDIT TRAIL: Log admin action
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user!.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -698,10 +686,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Customer not found' });
       }
 
-      console.log(`✅ ADMIN UPDATE SUCCESS: Customer ${customerId} updated successfully`);
 
       // AUDIT TRAIL: Log admin action
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user!.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -759,14 +746,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       console.log('🔐 PIN verification request for:', identifier);
 
       // Use email for lookup (supports both email and username fields for compatibility)
-      const user = await (storage as any).getUserByEmail(identifier);
+      const user = await (storage).getUserByEmail(identifier);
 
       if (!user) {
-        console.log('❌ User not found for identifier:', identifier);
         return res.status(404).json({ message: 'User not found', verified: false });
       }
 
-      console.log('✅ Found user:', { id: user.id, email: user.email, isActive: user.isActive });
 
       // SECURITY: Check if account is active (approved by admin)
       if (!user.isActive) {
@@ -792,7 +777,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Invalid PIN', verified: false });
       }
 
-      console.log('✅ PIN verification successful');
       res.json({ success: true, verified: true });
     } catch (error) {
       console.error('❌ PIN verification error:', error);
@@ -803,7 +787,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Account endpoints - PROTECTED with JWT authentication
   app.get('/api/accounts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
 
       if (!user) {
         return res.status(404).json({ 
@@ -826,7 +810,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const accountId = parseInt(req.params.id, 10);
 
       // SECURITY: Verify account belongs to authenticated user
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -919,7 +903,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // AUDIT TRAIL: Log admin action
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user!.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -931,7 +915,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`✅ Registration approved for user ${registrationId} by admin ${admin?.fullName}`);
       
       res.json({ 
         success: true,
@@ -950,7 +933,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const registrationId = parseInt(req.params.registrationId, 10);
       const { reason } = req.body;
 
-      const user = await (storage as any).getUser(registrationId);
+      const user = await (storage).getUser(registrationId);
       if (!user) {
         return res.status(404).json({ error: 'Registration not found' });
       }
@@ -973,7 +956,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
       // AUDIT TRAIL: Log admin action
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user!.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -985,7 +968,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`❌ Registration rejected for user ${registrationId} by admin ${admin?.fullName}`);
       
       res.json({ 
         success: true,
@@ -1012,7 +994,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { currentPin, newPin } = validation.data;
 
       // Get authenticated user (email from JWT token)
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
 
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
@@ -1046,7 +1028,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== CARDS API ROUTES - PROTECTED ====================
   app.get('/api/cards', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1063,7 +1045,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const cardId = parseInt(req.params.id);
 
       // SECURITY: Verify card belongs to authenticated user
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1092,7 +1074,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { cardId, isLocked } = req.body;
 
       // SECURITY: Verify card belongs to authenticated user
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1122,7 +1104,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { cardId, dailyLimit, contactlessEnabled } = req.body;
 
       // SECURITY: Verify card belongs to authenticated user
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1154,7 +1136,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== INVESTMENTS API ROUTES - PROTECTED ====================
   app.get('/api/investments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1171,7 +1153,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
 
       // SECURITY: Verify investment belongs to authenticated user
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1196,7 +1178,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== MARKET DATA API ROUTES - PROTECTED ====================
   app.get('/api/market-rates', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const marketRates = await (storage as any).getMarketRates();
+      const marketRates = await (storage).getMarketRates();
 
       // Transform database format to frontend expected format
       const transformedData: any = {};
@@ -1268,7 +1250,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/portfolio-assets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // SECURITY: Get authenticated user
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1315,7 +1297,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { fromCurrency, toCurrency, amount } = req.body;
 
       // SECURITY: Get authenticated user
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1361,7 +1343,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // SECURITY: Only return messages for authenticated user
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1378,7 +1360,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.get('/api/messages/user/:userId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1393,7 +1375,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // SECURITY: Derive sender from authenticated user, not client input
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1439,7 +1421,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
 
       // SECURITY: Only allow marking own messages as read
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1463,7 +1445,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== ALERTS API ROUTES - PROTECTED ====================
   app.get('/api/alerts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1477,7 +1459,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.get('/api/alerts/unread', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1492,7 +1474,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/alerts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // SECURITY: Derive userId from authenticated user, not client input
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1516,7 +1498,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
 
       // SECURITY: Only allow deleting own alerts
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1543,7 +1525,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
 
       // SECURITY: Only allow marking own alerts as read
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1567,7 +1549,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== SUPPORT TICKETS API ROUTES ====================
   app.get('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1586,7 +1568,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.post('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1617,7 +1599,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const updatedTicket = await storage.updateSupportTicket(id, updates);
 
       // AUDIT TRAIL: Log admin action for ticket updates
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user!.email);
       if (admin && updatedTicket) {
         const actionDescription = updates.status 
           ? `Updated ticket #${id} status to ${updates.status}`
@@ -1845,7 +1827,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`✅ Supabase Auth admin account created: ${authData.user.id}`);
 
       // STEP 2: Create local database profile
       try {
@@ -1876,7 +1857,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           idNumber: 'ADMIN-001'
         });
 
-        console.log(`✅ Admin user created successfully: ${fullName} (${email})`);
         console.log(`📧 Email: ${email}`);
         console.log(`👤 Role: admin`);
         // SECURITY: NEVER log passwords
@@ -1901,7 +1881,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         console.error('❌ Database creation failed, rolling back Supabase Auth account:', dbError);
 
         await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-        console.log(`✅ Rolled back Supabase Auth account: ${authData.user.id}`);
 
         throw dbError;
       }
@@ -1963,7 +1942,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      console.log(`✅ Customer login successful: ${email} (role: ${role})`);
 
       res.json({ 
         token: data.session.access_token,
@@ -2014,7 +1992,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Admin access required. Contact system administrator.' });
       }
 
-      console.log(`✅ Admin login successful: ${email}`);
 
       res.json({ 
         token: data.session.access_token,
@@ -2072,7 +2049,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           const role = authUser.app_metadata?.role || 'customer';
 
           // Fetch user from database to get userId
-          const dbUser = await (storage as any).getUserByEmail(authUser.email);
+          const dbUser = await (storage).getUserByEmail(authUser.email);
 
           if (!dbUser) {
             console.warn(`🚫 WebSocket auth failed: User ${authUser.email} not found in database`);
@@ -2091,7 +2068,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           });
 
           isAuthenticated = true;
-          console.log(`✅ WebSocket client authenticated: ${authUser.email} (${role})`);
           ws.send(JSON.stringify({ type: 'auth_success', role, userId: dbUser.id }));
         } else if (!isAuthenticated) {
           // Reject all messages until client authenticates

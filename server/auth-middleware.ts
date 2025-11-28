@@ -45,17 +45,15 @@ export async function requireAuth(
     // SECURITY: Check if account is active (customer accounts only)
     // Admins always bypass this check
     if (role === 'customer') {
-      const dbUser = await (storage as any).getUserByEmail(data.user.email!);
+      const dbUser = await (storage).getUserByEmail(data.user.email!);
       
       if (!dbUser) {
-        console.error(`❌ Authenticated user not found in database: ${data.user.email}`);
         return res.status(403).json({ 
           error: 'Account not found in database. Please contact support.' 
         });
       }
       
       if (!dbUser.isActive) {
-        console.log(`🚫 API access blocked - account pending approval: ${data.user.email}`);
         return res.status(403).json({ 
           error: 'Your account is pending approval by our customer support team. You will receive a notification once your account is activated.',
           code: 'ACCOUNT_PENDING_APPROVAL'
@@ -71,9 +69,9 @@ export async function requireAuth(
     };
 
     next();
-  } catch (error) {
-    console.error('Auth middleware error:', error);
-    res.status(401).json({ error: 'Authentication failed' });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+    res.status(401).json({ error: errorMessage });
   }
 }
 
@@ -86,10 +84,8 @@ export async function requireAdmin(
   await requireAuth(req, res, async () => {
     // SECURITY: Only trust app_metadata.role which users cannot modify
     if (req.user?.role !== 'admin') {
-      console.warn(`🚫 Unauthorized admin access attempt by ${req.user?.email}`);
       return res.status(403).json({ error: 'Admin access required' });
     }
-    console.log(`✅ Admin access granted to ${req.user?.email}`);
     next();
   });
 }
