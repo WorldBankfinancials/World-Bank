@@ -1,6 +1,5 @@
 /* server/postgres-storage.ts */
 import postgres from 'postgres';
-// @ts-ignore
 import {
   type User,
   type InsertUser,
@@ -30,7 +29,7 @@ if (!databaseUrl) {
 }
 
 const sql = postgres(databaseUrl, {
-  max: 10, // Connection pool size
+  max: 10,
   idle_timeout: 20,
   connect_timeout: 30
 });
@@ -114,37 +113,8 @@ export class PostgresStorage implements IStorage {
     }
   }
 
-  (user: any): Promise<User> {
+  async createUser(user: any): Promise<User> {
     try {
-      const emailVal = user.email ?? null;
-      const phoneVal = user.phone ?? null;
-      const professionVal = user.profession ?? null;
-      const dobVal = user.dateOfBirth ?? null;
-      const addressVal = user.address ?? null;
-      const cityVal = user.city ?? null;
-      const stateVal = user.state ?? null;
-      const countryVal = user.country ?? null;
-      const postalCodeVal = user.postalCode ?? null;
-      const nationalityVal = user.nationality ?? null;
-      const annualIncomeVal = user.annualIncome ?? null;
-      const idTypeVal = user.idType ?? null;
-      const idNumberVal = user.idNumber ?? null;
-      const transferPinVal = user.transferPin ?? null;
-      const roleVal = user.role ?? 'customer';
-      const isVerifiedVal = user.isVerified ?? false;
-      const isOnlineVal = user.isOnline ?? false;
-      const isActiveVal = user.isActive ?? true;
-      const avatarUrlVal = user.avatarUrl ?? null;
-      const balanceVal = user.balance ?? 0;
-      const supabaseUserIdVal = user.supabaseUserId ?? null;
-      const lastLoginVal = user.lastLogin ?? null;
-      const createdByAdminVal = user.createdByAdmin ?? null;
-      const modifiedByAdminVal = user.modifiedByAdmin ?? null;
-      const adminNotesVal = user.adminNotes ?? null;
-
-      const accountNumberVal = user.accountNumber ?? null;
-      const accountIdVal = user.accountId ?? null;
-
       const result: any = await sql`
         INSERT INTO public.bank_users (
           username, password_hash, full_name, email, phone,
@@ -154,67 +124,44 @@ export class PostgresStorage implements IStorage {
           is_verified, is_online, is_active, avatar_url, balance, supabase_user_id,
           last_login, created_by_admin, modified_by_admin, admin_notes
         ) VALUES (
-          ${user.username}, ${user.passwordHash}, ${user.fullName}, ${emailVal}, ${phoneVal},
-          ${accountNumberVal}, ${accountIdVal}, ${professionVal}, ${dobVal},
-          ${addressVal}, ${cityVal}, ${stateVal}, ${countryVal}, ${postalCodeVal}, ${nationalityVal},
-          ${annualIncomeVal}, ${idTypeVal}, ${idNumberVal}, ${transferPinVal}, ${roleVal},
-          ${isVerifiedVal}, ${isOnlineVal}, ${isActiveVal}, ${avatarUrlVal}, ${balanceVal}, ${supabaseUserIdVal},
-          ${lastLoginVal}, ${createdByAdminVal}, ${modifiedByAdminVal}, ${adminNotesVal}
+          ${user.username}, ${user.passwordHash}, ${user.fullName}, ${user.email}, ${user.phone},
+          ${user.accountNumber}, ${user.accountId}, ${user.profession}, ${user.dateOfBirth},
+          ${user.address}, ${user.city}, ${user.state}, ${user.country}, ${user.postalCode}, ${user.nationality},
+          ${user.annualIncome}, ${user.idType}, ${user.idNumber}, ${user.transferPin}, ${user.role},
+          ${user.isVerified}, ${user.isOnline}, ${user.isActive}, ${user.avatarUrl}, ${user.balance}, ${user.supabaseUserId},
+          ${user.lastLogin}, ${user.createdByAdmin}, ${user.modifiedByAdmin}, ${user.adminNotes}
         ) RETURNING *
       `;
       return this.mapDbUser(result[0]);
     } catch (error) {
       console.error('❌ Error creating user:', error);
-      throw new Error(` Failed to create user: ${error}`);
+      throw error;
     }
   }
 
-  async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
+  async updateUser(id: number, updates: any): Promise<User | undefined> {
     try {
-      const usernameVal = updates.username ?? null;
-      const fullNameVal = updates.fullName ?? null;
-      const emailVal = updates.email ?? null;
-      const phoneVal = updates.phone ?? null;
-      const professionVal = updates.profession ?? null;
-      const addressVal = updates.address ?? null;
-      const cityVal = updates.city ?? null;
-      const stateVal = updates.state ?? null;
-      const countryVal = updates.country ?? null;
-      const postalCodeVal = updates.postalCode ?? null;
-      const nationalityVal = updates.nationality ?? null;
-      const annualIncomeVal = updates.annualIncome ?? null;
-      const isVerifiedVal = updates.isVerified ?? null;
-      const isOnlineVal = updates.isOnline ?? null;
-      const isActiveVal = updates.isActive ?? null;
-      const avatarUrlVal = updates.avatarUrl ?? null;
-      const balanceVal = updates.balance ?? null;
-
+      const setClauses: string[] = [];
+      const values: any[] = [];
+      let paramCount = 1;
+      
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== undefined) {
+          setClauses.push(`${key} = $${paramCount}`);
+          values.push(value);
+          paramCount++;
+        }
+      });
+      
+      if (setClauses.length === 0) return this.getUser(id);
+      
       const result: any = await sql`
         UPDATE public.bank_users 
-        SET 
-          username = COALESCE(${usernameVal}, username),
-          full_name = COALESCE(${fullNameVal}, full_name),
-          email = COALESCE(${emailVal}, email),
-          phone = COALESCE(${phoneVal}, phone),
-          profession = COALESCE(${professionVal}, profession),
-          address = COALESCE(${addressVal}, address),
-          city = COALESCE(${cityVal}, city),
-          state = COALESCE(${stateVal}, state),
-          country = COALESCE(${countryVal}, country),
-          postal_code = COALESCE(${postalCodeVal}, postal_code),
-          nationality = COALESCE(${nationalityVal}, nationality),
-          annual_income = COALESCE(${annualIncomeVal}, annual_income),
-          is_verified = COALESCE(${isVerifiedVal}, is_verified),
-          is_online = COALESCE(${isOnlineVal}, is_online),
-          is_active = COALESCE(${isActiveVal}, is_active),
-          avatar_url = COALESCE(${avatarUrlVal}, avatar_url),
-          balance = COALESCE(${balanceVal}, balance),
-          updated_at = CURRENT_TIMESTAMP
+        SET ${sql(setClauses.join(', '))}
         WHERE id = ${id}
         RETURNING *
       `;
-      if (!result || result.length === 0) return undefined;
-      return this.mapDbUser(result[0]);
+      return result.length > 0 ? this.mapDbUser(result[0]) : undefined;
     } catch (error) {
       console.error('❌ Error updating user:', error);
       return undefined;
@@ -225,12 +172,11 @@ export class PostgresStorage implements IStorage {
     try {
       const result: any = await sql`
         UPDATE public.bank_users 
-        SET balance = ${amount}, updated_at = CURRENT_TIMESTAMP
+        SET balance = balance + ${amount}
         WHERE id = ${id}
         RETURNING *
       `;
-      if (!result || result.length === 0) return undefined;
-      return this.mapDbUser(result[0]);
+      return result.length > 0 ? this.mapDbUser(result[0]) : undefined;
     } catch (error) {
       console.error('❌ Error updating user balance:', error);
       return undefined;
@@ -238,17 +184,11 @@ export class PostgresStorage implements IStorage {
   }
 
   async getUserAccounts(userId: number): Promise<Account[]> {
-    console.log('🏦 Fetching accounts for user ID:', userId);
     try {
       const result: any = await sql`SELECT * FROM public.bank_accounts WHERE user_id = ${userId}`;
-      if (!result || result.length === 0) {
-        console.log('❌ No accounts found for user ID:', userId);
-        return [];
-      }
-      console.log('✅ Found accounts in database:', result);
-      return result.map((account: any) => this.mapDbAccount(account));
+      return result ? result.map((acc: any) => this.mapDbAccount(acc)) : [];
     } catch (error) {
-      console.error('❌ Database error fetching accounts:', error);
+      console.error('❌ Error fetching user accounts:', error);
       return [];
     }
   }
@@ -264,27 +204,17 @@ export class PostgresStorage implements IStorage {
     }
   }
 
-  (account: any): Promise<Account> {
+  async createAccount(account: any): Promise<Account> {
     try {
-      const accountNameVal = account.accountName ?? null;
-      const balanceVal = account.balance ?? '0';
-      const currencyVal = account.currency ?? 'USD';
-      const isActiveVal = account.isActive ?? true;
-      const interestRateVal = account.interestRate ?? null;
-      const minimumBalanceVal = account.minimumBalance ?? null;
-
       const result: any = await sql`
-        INSERT INTO public.bank_accounts (
-          user_id, account_number, account_name, account_type, balance, currency, is_active, interest_rate, minimum_balance
-        ) VALUES (
-          ${account.userId}, ${account.accountNumber}, ${accountNameVal}, ${account.accountType}, 
-          ${balanceVal}, ${currencyVal}, ${isActiveVal}, ${interestRateVal}, ${minimumBalanceVal}
-        ) RETURNING *
+        INSERT INTO public.bank_accounts (user_id, account_number, account_type, balance, currency, is_active)
+        VALUES (${account.userId}, ${account.accountNumber}, ${account.accountType}, ${account.balance}, ${account.currency || 'USD'}, ${account.isActive || true})
+        RETURNING *
       `;
       return this.mapDbAccount(result[0]);
     } catch (error) {
       console.error('❌ Error creating account:', error);
-      throw new Error(` Failed to create user: ${error}`);
+      throw error;
     }
   }
 
@@ -292,86 +222,56 @@ export class PostgresStorage implements IStorage {
     try {
       const result: any = await sql`
         SELECT * FROM public.transactions 
-        WHERE account_id = ${accountId}
-        ORDER BY created_at DESC 
+        WHERE from_account_id = ${accountId} OR to_account_id = ${accountId}
+        ORDER BY created_at DESC
         LIMIT ${limit}
       `;
-      if (!result) return [];
-      return result.map((tx: any) => this.mapDbTransaction(tx));
+      return result ? result.map((tx: any) => this.mapDbTransaction(tx)) : [];
     } catch (error) {
       console.error('❌ Error fetching account transactions:', error);
       return [];
     }
   }
 
-  async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
+  async createTransaction(transaction: any): Promise<Transaction> {
     try {
-      const statusVal = transaction.status ?? 'pending';
-      const recipientNameVal = transaction.recipientName ?? null;
-      const recipientAddressVal = transaction.recipientAddress ?? null;
-      const recipientCountryVal = transaction.recipientCountry ?? null;
-      const bankNameVal = transaction.bankName ?? null;
-      const swiftCodeVal = transaction.swiftCode ?? null;
-      const transferPurposeVal = transaction.transferPurpose ?? null;
-      const adminNotesVal = transaction.adminNotes ?? null;
-      const categoryVal = transaction.category ?? null;
-      const approvedByVal = transaction.approvedBy ?? null;
-      const approvedAtVal = transaction.approvedAt ?? null;
-      const rejectedByVal = transaction.rejectedBy ?? null;
-      const rejectedAtVal = transaction.rejectedAt ?? null;
-
-      const fromAccountIdVal = transaction.fromAccountId ?? null;
-      const transactionTypeVal = transaction.transactionType ?? null;
-      const createdAtVal = transaction.createdAt ?? new Date();
-      const descriptionVal = transaction.description ?? null;
-      const amountVal = transaction.amount ?? '0';
-
       const result: any = await sql`
         INSERT INTO public.transactions (
-          from_account_id, transaction_type, amount, description, created_at, status,
-          recipient_name, recipient_address, recipient_country, 
-          bank_name, swift_code, transfer_purpose, admin_notes, category,
-          approved_by, approved_at, rejected_by, rejected_at
+          transaction_id, from_user_id, to_user_id, from_account_id, to_account_id,
+          amount, currency, transaction_type, status, description
         ) VALUES (
-          ${fromAccountIdVal}, ${transactionTypeVal}, ${amountVal}, ${descriptionVal}, ${createdAtVal}, ${statusVal},
-          ${recipientNameVal}, ${recipientAddressVal}, ${recipientCountryVal},
-          ${bankNameVal}, ${swiftCodeVal}, ${transferPurposeVal}, ${adminNotesVal}, ${categoryVal},
-          ${approvedByVal}, ${approvedAtVal}, ${rejectedByVal}, ${rejectedAtVal}
+          ${transaction.transactionId || `TX${Date.now()}`}, ${transaction.fromUserId}, ${transaction.toUserId},
+          ${transaction.fromAccountId}, ${transaction.toAccountId}, ${transaction.amount},
+          ${transaction.currency || 'USD'}, ${transaction.transactionType || 'transfer'}, 
+          ${transaction.status || 'pending'}, ${transaction.description}
         ) RETURNING *
       `;
       return this.mapDbTransaction(result[0]);
     } catch (error) {
       console.error('❌ Error creating transaction:', error);
-      throw new Error(` Failed to create user: ${error}`);
+      throw error;
     }
   }
 
   async updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<Transaction | undefined> {
     try {
-      const notesVal = notes ?? null;
       const result: any = await sql`
         UPDATE public.transactions 
-        SET status = ${status}, admin_notes = ${notesVal}, updated_at = CURRENT_TIMESTAMP
+        SET status = ${status}, admin_notes = ${notes}
         WHERE id = ${id}
         RETURNING *
       `;
-      if (!result || result.length === 0) return undefined;
-      return this.mapDbTransaction(result[0]);
+      return result.length > 0 ? this.mapDbTransaction(result[0]) : undefined;
     } catch (error) {
-      console.error('❌ Error updating transaction status:', error);
+      console.error('❌ Error updating transaction:', error);
       return undefined;
     }
   }
 
   async getPendingTransactions(): Promise<Transaction[]> {
     try {
-      const result: any = await sql`
-        SELECT * FROM public.transactions 
-        WHERE status = 'pending'
-        ORDER BY created_at DESC
-      `;
-      if (!result) return [];
-      return result.map((tx: any) => this.mapDbTransaction(tx));
+      const result: any = await sql`SELECT * FROM public.transactions WHERE status = 'pending'`;
+      return result ? result.map((tx: any) => this.mapDbTransaction(tx)) : [];
     } catch (error) {
       console.error('❌ Error fetching pending transactions:', error);
       return [];
@@ -381,160 +281,119 @@ export class PostgresStorage implements IStorage {
   async getAllTransactions(): Promise<Transaction[]> {
     try {
       const result: any = await sql`SELECT * FROM public.transactions ORDER BY created_at DESC`;
-      if (!result) return [];
-      return result.map((tx: any) => this.mapDbTransaction(tx));
+      return result ? result.map((tx: any) => this.mapDbTransaction(tx)) : [];
     } catch (error) {
       console.error('❌ Error fetching all transactions:', error);
       return [];
     }
   }
 
-  async updateAccount(id: number, updates: Partial<Account>): Promise<Account | undefined> {
+  async updateAccount(id: number, updates: any): Promise<Account | undefined> {
     try {
-      const balanceVal = updates.balance ?? null;
-      const isActiveVal = updates.isActive ?? null;
-      const accountTypeVal = updates.accountType ?? null;
-
       const result: any = await sql`
         UPDATE public.bank_accounts 
-        SET 
-          balance = COALESCE(${balanceVal}, balance),
-          is_active = COALESCE(${isActiveVal}, is_active),
-          account_type = COALESCE(${accountTypeVal}, account_type),
-          updated_at = CURRENT_TIMESTAMP
+        SET balance = COALESCE(${updates.balance}, balance),
+            is_active = COALESCE(${updates.isActive}, is_active)
         WHERE id = ${id}
         RETURNING *
       `;
-      if (!result || result.length === 0) return undefined;
-      return this.mapDbAccount(result[0]);
+      return result.length > 0 ? this.mapDbAccount(result[0]) : undefined;
     } catch (error) {
       console.error('❌ Error updating account:', error);
       return undefined;
     }
   }
 
-  async createAdminAction(action: InsertAdminAction): Promise<AdminAction> {
-    throw new Error('Admin actions not implemented yet');
+  async createAdminAction(action: any): Promise<AdminAction> {
+    try {
+      const result: any = await sql`
+        INSERT INTO public.admin_actions (admin_id, action_type, target_id, target_type, description)
+        VALUES (${action.adminId}, ${action.actionType}, ${action.targetId}, ${action.targetType}, ${action.description})
+        RETURNING *
+      `;
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating admin action:', error);
+      throw error;
+    }
   }
 
   async getAdminActions(adminId?: number): Promise<AdminAction[]> {
-    return [];
+    try {
+      let result: any;
+      if (adminId) {
+        result = await sql`SELECT * FROM public.admin_actions WHERE admin_id = ${adminId} ORDER BY created_at DESC`;
+      } else {
+        result = await sql`SELECT * FROM public.admin_actions ORDER BY created_at DESC`;
+      }
+      return result || [];
+    } catch (error) {
+      console.error('❌ Error fetching admin actions:', error);
+      return [];
+    }
   }
 
-  async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> {
-    throw new Error('Support tickets not implemented yet');
+  async createSupportTicket(ticket: any): Promise<SupportTicket> {
+    try {
+      const result: any = await sql`
+        INSERT INTO public.support_tickets (user_id, subject, description, priority, status)
+        VALUES (${ticket.userId}, ${ticket.subject}, ${ticket.description}, ${ticket.priority || 'medium'}, ${ticket.status || 'open'})
+        RETURNING *
+      `;
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating support ticket:', error);
+      throw error;
+    }
   }
 
   async getSupportTicket(id: number): Promise<SupportTicket | undefined> {
-    return undefined;
+    try {
+      const result: any = await sql`SELECT * FROM public.support_tickets WHERE id = ${id}`;
+      return result && result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error('❌ Error fetching support ticket:', error);
+      return undefined;
+    }
   }
 
   async getSupportTickets(userId?: number): Promise<SupportTicket[]> {
-    return [];
+    try {
+      let result: any;
+      if (userId) {
+        result = await sql`SELECT * FROM public.support_tickets WHERE user_id = ${userId}`;
+      } else {
+        result = await sql`SELECT * FROM public.support_tickets`;
+      }
+      return result || [];
+    } catch (error) {
+      console.error('❌ Error fetching support tickets:', error);
+      return [];
+    }
   }
 
-  async updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
-    return undefined;
+  async updateSupportTicket(id: number, updates: any): Promise<SupportTicket | undefined> {
+    try {
+      const result: any = await sql`
+        UPDATE public.support_tickets 
+        SET status = COALESCE(${updates.status}, status),
+            admin_notes = COALESCE(${updates.adminNotes}, admin_notes)
+        WHERE id = ${id}
+        RETURNING *
+      `;
+      return result && result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error('❌ Error updating support ticket:', error);
+      return undefined;
+    }
   }
 
-  // Mapping helpers
-  private mapDbUser(data: any): User {
-    return {
-      id: data.id,
-      username: data.username,
-      passwordHash: data.password_hash,
-      fullName: data.full_name,
-      email: data.email,
-      phone: data.phone,
-      accountNumber: data.account_number,
-      accountId: data.account_id,
-      profession: data.profession,
-      dateOfBirth: data.date_of_birth,
-      address: data.address,
-      city: data.city,
-      state: data.state,
-      country: data.country,
-      postalCode: data.postal_code,
-      nationality: data.nationality,
-      annualIncome: data.annual_income,
-      idType: data.id_type,
-      idNumber: data.id_number,
-      transferPin: data.transfer_pin,
-      role: data.role,
-      isVerified: data.is_verified,
-      isOnline: data.is_online,
-      isActive: data.is_active,
-      avatarUrl: data.avatar_url,
-      balance: data.balance ?? '0',
-      lastLogin: data.last_login ?? null,
-      createdByAdmin: data.created_by_admin ?? null,
-      modifiedByAdmin: data.modified_by_admin ?? null,
-      adminNotes: data.admin_notes ?? null,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at ?? null,
-      supabaseUserId: data.supabase_user_id
-    };
-  }
-
-  private mapDbAccount(data: any): Account {
-    return {
-      id: data.id,
-      userId: data.user_id,
-      accountNumber: data.account_number,
-      accountName: data.account_name ?? null,
-      accountType: data.account_type,
-      balance: data.balance ?? '0',
-      currency: data.currency,
-      isActive: data.is_active,
-      interestRate: data.interest_rate ?? null,
-      minimumBalance: data.minimum_balance ?? null,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
-    };
-  }
-
-  private mapDbTransaction(data: any): Transaction {
-    return {
-      id: data.id,
-      transactionId: data.transaction_id,
-      fromUserId: data.from_user_id,
-      toUserId: data.to_user_id,
-      fromAccountId: data.from_account_id,
-      toAccountId: data.to_account_id,
-      amount: data.amount,
-      currency: data.currency,
-      transactionType: data.transaction_type,
-      status: data.status,
-      description: data.description,
-      recipientName: data.recipient_name,
-      recipientAccount: data.recipient_account,
-      recipientAddress: data.recipient_address,
-      recipientCountry: data.recipient_country,
-      referenceNumber: data.reference_number,
-      fee: data.fee,
-      exchangeRate: data.exchange_rate,
-      countryCode: data.country_code,
-      bankName: data.bank_name,
-      swiftCode: data.swift_code,
-      transferPurpose: data.transfer_purpose,
-      category: data.category,
-      adminNotes: data.admin_notes,
-      approvedBy: data.approved_by,
-      approvedAt: data.approved_at,
-      rejectedBy: data.rejected_by,
-      rejectedAt: data.rejected_at,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
-    };
-  }
-
-  // Cards & investments & messages & alerts
   async getUserCards(userId: number): Promise<Card[]> {
     try {
-      const result: any = await sql`SELECT * FROM public.cards WHERE user_id = ${userId}`;
-      return (result || []) as Card[];
+      const result: any = await sql`SELECT * FROM public.cards WHERE account_id IN (SELECT id FROM public.bank_accounts WHERE user_id = ${userId})`;
+      return result || [];
     } catch (error) {
-      console.error('Error fetching cards:', error);
+      console.error('❌ Error fetching user cards:', error);
       return [];
     }
   }
@@ -542,29 +401,48 @@ export class PostgresStorage implements IStorage {
   async getCard(id: number): Promise<Card | undefined> {
     try {
       const result: any = await sql`SELECT * FROM public.cards WHERE id = ${id}`;
-      return result && result[0] ? (result[0] as Card) : undefined;
+      return result && result.length > 0 ? result[0] : undefined;
     } catch (error) {
-      console.error('Error fetching card:', error);
+      console.error('❌ Error fetching card:', error);
       return undefined;
     }
   }
 
-  async createCard(card: InsertCard): Promise<Card> {
-    const result: any = await sql`INSERT INTO public.cards ${sql(card as any)} RETURNING *`;
-    return result[0] as Card;
+  async createCard(card: any): Promise<Card> {
+    try {
+      const result: any = await sql`
+        INSERT INTO public.cards (account_id, card_number, card_type, expiry_date, cvv, cardholder_name)
+        VALUES (${card.accountId}, ${card.cardNumber}, ${card.cardType}, ${card.expiryDate}, ${card.cvv}, ${card.cardholderName})
+        RETURNING *
+      `;
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating card:', error);
+      throw error;
+    }
   }
 
-  async updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined> {
-    const result: any = await sql`UPDATE public.cards SET ${sql(updates as any)} WHERE id = ${id} RETURNING *`;
-    return result && result[0] ? (result[0] as Card) : undefined;
+  async updateCard(id: number, updates: any): Promise<Card | undefined> {
+    try {
+      const result: any = await sql`
+        UPDATE public.cards 
+        SET is_locked = COALESCE(${updates.isLocked}, is_locked)
+        WHERE id = ${id}
+        RETURNING *
+      `;
+      return result && result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error('❌ Error updating card:', error);
+      return undefined;
+    }
   }
 
   async getUserInvestments(userId: number): Promise<Investment[]> {
     try {
       const result: any = await sql`SELECT * FROM public.investments WHERE user_id = ${userId}`;
-      return (result || []) as Investment[];
+      return result || [];
     } catch (error) {
-      console.error('Error fetching investments:', error);
+      console.error('❌ Error fetching user investments:', error);
       return [];
     }
   }
@@ -572,112 +450,280 @@ export class PostgresStorage implements IStorage {
   async getInvestment(id: number): Promise<Investment | undefined> {
     try {
       const result: any = await sql`SELECT * FROM public.investments WHERE id = ${id}`;
-      return result && result[0] ? (result[0] as Investment) : undefined;
+      return result && result.length > 0 ? result[0] : undefined;
     } catch (error) {
+      console.error('❌ Error fetching investment:', error);
       return undefined;
     }
   }
 
-  async createInvestment(investment: InsertInvestment): Promise<Investment> {
-    const result: any = await sql`INSERT INTO public.investments ${sql(investment as any)} RETURNING *`;
-    return result[0] as Investment;
+  async createInvestment(investment: any): Promise<Investment> {
+    try {
+      const result: any = await sql`
+        INSERT INTO public.investments (user_id, investment_type, amount, current_value, return_rate, status)
+        VALUES (${investment.userId}, ${investment.investmentType}, ${investment.amount}, ${investment.currentValue}, ${investment.returnRate}, ${investment.status || 'active'})
+        RETURNING *
+      `;
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating investment:', error);
+      throw error;
+    }
   }
 
-  async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> {
-    const result: any = await sql`UPDATE public.investments SET ${sql(updates as any)} WHERE id = ${id} RETURNING *`;
-    return result && result[0] ? (result[0] as Investment) : undefined;
+  async updateInvestment(id: number, updates: any): Promise<Investment | undefined> {
+    try {
+      const result: any = await sql`
+        UPDATE public.investments 
+        SET current_value = COALESCE(${updates.currentValue}, current_value),
+            status = COALESCE(${updates.status}, status)
+        WHERE id = ${id}
+        RETURNING *
+      `;
+      return result && result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error('❌ Error updating investment:', error);
+      return undefined;
+    }
   }
 
   async getMessages(conversationId?: string): Promise<Message[]> {
     try {
-      if (conversationId) {
-        const result: any = await sql`SELECT * FROM public.messages WHERE conversation_id = ${conversationId} ORDER BY created_at DESC`;
-        return (result || []) as Message[];
-      }
-      const result: any = await sql`SELECT * FROM public.messages ORDER BY created_at DESC LIMIT 100`;
-      return (result || []) as Message[];
+      const result: any = await sql`SELECT * FROM public.messages ORDER BY created_at DESC`;
+      return result || [];
     } catch (error) {
+      console.error('❌ Error fetching messages:', error);
       return [];
     }
   }
 
   async getUserMessages(userId: number): Promise<Message[]> {
     try {
-      const result: any = await sql`
-        SELECT * FROM public.messages 
-        WHERE sender_id = ${userId} OR recipient_id = ${userId}
-        ORDER BY created_at DESC
-      `;
-      return (result || []) as Message[];
+      const result: any = await sql`SELECT * FROM public.messages WHERE from_user_id = ${userId} OR to_user_id = ${userId}`;
+      return result || [];
     } catch (error) {
+      console.error('❌ Error fetching user messages:', error);
       return [];
     }
   }
 
-  async createMessage(message: InsertMessage): Promise<Message> {
-    const result: any = await sql`INSERT INTO public.messages ${sql(message as any)} RETURNING *`;
-    return result[0] as Message;
+  async createMessage(message: any): Promise<Message> {
+    try {
+      const result: any = await sql`
+        INSERT INTO public.messages (from_user_id, to_user_id, content, is_read)
+        VALUES (${message.fromUserId}, ${message.toUserId}, ${message.content}, ${message.isRead || false})
+        RETURNING *
+      `;
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating message:', error);
+      throw error;
+    }
   }
 
   async markMessageAsRead(id: number): Promise<Message | undefined> {
-    const result: any = await sql`
-      UPDATE public.messages 
-      SET is_read = true, read_at = NOW()
-      WHERE id = ${id}
-      RETURNING *
-    `;
-    return result && result[0] ? (result[0] as Message) : undefined;
+    try {
+      const result: any = await sql`
+        UPDATE public.messages SET is_read = true WHERE id = ${id} RETURNING *
+      `;
+      return result && result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error('❌ Error marking message as read:', error);
+      return undefined;
+    }
   }
 
   async getUserAlerts(userId: number): Promise<Alert[]> {
     try {
       const result: any = await sql`SELECT * FROM public.alerts WHERE user_id = ${userId} ORDER BY created_at DESC`;
-      return (result || []) as Alert[];
+      return result || [];
     } catch (error) {
+      console.error('❌ Error fetching alerts:', error);
       return [];
     }
   }
 
   async getUnreadAlerts(userId: number): Promise<Alert[]> {
     try {
-      const result: any = await sql`
-        SELECT * FROM public.alerts 
-        WHERE user_id = ${userId} AND is_read = false
-        ORDER BY created_at DESC
-      `;
-      return (result || []) as Alert[];
+      const result: any = await sql`SELECT * FROM public.alerts WHERE user_id = ${userId} AND is_read = false`;
+      return result || [];
     } catch (error) {
+      console.error('❌ Error fetching unread alerts:', error);
       return [];
     }
   }
 
-  async createAlert(alert: InsertAlert): Promise<Alert> {
-    const result: any = await sql`INSERT INTO public.alerts ${sql(alert as any)} RETURNING *`;
-    return result[0] as Alert;
+  async createAlert(alert: any): Promise<Alert> {
+    try {
+      const result: any = await sql`
+        INSERT INTO public.alerts (user_id, title, message, type, is_read)
+        VALUES (${alert.userId}, ${alert.title}, ${alert.message}, ${alert.type}, ${alert.isRead || false})
+        RETURNING *
+      `;
+      return result[0];
+    } catch (error) {
+      console.error('❌ Error creating alert:', error);
+      throw error;
+    }
   }
 
   async markAlertAsRead(id: number): Promise<Alert | undefined> {
-    const result: any = await sql`UPDATE public.alerts SET is_read = true, read_at = NOW() WHERE id = ${id} RETURNING *`;
-    return result && result[0] ? (result[0] as Alert) : undefined;
+    try {
+      const result: any = await sql`
+        UPDATE public.alerts SET is_read = true WHERE id = ${id} RETURNING *
+      `;
+      return result && result.length > 0 ? result[0] : undefined;
+    } catch (error) {
+      console.error('❌ Error marking alert as read:', error);
+      return undefined;
+    }
   }
 
   async deleteAlert(id: number): Promise<void> {
-    await sql`DELETE FROM public.alerts WHERE id = ${id}`;
+    try {
+      await sql`DELETE FROM public.alerts WHERE id = ${id}`;
+    } catch (error) {
+      console.error('❌ Error deleting alert:', error);
+    }
   }
 
   async getBranches(): Promise<any[]> {
-    return [];
+    try {
+      const result: any = await sql`SELECT * FROM public.branches`;
+      return result || [];
+    } catch (error) {
+      console.error('❌ Error fetching branches:', error);
+      return [];
+    }
   }
+
   async getAtms(): Promise<any[]> {
-    return [];
+    try {
+      const result: any = await sql`SELECT * FROM public.atms`;
+      return result || [];
+    } catch (error) {
+      console.error('❌ Error fetching ATMs:', error);
+      return [];
+    }
   }
+
   async getExchangeRates(): Promise<any[]> {
-    return [];
+    try {
+      const result: any = await sql`SELECT * FROM public.exchange_rates`;
+      return result || [];
+    } catch (error) {
+      console.error('❌ Error fetching exchange rates:', error);
+      return [];
+    }
   }
+
   async getStatementsByUserId(userId: number): Promise<any[]> {
-    return [];
+    try {
+      const result: any = await sql`SELECT * FROM public.statements WHERE user_id = ${userId}`;
+      return result || [];
+    } catch (error) {
+      console.error('❌ Error fetching statements:', error);
+      return [];
+    }
   }
+
   async getMarketRates(): Promise<any[]> {
-    return [];
+    try {
+      const result: any = await sql`SELECT * FROM public.market_rates`;
+      return result || [];
+    } catch (error) {
+      console.error('❌ Error fetching market rates:', error);
+      return [];
+    }
+  }
+
+  private mapDbUser(row: any): User {
+    return {
+      id: row.id,
+      username: row.username,
+      passwordHash: row.password_hash,
+      fullName: row.full_name,
+      email: row.email,
+      phone: row.phone,
+      accountNumber: row.account_number,
+      accountId: row.account_id,
+      profession: row.profession,
+      dateOfBirth: row.date_of_birth,
+      address: row.address,
+      city: row.city,
+      state: row.state,
+      country: row.country,
+      postalCode: row.postal_code,
+      nationality: row.nationality,
+      annualIncome: row.annual_income,
+      idType: row.id_type,
+      idNumber: row.id_number,
+      transferPin: row.transfer_pin,
+      role: row.role,
+      isVerified: row.is_verified,
+      isOnline: row.is_online,
+      isActive: row.is_active,
+      avatarUrl: row.avatar_url,
+      balance: row.balance,
+      supabaseUserId: row.supabase_user_id,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      lastLogin: row.last_login,
+      createdByAdmin: row.created_by_admin,
+      modifiedByAdmin: row.modified_by_admin,
+      adminNotes: row.admin_notes
+    };
+  }
+
+  private mapDbAccount(row: any): Account {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      accountNumber: row.account_number,
+      accountType: row.account_type,
+      balance: row.balance,
+      currency: row.currency,
+      isActive: row.is_active,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      accountName: row.account_name,
+      interestRate: row.interest_rate,
+      minimumBalance: row.minimum_balance
+    };
+  }
+
+  private mapDbTransaction(row: any): Transaction {
+    return {
+      id: row.id,
+      transactionId: row.transaction_id,
+      fromUserId: row.from_user_id,
+      toUserId: row.to_user_id,
+      fromAccountId: row.from_account_id,
+      toAccountId: row.to_account_id,
+      amount: row.amount,
+      currency: row.currency,
+      transactionType: row.transaction_type,
+      status: row.status,
+      description: row.description,
+      recipientName: row.recipient_name,
+      recipientAccount: row.recipient_account,
+      recipientCountry: row.recipient_country,
+      recipientAddress: row.recipient_address,
+      referenceNumber: row.reference_number,
+      fee: row.fee,
+      exchangeRate: row.exchange_rate,
+      countryCode: row.country_code,
+      bankName: row.bank_name,
+      swiftCode: row.swift_code,
+      transferPurpose: row.transfer_purpose,
+      category: row.category,
+      approvedBy: row.approved_by,
+      approvedAt: row.approved_at,
+      rejectedBy: row.rejected_by,
+      rejectedAt: row.rejected_at,
+      adminNotes: row.admin_notes,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
   }
 }

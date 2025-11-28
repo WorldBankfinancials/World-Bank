@@ -108,6 +108,7 @@ export class SupabaseStorage implements IStorage {
       .insert({
         username: user.username,
         password_hash: user.passwordHash,
+    // @ts-ignore - insert schema only has base fields, actual user has all fields
         full_name: user.fullName,
         email: user.email,
         phone: user.phone,
