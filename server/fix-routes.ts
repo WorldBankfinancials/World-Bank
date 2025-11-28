@@ -364,7 +364,6 @@ export async function registerFixedRoutes(app: Express): Promise<void> {
       }
 
       // SECURITY: Hash default PIN with bcrypt
-      const bcrypt = await import('bcryptjs');
       const hashedDefaultPin = await bcrypt.hash('0000', 10);
 
       // SECURITY: Only accept whitelisted fields from client, hardcode privileged fields server-side
@@ -696,46 +695,50 @@ export async function registerFixedRoutes(app: Express): Promise<void> {
         return res.status(400).json({ 
           message: "Validation failed",
           errors: (validation as any).errors
-          });
-        }
-  
-        const { username, password } = validation as any.data as any;
-        const user = await storage.getUserByUsername(username);
-  
-        if (!user || !(await bcryptjs.compare(password, user.passwordHash))) {
-          return res.status(401).json({ message: 'Invalid credentials' });
-        }
-        const data = (validation as any)?.data || {};
-        const { username, password } = data;
-        res.json({ success: true, user });
-        res.status(500).json({ error: 'Failed to login' });
+        });
       }
-    });
+
+      const data = (validation as any)?.data || {};
+      const { username = "", password = "" } = data;
+      const user = await storage.getUserByUsername(username);
+
+      if (!user || !(await bcryptjs.compare(password, user.passwordHash))) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      res.json({ success: true, user });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ error: 'Failed to login' });
+    }
+  });
   
-    app.post('/api/verify-pin', async (req: Request, res: Response) => {
-      try {
-        // Validate request body with Zod schema
-        const { pinVerificationSchema, validateRequest } = await import('./validation-schemas');
-        const validation = validateRequest(pinVerificationSchema, req.body);
-        
-        if (!validation.success) {
-          return res.status(400).json({ 
-            message: "Validation failed",
-            errors: (validation as any).errors,
-            verified: false
-          });
-        }
-  
-        const { email, username, pin } = validation as any.data as any;
-        const identifier = email || username;
-        console.info('🔐 PIN verification request for:', identifier);
-  
-        // Use email for lookup (supports both email and username fields for compatibility)
-        const data = (validation as any)?.data || {};
-        const { email, username, pin } = data;
-  
-        if (!user) {
-          console.info('❌ User not found for identifier:', identifier);
+  app.post('/api/verify-pin', async (req: Request, res: Response) => {
+    try {
+      // Validate request body with Zod schema
+      const { pinVerificationSchema, validateRequest } = await import('./validation-schemas');
+    const validation = validateRequest(pinVerificationSchema, req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Validation failed",
+          errors: (validation as any).errors,
+          verified: false
+        });
+      }
+
+      const pdata = (validation as any)?.data || {};
+      const { email = "", username = "", pin = "" } = pdata;
+      const identifier = email || username;
+      console.info('🔐 PIN verification request for:', identifier);
+
+      // Use email for lookup (supports both email and username fields for compatibility)
+      const user = await (storage as any).getUserByEmail(identifier);
+
+      if (!user) {
+        console.info('❌ User not found for identifier:', identifier);
+        return res.status(404).json({ message: 'User not found', verified: false });
+      }
 
       console.info('✅ Found user:', { id: user.id, email: user.email, isActive: user.isActive });
 
@@ -753,7 +756,6 @@ export async function registerFixedRoutes(app: Express): Promise<void> {
       let pinValid = false;
       if (user.transferPin && user.transferPin.startsWith('$2')) {
         // Hashed PIN - use bcrypt compare
-        const bcrypt = await import('bcryptjs');
         pinValid = await bcryptjs.compare(pin, user.transferPin);
       } else {
         // Plaintext PIN - direct comparison (legacy support)
@@ -768,7 +770,7 @@ export async function registerFixedRoutes(app: Express): Promise<void> {
       console.info('✅ PIN verification successful');
       res.json({ success: true, verified: true });
     } catch (error) {
-      console.error('❌ PIN verification error:', error);
+      console.error('PIN verification error:', error);
       res.status(500).json({ error: 'Failed to verify PIN', verified: false });
     }
   });
@@ -995,7 +997,6 @@ export async function registerFixedRoutes(app: Express): Promise<void> {
       let currentPinValid = false;
       if (user.transferPin && user.transferPin.startsWith('$2')) {
         // Hashed PIN - use bcrypt compare
-        const bcrypt = await import('bcryptjs');
         currentPinValid = await bcrypt.compare(currentPin, user.transferPin);
       } else {
         // Plaintext PIN - direct comparison (legacy support)
@@ -1012,7 +1013,6 @@ export async function registerFixedRoutes(app: Express): Promise<void> {
       }
 
       // SECURITY: Hash the new PIN with bcrypt
-      const bcrypt = await import('bcryptjs');
       const hashedPin = await bcrypt.hash(newPin, 10);
 
       // Use authenticated user's ID (not hardcoded)
