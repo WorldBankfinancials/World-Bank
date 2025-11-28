@@ -53,11 +53,10 @@ export const balanceUpdateSchema = z.object({
 export const registrationSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string()
-    .min(12, 'Password must be at least 12 characters')
+    .min(8, 'Password must be at least 8 characters')
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number')
-    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
+    .regex(/[0-9]/, 'Password must contain at least one number'),
   firstName: z.string()
     .min(2, 'First name must be at least 2 characters')
     .max(50, 'First name too long')
@@ -70,14 +69,16 @@ export const registrationSchema = z.object({
     .regex(/^\+?[0-9\-\s()]+$/, 'Invalid phone number format')
     .min(10, 'Phone number too short'),
   dateOfBirth: z.string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
-  address: z.string().min(5, 'Address too short').max(200, 'Address too long'),
-  city: z.string().min(2, 'City name too short').max(50, 'City name too long'),
-  state: z.string().min(2, 'State too short').max(50, 'State too long'),
-  country: z.string().min(2, 'Country too short').max(50, 'Country too long'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+    .optional(),
+  address: z.string().min(5, 'Address too short').max(200, 'Address too long').optional(),
+  city: z.string().min(2, 'City name too short').max(50, 'City name too long').optional(),
+  state: z.string().min(2, 'State too short').max(50, 'State too long').optional(),
+  country: z.string().min(2, 'Country too short').max(50, 'Country too long').optional(),
   postalCode: z.string()
     .min(3, 'Postal code too short')
-    .max(10, 'Postal code too long'),
+    .max(10, 'Postal code too long')
+    .optional(),
   profession: z.string().min(2, 'Profession too short').max(100, 'Profession too long').optional(),
   annualIncome: z.string().min(1, 'Annual income required').optional(),
   idType: z.string().min(2, 'ID type required').optional(),

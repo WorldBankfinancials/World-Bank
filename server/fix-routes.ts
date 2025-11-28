@@ -745,23 +745,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Authentication endpoints with fixed typing
-  app.post('/api/login', async (req: Request, res: Response) => {
-    try {
-      const body = req.body as { username: string; password: string };
-      const user = await storage.getUserByUsername(body.username);
-
-      if (!user || user.password !== body.password) {
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
-
-      res.json({ success: true, user });
-    } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ error: 'Failed to login' });
-    }
-  });
-
+  // Verify PIN endpoint
   app.post('/api/verify-pin', async (req: Request, res: Response) => {
     try {
       const body = req.body as { email?: string; username?: string; pin: string };
