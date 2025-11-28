@@ -1057,8 +1057,8 @@ export default function Dashboard() {
 
       {/* Live Chat Component */}
       <LiveChat 
-        isOpen={showLiveChat} 
-        onClose={() => setShowLiveChat(false)} 
+        isOpen={isChatOpen} 
+        onClose={() => setIsChatOpen(false)} 
       />
     </div>
   );
