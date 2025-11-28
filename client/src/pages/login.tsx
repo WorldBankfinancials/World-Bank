@@ -394,6 +394,7 @@ export default function Login() {
               <Shield className="w-5 h-5 text-blue-600" />
               {t('pin_verification_required')}
             </DialogTitle>
+            <div className="sr-only">Enter your 4-digit security PIN to complete login verification</div>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-gray-600">

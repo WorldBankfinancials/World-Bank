@@ -273,6 +273,7 @@ export default function CustomerManagement() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Customer Information</DialogTitle>
+              <div className="sr-only">Edit customer personal, contact, financial, and verification information</div>
             </DialogHeader>
             
             {editingCustomer && (
