@@ -785,8 +785,26 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
       
       // SECURITY: Use bcrypt to compare hashed PIN
-      const pinMatch = await bcrypt.compare(body.pin, user.transferPin);
+      // DEBUG: Log PIN comparison
+      console.log('🔐 PIN Verification Debug:');
+      console.log('Provided PIN:', body.pin);
+      console.log('Stored hash length:', user.transferPin?.length);
+      console.log('Is hash:', user.transferPin?.startsWith('$2'));
+      
+      let pinMatch = false;
+      
+      // Try bcrypt comparison if it's hashed
+      if (user.transferPin && user.transferPin.startsWith('$2')) {
+        pinMatch = await bcrypt.compare(body.pin, user.transferPin);
+        console.log('✅ bcrypt comparison result:', pinMatch);
+      } else if (user.transferPin === body.pin) {
+        // Fallback for plaintext (shouldn't happen, but for compatibility)
+        pinMatch = true;
+        console.log('⚠️  PIN matched as plaintext (legacy)');
+      }
+      
       if (!pinMatch) {
+        console.log('❌ PIN mismatch');
         return res.status(401).json({ message: 'Invalid PIN', verified: false });
       }
 
