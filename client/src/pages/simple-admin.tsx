@@ -579,6 +579,7 @@ export default function SimpleAdmin() {
         const userData = await response.json();
         setEditingCustomer(customer);
         setEditForm({
+          status: 'active',
           fullName: userData.fullName || customer.fullName,
           email: userData.email || customer.email,
           phone: userData.phone || '+86 138 0013 8000',
@@ -599,6 +600,7 @@ export default function SimpleAdmin() {
       // Use fallback data based on customer profile settings
       setEditingCustomer(customer);
       setEditForm({
+        status: 'active',
         fullName: customer.fullName || 'Customer',
         email: customer.email || '',
         phone: '+86 138 0013 8000',
@@ -665,6 +667,7 @@ export default function SimpleAdmin() {
   const handleCancelEdit = () => {
     setEditingCustomer(null);
     setEditForm({
+      status: 'active',
       fullName: '',
       email: '',
       phone: '',
@@ -1513,7 +1516,7 @@ export default function SimpleAdmin() {
                         <p className="font-medium">Mr. Liu Wei</p>
                         <p className="text-sm text-gray-600">Account: 4789-6523-1087-9234</p>
                         <p className="text-sm text-gray-600">
-                          Current Balance: ${user?.balance ? parseFloat(user.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                          Current Balance: ${user?.balance ? parseFloat(String(user.balance)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
                         </p>
                       </div>
                       <Button 
@@ -1606,11 +1609,11 @@ export default function SimpleAdmin() {
               <div className="flex items-center gap-4">
                 <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
                   <span className="text-white font-semibold text-xl">
-                    {editingCustomer.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                    {(editingCustomer?.fullName || 'C').split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-medium">{editingCustomer.fullName}</h3>
+                  <h3 className="font-medium">{editingCustomer?.fullName || 'Customer'}</h3>
                   <div className="flex items-center gap-2 mt-2">
                     <input
                       type="file"

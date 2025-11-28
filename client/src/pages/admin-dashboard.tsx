@@ -133,7 +133,7 @@ export default function AdminDashboard() {
 
   // Customer verification mutation
   const verifyCustomerMutation = useMutation({
-    mutationFn: async ({ userId, verified }: { userId: number; verified: boolean }) => {
+    mutationFn: async ({ userId, verified }: { userId: number | string; verified: boolean }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/admin/customers/${userId}/verify`, {
         method: 'POST',
