@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Filter, Search, Calendar, Download, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface Transaction {
   id: number;
@@ -33,6 +33,7 @@ interface Account {
 export default function History() {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -93,8 +94,11 @@ export default function History() {
     }
   }, [accountsError, toast]);
 
-  useEffect(() => {
-  }, [accounts]);
+  // Refresh handler - invalidate query cache
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+  };
 
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -149,7 +153,7 @@ export default function History() {
             <p className="text-gray-600 mt-1">{t('view_all_transactions')}</p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={fetchAllTransactions} variant="outline" size="sm">
+            <Button onClick={handleRefresh} variant="outline" size="sm">
               <RefreshCw className="w-4 h-4 mr-2" />
               {t('refresh')}
             </Button>
