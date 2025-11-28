@@ -34,7 +34,7 @@ class DynamicChannelRegistry {
           });
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: any) => {
         console.log('🔄 Dynamic realtime channel:', status);
       });
   }

@@ -24,7 +24,7 @@ export function useRealtimeTransactions(enabled: boolean = true) {
           schema: 'public',
           table: 'transactions'
         },
-        (payload) => {
+        (payload: any) => {
           console.log('Transaction change detected:', payload);
           
           // Invalidate all transaction-related queries
@@ -67,7 +67,7 @@ export function useRealtimeSupportTickets(enabled: boolean = true) {
           schema: 'public',
           table: 'support_tickets'
         },
-        (payload) => {
+        (payload: any) => {
           console.log('Support ticket change detected:', payload);
           
           // Invalidate support ticket queries
@@ -102,7 +102,7 @@ export function useRealtimeAlerts(userId: number | undefined, enabled: boolean =
           table: 'alerts',
           filter: `user_id=eq.${userId}`
         },
-        (payload) => {
+        (payload: any) => {
           console.log('Alert change detected for user:', payload);
           
           // Invalidate alert queries

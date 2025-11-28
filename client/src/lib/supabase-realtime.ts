@@ -90,7 +90,7 @@ class SharedChannelRegistry {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'alerts' },
-        (payload) => {
+        (payload: any) => {
           if (!payload.new) return;
           try {
             const alert: RealtimeAlert = {
@@ -112,7 +112,7 @@ class SharedChannelRegistry {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'transactions' },
-        (payload) => {
+        (payload: any) => {
           if (!payload.new) return;
           try {
             const transaction: RealtimeTransaction = {
@@ -136,7 +136,7 @@ class SharedChannelRegistry {
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'bank_accounts' },
-        (payload) => {
+        (payload: any) => {
           if (!payload.new) return;
           try {
             const account: RealtimeBankAccount = {
@@ -159,7 +159,7 @@ class SharedChannelRegistry {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'support_tickets' },
-        (payload) => {
+        (payload: any) => {
           const ticketData = (payload.new || payload.old) as Record<string, any> | null;
           if (!ticketData) return;
           try {
@@ -185,7 +185,7 @@ class SharedChannelRegistry {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'admin_actions' },
-        (payload) => {
+        (payload: any) => {
           if (!payload.new) return;
           try {
             const action: RealtimeAdminAction = {
@@ -203,7 +203,7 @@ class SharedChannelRegistry {
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: any) => {
         console.log('🔄 Core realtime channel:', status);
       });
   }
