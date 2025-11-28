@@ -37,14 +37,8 @@ export default function Alerts() {
     queryKey: ['/api/user'],
   });
 
-  // Enable real-time alerts updates (gracefully handle WebSocket errors)
-  const userId = user?.id ? (typeof user.id === 'number' ? user.id : parseInt(user.id)) : undefined;
-  try {
-    useRealtimeAlerts(userId, !!user);
-  } catch (err) {
-    // WebSocket not available in this environment - gracefully continue with polling
-    console.warn('Real-time alerts unavailable:', err);
-  }
+  // Real-time alerts disabled - using polling instead (WebSocket unavailable in Replit)
+  // useRealtimeAlerts will be re-enabled when deploying to production with WebSocket support
 
   // Fetch real alerts from database
   const { data: alerts, isLoading: alertsLoading } = useQuery<any[]>({
