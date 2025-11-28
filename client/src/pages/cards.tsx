@@ -379,6 +379,7 @@ export default function Cards() {
             <DialogTitle>
               {selectedCard?.isLocked ? (t('unlock_card') || 'Unlock Card') : (t('lock_card') || 'Lock Card')}
             </DialogTitle>
+            <div className="sr-only">Enter your PIN to lock or unlock your card</div>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
@@ -415,6 +416,7 @@ export default function Cards() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('mobile_pay') || 'Mobile Pay'}</DialogTitle>
+            <div className="sr-only">Send mobile payment by entering phone number and amount</div>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -464,6 +466,7 @@ export default function Cards() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('pay_bill') || 'Pay Bill'}</DialogTitle>
+            <div className="sr-only">Pay bill by entering provider, account number, and amount</div>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -522,6 +525,7 @@ export default function Cards() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('card_settings') || 'Card Settings'}</DialogTitle>
+            <div className="sr-only">Update daily spending limit and card preferences</div>
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-4 bg-gray-50 rounded-lg">
