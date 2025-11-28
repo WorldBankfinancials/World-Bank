@@ -110,63 +110,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
 
-      if (!supabase) {
-        return { error: 'Authentication service unavailable' };
-      }
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       });
 
-      if (error) {
-        return { error: error.message };
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        setLoading(false);
+        return { error: data.error || 'Login failed' };
       }
 
-      if (data.user && data.session) {
-        setUser(data.user);
-        await fetchUserData(data.user);
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser({ id: data.user.id, email: data.user.email } as any);
         setLoading(false);
         return {};
       }
 
       setLoading(false);
       return { error: 'Authentication failed' };
-    } catch (error) {
+    } catch (error: any) {
       setLoading(false);
-      return { error: 'Network error occurred' };
+      return { error: error.message || 'Network error' };
     }
   };
 
   const signUp = async (email: string, password: string, metadata?: any): Promise<{ error?: string }> => {
     try {
-      if (!supabase) {
-        return { error: 'Authentication service unavailable' };
-      }
-
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: metadata }
+      const response = await fetch('/api/auth/register-complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email, 
+          password,
+          firstName: metadata?.firstName || email.split('@')[0],
+          lastName: metadata?.lastName || 'User',
+          phone: metadata?.phone || '',
+          dateOfBirth: metadata?.dateOfBirth || '',
+          address: metadata?.address || '',
+          city: metadata?.city || '',
+          state: metadata?.state || '',
+          country: metadata?.country || '',
+          postalCode: metadata?.postalCode || '',
+          profession: metadata?.profession || '',
+          annualIncome: metadata?.annualIncome || '',
+          idType: metadata?.idType || '',
+          idNumber: metadata?.idNumber || '',
+          transferPin: metadata?.transferPin || ''
+        })
       });
 
-      if (error) {
-        return { error: error.message };
+      const data = await response.json();
+      if (!response.ok || data.error) {
+        return { error: data.error || 'Signup failed' };
       }
 
       return {};
-    } catch (error) {
-      return { error: 'Signup failed' };
+    } catch (error: any) {
+      return { error: error.message || 'Signup failed' };
     }
   };
 
   const signOut = async () => {
     try {
-      if (supabase) {
-        await supabase.auth.signOut();
-        setUser(null);
-        setUserProfile(null);
-      }
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+      setUserProfile(null);
     } catch (error) {
       console.error('Sign out error:', error);
     }
