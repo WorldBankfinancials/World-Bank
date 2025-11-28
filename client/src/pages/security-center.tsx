@@ -71,11 +71,19 @@ export default function SecurityCenter() {
     }
   ];
 
-  // Backend API needed: /api/user/activity-log for real activity tracking
-  const recentActivity: any[] = [];
+  // Fetch real activity from API
+  const { data: recentActivity = [] } = useQuery<any[]>({
+    queryKey: ['/api/user/activity-log'],
+    enabled: !!user,
+    staleTime: 30000
+  });
 
-  // Backend API needed: /api/user/trusted-devices for real device management
-  const trustedDevices: any[] = [];
+  // Fetch trusted devices from API
+  const { data: trustedDevices = [] } = useQuery<any[]>({
+    queryKey: ['/api/user/trusted-devices'],
+    enabled: !!user,
+    staleTime: 30000
+  });
 
   return (
     <div className="min-h-screen bg-wb-gray">

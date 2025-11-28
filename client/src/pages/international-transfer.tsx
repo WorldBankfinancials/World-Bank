@@ -224,33 +224,23 @@ export default function InternationalTransfer() {
     );
   }
 
-  const exchangeRates = [
-    { from: "USD", to: "CNY", rate: "7.23", trend: "up", flag: "🇨🇳", change: "+0.05", changePercent: "+0.69%" },
-    { from: "USD", to: "EUR", rate: "0.92", trend: "down", flag: "🇪🇺", change: "-0.02", changePercent: "-2.13%" },
-    { from: "USD", to: "GBP", rate: "0.79", trend: "up", flag: "🇬🇧", change: "+0.01", changePercent: "+1.28%" },
-    { from: "USD", to: "JPY", rate: "149.50", trend: "stable", flag: "🇯🇵", change: "0.00", changePercent: "0.00%" },
-    { from: "USD", to: "SGD", rate: "1.35", trend: "up", flag: "🇸🇬", change: "+0.03", changePercent: "+2.27%" },
-    { from: "USD", to: "AUD", rate: "1.52", trend: "down", flag: "🇦🇺", change: "-0.04", changePercent: "-2.56%" },
-    { from: "USD", to: "CAD", rate: "1.36", trend: "up", flag: "🇨🇦", change: "+0.02", changePercent: "+1.49%" },
-    { from: "USD", to: "CHF", rate: "0.91", trend: "stable", flag: "🇨🇭", change: "0.00", changePercent: "0.00%" },
-    { from: "USD", to: "KRW", rate: "1340.25", trend: "down", flag: "🇰🇷", change: "-15.50", changePercent: "-1.14%" },
-    { from: "USD", to: "INR", rate: "83.12", trend: "up", flag: "🇮🇳", change: "+0.45", changePercent: "+0.54%" }
-  ];
+  // Fetch exchange rates from API
+  const { data: exchangeRates = [] } = useQuery<any[]>({
+    queryKey: ['/api/exchange-rates'],
+    staleTime: 60000
+  });
 
-  const popularDestinations = [
-    { country: "China", flag: "🇨🇳", currency: "CNY", fee: "$8.00", time: "Same day" },
-    { country: "United Kingdom", flag: "🇬🇧", currency: "GBP", fee: "$12.00", time: "1-2 hours" },
-    { country: "Japan", flag: "🇯🇵", currency: "JPY", fee: "$15.00", time: "Same day" },
-    { country: "Singapore", flag: "🇸🇬", currency: "SGD", fee: "$10.00", time: "1 hour" },
-    { country: "Australia", flag: "🇦🇺", currency: "AUD", fee: "$14.00", time: "2-4 hours" },
-    { country: "Germany", flag: "🇩🇪", currency: "EUR", fee: "$11.00", time: "1-3 hours" }
-  ];
+  // Fetch popular destinations from API
+  const { data: popularDestinations = [] } = useQuery<any[]>({
+    queryKey: ['/api/transfer/destinations'],
+    staleTime: 300000
+  });
 
-  const recentRecipients = [
-    { name: "Zhang Wei", country: "China", account: "****8901", lastTransfer: "2 days ago" },
-    { name: "Emily Johnson", country: "UK", account: "****5643", lastTransfer: "1 week ago" },
-    { name: "Hiroshi Tanaka", country: "Japan", account: "****2187", lastTransfer: "2 weeks ago" }
-  ];
+  // Fetch recent recipients from API
+  const { data: recentRecipients = [] } = useQuery<any[]>({
+    queryKey: ['/api/transfer/recipients'],
+    staleTime: 60000
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">

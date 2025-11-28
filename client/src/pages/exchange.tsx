@@ -78,7 +78,13 @@ export default function Exchange() {
     }
   };
 
-  const currencies = [
+  // Fetch currencies from API
+  const { data: currencyList = [] } = useQuery<any[]>({
+    queryKey: ['/api/currencies'],
+    staleTime: 86400000
+  });
+  
+  const currencies = currencyList.length > 0 ? currencyList : [
     { code: 'USD', name: 'US Dollar', flag: '🇺🇸' },
     { code: 'EUR', name: 'Euro', flag: '🇪🇺' },
     { code: 'GBP', name: 'British Pound', flag: '🇬🇧' },

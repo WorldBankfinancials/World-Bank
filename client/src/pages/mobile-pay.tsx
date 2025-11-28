@@ -64,12 +64,12 @@ export default function MobilePay() {
     staleTime: 30000
   });
 
-  const nearbyMerchants = [
-    { name: "Starbucks", distance: "0.2 miles", category: "Coffee", accepts: ["QR", "NFC"] },
-    { name: "McDonald's", distance: "0.4 miles", category: "Fast Food", accepts: ["QR", "NFC"] },
-    { name: "Best Buy", distance: "0.8 miles", category: "Electronics", accepts: ["QR", "NFC", "Online"] },
-    { name: "Walmart", distance: "1.2 miles", category: "Retail", accepts: ["QR", "NFC"] }
-  ];
+  // Fetch nearby merchants from API
+  const { data: nearbyMerchants = [] } = useQuery<any[]>({
+    queryKey: ['/api/mobile-pay/merchants'],
+    enabled: !!user,
+    staleTime: 60000
+  });
 
   return (
     <div className="min-h-screen bg-wb-gray">

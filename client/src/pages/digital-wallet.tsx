@@ -62,6 +62,7 @@ export default function DigitalWallet() {
 
   const walletBalance = walletData?.balance || (user as any)?.balance || 0;
 
+  // Quick actions - navigation only (no API needed)
   const quickActions = [
     { icon: Send, label: "Send Money", action: () => window.location.href = "/transfer" },
     { icon: QrCode, label: "QR Pay", action: () => window.location.href = "/mobile-pay" },
