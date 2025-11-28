@@ -201,10 +201,11 @@ export class SupabaseStorage implements IStorage {
       userId: account.user_id,
       accountNumber: account.account_number,
       accountType: account.account_type,
-      balance: account.balance,
-      currency: account.currency,
-      createdAt: account.created_at,
-      updatedAt: account.updated_at
+      balance: account.balance || '0.00',
+      currency: account.currency || 'USD',
+      status: account.status || 'active',
+      createdAt: new Date(account.created_at),
+      updatedAt: new Date(account.updated_at)
     }));
   }
 
