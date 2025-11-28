@@ -112,8 +112,6 @@ export default function AdminTransactionCreator() {
         } catch (e) {
           throw new Error('Failed to parse transaction response');
         }
-        console.log(`Transaction created successfully: ${transactionType.toUpperCase()} $${numAmount.toLocaleString()}`);
-        
         toast({
           title: 'Transaction created',
           description: `${transactionType.toUpperCase()} of $${numAmount.toLocaleString()} completed successfully.`,

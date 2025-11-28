@@ -42,11 +42,13 @@ export default function CreditCards() {
     );
   }
 
+  const { toast } = useToast();
+  
   const quickActions = [
-    { icon: Lock, label: t('lock_card'), action: () => console.log("Card locked") },
-    { icon: Smartphone, label: t('mobile_pay'), action: () => console.log("Mobile pay activated") },
-    { icon: DollarSign, label: t('pay_bill'), action: () => console.log("Redirecting to payment") },
-    { icon: Settings, label: t('settings'), action: () => console.log("Card settings opened") }
+    { icon: Lock, label: t('lock_card'), action: () => toast({ title: 'Card locked', description: 'Your card has been locked.' }) },
+    { icon: Smartphone, label: t('mobile_pay'), action: () => toast({ title: 'Mobile pay', description: 'Mobile pay activated successfully.' }) },
+    { icon: DollarSign, label: t('pay_bill'), action: () => toast({ title: 'Payment', description: 'Redirecting to payment page.' }) },
+    { icon: Settings, label: t('settings'), action: () => toast({ title: 'Settings', description: 'Card settings opened.' }) }
   ];
 
   return (

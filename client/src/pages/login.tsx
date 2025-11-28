@@ -83,7 +83,6 @@ export default function Login() {
           errorMessage = 'Account not found. Please register first or contact support.';
         }
         
-        console.log('🔔 Showing login error toast:', errorMessage);
         toast({
           title: t('login_failed') || 'Login Failed',
           description: errorMessage,

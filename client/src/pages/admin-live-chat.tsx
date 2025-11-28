@@ -82,7 +82,6 @@ export default function AdminLiveChat() {
       
       wsRef.current.onopen = () => {
         setIsConnected(true);
-        console.log('Admin chat connected');
         // Authenticate as admin
         wsRef.current?.send(JSON.stringify({
           type: 'auth',
@@ -138,7 +137,6 @@ export default function AdminLiveChat() {
 
       wsRef.current.onclose = () => {
         setIsConnected(false);
-        console.log('Admin chat disconnected');
         toast({
           title: 'Chat disconnected',
           description: 'Lost connection to chat server. Attempting to reconnect...',
