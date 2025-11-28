@@ -28,6 +28,14 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+interface Alert {
+  id: number;
+  alert_type: string;
+  message: string;
+  title?: string;
+  is_read: boolean;
+  created_at?: string;
+}
 
 export default function Alerts() {
   const { t } = useLanguage();
@@ -38,15 +46,6 @@ export default function Alerts() {
 
   // Real-time alerts disabled - using polling instead (WebSocket unavailable in Replit)
   // useRealtimeAlerts will be re-enabled when deploying to production with WebSocket support
-
-  interface Alert {
-    id: number;
-    alert_type: string;
-    message: string;
-    title?: string;
-    is_read: boolean;
-    created_at?: string;
-  }
 
   // Fetch real alerts from database
   const { data: alerts = [], isLoading: alertsLoading } = useQuery<Alert[]>({
