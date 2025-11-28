@@ -17,34 +17,6 @@ export default function ProfileSettings() {
   const [displayUser, setDisplayUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchUserProfile() {
-      try {
-        const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
-        
-        if (!authUser) {
-          setLocation('/login');
-          return;
-        }
-
-        const { data: bankUser, error } = await supabase
-          .from('bank_users')
-          .select('*')
-          .eq('supabase_user_id', authUser.id)
-          .single();
-
-        if (error) throw error;
-        
-        setDisplayUser(bankUser);
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchUserProfile();
-  }, [setLocation]);
 
 
   if (loading) {

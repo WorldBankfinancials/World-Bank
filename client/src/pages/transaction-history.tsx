@@ -30,117 +30,6 @@ export default function TransactionHistory() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
-        if (!authUser) return;
-
-        const { data: bankUser } = await supabase
-          .from('bank_users')
-          .select('*')
-          .eq('supabase_user_id', authUser.id)
-          .single();
-
-        setUser(bankUser);
-
-        if (bankUser) {
-          const { data: accounts } = await supabase
-            .from('bank_accounts')
-            .select('id')
-            .eq('user_id', bankUser.id);
-
-          if (accounts && accounts.length > 0) {
-            const { data: txns } = await supabase
-              .from('transactions')
-              .select('*')
-              .or(`from_account_id.eq.${accounts[0].id},to_account_id.eq.${accounts[0].id}`)
-              .order('created_at', { ascending: false });
-
-            setTransactions(txns || []);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, []);
-
-  // Real-time subscription for transaction updates (row-level filtered)
-  useEffect(() => {
-    if (!user) return;
-
-    // Fetch account IDs first to set up row-level filter
-    async function setupRealtimeWithFilter() {
-      const { data: accounts } = await supabase
-        .from('bank_accounts')
-        .select('id')
-        .eq('user_id', user.id);
-
-      if (!accounts || accounts.length === 0) return;
-
-      const accountId = accounts[0].id;
-
-      // Subscribe with row-level filter to only receive updates for this user's transactions
-      const channel = supabase
-        .channel(`transaction-updates-${accountId}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'transactions',
-          filter: `from_account_id=eq.${accountId}`
-        }, () => {
-        console.log('🔄 Transaction data changed, refreshing...');
-        // Refetch data when transactions change
-        async function refetchData() {
-          try {
-            const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
-            if (!authUser) return;
-
-            const { data: bankUser } = await supabase
-              .from('bank_users')
-              .select('*')
-              .eq('supabase_user_id', authUser.id)
-              .single();
-
-            if (bankUser) {
-              const { data: accounts } = await supabase
-                .from('bank_accounts')
-                .select('id')
-                .eq('user_id', bankUser.id);
-
-              if (accounts && accounts.length > 0) {
-                const { data: txns } = await supabase
-                  .from('transactions')
-                  .select('*')
-                  .or(`from_account_id.eq.${accounts[0].id},to_account_id.eq.${accounts[0].id}`)
-                  .order('created_at', { ascending: false });
-
-                setTransactions(txns || []);
-              }
-            }
-          } catch (error) {
-            console.error('Error refetching transactions:', error);
-          }
-        }
-          refetchData();
-        })
-        .subscribe();
-
-      return () => {
-        channel.unsubscribe();
-      };
-    }
-
-    const cleanup = setupRealtimeWithFilter();
-    return () => {
-      cleanup.then(cleanupFn => cleanupFn?.());
-    };
-  }, [user]);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
@@ -290,20 +179,20 @@ export default function TransactionHistory() {
       const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
       if (!authUser) return;
 
-      const { data: bankUser } = await supabase
+      // const { data: bankUser } = await supabase
         .from('bank_users')
         .select('*')
-        .eq('supabase_user_id', authUser.id)
+        .eq('id', authUser?.id)
         .single();
 
       if (bankUser) {
-        const { data: accounts } = await supabase
+        // const { data: accounts } = await supabase
           .from('bank_accounts')
           .select('id')
           .eq('user_id', bankUser.id);
 
         if (accounts && accounts.length > 0) {
-          const { data: txns } = await supabase
+          // const { data: txns } = await supabase
             .from('transactions')
             .select('*')
             .or(`from_account_id.eq.${accounts[0].id},to_account_id.eq.${accounts[0].id}`)

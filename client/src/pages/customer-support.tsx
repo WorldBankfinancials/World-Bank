@@ -26,60 +26,6 @@ export default function CustomerSupport() {
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmitTicket = async () => {
-    if (!subject || !category || !priority || !description) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please fill in all required fields to submit your support ticket.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
-      if (!authUser) throw new Error('Not authenticated');
-
-      const { data: bankUser } = await supabase
-        .from('bank_users')
-        .select('id')
-        .eq('supabase_user_id', authUser.id)
-        .single();
-
-      if (!bankUser) throw new Error('User not found');
-
-      const { error } = await supabase
-        .from('support_tickets')
-        .insert({
-          user_id: bankUser.id,
-          subject,
-          category,
-          priority,
-          description,
-          status: 'open'
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Ticket Submitted',
-        description: 'Support ticket submitted successfully! Our team will contact you soon.',
-      });
-      setSubject('');
-      setCategory('');
-      setPriority('');
-      setDescription('');
-    } catch (error: any) {
-      toast({
-        title: 'Submission Failed',
-        description: error.message || 'Failed to submit support ticket. Please try again.',
-        variant: 'destructive',
-      });
-    } finally{
-      setIsSubmitting(false);
-    }
-  };
 
   if (isLoading) {
     return (
