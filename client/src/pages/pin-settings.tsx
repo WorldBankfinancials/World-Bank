@@ -154,7 +154,7 @@ export default function PinSettings() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={user} />
+      <Header user={user as any} />
       
       <div className="container mx-auto px-4 py-8 max-w-md">
         <div className="flex items-center mb-6">
