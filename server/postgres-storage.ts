@@ -19,7 +19,7 @@ import {
   type InsertMessage,
   type Alert,
   type InsertAlert
-} from '@shared/schema';
+} from '../shared/schema';
 import { IStorage } from './storage';
 
 const databaseUrl = process.env.DATABASE_URL;

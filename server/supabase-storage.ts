@@ -10,7 +10,7 @@ import {
   type InsertAdminAction,
   type SupportTicket,
   type InsertSupportTicket
-} from "@shared/schema";
+} from "../shared/schema";
 import { IStorage } from "./storage";
 
 // Use DATABASE_URL for direct PostgreSQL connection instead of Supabase

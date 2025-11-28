@@ -19,7 +19,7 @@ import {
   type InsertMessage,
   type Alert,
   type InsertAlert
-} from "@shared/schema";
+} from "../shared/schema";
 import { IStorage } from "./storage";
 
 if (!process.env.VITE_SUPABASE_URL) {
