@@ -3,7 +3,7 @@ import { CreditCard, Plus, Eye, EyeOff, MoreVertical, Zap, Shield, Smartphone, L
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -214,12 +214,12 @@ export default function Cards() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{t('my_cards') || 'My Cards'}</h1>
             <p className="text-gray-600">{t('manage_cards') || 'Manage your credit and debit cards'}</p>
-          </div>
+          </DialogDescription>
           <Button className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 mr-2" />
             {t('add_card') || 'Add Card'}
           </Button>
-        </div>
+        </DialogDescription>
 
         {/* Credit Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -231,7 +231,7 @@ export default function Cards() {
                   <div>
                     <p className="text-sm opacity-80">{card.name}</p>
                     <p className="text-lg font-mono">{card.number}</p>
-                  </div>
+                  </DialogDescription>
                   <div className="flex items-center space-x-2">
                     <Badge variant="secondary" className="bg-white/20 text-white">
                       {card.type}
@@ -245,8 +245,8 @@ export default function Cards() {
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
-                  </div>
-                </div>
+                  </DialogDescription>
+                </DialogDescription>
                 
                 <div className="flex justify-between items-end">
                   <div>
@@ -254,16 +254,16 @@ export default function Cards() {
                     <p className="text-xl font-bold">
                       {showBalance ? `$${(card.limit - card.balance).toLocaleString()}` : '••••••'}
                     </p>
-                  </div>
+                  </DialogDescription>
                   <div className="text-right">
                     <p className="text-xs opacity-80">Expires</p>
                     <p className="text-sm">{card.expiry}</p>
-                  </div>
-                </div>
+                  </DialogDescription>
+                </DialogDescription>
                 
                 {/* Card Chip */}
-                <div className="absolute top-16 left-6 w-8 h-6 bg-yellow-400 rounded opacity-80"></div>
-              </div>
+                <div className="absolute top-16 left-6 w-8 h-6 bg-yellow-400 rounded opacity-80"></DialogDescription>
+              </DialogDescription>
               
               <CardContent className="p-4">
                 <div className="flex justify-between items-center mb-3">
@@ -271,12 +271,12 @@ export default function Cards() {
                   <span className="font-semibold">
                     {showBalance ? `$${card.balance.toLocaleString()}` : '••••••'}
                   </span>
-                </div>
+                </DialogDescription>
                 
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-sm text-gray-600">Credit Limit</span>
                   <span className="font-semibold">${card.limit.toLocaleString()}</span>
-                </div>
+                </DialogDescription>
                 
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   <Button 
@@ -321,11 +321,11 @@ export default function Cards() {
                     <Settings className="w-4 h-4 mr-1" />
                     {t('settings') || 'Settings'}
                   </Button>
-                </div>
+                </DialogDescription>
               </CardContent>
             </Card>
           ))}
-        </div>
+        </DialogDescription>
 
         {/* Card Features */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -352,7 +352,7 @@ export default function Cards() {
               <p className="text-sm text-gray-600">{t('mobile_wallet_desc') || 'Use your phone for contactless payments'}</p>
             </CardContent>
           </Card>
-        </div>
+        </DialogDescription>
 
         {/* Balance Toggle */}
         <div className="flex justify-center mb-8">
@@ -366,11 +366,11 @@ export default function Cards() {
               {showBalance ? (t('hide_balances') || 'Hide Balances') : (t('show_balances') || 'Show Balances')}
             </span>
           </Button>
-        </div>
+        </DialogDescription>
 
         {/* Quick Actions */}
         <QuickActions />
-      </div>
+      </DialogDescription>
 
       {/* Lock/Unlock Card Dialog */}
       <Dialog open={lockDialogOpen} onOpenChange={setLockDialogOpen}>
@@ -379,7 +379,7 @@ export default function Cards() {
             <DialogTitle>
               {selectedCard?.isLocked ? (t('unlock_card') || 'Unlock Card') : (t('lock_card') || 'Lock Card')}
             </DialogTitle>
-            <div className="sr-only">Enter your PIN to lock or unlock your card</div>
+            <DialogDescription>Enter your PIN to lock or unlock your card</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
@@ -398,7 +398,7 @@ export default function Cards() {
                 onChange={(e) => setPin(e.target.value)}
                 maxLength={4}
               />
-            </div>
+            </DialogDescription>
             <div className="flex space-x-2">
               <Button variant="outline" onClick={() => setLockDialogOpen(false)} className="flex-1">
                 {t('cancel') || 'Cancel'}
@@ -406,8 +406,8 @@ export default function Cards() {
               <Button onClick={handleLockCard} className="flex-1">
                 {selectedCard?.isLocked ? (t('unlock') || 'Unlock') : (t('lock') || 'Lock')}
               </Button>
-            </div>
-          </div>
+            </DialogDescription>
+          </DialogDescription>
         </DialogContent>
       </Dialog>
 
@@ -416,7 +416,7 @@ export default function Cards() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('mobile_pay') || 'Mobile Pay'}</DialogTitle>
-            <div className="sr-only">Send mobile payment by entering phone number and amount</div>
+            <DialogDescription>Send mobile payment by entering phone number and amount</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -427,7 +427,7 @@ export default function Cards() {
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
               />
-            </div>
+            </DialogDescription>
             <div>
               <Label htmlFor="amount">{t('amount') || 'Amount'}</Label>
               <Input
@@ -437,7 +437,7 @@ export default function Cards() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
-            </div>
+            </DialogDescription>
             <div>
               <Label htmlFor="pin">{t('transfer_pin') || 'Transfer PIN'}</Label>
               <Input
@@ -448,7 +448,7 @@ export default function Cards() {
                 onChange={(e) => setPin(e.target.value)}
                 maxLength={4}
               />
-            </div>
+            </DialogDescription>
             <div className="flex space-x-2">
               <Button variant="outline" onClick={() => setMobilePayDialogOpen(false)} className="flex-1">
                 {t('cancel') || 'Cancel'}
@@ -456,8 +456,8 @@ export default function Cards() {
               <Button onClick={handleMobilePay} className="flex-1">
                 {t('send_payment') || 'Send Payment'}
               </Button>
-            </div>
-          </div>
+            </DialogDescription>
+          </DialogDescription>
         </DialogContent>
       </Dialog>
 
@@ -466,7 +466,7 @@ export default function Cards() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('pay_bill') || 'Pay Bill'}</DialogTitle>
-            <div className="sr-only">Pay bill by entering provider, account number, and amount</div>
+            <DialogDescription>Pay bill by entering provider, account number, and amount</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -477,7 +477,7 @@ export default function Cards() {
                 value={billProvider}
                 onChange={(e) => setBillProvider(e.target.value)}
               />
-            </div>
+            </DialogDescription>
             <div>
               <Label htmlFor="account">{t('account_number') || 'Account Number'}</Label>
               <Input
@@ -486,7 +486,7 @@ export default function Cards() {
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
               />
-            </div>
+            </DialogDescription>
             <div>
               <Label htmlFor="amount">{t('amount') || 'Amount'}</Label>
               <Input
@@ -496,7 +496,7 @@ export default function Cards() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
-            </div>
+            </DialogDescription>
             <div>
               <Label htmlFor="pin">{t('transfer_pin') || 'Transfer PIN'}</Label>
               <Input
@@ -507,7 +507,7 @@ export default function Cards() {
                 onChange={(e) => setPin(e.target.value)}
                 maxLength={4}
               />
-            </div>
+            </DialogDescription>
             <div className="flex space-x-2">
               <Button variant="outline" onClick={() => setPayBillDialogOpen(false)} className="flex-1">
                 {t('cancel') || 'Cancel'}
@@ -515,8 +515,8 @@ export default function Cards() {
               <Button onClick={handlePayBill} className="flex-1">
                 {t('pay_now') || 'Pay Now'}
               </Button>
-            </div>
-          </div>
+            </DialogDescription>
+          </DialogDescription>
         </DialogContent>
       </Dialog>
 
@@ -525,13 +525,13 @@ export default function Cards() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('card_settings') || 'Card Settings'}</DialogTitle>
-            <div className="sr-only">Update daily spending limit and card preferences</div>
+            <DialogDescription>Update daily spending limit and card preferences</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-4 bg-gray-50 rounded-lg">
               <h4 className="font-semibold mb-2">{selectedCard?.name}</h4>
               <p className="text-sm text-gray-600">{selectedCard?.number}</p>
-            </div>
+            </DialogDescription>
             <div>
               <Label htmlFor="dailyLimit">{t('daily_spending_limit') || 'Daily Spending Limit'}</Label>
               <Input
@@ -541,21 +541,21 @@ export default function Cards() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
-            </div>
+            </DialogDescription>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm">{t('contactless_payments') || 'Contactless Payments'}</span>
                 <Badge variant={selectedCard?.contactlessEnabled ? "default" : "secondary"}>
                   {selectedCard?.contactlessEnabled ? (t('enabled') || 'Enabled') : (t('disabled') || 'Disabled')}
                 </Badge>
-              </div>
+              </DialogDescription>
               <div className="flex items-center justify-between">
                 <span className="text-sm">{t('card_status') || 'Card Status'}</span>
                 <Badge variant={selectedCard?.isLocked ? "destructive" : "default"}>
                   {selectedCard?.isLocked ? (t('locked') || 'Locked') : (t('active') || 'Active')}
                 </Badge>
-              </div>
-            </div>
+              </DialogDescription>
+            </DialogDescription>
             <div className="flex space-x-2">
               <Button variant="outline" onClick={() => setSettingsDialogOpen(false)} className="flex-1">
                 {t('cancel') || 'Cancel'}
@@ -563,12 +563,12 @@ export default function Cards() {
               <Button onClick={handleUpdateSettings} className="flex-1">
                 {t('save_changes') || 'Save Changes'}
               </Button>
-            </div>
-          </div>
+            </DialogDescription>
+          </DialogDescription>
         </DialogContent>
       </Dialog>
       
       <BottomNavigation />
-    </div>
+    </DialogDescription>
   );
 }

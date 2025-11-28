@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
@@ -148,11 +148,11 @@ export default function CustomerManagement() {
               <div className="text-center">
                 <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-2" />
                 <p className="text-gray-600">Access Denied - Admin Only</p>
-              </div>
+              </DialogDescription>
             </CardContent>
           </Card>
-        </div>
-      </div>
+        </DialogDescription>
+      </DialogDescription>
     );
   }
 
@@ -164,7 +164,7 @@ export default function CustomerManagement() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Customer Management</h1>
           <p className="text-gray-600">Manage customer information and verification status</p>
-        </div>
+        </DialogDescription>
 
         {/* Search Bar */}
         <Card className="mb-6">
@@ -177,7 +177,7 @@ export default function CustomerManagement() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
-            </div>
+            </DialogDescription>
           </CardContent>
         </Card>
 
@@ -209,35 +209,35 @@ export default function CustomerManagement() {
                         <Badge variant={customer.isOnline ? "default" : "outline"}>
                           {customer.isOnline ? "Online" : "Offline"}
                         </Badge>
-                      </div>
+                      </DialogDescription>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
                         <div>
                           <strong>Email:</strong> {customer.email}
-                        </div>
+                        </DialogDescription>
                         <div>
                           <strong>Phone:</strong> {customer.phone}
-                        </div>
+                        </DialogDescription>
                         <div>
                           <strong>Account:</strong> {customer.accountNumber}
-                        </div>
+                        </DialogDescription>
                         <div>
                           <strong>Balance:</strong> ${customer.balance?.toLocaleString() || "0"}
-                        </div>
+                        </DialogDescription>
                         <div>
                           <strong>Profession:</strong> {customer.profession}
-                        </div>
+                        </DialogDescription>
                         <div>
                           <strong>Location:</strong> {customer.city}, {customer.country}
-                        </div>
+                        </DialogDescription>
                         <div>
                           <strong>ID Type:</strong> {customer.idType}
-                        </div>
+                        </DialogDescription>
                         <div>
                           <strong>Joined:</strong> {new Date(customer.createdAt).toLocaleDateString()}
-                        </div>
-                      </div>
-                    </div>
+                        </DialogDescription>
+                      </DialogDescription>
+                    </DialogDescription>
                     
                     <div className="flex gap-2 ml-4">
                       <Button
@@ -260,20 +260,20 @@ export default function CustomerManagement() {
                           Verify
                         </Button>
                       )}
-                    </div>
-                  </div>
+                    </DialogDescription>
+                  </DialogDescription>
                 </CardContent>
               </Card>
             ))
           )}
-        </div>
+        </DialogDescription>
 
         {/* Edit Customer Dialog */}
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Customer Information</DialogTitle>
-              <div className="sr-only">Edit customer personal, contact, financial, and verification information</div>
+              <DialogDescription>Edit customer personal, contact, financial, and verification information</DialogDescription>
             </DialogHeader>
             
             {editingCustomer && (
@@ -297,7 +297,7 @@ export default function CustomerManagement() {
                           fullName: e.target.value
                         })}
                       />
-                    </div>
+                    </DialogDescription>
                     <div>
                       <Label htmlFor="username">Username</Label>
                       <Input
@@ -308,7 +308,7 @@ export default function CustomerManagement() {
                           username: e.target.value
                         })}
                       />
-                    </div>
+                    </DialogDescription>
                     <div>
                       <Label htmlFor="profession">Profession</Label>
                       <Input
@@ -319,7 +319,7 @@ export default function CustomerManagement() {
                           profession: e.target.value
                         })}
                       />
-                    </div>
+                    </DialogDescription>
                     <div>
                       <Label htmlFor="annualIncome">Annual Income</Label>
                       <Select
@@ -341,8 +341,8 @@ export default function CustomerManagement() {
                           <SelectItem value="over_500k">Over $500,000</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                  </div>
+                    </DialogDescription>
+                  </DialogDescription>
                 </TabsContent>
                 
                 <TabsContent value="contact" className="space-y-4">
@@ -358,7 +358,7 @@ export default function CustomerManagement() {
                           email: e.target.value
                         })}
                       />
-                    </div>
+                    </DialogDescription>
                     <div>
                       <Label htmlFor="phone">Phone</Label>
                       <Input
@@ -369,7 +369,7 @@ export default function CustomerManagement() {
                           phone: e.target.value
                         })}
                       />
-                    </div>
+                    </DialogDescription>
                     <div className="col-span-2">
                       <Label htmlFor="address">Address</Label>
                       <Textarea
@@ -380,7 +380,7 @@ export default function CustomerManagement() {
                           address: e.target.value
                         })}
                       />
-                    </div>
+                    </DialogDescription>
                     <div>
                       <Label htmlFor="city">City</Label>
                       <Input
@@ -391,7 +391,7 @@ export default function CustomerManagement() {
                           city: e.target.value
                         })}
                       />
-                    </div>
+                    </DialogDescription>
                     <div>
                       <Label htmlFor="state">State/Province</Label>
                       <Input
@@ -402,7 +402,7 @@ export default function CustomerManagement() {
                           state: e.target.value
                         })}
                       />
-                    </div>
+                    </DialogDescription>
                     <div>
                       <Label htmlFor="country">Country</Label>
                       <Input
@@ -413,7 +413,7 @@ export default function CustomerManagement() {
                           country: e.target.value
                         })}
                       />
-                    </div>
+                    </DialogDescription>
                     <div>
                       <Label htmlFor="postalCode">Postal Code</Label>
                       <Input
@@ -424,8 +424,8 @@ export default function CustomerManagement() {
                           postalCode: e.target.value
                         })}
                       />
-                    </div>
-                  </div>
+                    </DialogDescription>
+                  </DialogDescription>
                 </TabsContent>
                 
                 <TabsContent value="financial" className="space-y-4">
@@ -440,7 +440,7 @@ export default function CustomerManagement() {
                           accountNumber: e.target.value
                         })}
                       />
-                    </div>
+                    </DialogDescription>
                     <div>
                       <Label htmlFor="accountId">Account ID</Label>
                       <Input
@@ -451,7 +451,7 @@ export default function CustomerManagement() {
                           accountId: e.target.value
                         })}
                       />
-                    </div>
+                    </DialogDescription>
                     <div>
                       <Label htmlFor="balance">Account Balance</Label>
                       <Input
@@ -463,8 +463,8 @@ export default function CustomerManagement() {
                           balance: parseFloat(e.target.value) || 0
                         })}
                       />
-                    </div>
-                  </div>
+                    </DialogDescription>
+                  </DialogDescription>
                 </TabsContent>
                 
                 <TabsContent value="verification" className="space-y-4">
@@ -488,7 +488,7 @@ export default function CustomerManagement() {
                           <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
+                    </DialogDescription>
                     <div>
                       <Label htmlFor="idNumber">ID Number</Label>
                       <Input
@@ -499,7 +499,7 @@ export default function CustomerManagement() {
                           idNumber: e.target.value
                         })}
                       />
-                    </div>
+                    </DialogDescription>
                     <div>
                       <Label htmlFor="isVerified">Verification Status</Label>
                       <Select
@@ -517,8 +517,8 @@ export default function CustomerManagement() {
                           <SelectItem value="unverified">Unverified</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-                  </div>
+                    </DialogDescription>
+                  </DialogDescription>
                 </TabsContent>
                 
                 <div className="flex justify-end gap-2 mt-6">
@@ -536,12 +536,12 @@ export default function CustomerManagement() {
                     <Save className="w-4 h-4 mr-1" />
                     {updateCustomerMutation.isPending ? "Saving..." : "Save Changes"}
                   </Button>
-                </div>
+                </DialogDescription>
               </Tabs>
             )}
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+      </DialogDescription>
+    </DialogDescription>
   );
 }

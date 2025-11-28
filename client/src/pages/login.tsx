@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Lock, Eye, EyeOff, Shield, Smartphone, CreditCard, Mail, User, Globe } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import { BankLogo } from "@/components/BankLogo";
@@ -172,16 +172,16 @@ export default function Login() {
                   <SelectItem value="zh">中文</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </div>
+            </DialogDescription>
+          </DialogDescription>
 
           {/* Professional World Bank Header */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-6">
               <div className="relative">
                 <BankLogo className="w-20 h-20" />
-              </div>
-            </div>
+              </DialogDescription>
+            </DialogDescription>
             <div className="space-y-3">
               <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
                 WORLD BANK
@@ -189,8 +189,8 @@ export default function Login() {
               <p className="text-gray-600 text-base">
                 International Digital Banking
               </p>
-            </div>
-          </div>
+            </DialogDescription>
+          </DialogDescription>
 
           {/* Professional Login Card */}
           <Card className="wb-login-card shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
@@ -202,7 +202,7 @@ export default function Login() {
                 <p className="text-gray-600 text-sm">
                   Access your account
                 </p>
-              </div>
+              </DialogDescription>
             </CardHeader>
           
             <CardContent className="space-y-6 px-8 pb-8">
@@ -241,8 +241,8 @@ export default function Login() {
                           placeholder="Enter email address"
                           required={loginType === 'email'}
                         />
-                      </div>
-                    </div>
+                      </DialogDescription>
+                    </DialogDescription>
                   </TabsContent>
 
                   {/* Mobile Login */}
@@ -262,8 +262,8 @@ export default function Login() {
                           placeholder="Enter mobile number"
                           required={loginType === 'mobile'}
                         />
-                      </div>
-                    </div>
+                      </DialogDescription>
+                    </DialogDescription>
                   </TabsContent>
 
                   {/* ID Login */}
@@ -283,8 +283,8 @@ export default function Login() {
                           placeholder="Enter account ID (e.g. WB-2025-8912)"
                           required={loginType === 'id'}
                         />
-                      </div>
-                    </div>
+                      </DialogDescription>
+                    </DialogDescription>
                   </TabsContent>
 
                   {/* Password Field (Common for all login types) */}
@@ -310,8 +310,8 @@ export default function Login() {
                       >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
-                    </div>
-                  </div>
+                    </DialogDescription>
+                  </DialogDescription>
 
                   {/* Sign In Button */}
                   <div className="pt-2">
@@ -322,17 +322,17 @@ export default function Login() {
                     >
                       {loading ? (
                         <div className="flex items-center space-x-2">
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></DialogDescription>
                           <span>Signing In...</span>
-                        </div>
+                        </DialogDescription>
                       ) : (
                         <div className="flex items-center space-x-2">
                           <Shield className="w-5 h-5" />
                           <span>Sign In</span>
-                        </div>
+                        </DialogDescription>
                       )}
                     </Button>
-                  </div>
+                  </DialogDescription>
                 </form>
               </Tabs>
 
@@ -347,7 +347,7 @@ export default function Login() {
                     Create Account
                   </button>
                 </p>
-              </div>
+              </DialogDescription>
               
               {/* About World Bank Link */}
               <div className="text-center pt-2">
@@ -357,7 +357,7 @@ export default function Login() {
                 >
                   About World Bank
                 </button>
-              </div>
+              </DialogDescription>
             </CardContent>
           </Card>
 
@@ -377,14 +377,14 @@ export default function Login() {
               >
                 Security
               </button>
-            </div>
+            </DialogDescription>
 
             <div className="text-gray-500 text-xs">
               <p>© 2025 World Bank Group. All rights reserved.</p>
-            </div>
-          </div>
-        </div>
-      </div>
+            </DialogDescription>
+          </DialogDescription>
+        </DialogDescription>
+      </DialogDescription>
 
       {/* PIN Verification Modal */}
       <Dialog open={showPinVerification} onOpenChange={setShowPinVerification}>
@@ -394,7 +394,7 @@ export default function Login() {
               <Shield className="w-5 h-5 text-blue-600" />
               {t('pin_verification_required')}
             </DialogTitle>
-            <div className="sr-only">Enter your 4-digit security PIN to complete login verification</div>
+            <DialogDescription>Enter your 4-digit security PIN to complete login verification</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
@@ -426,7 +426,7 @@ export default function Login() {
                   <AlertDescription>{pinError}</AlertDescription>
                 </Alert>
               )}
-            </div>
+            </DialogDescription>
             
             <div className="flex space-x-3">
               <Button
@@ -447,8 +447,8 @@ export default function Login() {
               >
                 {t('verify_pin')}
               </Button>
-            </div>
-          </div>
+            </DialogDescription>
+          </DialogDescription>
         </DialogContent>
       </Dialog>
 
@@ -457,6 +457,6 @@ export default function Login() {
         isOpen={showLiveChat} 
         onClose={() => setShowLiveChat(false)} 
       /> */}
-    </div>
+    </DialogDescription>
   );
 }
