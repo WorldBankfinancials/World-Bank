@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { queryClient } from '@/lib/queryClient';
-import { supabase as supabaseClient } from '@/lib/supabase';
 
 // Use the centralized Supabase client to avoid "Multiple GoTrueClient instances" warning
 const supabase = supabaseClient;

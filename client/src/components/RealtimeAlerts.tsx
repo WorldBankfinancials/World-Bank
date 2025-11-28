@@ -3,7 +3,6 @@ import { Bell, Check, AlertCircle, Info, AlertTriangle, CheckCircle } from 'luci
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { realtimeAlerts, type RealtimeAlert } from '@/lib/supabase-realtime';
 
 export default function RealtimeAlerts() {
   const { user } = useAuth();

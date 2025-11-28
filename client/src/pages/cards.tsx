@@ -13,7 +13,6 @@ import QuickActions from '@/components/QuickActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
 import { apiRequest } from '@/lib/queryClient';
 
 export default function Cards() {

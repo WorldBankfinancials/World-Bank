@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { 
   QrCode, 
   Share, 

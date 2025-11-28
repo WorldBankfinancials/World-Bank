@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 
 // Shared channel registry for dynamic subscriptions

@@ -7,7 +7,6 @@ import { useQuery } from "@tanstack/react-query";
 import { User, Shield, MapPin, Check, Eye, Lock, KeyRound } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
 
 import { useLanguage } from "@/contexts/LanguageContext";

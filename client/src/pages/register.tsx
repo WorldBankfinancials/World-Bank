@@ -11,10 +11,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BankLogo } from '@/components/BankLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { supabase as supabaseClient } from '@/lib/supabase';
-
-// Use the centralized Supabase client to avoid "Multiple GoTrueClient instances" warning
-const getSupabaseClient = () => supabaseClient;
 
 const registrationSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -71,127 +67,41 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegistrationFormData) => {
     setIsLoading(true);
-
     try {
-      // STEP 1: Check if email already exists
-      const emailCheckResponse = await fetch('/api/auth/check-email', {
+      const response = await fetch('/api/auth/register-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: data.email })
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          dateOfBirth: data.dateOfBirth,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          country: data.country,
+          postalCode: data.postalCode,
+          profession: data.profession,
+          annualIncome: data.annualIncome,
+          idType: data.idType,
+          idNumber: data.idNumber,
+        })
       });
 
-      const emailCheck = await emailCheckResponse.json();
-      
-      if (!emailCheck.available) {
-        toast({
-          title: t('registration_failed'),
-          description: emailCheck.message || 'This email is already registered. Please use a different email or try logging in.',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
+      const result = await response.json();
+
+      if (!response.ok || result.error) {
+        throw new Error(result.error || 'Registration failed');
       }
-
-      const supabase = getSupabaseClient();
-      let supabaseUserId = null;
-
-      // STEP 2: Create user in Supabase Auth
-      if (!supabase) {
-        throw new Error('Authentication service unavailable. Please try again later.');
-      }
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: {
-            first_name: data.firstName,
-            last_name: data.lastName,
-            full_name: `${data.firstName} ${data.lastName}`,
-          }
-        }
-      });
-
-      // SECURITY: Fail immediately if Supabase auth fails
-      if (authError) {
-        console.error('Supabase authentication failed:', authError.message);
-        throw new Error(authError.message || 'Failed to create authentication account. User may already exist.');
-      }
-
-      if (!authData.user) {
-        throw new Error('Authentication account creation failed. Please try again.');
-      }
-
-      supabaseUserId = authData.user.id;
-
-      // SECURITY: NEVER send password to backend - Supabase handles it
-      const userProfile = {
-        username: data.email.split('@')[0],
-        fullName: `${data.firstName} ${data.lastName}`,
-        email: data.email,
-        phone: data.phone,
-        dateOfBirth: data.dateOfBirth,
-        address: data.address,
-        city: data.city,
-        state: data.state,
-        country: data.country,
-        postalCode: data.postalCode,
-        profession: data.profession,
-        annualIncome: data.annualIncome,
-        idType: data.idType,
-        idNumber: data.idNumber,
-        supabaseUserId: supabaseUserId,
-        role: 'customer',
-        isVerified: false,
-        isActive: false,
-        balance: 0,
-      };
-
-      // STEP 3: Create user profile in database with retry logic
-      let retries = 3;
-      let profileCreated = false;
-      
-      while (retries > 0 && !profileCreated) {
-        try {
-          const response = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(userProfile),
-          });
-
-          if (response.ok) {
-            profileCreated = true;
-            break;
-          } else if (retries > 1) {
-            // Wait 1 second before retry
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            retries--;
-          } else {
-            throw new Error('Failed to create user profile after retries');
-          }
-        } catch (error) {
-          if (retries > 1) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            retries--;
-          } else {
-            throw error;
-          }
-        }
-      }
-
-      if (!profileCreated) {
-        throw new Error('Failed to create user profile');
-      }
-
-      setRegistrationStep('pending');
 
       toast({
-        title: t('registration_submitted'),
-        description: t('admin_review_pending'),
+        title: 'Success',
+        description: 'Account created successfully. Please log in.',
       });
 
+      setLocation('/login');
     } catch (error: any) {
       console.error('Registration error:', error);
       toast({

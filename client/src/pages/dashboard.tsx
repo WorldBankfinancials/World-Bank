@@ -595,40 +595,7 @@ export default function Dashboard() {
 
   // Real-time subscription for transactions and admin changes
   useEffect(() => {
-    import('@/lib/supabase').then(({ supabase }) => {
       // Subscribe to transaction changes
-      const transactionChannel = supabase
-        .channel('transaction_realtime_changes')
-        .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'transactions' },
-          (payload: any) => {
-            console.log('Transaction change detected:', payload);
-            // Refetch user data and accounts to update balances
-            queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/transactions/recent'] });
-          }
-        )
-        .subscribe();
-
-      // Subscribe to account balance changes
-      const accountChannel = supabase
-        .channel('account_balance_changes')
-        .on('postgres_changes', 
-          { event: 'UPDATE', schema: 'public', table: 'bank_accounts' },
-          (payload: any) => {
-            console.log('Account balance updated by admin:', payload);
-            queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-          }
-        )
-        .subscribe();
-
-      return () => {
-        transactionChannel.unsubscribe();
-        accountChannel.unsubscribe();
-      };
-    });
   }, [queryClient]);
 
   const profileMenuItems = [

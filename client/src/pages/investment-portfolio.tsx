@@ -7,7 +7,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from "lucide-react";
 import { useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 
 
 export default function InvestmentPortfolio() {

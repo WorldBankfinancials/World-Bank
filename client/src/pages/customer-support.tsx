@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Send, MessageSquare, Users, AlertCircle } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
 

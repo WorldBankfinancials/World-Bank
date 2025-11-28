@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/lib/supabase";
 import { 
   CreditCard, 
   Banknote, 

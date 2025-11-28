@@ -12,7 +12,6 @@ import { BankLogo } from "@/components/BankLogo";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/lib/supabase";
 import { Building2, Shield, Globe, Eye, EyeOff, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
