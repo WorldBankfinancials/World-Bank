@@ -201,7 +201,7 @@ export class SupabasePublicStorage implements IStorage {
         toAccountId: transaction.to_account_id,
         amount: transaction.amount,
         currency: transaction.currency,
-        transactionType: transaction.transaction_type,
+        transactionType: transaction.transaction_type, type: transaction.type,
         status: transaction.status,
         description: transaction.description,
         recipientName: transaction.recipient_name,
@@ -254,7 +254,7 @@ export class SupabasePublicStorage implements IStorage {
         toAccountId: transaction.to_account_id,
         amount: transaction.amount,
         currency: transaction.currency,
-        transactionType: transaction.transaction_type,
+        transactionType: transaction.transaction_type, type: transaction.type,
         status: transaction.status,
         description: transaction.description,
         recipientName: transaction.recipient_name,
@@ -334,7 +334,7 @@ export class SupabasePublicStorage implements IStorage {
         createdAt: user.created_at,
         createdByAdmin: user.created_by_admin,
         modifiedByAdmin: user.modified_by_admin,
-        adminNotes: user.admin_notes,
+        
         updatedAt: user.updated_at
       }));
     } catch (error) {
@@ -366,8 +366,9 @@ export class SupabasePublicStorage implements IStorage {
         .from('bank_users')
         .insert({
           username: data.username,
-          password_hash: data.passwordHash,
-          full_name: data.fullName,
+          password: data.password,
+          first_name: data.firstName,
+          last_name: data.lastName,
           email: data.email,
           phone: data.phone,
           account_number: data.accountNumber,
@@ -385,11 +386,8 @@ export class SupabasePublicStorage implements IStorage {
           transfer_pin: data.transferPin,
           role: data.role || 'customer',
           is_verified: data.isVerified || false,
-          is_online: data.isOnline || false,
           is_active: data.isActive || false,
-          balance: data.balance || 0,
-          supabase_user_id: data.supabaseUserId,
-          admin_notes: data.adminNotes
+          balance: data.balance || 0
         })
         .select()
         .single();
@@ -418,33 +416,24 @@ export class SupabasePublicStorage implements IStorage {
 
   async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
     try {
-      const { data: user, error } = await supabase
-        .from('bank_users')
-        .update({
-          username: updates.username,
-          full_name: updates.fullName,
-          email: updates.email,
-          phone: updates.phone,
-          profession: updates.profession,
-          address: updates.address,
-          city: updates.city,
-          state: updates.state,
-          country: updates.country,
-          postal_code: updates.postalCode,
-          annual_income: updates.annualIncome,
-          is_verified: updates.isVerified,
-          is_online: updates.isOnline,
-          is_active: updates.isActive,
-          avatar_url: updates.avatarUrl,
-          balance: updates.balance,
-          modified_by_admin: updates.modifiedByAdmin,
-          admin_notes: updates.adminNotes,
-          transfer_pin: updates.transferPin,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
+      const updateData: any = { updated_at: new Date().toISOString() };
+      if (updates.username !== undefined) updateData.username = updates.username;
+      if (updates.firstName !== undefined) updateData.first_name = updates.firstName;
+      if (updates.lastName !== undefined) updateData.last_name = updates.lastName;
+      if (updates.email !== undefined) updateData.email = updates.email;
+      if (updates.phone !== undefined) updateData.phone = updates.phone;
+      if (updates.profession !== undefined) updateData.profession = updates.profession;
+      if (updates.address !== undefined) updateData.address = updates.address;
+      if (updates.city !== undefined) updateData.city = updates.city;
+      if (updates.state !== undefined) updateData.state = updates.state;
+      if (updates.country !== undefined) updateData.country = updates.country;
+      if (updates.postalCode !== undefined) updateData.postal_code = updates.postalCode;
+      if (updates.annualIncome !== undefined) updateData.annual_income = updates.annualIncome;
+      if (updates.isVerified !== undefined) updateData.is_verified = updates.isVerified;
+      if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+      if (updates.balance !== undefined) updateData.balance = updates.balance;
+      if (updates.transferPin !== undefined) updateData.transfer_pin = updates.transferPin;
+      const { data: user, error } = await supabase.from('bank_users').update(updateData).eq('id', id).select().single();
 
       if (error || !user) return undefined;
       
@@ -605,7 +594,7 @@ export class SupabasePublicStorage implements IStorage {
         toAccountId: tx.to_account_id,
         amount: tx.amount,
         currency: tx.currency,
-        transactionType: tx.transaction_type,
+        transactionType: tx.transaction_type, type: tx.type,
         status: tx.status,
         description: tx.description,
         recipientName: tx.recipient_name,
@@ -660,7 +649,7 @@ export class SupabasePublicStorage implements IStorage {
         toAccountId: transaction.to_account_id,
         amount: transaction.amount,
         currency: transaction.currency,
-        transactionType: transaction.transaction_type,
+        transactionType: transaction.transaction_type, type: transaction.type,
         status: transaction.status,
         description: transaction.description,
         recipientName: transaction.recipient_name,
@@ -711,7 +700,7 @@ export class SupabasePublicStorage implements IStorage {
         toAccountId: tx.to_account_id,
         amount: tx.amount,
         currency: tx.currency,
-        transactionType: tx.transaction_type,
+        transactionType: tx.transaction_type, type: tx.type,
         status: tx.status,
         description: tx.description,
         recipientName: tx.recipient_name,
@@ -761,7 +750,7 @@ export class SupabasePublicStorage implements IStorage {
         toAccountId: tx.to_account_id,
         amount: tx.amount,
         currency: tx.currency,
-        transactionType: tx.transaction_type,
+        transactionType: tx.transaction_type, type: tx.type,
         status: tx.status,
         description: tx.description,
         recipientName: tx.recipient_name,
