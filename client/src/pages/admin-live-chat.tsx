@@ -30,7 +30,7 @@ export default function AdminLiveChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   
   // Fetch messages from API when session is selected
-  const { data: queryMessages = [], isLoading: messagesLoading } = useQuery<Message[]>({
+  const { data: queryMessages = [] } = useQuery<Message[]>({
     queryKey: ['/api/messages', selectedSession?.id],
     queryFn: async () => {
       if (!selectedSession?.id) return [];
@@ -43,9 +43,15 @@ export default function AdminLiveChat() {
         return [];
       }
     },
-    enabled: !!selectedSession?.id,
-    onSuccess: (data) => setMessages(data)
+    enabled: !!selectedSession?.id
   });
+
+  // Update local messages state when query data changes
+  useEffect(() => {
+    if (queryMessages && queryMessages.length > 0) {
+      setMessages(queryMessages);
+    }
+  }, [queryMessages]);
 
   const { data: chatSessions = [] } = useQuery<ChatSession[]>({
     queryKey: ['/api/admin/chat-sessions'],
