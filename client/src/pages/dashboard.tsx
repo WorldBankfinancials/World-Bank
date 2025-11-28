@@ -585,7 +585,7 @@ export default function Dashboard() {
           }
         }
       } catch (error) {
-        // Silently handle fetch errors
+        console.error('Error fetching accounts:', error);
       }
     };
 
@@ -602,13 +602,17 @@ export default function Dashboard() {
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const response = await authenticatedFetch('/api/accounts/1/transactions');
-        if (response.ok) {
-          try {
-            const data = await response.json();
+        if (!response.ok) {
+          console.error('Failed to fetch transactions:', response.status, response.statusText);
+          return;
+        }
+        try {
+          const data = await response.json();
+          if (Array.isArray(data)) {
             setRecentTransactions(data.slice(0, 5));
-          } catch (e) {
-            console.error('Failed to parse transactions');
           }
+        } catch (e) {
+          console.error('Failed to parse transactions JSON:', e);
         }
       } catch (error) {
         console.error('Error fetching transactions:', error);
