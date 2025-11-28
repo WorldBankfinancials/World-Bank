@@ -1892,7 +1892,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   // CUSTOMER LOGIN ENDPOINT
   // Authenticates customers using Supabase Auth
-  // SIMPLE LOGIN - Uses database directly, no Supabase auth dependency
   app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
@@ -1901,43 +1900,48 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Email and password are required' });
       }
 
-      console.log('🔐 Login attempt for:', email);
 
-      // Get user from database
-      const dbUser = await storage.getUserByEmail(email);
-      
-      if (!dbUser) {
-        console.log('❌ User not found:', email);
-        return res.status(401).json({ error: 'Invalid email or password' });
+      // Authenticate with Supabase
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.VITE_SUPABASE_ANON_KEY!
+      );
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error('Customer auth failed:', error);
+        return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      // For now, accept any password for testing (in production, use bcrypt)
-      // This bypasses Supabase auth completely
-      console.log('✅ User found:', dbUser.email);
+      // CRITICAL: Check role from app_metadata (server-controlled)
+      const role = data.user.app_metadata?.role || 'customer';
 
-      if (!dbUser.isActive) {
+      // SECURITY: Check if user account is active (approved by admin)
+      const dbUser = await storage.getUserByEmail(email);
+      if (!dbUser) {
         return res.status(403).json({ 
-          error: 'Your account is pending approval. You will receive a notification once your account is activated.' 
+          error: 'Account not found. Please contact support.' 
         });
       }
 
-      // Generate a simple session token
-      const token = Buffer.from(JSON.stringify({ 
-        userId: dbUser.id, 
-        email: dbUser.email, 
-        role: dbUser.role 
-      })).toString('base64');
+      if (!dbUser.isActive) {
+        return res.status(403).json({ 
+          error: 'Your account is pending approval by our customer support team. You will receive a notification once your account is activated.' 
+        });
+      }
 
-      console.log('✅ Login successful for:', email);
 
       res.json({ 
-        token: token,
+        token: data.session.access_token,
         user: {
-          id: dbUser.id,
-          email: dbUser.email,
-          role: dbUser.role,
-          firstName: dbUser.firstName,
-          lastName: dbUser.lastName
+          id: data.user.id,
+          email: data.user.email,
+          role: role
         }
       });
     } catch (error) {

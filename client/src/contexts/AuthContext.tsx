@@ -37,9 +37,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = supabaseClient;
 
   useEffect(() => {
-    // Skip Supabase auth - using backend login only
-    setLoading(false);
-  }, []);
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
+    // Check current session
+    const checkSession = async () => {
+      try {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (!sessionError && sessionData?.session?.user) {
+          setUser(sessionData.session.user);
+          await fetchUserData(sessionData.session.user);
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+
+    // Listen for auth changes
+    const { data } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+      try {
+        if (session?.user) {
+          setUser(session.user);
+          await fetchUserData(session.user);
+        } else {
+          setUser(null);
+          setUserProfile(null);
+        }
+      } catch (error) {
+        console.error('Auth state change error:', error);
+      }
+    });
+
+    return () => {
+      data?.subscription?.unsubscribe();
+    };
+  }, [supabase]);
 
   const fetchUserData = useCallback(async (authUser: User) => {
     try {
@@ -77,64 +115,84 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string): Promise<{ error?: string }> => {
     try {
       setLoading(true);
-      console.log('🔐 Starting login for:', email);
 
-      // Use backend login endpoint (bypasses Supabase auth)
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      console.log('Response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Login failed:', errorData.error);
-        setLoading(false);
-        return { error: errorData.error || 'Login failed' };
+      if (!supabase) {
+        return { error: 'Authentication service unavailable' };
       }
 
-      const loginData = await response.json();
-      console.log('✅ Login successful! User:', loginData.user.email);
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      // Create minimal user object
-      const mockUser = {
-        id: String(loginData.user.id),
-        email: loginData.user.email,
-        app_metadata: { role: loginData.user.role || 'customer' },
-        user_metadata: {
-          full_name: `${loginData.user.firstName} ${loginData.user.lastName}`
-        },
-        aud: 'authenticated',
-        created_at: new Date().toISOString()
-      } as any;
+        if (error) {
+          console.error('Supabase auth error:', error.message);
+          return { error: error.message };
+        }
 
-      setUser(mockUser);
-      
-      // Set user profile directly from login response - no need to fetch again
-      setUserProfile({
-        id: String(loginData.user.id),
-        email: loginData.user.email,
-        fullName: `${loginData.user.firstName} ${loginData.user.lastName}`,
-        role: loginData.user.role || 'customer',
-        balance: '0'
-      });
-      
-      setLoading(false);
-      return {};
+        if (data.user && data.session) {
+          setUser(data.user);
+          await fetchUserData(data.user);
+          setLoading(false);
+          return {};
+        }
 
+        setLoading(false);
+        return { error: 'Authentication failed' };
+      } catch (supabaseError: any) {
+        console.error('Supabase connection error:', supabaseError);
+        
+        // Fallback to backend login if Supabase fails
+        console.log('Attempting backend login fallback...');
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          return { error: errorData.error || 'Login failed' };
+        }
+
+        const loginData = await response.json();
+        setUser({ 
+          id: loginData.user.id, 
+          email: loginData.user.email,
+          app_metadata: { role: loginData.user.role },
+          user_metadata: {},
+          aud: '',
+          created_at: new Date().toISOString()
+        } as any);
+        
+        setLoading(false);
+        return {};
+      }
     } catch (error) {
       setLoading(false);
-      console.error('❌ Login error:', error);
-      return { error: 'Network error - please try again' };
+      console.error('Login error:', error);
+      return { error: 'Network error occurred' };
     }
   };
 
   const signUp = async (email: string, password: string, metadata?: any): Promise<{ error?: string }> => {
     try {
-      // Sign up disabled - use registration endpoint
-      return { error: 'Please use the registration page' };
+      if (!supabase) {
+        return { error: 'Authentication service unavailable' };
+      }
+
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: metadata }
+      });
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      return {};
     } catch (error) {
       return { error: 'Signup failed' };
     }
@@ -142,8 +200,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      setUser(null);
-      setUserProfile(null);
+      if (supabase) {
+        await supabase.auth.signOut();
+        setUser(null);
+        setUserProfile(null);
+      }
     } catch (error) {
       console.error('Sign out error:', error);
     }

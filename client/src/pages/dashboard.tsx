@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-// import { usePresence } from "@/hooks/usePresence"; // Disabled: WebSocket not available on HTTP
+import { usePresence } from "@/hooks/usePresence";
 import { 
   Eye,
   EyeOff,
@@ -495,16 +495,40 @@ export default function Dashboard() {
   const [userData, setUserData] = useState<any>(null);
   const queryClient = useQueryClient();
 
-  // Track user presence disabled - WebSocket not available on HTTP
-  // usePresence(
-  //   userProfile?.id ? (typeof userProfile.id === 'number' ? userProfile.id : parseInt(userProfile.id)) : undefined,
-  //   userProfile?.fullName || userProfile?.email
-  // );
+  // Track user presence for real-time online/offline status
+  usePresence(
+    userProfile?.id ? (typeof userProfile.id === 'number' ? userProfile.id : parseInt(userProfile.id)) : undefined,
+    userProfile?.fullName || userProfile?.email
+  );
 
   useEffect(() => {
-    if (userProfile) {
-      setUserData(userProfile);
-    }
+    const fetchUserData = async () => {
+      if (!userProfile?.id) {
+        return;
+      }
+      
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch(`/api/users/supabase/${userProfile.id}`, {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUserData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+    
+    // Refresh every 10 seconds for real-time updates
+    const interval = setInterval(fetchUserData, 10000);
+    return () => clearInterval(interval);
   }, [userProfile]);
 
   useEffect(() => {
