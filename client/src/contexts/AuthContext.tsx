@@ -115,64 +115,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string): Promise<{ error?: string }> => {
     try {
       setLoading(true);
+      console.log('🔐 Starting login for:', email);
 
-      if (!supabase) {
-        return { error: 'Authentication service unavailable' };
+      // Use backend login endpoint (bypasses Supabase auth)
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Login failed:', errorData.error);
+        setLoading(false);
+        return { error: errorData.error || 'Login failed' };
       }
 
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      const loginData = await response.json();
+      console.log('✅ Login successful! User:', loginData.user.email);
 
-        if (error) {
-          console.error('Supabase auth error:', error.message);
-          return { error: error.message };
-        }
+      // Create minimal user object
+      const mockUser = {
+        id: String(loginData.user.id),
+        email: loginData.user.email,
+        app_metadata: { role: loginData.user.role || 'customer' },
+        user_metadata: {
+          full_name: `${loginData.user.firstName} ${loginData.user.lastName}`
+        },
+        aud: 'authenticated',
+        created_at: new Date().toISOString()
+      } as any;
 
-        if (data.user && data.session) {
-          setUser(data.user);
-          await fetchUserData(data.user);
-          setLoading(false);
-          return {};
-        }
+      setUser(mockUser);
+      await fetchUserData(mockUser);
+      
+      setLoading(false);
+      return {};
 
-        setLoading(false);
-        return { error: 'Authentication failed' };
-      } catch (supabaseError: any) {
-        console.error('Supabase connection error:', supabaseError);
-        
-        // Fallback to backend login if Supabase fails
-        console.log('Attempting backend login fallback...');
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          return { error: errorData.error || 'Login failed' };
-        }
-
-        const loginData = await response.json();
-        setUser({ 
-          id: loginData.user.id, 
-          email: loginData.user.email,
-          app_metadata: { role: loginData.user.role },
-          user_metadata: {},
-          aud: '',
-          created_at: new Date().toISOString()
-        } as any);
-        
-        setLoading(false);
-        return {};
-      }
     } catch (error) {
       setLoading(false);
-      console.error('Login error:', error);
-      return { error: 'Network error occurred' };
+      console.error('❌ Login error:', error);
+      return { error: 'Network error - please try again' };
     }
   };
 
