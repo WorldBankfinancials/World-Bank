@@ -21,23 +21,31 @@ import {
 } from "@shared/schema";
 import { IStorage } from "./storage";
 
-const databaseUrl = process.env.DATABASE_URL!;
+// Lazy-load PostgreSQL connection to avoid initialization errors with invalid URLs
+let sql: any = null;
 
-if (!databaseUrl) {
-  throw new Error('Missing DATABASE_URL environment variable');
+function getConnection() {
+  if (sql) return sql;
+  
+  const databaseUrl = process.env.DATABASE_URL || '';
+  
+  if (!databaseUrl || databaseUrl.includes(' ')) {
+    throw new Error('❌ Invalid DATABASE_URL: check environment variables for spaces or empty values');
+  }
+  
+  sql = postgres(databaseUrl, {
+    max: 10,
+    idle_timeout: 20,
+    connect_timeout: 30
+  });
+  return sql;
 }
-
-const sql = postgres(databaseUrl, {
-  max: 10, // Connection pool size
-  idle_timeout: 20,
-  connect_timeout: 30
-});
 
 export class PostgresStorage implements IStorage {
   
   async getUser(id: number): Promise<User | undefined> {
     try {
-      const result = await sql`
+      const result = await getConnection()`
         SELECT * FROM public.bank_users WHERE id = ${id}
       `;
       
@@ -52,7 +60,7 @@ export class PostgresStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     try {
-      const result = await sql`
+      const result = await getConnection()`
         SELECT * FROM public.bank_users WHERE username = ${username}
       `;
       
@@ -68,7 +76,7 @@ export class PostgresStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     console.log('🔍 Searching for user with email:', email);
     try {
-      const result = await sql`
+      const result = await getConnection()`
         SELECT * FROM public.bank_users WHERE email = ${email}
       `;
       
@@ -88,7 +96,7 @@ export class PostgresStorage implements IStorage {
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
     console.log('🔍 Searching for user with Supabase UUID:', supabaseUserId);
     try {
-      const result = await sql`
+      const result = await getConnection()`
         SELECT * FROM public.bank_users WHERE supabase_user_id = ${supabaseUserId}::uuid
       `;
       
@@ -107,7 +115,7 @@ export class PostgresStorage implements IStorage {
 
   async getUserByPhone(phone: string): Promise<User | undefined> {
     try {
-      const result = await sql`
+      const result = await getConnection()`
         SELECT * FROM public.bank_users WHERE phone = ${phone}
       `;
       
@@ -122,7 +130,7 @@ export class PostgresStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     try {
-      const result = await sql`
+      const result = await getConnection()`
         SELECT * FROM public.bank_users ORDER BY created_at DESC
       `;
       
@@ -156,7 +164,7 @@ export class PostgresStorage implements IStorage {
       const accountNumberVal = user.accountNumber || null;
       const accountIdVal = user.accountId || null;
       
-      const result = await sql`
+      const result = await getConnection()`
         INSERT INTO public.bank_users (
           username, password, first_name, last_name, email, phone,
           account_number, account_id, profession, date_of_birth,
@@ -197,7 +205,7 @@ export class PostgresStorage implements IStorage {
       const isActiveVal = updates.isActive ?? null;
       const balanceVal = updates.balance ?? null;
       
-      const result = await sql`
+      const result = await getConnection()`
         UPDATE public.bank_users 
         SET 
           username = COALESCE(${usernameVal}, username),
@@ -231,7 +239,7 @@ export class PostgresStorage implements IStorage {
 
   async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
     try {
-      const result = await sql`
+      const result = await getConnection()`
         UPDATE public.bank_users 
         SET balance = ${amount}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
@@ -250,7 +258,7 @@ export class PostgresStorage implements IStorage {
   async getUserAccounts(userId: number): Promise<Account[]> {
     console.log('🏦 Fetching accounts for user ID:', userId);
     try {
-      const result = await sql`
+      const result = await getConnection()`
         SELECT * FROM public.bank_accounts WHERE user_id = ${userId}
       `;
       
@@ -269,7 +277,7 @@ export class PostgresStorage implements IStorage {
 
   async getAccount(id: number): Promise<Account | undefined> {
     try {
-      const result = await sql`
+      const result = await getConnection()`
         SELECT * FROM public.bank_accounts WHERE id = ${id}
       `;
       
@@ -290,7 +298,7 @@ export class PostgresStorage implements IStorage {
       const accountType = account.accountType ?? 'savings';
       const currency = account.currency || 'USD';
       const status = account.status || 'active';
-      const result = await sql`
+      const result = await getConnection()`
         INSERT INTO public.bank_accounts (
           user_id, account_number, account_type, balance, currency, status
         ) VALUES (
@@ -308,7 +316,7 @@ export class PostgresStorage implements IStorage {
 
   async getAccountTransactions(accountId: number, limit = 50): Promise<Transaction[]> {
     try {
-      const result = await sql`
+      const result = await getConnection()`
         SELECT * FROM public.transactions 
         WHERE account_id = ${accountId}
         ORDER BY created_at DESC 
@@ -344,7 +352,7 @@ export class PostgresStorage implements IStorage {
       const descriptionVal = transaction.description ?? null;
       const amountVal = transaction.amount ?? '0';
       
-      const result = await sql`
+      const result = await getConnection()`
         INSERT INTO public.transactions (
           from_account_id, transaction_type, amount, description, created_at, status,
           recipient_name, recipient_address, recipient_country, 
@@ -369,7 +377,7 @@ export class PostgresStorage implements IStorage {
     try {
       const notesVal = notes || null;
       
-      const result = await sql`
+      const result = await getConnection()`
         UPDATE public.transactions 
         SET status = ${status}, admin_notes = ${notesVal}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
@@ -387,7 +395,7 @@ export class PostgresStorage implements IStorage {
 
   async getPendingTransactions(): Promise<Transaction[]> {
     try {
-      const result = await sql`
+      const result = await getConnection()`
         SELECT * FROM public.transactions 
         WHERE status = 'pending'
         ORDER BY created_at DESC
@@ -402,7 +410,7 @@ export class PostgresStorage implements IStorage {
 
   async getAllTransactions(): Promise<Transaction[]> {
     try {
-      const result = await sql`
+      const result = await getConnection()`
         SELECT * FROM public.transactions 
         ORDER BY created_at DESC
       `;
@@ -420,7 +428,7 @@ export class PostgresStorage implements IStorage {
       const statusVal = updates.status || null;
       const accountTypeVal = updates.accountType || null;
       
-      const result = await sql`
+      const result = await getConnection()`
         UPDATE public.bank_accounts 
         SET 
           balance = COALESCE(${balanceVal}, balance),
@@ -547,7 +555,7 @@ export class PostgresStorage implements IStorage {
   // Cards methods
   async getUserCards(userId: number): Promise<Card[]> {
     try {
-      const result = await sql`SELECT * FROM public.cards WHERE user_id = ${userId}`;
+      const result = await getConnection()`SELECT * FROM public.cards WHERE user_id = ${userId}`;
       return result as unknown as Card[];
     } catch (error) {
       console.error('Error fetching cards:', error);
@@ -557,7 +565,7 @@ export class PostgresStorage implements IStorage {
 
   async getCard(id: number): Promise<Card | undefined> {
     try {
-      const result = await sql`SELECT * FROM public.cards WHERE id = ${id}`;
+      const result = await getConnection()`SELECT * FROM public.cards WHERE id = ${id}`;
       return result[0] as Card | undefined;
     } catch (error) {
       console.error('Error fetching card:', error);
@@ -566,7 +574,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async createCard(card: InsertCard): Promise<Card> {
-    const result = await sql`
+    const result = await getConnection()`
       INSERT INTO public.cards ${sql(card)}
       RETURNING *
     `;
@@ -574,7 +582,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined> {
-    const result = await sql`
+    const result = await getConnection()`
       UPDATE public.cards 
       SET ${sql(updates)}
       WHERE id = ${id}
@@ -586,7 +594,7 @@ export class PostgresStorage implements IStorage {
   // Investments methods
   async getUserInvestments(userId: number): Promise<Investment[]> {
     try {
-      const result = await sql`SELECT * FROM public.investments WHERE user_id = ${userId}`;
+      const result = await getConnection()`SELECT * FROM public.investments WHERE user_id = ${userId}`;
       return result as unknown as Investment[];
     } catch (error) {
       console.error('Error fetching investments:', error);
@@ -596,7 +604,7 @@ export class PostgresStorage implements IStorage {
 
   async getInvestment(id: number): Promise<Investment | undefined> {
     try {
-      const result = await sql`SELECT * FROM public.investments WHERE id = ${id}`;
+      const result = await getConnection()`SELECT * FROM public.investments WHERE id = ${id}`;
       return result[0] as Investment | undefined;
     } catch (error) {
       return undefined;
@@ -604,7 +612,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async createInvestment(investment: InsertInvestment): Promise<Investment> {
-    const result = await sql`
+    const result = await getConnection()`
       INSERT INTO public.investments ${sql(investment)}
       RETURNING *
     `;
@@ -612,7 +620,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> {
-    const result = await sql`
+    const result = await getConnection()`
       UPDATE public.investments 
       SET ${sql(updates)}
       WHERE id = ${id}
@@ -625,10 +633,10 @@ export class PostgresStorage implements IStorage {
   async getMessages(conversationId?: string): Promise<Message[]> {
     try {
       if (conversationId) {
-        const result = await sql`SELECT * FROM public.messages WHERE conversation_id = ${conversationId} ORDER BY created_at DESC`;
+        const result = await getConnection()`SELECT * FROM public.messages WHERE conversation_id = ${conversationId} ORDER BY created_at DESC`;
         return result as unknown as Message[];
       }
-      const result = await sql`SELECT * FROM public.messages ORDER BY created_at DESC LIMIT 100`;
+      const result = await getConnection()`SELECT * FROM public.messages ORDER BY created_at DESC LIMIT 100`;
       return result as unknown as Message[];
     } catch (error) {
       return [];
@@ -637,7 +645,7 @@ export class PostgresStorage implements IStorage {
 
   async getUserMessages(userId: number): Promise<Message[]> {
     try {
-      const result = await sql`
+      const result = await getConnection()`
         SELECT * FROM public.messages 
         WHERE sender_id = ${userId} OR recipient_id = ${userId}
         ORDER BY created_at DESC
@@ -649,7 +657,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {
-    const result = await sql`
+    const result = await getConnection()`
       INSERT INTO public.messages ${sql(message)}
       RETURNING *
     `;
@@ -657,7 +665,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async markMessageAsRead(id: number): Promise<Message | undefined> {
-    const result = await sql`
+    const result = await getConnection()`
       UPDATE public.messages 
       SET is_read = true, read_at = NOW()
       WHERE id = ${id}
@@ -669,7 +677,7 @@ export class PostgresStorage implements IStorage {
   // Alerts methods
   async getUserAlerts(userId: number): Promise<Alert[]> {
     try {
-      const result = await sql`SELECT * FROM public.alerts WHERE user_id = ${userId} ORDER BY created_at DESC`;
+      const result = await getConnection()`SELECT * FROM public.alerts WHERE user_id = ${userId} ORDER BY created_at DESC`;
       return result as unknown as Alert[];
     } catch (error) {
       return [];
@@ -678,7 +686,7 @@ export class PostgresStorage implements IStorage {
 
   async getUnreadAlerts(userId: number): Promise<Alert[]> {
     try {
-      const result = await sql`
+      const result = await getConnection()`
         SELECT * FROM public.alerts 
         WHERE user_id = ${userId} AND is_read = false
         ORDER BY created_at DESC
@@ -690,7 +698,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async createAlert(alert: InsertAlert): Promise<Alert> {
-    const result = await sql`
+    const result = await getConnection()`
       INSERT INTO public.alerts ${sql(alert)}
       RETURNING *
     `;
@@ -698,7 +706,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async markAlertAsRead(id: number): Promise<Alert | undefined> {
-    const result = await sql`
+    const result = await getConnection()`
       UPDATE public.alerts 
       SET is_read = true, read_at = NOW()
       WHERE id = ${id}
@@ -709,7 +717,7 @@ export class PostgresStorage implements IStorage {
 
   // Additional stub methods to satisfy IStorage interface
   async deleteAlert(id: number): Promise<void> {
-    await sql`DELETE FROM public.alerts WHERE id = ${id}`;
+    await getConnection()`DELETE FROM public.alerts WHERE id = ${id}`;
   }
 
   async getBranches(): Promise<any[]> { return []; }
