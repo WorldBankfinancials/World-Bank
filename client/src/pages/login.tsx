@@ -97,11 +97,12 @@ export default function Login() {
       setShowPinVerification(true);
       setLoading(false);
 
-    } catch (error) {
-      console.error("Login error:", error);
+    } catch (error: any) {
+      const errorMsg = error?.message || 'An unexpected error occurred';
+      console.error("❌ Login error:", errorMsg);
       toast({
         title: t('login_failed'),
-        description: t('unexpected_error'),
+        description: errorMsg,
         variant: "destructive"
       });
       setLoading(false);

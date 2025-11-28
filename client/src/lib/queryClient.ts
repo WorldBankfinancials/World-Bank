@@ -43,8 +43,19 @@ export async function authenticatedFetch(
       credentials: "include",
     });
     
+    // Handle authentication errors
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    
     return response;
-  } catch (error) {
+  } catch (error: any) {
+    // Only log meaningful errors
+    if (error?.message && !error.message.includes('abort')) {
+      console.error('❌ Authenticated fetch failed:', error.message);
+    }
     throw error;
   }
 }
