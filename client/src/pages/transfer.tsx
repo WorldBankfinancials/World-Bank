@@ -126,7 +126,13 @@ export default function Transfer() {
         })
       });
       
-      const pinResult = await pinResponse.json();
+      let pinResult;
+      try {
+        pinResult = await pinResponse.json();
+      } catch (e) {
+        setPinError("Failed to parse PIN verification response");
+        return;
+      }
       if (!pinResult.success) {
         setPinError("Invalid PIN");
         return;
@@ -166,7 +172,14 @@ export default function Transfer() {
       
       
       if (response.ok) {
-        const result = await response.json();
+        let result;
+        try {
+          result = await response.json();
+        } catch (e) {
+          setPinError("Failed to parse transfer response");
+          setIsProcessing(false);
+          return;
+        }
         
         setShowPinVerification(false);
         setTransferPin("");
@@ -196,9 +209,17 @@ export default function Transfer() {
           relationship: ""
         });
       } else {
-        const error = await response.json();
+        let error;
+        try {
+          error = await response.json();
+        } catch (e) {
+          setPinError("Transfer failed - server error");
+          setIsProcessing(false);
+          return;
+        }
         
-        setPinError(error.message || "Invalid PIN. Please verify your 4-digit transfer PIN.");
+        setPinError(error?.message || "Invalid PIN. Please verify your 4-digit transfer PIN.");
+        setIsProcessing(false);
       }
     } catch (error) {
       
