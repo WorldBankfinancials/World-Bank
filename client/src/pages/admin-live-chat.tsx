@@ -92,8 +92,9 @@ export default function AdminLiveChat() {
       };
 
       wsRef.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === 'chat_message' && data.senderRole === 'customer') {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'chat_message' && data.senderRole === 'customer') {
           // Add customer message to appropriate chat session
           setChatSessions(prev => {
             // Check if session exists for this customer
@@ -129,6 +130,9 @@ export default function AdminLiveChat() {
               return [...prev, newSession];
             }
           });
+        }
+        } catch (error) {
+          console.error('❌ Admin chat message parse error:', error);
         }
       };
 

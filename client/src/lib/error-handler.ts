@@ -73,8 +73,8 @@ export function logError(context: string, error: any, severity: 'low' | 'medium'
   console.error(`${severityEmoji[severity]} [${context}] ${timestamp}: ${message}`, error);
 
   // In production, send to error tracking service
-  if (typeof window !== 'undefined' && window.__ERROR_TRACKING__) {
-    window.__ERROR_TRACKING__({ context, error, severity, timestamp });
+  if (typeof window !== 'undefined' && (window as any).__ERROR_TRACKING__) {
+    (window as any).__ERROR_TRACKING__({ context, error, severity, timestamp });
   }
 }
 
