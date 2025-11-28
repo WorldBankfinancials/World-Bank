@@ -10,11 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 
 import { useLanguage } from "@/contexts/LanguageContext";
+import { CustomerData } from "@/types";
 
 export default function ProfileSettings() {
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
-  const { data: user, isLoading } = useQuery<any>({
+  const { data: user, isLoading } = useQuery<CustomerData>({
     queryKey: ['/api/user'],
   });
   const displayUser = user || {};

@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";
 import type { User, Transaction } from "@/lib/schema";
+import { TransactionData, CustomerData } from "@/types";
 
 interface TransactionFormData {
   amount: string;
@@ -26,8 +27,8 @@ interface TransactionFormData {
 export default function TransactionHistory() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [user, setUser] = useState<any>(null);
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [user, setUser] = useState<CustomerData | null>(null);
+  const [transactions, setTransactions] = useState<TransactionData[]>([]);
   const [loading, setLoading] = useState(true);
 
   
@@ -101,7 +102,7 @@ export default function TransactionHistory() {
     const csvContent = [
       ['Date', 'Description', 'Category', 'Type', 'Amount', 'Status'].join(','),
       ...transactions.map(t => [
-        new Date(t.createdAt || new Date()).toLocaleDateString(),
+        new Date(t.createdAt || t.created_at || new Date()).toLocaleDateString(),
         `"${t.description || ''}"`,
         t.category || 'General',
         t.type === 'credit' ? 'Credit' : 'Debit',

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { BankLogo } from '@/components/BankLogo';
 import { useToast } from '@/hooks/use-toast';
+import { CustomerData } from '@/types';
 
 interface PendingTransfer {
   id: number;
@@ -109,6 +110,7 @@ export default function SimpleAdmin() {
   const [password, setPassword] = useState('');
   const [selectedTab, setSelectedTab] = useState("transfers");
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerData | null>(null);
 
   // Real-time data from API
   const [realTimeAccounts, setRealTimeAccounts] = useState<CustomerAccount[]>([]);
@@ -130,7 +132,14 @@ export default function SimpleAdmin() {
   // Profile upload states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<CustomerData | null>(null);
+
+  // Customer editing states moved after user state
+  const [editForm, setEditForm] = useState({
+    fullName: '',
+    email: '',
+    status: 'active'
+  });
 
   const fetchUserData = async () => {
     try {
@@ -519,22 +528,6 @@ export default function SimpleAdmin() {
     message: string;
     timestamp: string;
   }>>([]);
-
-  // Customer editing states
-  const [editingCustomer, setEditingCustomer] = useState<any>(null);
-  const [editForm, setEditForm] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    profession: '',
-    address: '',
-    city: '',
-    country: '',
-    postalCode: '',
-    dateOfBirth: '',
-    nationality: '',
-    annualIncome: ''
-  });
 
   const handleApproveTransfer = (transferId: number) => {
     setTransfers(prev => prev.filter(t => t.id !== transferId));

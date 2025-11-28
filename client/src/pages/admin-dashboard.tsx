@@ -70,7 +70,7 @@ export default function AdminDashboard() {
   useRealtimeSupportTickets();
 
   // Fetch real customer data from API
-  const { data: customers = [], isLoading: customersLoading } = useQuery<any[]>({
+  const { data: customers = [], isLoading: customersLoading } = useQuery<CustomerData[]>({
     queryKey: ['/api/admin/customers'],
     staleTime: 30000,
   });

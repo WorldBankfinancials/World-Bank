@@ -47,8 +47,9 @@ export interface TransactionData {
   type: 'credit' | 'debit';
   amount: string | number;
   description: string;
-  date: string;
+  date?: string;
   created_at?: string;
+  createdAt?: string;
   status?: string;
   recipientName?: string;
   bankName?: string;
@@ -58,14 +59,15 @@ export interface TransactionData {
 
 export interface CustomerData {
   id: number | string;
-  fullName: string;
-  email: string;
-  accountNumber: string;
+  fullName?: string;
+  email?: string;
+  accountNumber?: string;
   accountId?: string;
-  balance: number | string;
+  balance?: number | string;
   status?: string;
   createdAt?: string;
   isActive?: boolean;
+  role?: string;
 }
 
 export interface ApiError {

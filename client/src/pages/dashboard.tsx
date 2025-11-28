@@ -54,6 +54,7 @@ import {
   Trash2
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { CustomerData, TransactionData } from "@/types";
 
 // Transfer Section Component
 function TransferSection() {
@@ -494,8 +495,8 @@ export default function Dashboard() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showNotifications] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
-  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+  const [userData, setUserData] = useState<CustomerData | null>(null);
+  const [recentTransactions, setRecentTransactions] = useState<TransactionData[]>([]);
   const queryClient = useQueryClient();
 
   // Track user presence for real-time online/offline status
