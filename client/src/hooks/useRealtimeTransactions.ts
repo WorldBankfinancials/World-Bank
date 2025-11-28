@@ -11,7 +11,6 @@ export { useRealtimeAlerts } from '@/hooks/useRealtimeAlerts';
 
 export function useRealtimeTransactions(userId?: string, enabled?: boolean) {
   const handleTransactionUpdate = useCallback((transaction: any) => {
-    console.log('🔄 Transaction updated:', transaction);
     // Dispatch to global state or trigger refetch
     window.dispatchEvent(new CustomEvent('transaction-updated', { detail: transaction }));
   }, []);
@@ -49,7 +48,6 @@ export function useRealtimeTransactions(userId?: string, enabled?: boolean) {
  */
 export function useRealtimeSupportTickets(userId?: string, enabled?: boolean) {
   const handleTicketUpdate = useCallback((ticket: any) => {
-    console.log('🎫 Support ticket updated:', ticket);
     window.dispatchEvent(new CustomEvent('ticket-updated', { detail: ticket }));
   }, []);
 

@@ -51,7 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error('Invalid user format');
         }
       } catch (e) {
-        console.error('❌ Auth init error:', e);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
@@ -60,7 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = useCallback(async (user: User) => {
     if (!user?.id) {
-      console.error('❌ Invalid user for fetchUserData');
       return;
     }
     try {
@@ -82,7 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserProfile(profile);
       }
     } catch (error) {
-      console.error('❌ Fetch user data error:', error);
     }
   }, []);
 
@@ -121,7 +118,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: 'Authentication failed - invalid response' };
     } catch (error: any) {
       setLoading(false);
-      console.error('❌ Sign in error:', error);
       return { error: error?.message || 'Network error' };
     }
   };
@@ -163,7 +159,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return {};
     } catch (error: any) {
-      console.error('❌ Sign up error:', error);
       return { error: error?.message || 'Signup failed' };
     }
   };
@@ -175,7 +170,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setUserProfile(null);
     } catch (error) {
-      console.error('❌ Sign out error:', error);
     }
   };
 

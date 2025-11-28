@@ -114,7 +114,6 @@ export default function PinSettings() {
         }, 2000);
         return () => clearTimeout(timeout);
       } else {
-        console.error('PIN change failed:', data);
         setError(data.message || t('pin_change_failed'));
         toast({
           title: 'PIN change failed',
@@ -123,7 +122,6 @@ export default function PinSettings() {
         });
       }
     } catch (error) {
-      console.error('PIN change error:', error);
       setError(t('network_error'));
       toast({
         title: 'Network error',

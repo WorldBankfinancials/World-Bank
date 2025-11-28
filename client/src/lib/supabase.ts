@@ -26,12 +26,10 @@ export async function getCurrentUser() {
   try {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) {
-      console.error('❌ Get user error:', error);
       return null;
     }
     return user;
   } catch (error) {
-    console.error('❌ Get user exception:', error);
     return null;
   }
 }
@@ -43,12 +41,10 @@ export async function getSession() {
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error) {
-      console.error('❌ Get session error:', error);
       return null;
     }
     return session;
   } catch (error) {
-    console.error('❌ Get session exception:', error);
     return null;
   }
 }
@@ -61,7 +57,6 @@ export async function getAccessToken(): Promise<string | null> {
     const session = await getSession();
     return session?.access_token || null;
   } catch (error) {
-    console.error('❌ Get access token error:', error);
     return null;
   }
 }
@@ -85,7 +80,6 @@ export function subscribeToRealtimeUpdates(
 
     return subscription;
   } catch (error) {
-    console.error('❌ Subscribe to realtime error:', error);
     return null;
   }
 }
@@ -100,7 +94,6 @@ export async function signInWithPassword(email: string, password: string) {
       password,
     });
   } catch (error) {
-    console.error('❌ Sign in error:', error);
     throw error;
   }
 }
@@ -115,7 +108,6 @@ export async function signUpWithPassword(email: string, password: string) {
       password,
     });
   } catch (error) {
-    console.error('❌ Sign up error:', error);
     throw error;
   }
 }
@@ -127,7 +119,6 @@ export async function signOut() {
   try {
     return await supabase.auth.signOut();
   } catch (error) {
-    console.error('❌ Sign out error:', error);
     throw error;
   }
 }

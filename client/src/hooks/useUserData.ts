@@ -51,7 +51,6 @@ export function useUserData() {
       }
       
       const userData = await response.json();
-      console.log('✅ Real User Data from Supabase:', userData);
       return userData;
     },
     enabled: !!user?.email,
@@ -80,7 +79,6 @@ export function useAccountData() {
       }
       
       const accounts = await response.json();
-      console.log('✅ Real Account Data from Supabase:', accounts);
       return accounts;
     },
     enabled: !!user?.email,

@@ -54,7 +54,6 @@ export async function authenticatedFetch(
   } catch (error: any) {
     // Only log meaningful errors
     if (error?.message && !error.message.includes('abort')) {
-      console.error('❌ Authenticated fetch failed:', error.message);
     }
     throw error;
   }

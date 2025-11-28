@@ -49,7 +49,6 @@ export default function AdminTransactionDashboard() {
           throw new Error('Failed to parse transactions');
         }
       } else {
-        console.error('Failed to fetch transactions:', await response.text());
         toast({
           title: 'Error loading transactions',
           description: 'Unable to load transactions. Please try again.',
@@ -57,7 +56,6 @@ export default function AdminTransactionDashboard() {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch transactions:', error);
       toast({
         title: 'Network error',
         description: 'Unable to connect to the server. Please check your connection.',
@@ -102,11 +100,9 @@ export default function AdminTransactionDashboard() {
         });
       } else {
         const errorText = await response.text();
-        console.error('Failed to create transaction:', errorText);
         throw new Error(errorText || 'Failed to create transaction');
       }
     } catch (error) {
-      console.error('Failed to create transaction:', error);
       toast({
         title: 'Transaction failed',
         description: error instanceof Error ? error.message : 'Failed to create transaction. Please try again.',

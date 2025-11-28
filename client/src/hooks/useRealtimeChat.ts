@@ -36,7 +36,6 @@ export function useRealtimeChat(
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('✅ Chat WebSocket connected');
       };
 
       wsRef.current.onmessage = (event) => {
@@ -55,19 +54,15 @@ export function useRealtimeChat(
             onPresence(data.activeUsers);
           }
         } catch (error) {
-          console.error('❌ WebSocket message parse error:', error);
         }
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('❌ WebSocket error:', error);
       };
 
       wsRef.current.onclose = () => {
-        console.log('❌ Chat WebSocket disconnected');
       };
     } catch (error) {
-      console.error('Failed to connect WebSocket:', error);
     }
 
     return () => {

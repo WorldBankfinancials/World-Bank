@@ -19,9 +19,6 @@ export function setupErrorFiltering() {
     '@vite',
   ];
 
-  // Override console.error to filter noise
-  const originalError = console.error;
-  console.error = function(...args: any[]) {
     const message = args[0]?.toString() || args.join(' ');
     
     // Check if this is a suppressed error

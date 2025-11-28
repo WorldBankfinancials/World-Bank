@@ -30,7 +30,6 @@ export default function AdminLogin() {
         setLocation("/admin-dashboard");
       }
     } catch (err) {
-      console.error('Admin login error:', err);
       setError("Login failed. Please try again.");
     } finally {
       setIsLoading(false);

@@ -24,7 +24,6 @@ export function safeGetStorageItem(key: string, defaultValue?: any): any {
     if (!item) return defaultValue;
     return JSON.parse(item);
   } catch (e) {
-    console.error(`Failed to parse storage item: ${key}`);
     return defaultValue;
   }
 }

@@ -45,7 +45,6 @@ export default function AdminTransactionCreator() {
           throw new Error('Failed to parse accounts');
         }
       } else {
-        console.error('Failed to fetch accounts:', await response.text());
         toast({
           title: 'Error loading accounts',
           description: 'Unable to load accounts. Please try again.',
@@ -53,7 +52,6 @@ export default function AdminTransactionCreator() {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch accounts:', error);
       toast({
         title: 'Error loading accounts',
         description: 'Network error. Please check your connection.',
@@ -68,7 +66,6 @@ export default function AdminTransactionCreator() {
 
   const handleCreateTransaction = async () => {
     if (!selectedAccountId || !amount || !description) {
-      console.warn('Missing required fields for transaction creation');
       toast({
         title: 'Missing information',
         description: 'Please fill in all required fields.',
@@ -79,7 +76,6 @@ export default function AdminTransactionCreator() {
 
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) {
-      console.warn('Invalid amount for transaction');
       toast({
         title: 'Invalid amount',
         description: 'Please enter a valid amount greater than zero.',
@@ -137,11 +133,9 @@ export default function AdminTransactionCreator() {
         fetchAccounts();
       } else {
         const errorText = await response.text();
-        console.error('Failed to create transaction:', errorText);
         throw new Error(errorText || 'Failed to create transaction');
       }
     } catch (error) {
-      console.error('Transaction creation error:', error);
       toast({
         title: 'Transaction failed',
         description: error instanceof Error ? error.message : 'Failed to create transaction. Please try again.',

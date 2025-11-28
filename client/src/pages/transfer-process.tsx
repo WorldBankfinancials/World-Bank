@@ -43,7 +43,6 @@ export default function TransferProcess({ transferData, onBack, onComplete }: Tr
       });
 
       if (!verifyResponse.ok) {
-        console.error('PIN verification failed:', await verifyResponse.text());
         setPinError(t('invalid_pin_try_again'));
         toast({
           title: 'Invalid PIN',
@@ -53,7 +52,6 @@ export default function TransferProcess({ transferData, onBack, onComplete }: Tr
         return;
       }
     } catch (error) {
-      console.error('PIN verification error:', error);
       setPinError(t('invalid_pin_try_again'));
       toast({
         title: 'Verification failed',
@@ -95,11 +93,9 @@ export default function TransferProcess({ transferData, onBack, onComplete }: Tr
         return () => clearTimeout(timeout);
       } else {
         const errorText = await response.text();
-        console.error('Transfer submission failed:', errorText);
         throw new Error(errorText || 'Transfer submission failed');
       }
     } catch (error) {
-      console.error('Transfer error:', error);
       setPinError(t('transfer_failed_try_again'));
       toast({
         title: 'Transfer failed',

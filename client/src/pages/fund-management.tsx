@@ -80,7 +80,6 @@ export default function FundManagement() {
           throw new Error('Failed to parse customers');
         }
       } else {
-        console.error('Failed to fetch customers:', await response.text());
         toast({
           title: 'Error loading customers',
           description: 'Unable to load customer list. Please try again.',
@@ -88,7 +87,6 @@ export default function FundManagement() {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch customers:', error);
       toast({
         title: 'Network error',
         description: 'Unable to connect to the server. Please check your connection.',
@@ -109,7 +107,6 @@ export default function FundManagement() {
           throw new Error('Failed to parse transactions');
         }
       } else {
-        console.error('Failed to fetch transactions:', await response.text());
         toast({
           title: 'Error loading transactions',
           description: 'Unable to load transaction history. Please try again.',
@@ -117,7 +114,6 @@ export default function FundManagement() {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch transactions:', error);
       toast({
         title: 'Network error',
         description: 'Unable to connect to the server. Please check your connection.',
@@ -204,7 +200,6 @@ export default function FundManagement() {
         }
       }
     } catch (error) {
-      // console.error('Failed to process transaction:', error);
       toast({
         title: 'Transaction Failed',
         description: 'Failed to process transaction. Please try again.',

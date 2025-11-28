@@ -131,7 +131,6 @@ export default function AdminLiveChat() {
           });
         }
         } catch (error) {
-          console.error('❌ Admin chat message parse error:', error);
         }
       };
 
@@ -145,7 +144,6 @@ export default function AdminLiveChat() {
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('Admin WebSocket error:', error);
         setIsConnected(false);
         toast({
           title: 'Connection error',
@@ -154,7 +152,6 @@ export default function AdminLiveChat() {
         });
       };
     } catch (error) {
-      console.error('Failed to connect admin chat:', error);
       setIsConnected(false);
       toast({
         title: 'Chat system unavailable',

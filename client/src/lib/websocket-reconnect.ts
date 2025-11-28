@@ -47,16 +47,13 @@ export class WebSocketReconnect {
    */
   connect() {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      console.log('✅ WebSocket already connected');
       return;
     }
 
     try {
-      console.log(`🔌 Connecting to WebSocket: ${this.url}`);
       this.ws = new WebSocket(this.url);
 
       this.ws.onopen = () => {
-        console.log('✅ WebSocket connected successfully');
         this.retryCount = 0; // Reset retry count on successful connection
         this.isIntentionallyClosed = false;
         this.onOpen?.();
@@ -67,12 +64,10 @@ export class WebSocketReconnect {
       };
 
       this.ws.onerror = (error) => {
-        console.error('❌ WebSocket error:', error);
         this.onError?.(error);
       };
 
       this.ws.onclose = () => {
-        console.log('🔌 WebSocket connection closed');
         this.onClose?.();
         
         // Only attempt reconnect if not intentionally closed
@@ -82,7 +77,6 @@ export class WebSocketReconnect {
       };
 
     } catch (error) {
-      console.error('❌ Failed to create WebSocket:', error);
       this.scheduleReconnect();
     }
   }
@@ -92,7 +86,6 @@ export class WebSocketReconnect {
    */
   private scheduleReconnect() {
     if (this.retryCount >= this.maxRetries) {
-      console.error(`❌ Max reconnection attempts (${this.maxRetries}) reached. Giving up.`);
       return;
     }
 
@@ -104,10 +97,8 @@ export class WebSocketReconnect {
 
     this.retryCount++;
     
-    console.log(`🔄 Scheduling reconnect attempt ${this.retryCount}/${this.maxRetries} in ${delay}ms...`);
 
     this.reconnectTimeout = setTimeout(() => {
-      console.log(`🔄 Attempting reconnect ${this.retryCount}/${this.maxRetries}...`);
       this.connect();
     }, delay);
   }
@@ -121,7 +112,6 @@ export class WebSocketReconnect {
       this.ws.send(message);
       return true;
     } else {
-      console.warn('⚠️ Cannot send message: WebSocket not connected');
       return false;
     }
   }
@@ -130,7 +120,6 @@ export class WebSocketReconnect {
    * Close WebSocket connection (prevents auto-reconnect)
    */
   close() {
-    console.log('🔌 Closing WebSocket connection intentionally');
     this.isIntentionallyClosed = true;
     
     if (this.reconnectTimeout) {

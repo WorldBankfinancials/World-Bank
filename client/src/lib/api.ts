@@ -15,7 +15,6 @@ export async function apiFetch(url: string, options?: RequestInit): Promise<Resp
     try {
       userData = JSON.parse(user);
     } catch (e) {
-      console.error('❌ Failed to parse user data:', e);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       throw new Error('Invalid user data');
@@ -37,7 +36,6 @@ export async function apiFetch(url: string, options?: RequestInit): Promise<Resp
     });
 
     if (!response.ok && response.status === 401) {
-      console.error('❌ Unauthorized - clearing auth');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       throw new Error('Session expired');
@@ -45,7 +43,6 @@ export async function apiFetch(url: string, options?: RequestInit): Promise<Resp
 
     return response;
   } catch (error) {
-    console.error('❌ apiFetch error:', error);
     throw error;
   }
 }
@@ -60,13 +57,11 @@ export async function getCurrentUserEmail(): Promise<string | null> {
     
     const userData = JSON.parse(user);
     if (!userData?.email) {
-      console.error('❌ Invalid user data - no email');
       return null;
     }
     
     return userData.email;
   } catch (error) {
-    console.error('❌ getCurrentUserEmail error:', error);
     return null;
   }
 }
@@ -89,7 +84,6 @@ export async function apiCall<T>(
     const data = await response.json();
     return { data };
   } catch (error: any) {
-    console.error('❌ apiCall error:', error);
     return { error: error?.message || 'API call failed' };
   }
 }

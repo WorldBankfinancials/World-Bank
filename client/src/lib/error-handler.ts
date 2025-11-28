@@ -21,12 +21,10 @@ export class APIError extends Error {
 export function safeJsonParse<T>(data: string, fallback?: T): T | null {
   try {
     if (!data || typeof data !== 'string') {
-      console.error('❌ Invalid data for JSON parse:', data);
       return fallback ?? null;
     }
     return JSON.parse(data) as T;
   } catch (error) {
-    console.error('❌ JSON parse error:', error);
     return fallback ?? null;
   }
 }
@@ -52,7 +50,6 @@ export async function handleApiResponse<T>(response: Response): Promise<T> {
     return data as T;
   } catch (error: any) {
     if (error instanceof APIError) throw error;
-    console.error('❌ Response handling error:', error);
     throw new APIError(500, 'PARSE_ERROR', error?.message || 'Failed to parse response');
   }
 }
@@ -70,7 +67,6 @@ export function logError(context: string, error: any, severity: 'low' | 'medium'
     high: '🔴'
   };
 
-  console.error(`${severityEmoji[severity]} [${context}] ${timestamp}: ${message}`, error);
 
   // In production, send to error tracking service
   if (typeof window !== 'undefined' && (window as any).__ERROR_TRACKING__) {
@@ -125,7 +121,6 @@ export async function withRetry<T>(
       lastError = error;
       if (i < maxRetries - 1) {
         const waitTime = delay * Math.pow(2, i);
-        console.warn(`⏳ Retry attempt ${i + 1}/${maxRetries} after ${waitTime}ms`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }

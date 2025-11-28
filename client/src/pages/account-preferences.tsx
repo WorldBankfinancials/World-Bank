@@ -70,7 +70,6 @@ export default function AccountPreferences() {
         });
       }
     } catch (error) {
-      console.error('Error saving preferences:', error);
       toast({
         title: 'Error',
         description: 'Error saving preferences. Please try again.',

@@ -8,7 +8,6 @@ import { supabase } from '@/lib/supabase';
 
 export function useRealtimeAlerts(userId?: number | undefined, enabled?: boolean) {
   const handleAlertReceived = useCallback((alert: any) => {
-    console.log('🔔 Real-time alert received:', alert);
   }, []);
 
   useEffect(() => {
