@@ -1,6 +1,4 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase as supabaseClient } from '@/lib/supabase';
 
 interface UserProfile {
   id: string;
@@ -15,6 +13,12 @@ interface UserProfile {
   profession?: string;
   accountId?: string;
   accountNumber?: string;
+}
+
+interface User {
+  id: string;
+  email: string;
+  role: string;
 }
 
 interface AuthContextType {
@@ -34,21 +38,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const supabase = supabaseClient;
-
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-
-    // Check current session
+    // Check for stored session token
     const checkSession = async () => {
       try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        if (!sessionError && sessionData?.session?.user) {
-          setUser(sessionData.session.user);
-          await fetchUserData(sessionData.session.user);
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          // Verify token with backend
+          const response = await fetch('/api/auth/verify', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            setUser(userData.user);
+            await fetchUserData(userData.user);
+          } else {
+            localStorage.removeItem('auth_token');
+          }
         }
       } catch (error) {
         console.error('Session check error:', error);
@@ -58,21 +65,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     checkSession();
-
-    // Listen for auth changes
-    const { data } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
-      try {
-        if (session?.user) {
-          setUser(session.user);
-          await fetchUserData(session.user);
-        } else {
-          setUser(null);
-          setUserProfile(null);
-        }
-      } catch (error) {
-        console.error('Auth state change error:', error);
-      }
-    });
 
     return () => {
       data?.subscription?.unsubscribe();
