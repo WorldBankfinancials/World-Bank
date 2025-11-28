@@ -1,19 +1,302 @@
 /**
  * COMPLETE SUPABASE STORAGE IMPLEMENTATION
- * Implements ALL 9 Supabase table operations
+ * Implements ALL operations for 11+ Supabase tables
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { IStorage } from "./storage";
+import type { IStorage } from "./storage";
+import type { User, Account, Transaction, AdminAction, SupportTicket, InsertUser, InsertAccount, InsertTransaction, InsertAdminAction, InsertSupportTicket } from "@shared/schema";
+import { mapSupabaseUserToUser, mapUserToSupabaseInsert, mapSupabaseAccountToAccount, mapAccountToSupabaseInsert, mapSupabaseTransactionToTransaction } from './supabase-mapping';
 
-const databaseUrl = process.env.DATABASE_URL!;
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export class CompleteSupabaseStorage implements IStorage {
-  // CARDS TABLE OPERATIONS
+  // ==================== USER OPERATIONS ====================
+  async getUser(id: number): Promise<User | undefined> {
+    const { data, error } = await supabase
+      .from('bank_users')
+      .select('*')
+      .eq('id', id)
+      .single();
+    return error ? undefined : (data ? mapSupabaseUserToUser(data) : undefined);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const { data, error } = await supabase
+      .from('bank_users')
+      .select('*')
+      .eq('username', username)
+      .single();
+    return error ? undefined : (data ? mapSupabaseUserToUser(data) : undefined);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    console.log('🔍 Querying bank_users for email:', email);
+    const { data, error } = await supabase
+      .from('bank_users')
+      .select('*')
+      .eq('email', email)
+      .single();
+    if (error) {
+      console.error('❌ Supabase error:', error);
+      return undefined;
+    }
+    console.log('✅ Found user:', data?.email);
+    return data ? mapSupabaseUserToUser(data) : undefined;
+  }
+
+  async getUserByPhone(phone: string): Promise<User | undefined> {
+    const { data, error } = await supabase
+      .from('bank_users')
+      .select('*')
+      .eq('phone', phone)
+      .single();
+    return error ? undefined : (data ? mapSupabaseUserToUser(data) : undefined);
+  }
+
+  async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
+    const { data, error } = await supabase
+      .from('bank_users')
+      .select('*')
+      .eq('supabase_id', supabaseUserId)
+      .single();
+    return error ? undefined : (data ? mapSupabaseUserToUser(data) : undefined);
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    const { data, error } = await supabase
+      .from('bank_users')
+      .select('*')
+      .order('created_at', { ascending: false });
+    return error ? [] : (data ? data.map(mapSupabaseUserToUser) : []);
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const insertData = mapUserToSupabaseInsert(user as any);
+    const { data, error } = await supabase
+      .from('bank_users')
+      .insert([insertData])
+      .select()
+      .single();
+    if (error) throw error;
+    return mapSupabaseUserToUser(data);
+  }
+
+  async updateUser(id: number, user: Partial<User>): Promise<User | undefined> {
+    const updateData = mapUserToSupabaseInsert(user);
+    const { data, error } = await supabase
+      .from('bank_users')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    return error ? undefined : (data ? mapSupabaseUserToUser(data) : undefined);
+  }
+
+  async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
+    const { data, error } = await supabase
+      .from('bank_users')
+      .update({ balance: amount.toString() })
+      .eq('id', id)
+      .select()
+      .single();
+    return error ? undefined : (data ? mapSupabaseUserToUser(data) : undefined);
+  }
+
+  // ==================== ACCOUNT OPERATIONS ====================
+  async getUserAccounts(userId: number): Promise<Account[]> {
+    const { data, error } = await supabase
+      .from('bank_accounts')
+      .select('*')
+      .eq('user_id', userId);
+    return error ? [] : (data ? data.map(mapSupabaseAccountToAccount) : []);
+  }
+
+  async getAccount(id: number): Promise<Account | undefined> {
+    const { data, error } = await supabase
+      .from('bank_accounts')
+      .select('*')
+      .eq('id', id)
+      .single();
+    return error ? undefined : (data ? mapSupabaseAccountToAccount(data) : undefined);
+  }
+
+  async createAccount(account: InsertAccount): Promise<Account> {
+    const insertData = mapAccountToSupabaseInsert(account);
+    const { data, error } = await supabase
+      .from('bank_accounts')
+      .insert([insertData])
+      .select()
+      .single();
+    if (error) throw error;
+    return mapSupabaseAccountToAccount(data);
+  }
+
+  async updateAccount(id: number, updates: Partial<Account>): Promise<Account | undefined> {
+    const updateData = mapAccountToSupabaseInsert(updates);
+    const { data, error } = await supabase
+      .from('bank_accounts')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    return error ? undefined : (data ? mapSupabaseAccountToAccount(data) : undefined);
+  }
+
+  // ==================== TRANSACTION OPERATIONS ====================
+  async getAccountTransactions(accountId: number, limit?: number): Promise<Transaction[]> {
+    let query = supabase
+      .from('transactions')
+      .select('*')
+      .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
+      .order('created_at', { ascending: false });
+    
+    if (limit) query = query.limit(limit);
+    
+    const { data, error } = await query;
+    return error ? [] : (data ? data.map(mapSupabaseTransactionToTransaction) : []);
+  }
+
+  async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert([{
+        from_user_id: transaction.fromUserId,
+        to_user_id: transaction.toUserId,
+        from_account_id: transaction.fromAccountId,
+        to_account_id: transaction.toAccountId,
+        amount: transaction.amount,
+        currency: transaction.currency || 'USD',
+        type: transaction.type || 'transfer',
+        status: transaction.status || 'pending',
+        description: transaction.description,
+        recipient_name: transaction.recipientName,
+        recipient_account: transaction.recipientAccount,
+        recipient_address: transaction.recipientAddress,
+        recipient_country: transaction.recipientCountry,
+        reference_number: transaction.referenceNumber,
+        fee: transaction.fee || '0.00',
+        exchange_rate: transaction.exchangeRate,
+        country_code: transaction.countryCode,
+        bank_name: transaction.bankName,
+        swift_code: transaction.swiftCode,
+        transfer_purpose: transaction.transferPurpose
+      }])
+      .select()
+      .single();
+    if (error) throw error;
+    return mapSupabaseTransactionToTransaction(data);
+  }
+
+  async updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<Transaction | undefined> {
+    const { data, error } = await supabase
+      .from('transactions')
+      .update({ 
+        status,
+        admin_notes: notes,
+        approved_by: adminId,
+        approved_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    return error ? undefined : (data ? mapSupabaseTransactionToTransaction(data) : undefined);
+  }
+
+  async getPendingTransactions(): Promise<Transaction[]> {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+    return error ? [] : (data ? data.map(mapSupabaseTransactionToTransaction) : []);
+  }
+
+  async getAllTransactions(): Promise<Transaction[]> {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .order('created_at', { ascending: false });
+    return error ? [] : (data ? data.map(mapSupabaseTransactionToTransaction) : []);
+  }
+
+  // ==================== ADMIN ACTIONS ====================
+  async createAdminAction(action: InsertAdminAction): Promise<AdminAction> {
+    const { data, error } = await supabase
+      .from('admin_actions')
+      .insert([{
+        admin_id: action.adminId,
+        action: action.action,
+        target_type: action.targetType,
+        target_id: action.targetId,
+        details: action.details,
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  async getAdminActions(adminId?: number): Promise<AdminAction[]> {
+    let query = supabase.from('admin_actions').select('*');
+    if (adminId) query = query.eq('admin_id', adminId);
+    const { data, error } = await query.order('created_at', { ascending: false });
+    return error ? [] : (data || []);
+  }
+
+  // ==================== SUPPORT TICKETS ====================
+  async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .insert([{
+        user_id: ticket.userId,
+        subject: ticket.subject,
+        description: ticket.description,
+        priority: ticket.priority || 'medium',
+        status: ticket.status || 'open',
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  async getSupportTicket(id: number): Promise<SupportTicket | undefined> {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select('*')
+      .eq('id', id)
+      .single();
+    return error ? undefined : data;
+  }
+
+  async getSupportTickets(userId?: number): Promise<SupportTicket[]> {
+    let query = supabase.from('support_tickets').select('*');
+    if (userId) query = query.eq('user_id', userId);
+    const { data, error } = await query.order('created_at', { ascending: false });
+    return error ? [] : (data || []);
+  }
+
+  async updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .update({
+        status: updates.status,
+        priority: updates.priority,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    return error ? undefined : data;
+  }
+
+  // ==================== CARDS ====================
   async getUserCards(userId: number): Promise<any[]> {
     const { data, error } = await supabase
       .from('cards')
@@ -34,17 +317,7 @@ export class CompleteSupabaseStorage implements IStorage {
   async createCard(card: any): Promise<any> {
     const { data, error } = await supabase
       .from('cards')
-      .insert([{
-        user_id: card.userId,
-        card_number: card.cardNumber,
-        card_type: card.cardType || 'debit',
-        card_holder: card.cardHolder,
-        expiry_date: card.expiryDate,
-        cvv: card.cvv,
-        balance: card.balance || '0.00',
-        status: card.status || 'active',
-        created_at: new Date().toISOString()
-      }])
+      .insert([{...card, created_at: new Date().toISOString()}])
       .select()
       .single();
     if (error) throw error;
@@ -54,11 +327,7 @@ export class CompleteSupabaseStorage implements IStorage {
   async updateCard(id: number, updates: any): Promise<any | undefined> {
     const { data, error } = await supabase
       .from('cards')
-      .update({
-        status: updates.status,
-        balance: updates.balance,
-        updated_at: new Date().toISOString()
-      })
+      .update({...updates, updated_at: new Date().toISOString()})
       .eq('id', id)
       .select()
       .single();
@@ -69,7 +338,7 @@ export class CompleteSupabaseStorage implements IStorage {
     await supabase.from('cards').delete().eq('id', id);
   }
 
-  // INVESTMENTS TABLE OPERATIONS
+  // ==================== INVESTMENTS ====================
   async getUserInvestments(userId: number): Promise<any[]> {
     const { data, error } = await supabase
       .from('investments')
@@ -90,16 +359,7 @@ export class CompleteSupabaseStorage implements IStorage {
   async createInvestment(investment: any): Promise<any> {
     const { data, error } = await supabase
       .from('investments')
-      .insert([{
-        user_id: investment.userId,
-        investment_type: investment.investmentType,
-        symbol: investment.symbol,
-        quantity: investment.quantity,
-        purchase_price: investment.purchasePrice,
-        current_price: investment.currentPrice,
-        total_value: investment.totalValue || (investment.quantity * investment.currentPrice),
-        created_at: new Date().toISOString()
-      }])
+      .insert([{...investment, created_at: new Date().toISOString()}])
       .select()
       .single();
     if (error) throw error;
@@ -109,23 +369,17 @@ export class CompleteSupabaseStorage implements IStorage {
   async updateInvestment(id: number, updates: any): Promise<any | undefined> {
     const { data, error } = await supabase
       .from('investments')
-      .update({
-        current_price: updates.currentPrice,
-        total_value: updates.totalValue,
-        updated_at: new Date().toISOString()
-      })
+      .update({...updates, updated_at: new Date().toISOString()})
       .eq('id', id)
       .select()
       .single();
     return error ? undefined : data;
   }
 
-  // MESSAGES TABLE OPERATIONS
+  // ==================== MESSAGES ====================
   async getMessages(conversationId?: string): Promise<any[]> {
     let query = supabase.from('messages').select('*');
-    if (conversationId) {
-      query = query.eq('conversation_id', conversationId);
-    }
+    if (conversationId) query = query.eq('conversation_id', conversationId);
     const { data, error } = await query.order('created_at', { ascending: true });
     return error ? [] : (data || []);
   }
@@ -142,14 +396,7 @@ export class CompleteSupabaseStorage implements IStorage {
   async createMessage(message: any): Promise<any> {
     const { data, error } = await supabase
       .from('messages')
-      .insert([{
-        sender_id: message.senderId,
-        receiver_id: message.receiverId,
-        conversation_id: message.conversationId,
-        content: message.content,
-        is_read: false,
-        created_at: new Date().toISOString()
-      }])
+      .insert([{...message, created_at: new Date().toISOString()}])
       .select()
       .single();
     if (error) throw error;
@@ -166,7 +413,7 @@ export class CompleteSupabaseStorage implements IStorage {
     return error ? undefined : data;
   }
 
-  // ALERTS TABLE OPERATIONS
+  // ==================== ALERTS ====================
   async getUserAlerts(userId: number): Promise<any[]> {
     const { data, error } = await supabase
       .from('alerts')
@@ -189,14 +436,7 @@ export class CompleteSupabaseStorage implements IStorage {
   async createAlert(alert: any): Promise<any> {
     const { data, error } = await supabase
       .from('alerts')
-      .insert([{
-        user_id: alert.userId,
-        title: alert.title,
-        message: alert.message,
-        type: alert.type || 'info',
-        is_read: false,
-        created_at: new Date().toISOString()
-      }])
+      .insert([{...alert, created_at: new Date().toISOString()}])
       .select()
       .single();
     if (error) throw error;
@@ -217,34 +457,33 @@ export class CompleteSupabaseStorage implements IStorage {
     await supabase.from('alerts').delete().eq('id', id);
   }
 
-  // STUBS - These are implemented in main storage
-  async getUser(id: number): Promise<any | undefined> { return undefined; }
-  async getUserByUsername(username: string): Promise<any | undefined> { return undefined; }
-  async getUserByEmail(email: string): Promise<any | undefined> { return undefined; }
-  async getUserByPhone(phone: string): Promise<any | undefined> { return undefined; }
-  async getUserBySupabaseId(supabaseUserId: string): Promise<any | undefined> { return undefined; }
-  async getAllUsers(): Promise<any[]> { return []; }
-  async createUser(user: any): Promise<any> { return {}; }
-  async updateUser(id: number, user: any): Promise<any | undefined> { return undefined; }
-  async updateUserBalance(id: number, amount: number): Promise<any | undefined> { return undefined; }
-  async getUserAccounts(userId: number): Promise<any[]> { return []; }
-  async getAccount(id: number): Promise<any | undefined> { return undefined; }
-  async createAccount(account: any): Promise<any> { return {}; }
-  async getAccountTransactions(accountId: number, limit?: number): Promise<any[]> { return []; }
-  async createTransaction(transaction: any): Promise<any> { return {}; }
-  async updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<any | undefined> { return undefined; }
-  async getPendingTransactions(): Promise<any[]> { return []; }
-  async updateAccount(id: number, updates: any): Promise<any | undefined> { return undefined; }
-  async createAdminAction(action: any): Promise<any> { return {}; }
-  async getAdminActions(adminId?: number): Promise<any[]> { return []; }
-  async createSupportTicket(ticket: any): Promise<any> { return {}; }
-  async getSupportTicket(id: number): Promise<any | undefined> { return undefined; }
-  async getSupportTickets(userId?: number): Promise<any[]> { return []; }
-  async updateSupportTicket(id: number, updates: any): Promise<any | undefined> { return undefined; }
-  async getAllTransactions(): Promise<any[]> { return []; }
-  async getBranches(): Promise<any[]> { return []; }
-  async getAtms(): Promise<any[]> { return []; }
-  async getExchangeRates(): Promise<any[]> { return []; }
-  async getStatementsByUserId(userId: number): Promise<any[]> { return []; }
-  async getMarketRates(): Promise<any[]> { return []; }
+  // ==================== BRANCHES & ATMs ====================
+  async getBranches(): Promise<any[]> {
+    const { data, error } = await supabase.from('branches').select('*');
+    return error ? [] : (data || []);
+  }
+
+  async getAtms(): Promise<any[]> {
+    const { data, error } = await supabase.from('atms').select('*');
+    return error ? [] : (data || []);
+  }
+
+  async getExchangeRates(): Promise<any[]> {
+    const { data, error } = await supabase.from('exchange_rates').select('*');
+    return error ? [] : (data || []);
+  }
+
+  async getStatementsByUserId(userId: number): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('statements')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    return error ? [] : (data || []);
+  }
+
+  async getMarketRates(): Promise<any[]> {
+    const { data, error } = await supabase.from('market_rates').select('*');
+    return error ? [] : (data || []);
+  }
 }
