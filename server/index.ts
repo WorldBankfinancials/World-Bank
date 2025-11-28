@@ -22,6 +22,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   // Content Security Policy
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'");
   
+  // Cache busting - force fresh content always
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
   next();
 });
 
