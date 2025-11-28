@@ -1862,7 +1862,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // IN-MEMORY SESSION CACHE FOR PIN VALIDATION
   const sessionCache = new Map<string, any>();
 
-  // EMERGENCY LOGIN - Supabase Auth ONLY (bypass database for now)
+  // LOGIN - Supabase Auth + Auto-sync to bank_users table
   app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
@@ -1870,7 +1870,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Email and password required' });
       }
 
-      // SUPABASE AUTH ONLY - Skip database if unavailable
+      // STEP 1: Authenticate via Supabase Auth
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
         process.env.VITE_SUPABASE_URL!,
@@ -1893,7 +1893,35 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const supabaseUser = data.user;
 
-      // Cache session data in memory for PIN validation
+      // STEP 2: Sync user to bank_users table
+      let dbUser = await (storage).getUserByEmail(email);
+      
+      if (!dbUser) {
+        // User authenticated but not in bank_users - create them NOW
+        try {
+          dbUser = await storage.createUser({
+            username: email.split('@')[0],
+            email: email,
+            password: 'supabase_auth',
+            firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
+            lastName: supabaseUser.user_metadata?.last_name || 'User',
+            phone: supabaseUser.user_metadata?.phone || '',
+            profession: 'Not provided',
+            accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
+            accountId: Date.now(),
+            balance: '0',
+            isActive: true,
+            isVerified: true,
+            transferPin: supabaseUser.user_metadata?.transfer_pin || '0192',
+            role: supabaseUser.app_metadata?.role || 'customer'
+          });
+        } catch (dbError: any) {
+          // User authenticated - still return token even if DB create fails
+          console.error('Failed to create user in bank_users:', dbError);
+        }
+      }
+
+      // STEP 3: Cache session data in memory for PIN validation
       const cacheKey = email.toLowerCase();
       sessionCache.set(cacheKey, {
         email,
@@ -1908,14 +1936,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         lastLogin: Date.now()
       });
 
-      // Generate token: base64(email:timestamp:id)
+      // STEP 4: Generate token and return
       const userId = supabaseUser.id;
       const tokenData = `${email}:${Date.now()}:${userId}`;
       const token = Buffer.from(tokenData).toString('base64');
 
       res.json({ 
         token,
-        user: {
+        user: dbUser || {
           id: userId,
           email: supabaseUser.email,
           role: supabaseUser.app_metadata?.role || 'customer'
