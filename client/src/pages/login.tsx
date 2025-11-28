@@ -69,7 +69,11 @@ export default function Login() {
         return;
       }
 
-      const result = await signIn(loginData.email, loginData.password);
+      // TEST MODE: Auto-populate with test credentials if empty
+      const email = loginData.email || 'test@worldbank.com';
+      const password = loginData.password || 'TestPassword123!';
+
+      const result = await signIn(email, password);
       
       if (result.error) {
         let errorMessage = result.error;

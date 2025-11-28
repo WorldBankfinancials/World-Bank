@@ -68,6 +68,32 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   // SECURITY: Test user creation endpoint - DEVELOPMENT ONLY
 
+  // TEST: Create test user for development
+  app.post('/api/admin/create-test-user', async (req: Request, res: Response) => {
+    try {
+      const testUser = await storage.createUser({
+        email: 'test@worldbank.com',
+        fullName: 'Test User',
+        phone: '1234567890',
+        password: 'TestPassword123!',
+        passwordHash: 'supabase_auth',
+        supabaseUserId: 'test-user-id-123',
+        profession: 'Developer',
+        transferPin: '1234',
+        accountNumber: '123456789',
+        accountId: 'TEST001',
+        isVerified: true,
+        isOnline: false,
+        isActive: true,
+        balance: '10000',
+        role: 'customer'
+      });
+      res.json({ success: true, user: testUser });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to create test user' });
+    }
+  });
+
   // Get user by Supabase UUID
   app.get('/api/users/supabase/:supabaseId', async (req: Request, res: Response) => {
     try {
