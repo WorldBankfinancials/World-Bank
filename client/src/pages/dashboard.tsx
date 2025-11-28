@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";
+
+// Wire LiveChat for dashboard support - ACTIVE
 import { useUserData, useAccountData } from "@/hooks/useUserData";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User } from '@shared/schema';
@@ -71,6 +73,7 @@ import { CustomerData, TransactionData } from "@/types";
 function TransferSection() {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const [showLiveChat, setShowLiveChat] = useState(false);
   const [transferAmount, setTransferAmount] = useState("");
   const [recipient, setRecipient] = useState("");
   const [transferType, setTransferType] = useState("quick");
