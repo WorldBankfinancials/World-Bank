@@ -33,10 +33,17 @@ function getConnection() {
     throw new Error('❌ Invalid DATABASE_URL: check environment variables for spaces or empty values');
   }
   
+  // Add SSL and retry configuration for Supabase PostgreSQL
   sql = postgres(databaseUrl, {
     max: 10,
     idle_timeout: 20,
-    connect_timeout: 30
+    connect_timeout: 60,
+    statement_timeout: 60000,
+    application_name: 'worldbank',
+    ssl: 'require',
+    types: {
+      bigint: postgres.BigInt,
+    },
   });
   return sql;
 }
