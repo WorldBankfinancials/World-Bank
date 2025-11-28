@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import Header from "@/components/Header";
 import { apiRequest } from "@/lib/queryClient";
-import { useRealtimeTransactions, useRealtimeSupportTickets } from "@/hooks/useRealtimeTransactions";
 import type { Transaction, User } from "@shared/schema";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -66,9 +65,7 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Enable real-time updates for transactions and support tickets
-  useRealtimeTransactions();
-  useRealtimeSupportTickets();
+  // Real-time updates use polling instead (WebSocket unavailable in Replit development)
 
   // Fetch real customer data from API
   const { data: customers = [], isLoading: customersLoading } = useQuery<CustomerData[]>({

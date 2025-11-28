@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";
-import RealtimeAlerts from "@/components/RealtimeAlerts";
 import { useUserData, useAccountData } from "@/hooks/useUserData";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User } from '@shared/schema';
@@ -18,7 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePresence } from "@/hooks/usePresence";
 import { 
   Eye,
   EyeOff,
