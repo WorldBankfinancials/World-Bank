@@ -50,7 +50,7 @@ export async function approveTransfer(transactionId: number, adminId: number, no
         adminId: adminId,
         actionType: 'approve_transfer',
         targetType: 'transaction',
-        targetId: transactionId.toString(),
+        targetId: transactionId,
         description: `Approved transfer #${transactionId}`,
         metadata: notes ? JSON.stringify({ notes }) : null
       });
@@ -74,7 +74,7 @@ export async function rejectTransfer(transactionId: number, adminId: number, not
         adminId: adminId,
         actionType: 'reject_transfer',
         targetType: 'transaction',
-        targetId: transactionId.toString(),
+        targetId: transactionId,
         description: `Rejected transfer #${transactionId}`,
         metadata: JSON.stringify({ notes })
       });

@@ -387,11 +387,9 @@ export class SupabaseStorage implements IStorage {
       .from('bank_accounts')
       .update({
         balance: updates.balance,
-        is_active: updates.isActive,
         account_type: updates.accountType,
-        account_name: updates.accountName,
-        interest_rate: updates.interestRate,
-        minimum_balance: updates.minimumBalance
+        currency: updates.currency,
+        status: updates.status
       })
       .eq('id', id)
       .select()
@@ -403,13 +401,10 @@ export class SupabaseStorage implements IStorage {
       id: data.id,
       userId: data.user_id,
       accountNumber: data.account_number,
-      accountName: data.account_name || null,
       accountType: data.account_type,
       balance: data.balance,
-      currency: data.currency,
-      isActive: data.is_active,
-      interestRate: data.interest_rate || null,
-      minimumBalance: data.minimum_balance || null,
+      currency: data.currency || 'USD',
+      status: data.status || 'active',
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -449,37 +444,30 @@ export class SupabaseStorage implements IStorage {
     return {
       id: data.id,
       username: data.username,
-      passwordHash: data.password_hash,
-      fullName: data.full_name,
+      password: data.password,
+      firstName: data.first_name,
+      lastName: data.last_name,
       email: data.email,
-      phone: data.phone,
-      accountNumber: data.account_number,
-      accountId: data.account_id,
-      profession: data.profession,
-      dateOfBirth: data.date_of_birth,
-      address: data.address,
-      city: data.city,
-      state: data.state,
-      country: data.country,
-      postalCode: data.postal_code,
-      nationality: data.nationality,
-      annualIncome: data.annual_income,
-      idType: data.id_type,
-      idNumber: data.id_number,
-      transferPin: data.transfer_pin,
-      role: data.role,
-      isVerified: data.is_verified,
-      isOnline: data.is_online,
-      isActive: data.is_active,
-      avatarUrl: data.avatar_url,
-      balance: data.balance || '0',
-      lastLogin: data.last_login || null,
-      createdByAdmin: data.created_by_admin || null,
-      modifiedByAdmin: data.modified_by_admin || null,
-      adminNotes: data.admin_notes || null,
+      phone: data.phone || null,
+      accountNumber: data.account_number || null,
+      accountId: data.account_id || 0,
+      profession: data.profession || null,
+      dateOfBirth: data.date_of_birth || null,
+      address: data.address || null,
+      city: data.city || null,
+      state: data.state || null,
+      country: data.country || null,
+      postalCode: data.postal_code || null,
+      annualIncome: data.annual_income || null,
+      idType: data.id_type || null,
+      idNumber: data.id_number || null,
+      transferPin: data.transfer_pin || null,
+      role: data.role || 'customer',
+      isVerified: data.is_verified || false,
+      isActive: data.is_active || false,
+      balance: data.balance || '0.00',
       createdAt: data.created_at,
-      updatedAt: data.updated_at || null,
-      supabaseUserId: data.supabase_user_id
+      updatedAt: data.updated_at || null
     };
   }
 

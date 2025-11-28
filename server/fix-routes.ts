@@ -143,7 +143,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         email: validatedData.email,
         password: validatedData.password,
         email_confirm: true, // Auto-confirm for banking app
-        user_metadata: {
+        user_details: {
           first_name: validatedData.firstName,
           last_name: validatedData.lastName,
           phone: validatedData.phone,
@@ -581,11 +581,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
-          actionType: 'create_transaction',
+          action: 'create_transaction',
           targetType: 'transaction',
           targetId: transaction.id,
-          description: `Created ${body.type} transaction of $${body.amount} for customer ${customerIdNum}`,
-          metadata: JSON.stringify({ customerId: customerIdNum, amount: body.amount, type: body.type })
+          details: { customerId: customerIdNum, amount: body.amount, type: body.type }
         });
       }
 
@@ -615,7 +614,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Account not found' });
       }
 
-      const newBalance = parseFloat(account.balance.toString()) + balanceChange;
+      const newBalance = parseFloat((account.balance || '0').toString()) + balanceChange;
       await storage.updateAccount?.(accountId, { balance: newBalance.toString() });
 
       // Create transaction record
@@ -633,11 +632,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
-          actionType: 'update_account_balance',
+          action: 'update_account_balance',
           targetType: 'account',
-          targetId: accountId.toString(),
-          description: `${body.type === 'credit' ? 'Credited' : 'Debited'} $${body.amount} - ${body.description}`,
-          metadata: JSON.stringify({ accountId, amount: body.amount, type: body.type, oldBalance: account.balance, newBalance })
+          targetId: accountId,
+          details: { accountId, amount: body.amount, type: body.type, oldBalance: account.balance, newBalance }
         });
       }
 
@@ -676,7 +674,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           targetType: 'user',
           targetId: customerId.toString(),
           description: `Updated customer balance by $${body.amount} - ${body.description}`,
-          metadata: JSON.stringify({ customerId, amount: body.amount, oldBalance: oldUser?.balance, newBalance: updatedUser.balance, description: body.description })
+          details: JSON.stringify({ customerId, amount: body.amount, oldBalance: oldUser?.balance, newBalance: updatedUser.balance, description: body.description })
         });
       }
 
@@ -715,7 +713,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           targetType: 'user',
           targetId: customerId.toString(),
           description: `Updated customer profile: ${Object.keys(updates).join(', ')}`,
-          metadata: JSON.stringify({ customerId, updates })
+          details: JSON.stringify({ customerId, updates })
         });
       }
 
@@ -888,7 +886,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         name: 'Activate user account',
         execute: async () => {
           updatedUser = await storage.updateUser(registrationId, {
-            status: 'active',
+            isActive: true,
             isVerified: true
           });
           if (!updatedUser) throw new Error('Registration not found');
@@ -901,7 +899,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         execute: async () => {
           const accounts = await storage.getUserAccounts(registrationId);
           for (const account of accounts) {
-            await storage.updateAccount?.(account.id, { isActive: true });
+            await storage.updateAccount?.(account.id, { status: 'active' });
           }
           return accounts;
         }
@@ -930,7 +928,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           targetType: 'user',
           targetId: registrationId,
           description: `Approved registration for ${updatedUser.fullName} (${updatedUser.email})`,
-          metadata: JSON.stringify({ userId: registrationId, initialBalance: initialBalance || 0 })
+          details: JSON.stringify({ userId: registrationId, initialBalance: initialBalance || 0 })
         });
       }
 
@@ -978,11 +976,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
-          actionType: 'reject_registration',
+          action: 'reject_registration',
           targetType: 'user',
           targetId: registrationId,
           description: `Rejected registration for ${user.fullName} (${user.email})`,
-          metadata: JSON.stringify({ userId: registrationId, reason })
+          details: JSON.stringify({ userId: registrationId, reason })
         });
       }
 
@@ -1628,7 +1626,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           targetType: 'support_ticket',
           targetId: id.toString(),
           description: actionDescription,
-          metadata: JSON.stringify({ ticketId: id, updates, previousStatus: ticket?.status })
+          details: JSON.stringify({ ticketId: id, updates, previousStatus: ticket?.status })
         });
       }
 
@@ -1827,10 +1825,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         email,
         password,
         email_confirm: true, // Auto-confirm
-        user_metadata: {
+        user_details: {
           full_name: fullName
         },
-        app_metadata: {
+        app_details: {
           role: 'admin' // CRITICAL: Sets admin role in app_metadata
         }
       });
