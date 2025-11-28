@@ -5,7 +5,7 @@ import { CompleteSupabaseStorage } from './supabase-storage-complete';
 import type { IStorage } from './storage';
 
 // Environment-based storage factory
-// PRIMARY: PostgreSQL direct (production-grade), FALLBACK: Supabase
+// COMBINED STORAGE: Supabase Auth (login) + Supabase REST API (data) - works from Replit
 export function createStorage(): IStorage {
   const dataSource = config.getDataSource();
   
@@ -15,17 +15,18 @@ export function createStorage(): IStorage {
   console.log(`🔐 Auth Source: ${config.getAuthSource()}`);
   console.log('');
   
-  // PRIMARY: Use PostgreSQL as the single source of truth when available
-  if (process.env.DATABASE_URL) {
-    console.log('✅ Using PostgreSQL as PRIMARY source of truth');
-    console.log('📍 Supabase Auth (optional): available for sync if configured');
-    return new PostgresStorage();
+  // PRIMARY: Use Supabase REST API (works from Replit, direct Postgres blocked by DNS)
+  if (process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.log('✅ Using Supabase REST API for combined auth + data storage');
+    console.log('📍 Supabase Auth: handles login/authentication');
+    console.log('📍 Supabase REST: handles all data operations (user, PIN, accounts, etc)');
+    return new CompleteSupabaseStorage();
   }
   
-  // FALLBACK: Supabase complete integration (if Postgres unavailable)
-  if (process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.log('⚠️  Using Supabase as fallback (Postgres not available)');
-    return new CompleteSupabaseStorage();
+  // FALLBACK: Direct PostgreSQL (only if Supabase not available)
+  if (process.env.DATABASE_URL) {
+    console.log('⚠️  Using PostgreSQL direct connection (may fail from Replit)');
+    return new PostgresStorage();
   }
   
   // FALLBACK: Supabase public schema
@@ -35,7 +36,7 @@ export function createStorage(): IStorage {
   }
   
   // PRODUCTION-READY: No fallback to mock data - database required
-  throw new Error('❌ CRITICAL: No database configured! Set DATABASE_URL or SUPABASE_DATABASE_URL environment variable.');
+  throw new Error('❌ CRITICAL: No database configured! Set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.');
 }
 
 // Export singleton storage instance

@@ -38,12 +38,7 @@ function getConnection() {
     max: 10,
     idle_timeout: 20,
     connect_timeout: 60,
-    statement_timeout: 60000,
-    application_name: 'worldbank',
     ssl: 'require',
-    types: {
-      bigint: postgres.BigInt,
-    },
   });
   return sql;
 }
