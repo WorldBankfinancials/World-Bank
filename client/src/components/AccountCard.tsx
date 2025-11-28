@@ -79,7 +79,7 @@ export default function AccountCard({
             <div>
               <p className="text-sm text-gray-600">Available Balance</p>
               <p className="text-2xl font-bold text-green-600">
-                {showBalance ? formatCurrency(userProfile?.balance || account.balance, account.currency) : "••••••"}
+                {showBalance ? formatCurrency(Number(userProfile?.balance) || account.balance, account.currency) : "••••••"}
               </p>
             </div>
             {onToggleBalance && (

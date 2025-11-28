@@ -73,6 +73,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/create-test-user', async (req: Request, res: Response) => {
     try {
       const testUser = await storage.createUser({
+        username: 'testuser',
         email: 'test@worldbank.com',
         fullName: 'Test User',
         phone: '1234567890',
