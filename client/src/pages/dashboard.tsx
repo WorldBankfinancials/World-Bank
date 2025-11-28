@@ -509,8 +509,27 @@ export default function Dashboard() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showNotifications] = useState(false);
   const [userData, setUserData] = useState<CustomerData | null>(null);
-  const [recentTransactions, setRecentTransactions] = useState<TransactionData[]>([]);
   const queryClient = useQueryClient();
+
+  // Fetch real transaction data from API instead of hardcoded array
+  const { data: recentTransactions = [], isLoading: transactionsLoading, error: transactionsError } = useQuery<TransactionData[]>({
+    queryKey: ['/api/transactions/recent'],
+    queryFn: async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/admin/transactions');
+        if (!response.ok) {
+          console.error('Failed to fetch transactions:', response.status);
+          return [];
+        }
+        const data = await response.json();
+        return Array.isArray(data) ? data.slice(0, 10) : [];
+      } catch (error: any) {
+        console.error('Transaction fetch error:', error);
+        return [];
+      }
+    }
+  });
 
   // Track user presence for real-time online/offline status
   // usePresence disabled for backend auth mode
@@ -609,30 +628,13 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [userProfile]);
 
-  // Fetch recent transactions at top level
+  // Refresh transactions every 30 seconds
   useEffect(() => {
-    const fetchRecentTransactions = async () => {
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch('/api/accounts/1/transactions');
-        if (!response.ok) {
-          return;
-        }
-        try {
-          const data = await response.json();
-          if (Array.isArray(data)) {
-            // Using real API data from useQuery;
-          }
-        } catch (e) {
-        }
-      } catch (error) {
-      }
-    };
-
-    fetchRecentTransactions();
-    const interval = setInterval(fetchRecentTransactions, 30000);
+    const interval = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions/recent'] });
+    }, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [queryClient]);
 
   const profileMenuItems = [
     { 

@@ -351,30 +351,30 @@ export default function SimpleAdmin() {
     }
   };
 
-  // Real-time subscriptions setup (polling instead)
+  // Real-time data fetching with polling
   useEffect(() => {
     if (!isAuthenticated) return;
-    // Realtime disabled - using polling with interval refresh
-  }, [isAuthenticated]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchUserData();
-      fetchPendingRegistrations();
-      fetchPendingTransfers();
-      fetchSupportTickets();
-      fetchCustomers();
-      
-      // Refresh data every 30 seconds as backup
-      const interval = setInterval(() => {
+    
+    // Initial fetch
+    fetchUserData();
+    fetchPendingRegistrations();
+    fetchPendingTransfers();
+    fetchSupportTickets();
+    fetchCustomers();
+    
+    // Refresh data every 10 seconds for real-time feel
+    const interval = setInterval(() => {
+      try {
         fetchPendingRegistrations();
         fetchPendingTransfers();
         fetchSupportTickets();
         fetchCustomers();
-      }, 30000);
-      
-      return () => clearInterval(interval);
-    }
+      } catch (error) {
+        console.error('Real-time fetch error:', error);
+      }
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, [isAuthenticated]);
 
   const handleLogin = async (e: React.FormEvent) => {
