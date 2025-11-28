@@ -1938,7 +1938,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CUSTOMER LOGIN ENDPOINT - DUAL SOURCE: Postgres + Supabase Auth
+  // EMERGENCY LOGIN - Supabase Auth ONLY (bypass database for now)
   app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
@@ -1947,92 +1947,105 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Email and password required' });
       }
 
-      // DUAL AUTH: Try Supabase first, fallback to Postgres
-      let passwordValid = false;
-      let supabaseUser: any = null;
-      let dbUser = await storage.getUserByEmail(email);
+      // SUPABASE AUTH ONLY - Skip database if unavailable
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
 
-      // SOURCE 1: Supabase Auth (primary for password verification)
+      const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error('❌ Supabase Auth error:', error.message);
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      if (!data.session || !data.user) {
+        console.error('❌ No session returned from Supabase');
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      const supabaseUser = data.user;
+      console.log('✅ Password verified via Supabase Auth');
+
+      // Try to sync with Postgres database (if available)
+      let dbUser: any = null;
       try {
-        const { createClient } = await import('@supabase/supabase-js');
-        const supabaseAdmin = createClient(
-          process.env.VITE_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!,
-          { auth: { autoRefreshToken: false, persistSession: false } }
-        );
-
-        const { data, error } = await supabaseAdmin.auth.signInWithPassword({
-          email,
-          password
-        });
-
-        if (error) {
-          console.error('❌ Supabase Auth error:', error.message);
-        } else if (!error && data.session) {
-          passwordValid = true;
-          supabaseUser = data.user;
-          console.log('✅ Password verified via Supabase Auth');
-          
-          // SYNC: Ensure user exists in Postgres with isActive=true (auto-approve)
-          if (!dbUser) {
-            console.log('📍 Creating missing user in Postgres from Supabase Auth');
-            dbUser = await storage.createUser({
-              username: email.split('@')[0],
-              firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
-              lastName: supabaseUser.user_metadata?.last_name || 'User',
-              email: email,
-              phone: supabaseUser.user_metadata?.phone || '',
-              password: 'supabase_auth',
-              role: 'customer',
-              isActive: true,
-              isVerified: true,
-              balance: '0'
-            });
-          } else if (!dbUser.isActive) {
-            // Auto-activate if Supabase Auth succeeded
-            console.log('📍 Auto-activating user account after successful Supabase Auth');
-            dbUser = await storage.updateUser(dbUser.id, { isActive: true, isVerified: true });
-          }
+        dbUser = await storage.getUserByEmail(email);
+        if (!dbUser) {
+          console.log('📍 Creating missing user in Postgres from Supabase Auth');
+          dbUser = await storage.createUser({
+            username: email.split('@')[0],
+            firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
+            lastName: supabaseUser.user_metadata?.last_name || 'User',
+            email: email,
+            phone: supabaseUser.user_metadata?.phone || '',
+            password: 'supabase_auth',
+            role: supabaseUser.app_metadata?.role || 'customer',
+            isActive: true,
+            isVerified: true,
+            balance: '0'
+          });
+        } else if (!dbUser.isActive) {
+          console.log('📍 Auto-activating user after Supabase Auth success');
+          dbUser = await storage.updateUser(dbUser.id, { isActive: true, isVerified: true });
         }
-      } catch (supabaseError: any) {
-        console.log('⚠️  Supabase Auth error (continuing):', supabaseError?.message);
-      }
-
-      // Check if we got password validation from Supabase
-      if (!dbUser) {
-        console.log('❌ User not found in database:', email);
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-
-      if (!passwordValid) {
-        console.log('❌ Password verification failed for:', email);
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-
-      if (!dbUser.isActive) {
-        console.log('⚠️  Account not active:', email);
-        return res.status(403).json({ 
-          error: 'Account pending approval',
-          message: 'Your account is pending approval. Please check your email for updates.'
-        });
+      } catch (dbError: any) {
+        console.warn('⚠️  Database sync failed (continuing with Supabase Auth only):', dbError?.message?.substring(0, 100));
+        // Don't fail - Supabase Auth succeeded, that's enough
       }
 
       // Generate token: base64(email:timestamp:id)
-      const tokenData = `${email}:${Date.now()}:${dbUser.id}`;
+      const userId = dbUser?.id || supabaseUser.id;
+      const tokenData = `${email}:${Date.now()}:${userId}`;
       const token = Buffer.from(tokenData).toString('base64');
 
       console.log('✅ Login successful for:', email);
       res.json({ 
         token,
         user: {
-          id: dbUser.id,
-          email: dbUser.email,
-          role: dbUser.role || 'customer'
+          id: userId,
+          email: supabaseUser.email,
+          role: supabaseUser.app_metadata?.role || 'customer'
         }
       });
     } catch (error: any) {
       console.error('❌ Login error:', error);
       res.status(500).json({ error: 'Login failed', details: error.message });
+    }
+  });
+
+  // BOOTSTRAP: List all users in Supabase Auth (for debugging)
+  app.get('/api/admin/list-users', async (req: Request, res: Response) => {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+
+      const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+      if (error) {
+        return res.status(500).json({ error: 'Failed to list users', details: error.message });
+      }
+
+      res.json({
+        total: data.users.length,
+        users: data.users.map((u: any) => ({
+          id: u.id,
+          email: u.email,
+          role: u.app_metadata?.role || 'customer',
+          verified: u.email_confirmed_at ? 'yes' : 'no'
+        }))
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to list users', details: error.message });
     }
   });
 
