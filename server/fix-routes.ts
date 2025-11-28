@@ -2064,3 +2064,35 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   return httpServer;
 }
+// ==================== LIVE CHAT ENDPOINTS ====================
+import { setupLiveChatWebSocket, getChatHistory, getActiveSessions, createTicketFromChat } from './supabase-live-chat';
+
+export function registerLiveChatRoutes(app: Express) {
+  // Get chat history
+  app.get('/api/chat/history', getChatHistory);
+
+  // Get active chat sessions (admin only)
+  app.get('/api/chat/sessions', requireAdmin, getActiveSessions);
+
+  // Create support ticket from chat
+  app.post('/api/chat/create-ticket', requireAuth, createTicketFromChat);
+
+  // Real-time notifications
+  app.post('/api/chat/notify', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { userId, type, message } = req.body;
+      
+      // Send via Supabase real-time
+      const channel = supabase.channel(`notifications:${userId}`);
+      channel.send({
+        type: 'broadcast',
+        event: type,
+        payload: { message, timestamp: new Date() }
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+}
