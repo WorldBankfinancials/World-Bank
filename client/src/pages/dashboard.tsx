@@ -360,6 +360,7 @@ function AddMoneySection() {
 
 // Alerts Section Component
 function AlertsSection() {
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState({
     transactions: true,
     security: true,
@@ -367,38 +368,16 @@ function AlertsSection() {
     marketing: false
   });
 
-  const alerts = [
-    {
-      id: 1,
-      title: "Payment Received",
-      message: "You received $250.00 from John Smith",
-      time: "2 hours ago",
-      icon: ArrowDownRight,
-      color: "text-green-600",
-      bgColor: "bg-green-100",
-      read: false
-    },
-    {
-      id: 2,
-      title: "Security Alert",
-      message: "New device login detected",
-      time: "4 hours ago",
-      icon: Shield,
-      color: "text-orange-600",
-      bgColor: "bg-orange-100",
-      read: false
-    },
-    {
-      id: 3,
-      title: "Monthly Statement",
-      message: "Your December statement is ready",
-      time: "2 days ago",
-      icon: CheckCircle,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100",
-      read: true
+  // Fetch real alerts from API
+  const { data: alerts = [] } = useQuery({
+    queryKey: ['/api/alerts'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/alerts');
+      if (!response.ok) return [];
+      return response.json().catch(() => []);
     }
-  ];
+  });
 
   const handleNotificationToggle = (key: keyof typeof notifications) => {
     setNotifications(prev => ({
@@ -408,10 +387,10 @@ function AlertsSection() {
   };
 
   const markAsRead = (alertId: number) => {
-    // Mark alert as read in system
+    // Mark alert as read via API
   };
 
-  const unreadCount = alerts.filter(alert => !alert.read).length;
+  const unreadCount = Array.isArray(alerts) ? alerts.filter((alert: any) => !alert.read).length : 0;
 
   return (
     <div className="px-4 mb-6">

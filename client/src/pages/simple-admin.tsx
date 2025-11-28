@@ -419,7 +419,6 @@ export default function SimpleAdmin() {
       sessionStorage.setItem('adminUser', JSON.stringify(data.user));
       
       setIsAuthenticated(true);
-      console.log('✅ Admin authenticated:', data.user.email);
     } catch (error) {
       console.error('Login error:', error);
       toast({
