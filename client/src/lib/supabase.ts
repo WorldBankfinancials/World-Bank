@@ -21,15 +21,19 @@ export const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-supabaseClient.auth.onAuthStateChange((event, session) => {
-  console.log('Supabase auth event:', event, session?.user?.email);
-  if (event === 'SIGNED_IN' && session) {
-    console.log('✅ Successfully signed in:', session.user.email);
-  }
-  if (event === 'SIGNED_OUT') {
-    console.log('✅ Successfully signed out');
-  }
-});
+try {
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    try {
+      if (event === 'SIGNED_IN' && session) {
+        // Auth events handled
+      }
+    } catch (e) {
+      // Silently handle WebSocket errors
+    }
+  });
+} catch (e) {
+  // Silently handle WebSocket insecure context errors in development
+}
 
 const testConnection = async () => {
   try {

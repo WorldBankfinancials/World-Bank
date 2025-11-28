@@ -234,51 +234,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    let subscription: any = null;
+    let userChannel: any = null;
 
-      if (event === 'SIGNED_OUT') {
-        console.log('✅ Successfully signed out');
-        setUser(null);
-        setLoading(false);
-      } else if (event === 'INITIAL_SESSION' && session) {
-        // Handle initial session
-        console.log('🔐 Restoring session');
-        fetchUserData(session.user); // Changed from fetchUserProfile to fetchUserData
-      } else if (event === 'SIGNED_IN' && session) {
-        console.log('✅ User signed in');
-        setUser(session.user);
-        await fetchUserData(session.user);
-        setLoading(false);
-
-      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        console.log('🔄 Token refreshed');
-        setUser(session.user);
-        await fetchUserData(session.user);
-        setLoading(false);
-
-      } else if (event === 'INITIAL_SESSION') {
-        console.log('ℹ️ Initial session check');
-        setLoading(false);
-      }
-    });
-
-    // Real-time subscription for user profile changes
-    const userChannel = supabase
-      .channel('user_profile_changes')
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'bank_users' },
-        async (payload: any) => {
-          console.log('👤 User profile updated by admin:', payload);
-          if (user) {
-            await fetchUserData(user);
+    try {
+      const authSubscription = supabase.auth.onAuthStateChange(async (event, session) => {
+        try {
+          if (event === 'SIGNED_OUT') {
+            setUser(null);
+            setLoading(false);
+          } else if (event === 'INITIAL_SESSION' && session) {
+            fetchUserData(session.user);
+          } else if (event === 'SIGNED_IN' && session) {
+            setUser(session.user);
+            await fetchUserData(session.user);
+            setLoading(false);
+          } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+            setUser(session.user);
+            await fetchUserData(session.user);
+            setLoading(false);
+          } else if (event === 'INITIAL_SESSION') {
+            setLoading(false);
           }
+        } catch (e) {
+          // Silently handle event errors
         }
-      )
-      .subscribe();
+      });
+      subscription = authSubscription.data?.subscription;
+    } catch (e) {
+      // Silently handle WebSocket insecure context errors
+    }
+
+    try {
+      userChannel = supabase
+        .channel('user_profile_changes')
+        .on('postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'bank_users' },
+          async (payload: any) => {
+            if (user) {
+              await fetchUserData(user);
+            }
+          }
+        )
+        .subscribe();
+    } catch (e) {
+      // Silently handle realtime subscription errors
+    }
 
     return () => {
-      subscription.unsubscribe();
-      supabase.removeChannel(userChannel);
+      try {
+        subscription?.unsubscribe();
+      } catch (e) {}
+      try {
+        supabase.removeChannel(userChannel);
+      } catch (e) {}
     };
   }, []);
 
