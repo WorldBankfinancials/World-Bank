@@ -1420,15 +1420,12 @@ export class SupabasePublicStorage implements IStorage {
       return {
         id: data.id,
         userId: data.user_id,
-        type: data.investment_type,
+        type: data.investment_type || 'stock',
         amount: data.amount?.toString() || '0',
-        currentValue: data.current_value?.toString() || null,
-        returnRate: data.return_rate?.toString() || null,
-        maturityDate: data.maturity_date,
         status: data.status,
         createdAt: data.created_at,
         updatedAt: data.updated_at
-      };
+      } as any;
     } catch (error) {
       return undefined;
     }
@@ -1437,11 +1434,8 @@ export class SupabasePublicStorage implements IStorage {
   async createInvestment(investment: InsertInvestment): Promise<Investment> {
     const { data, error } = await supabase.from('investments').insert({
       user_id: investment.userId,
-      investment_type: investment.investmentType,
+      investment_type: investment.type || 'stock',
       amount: investment.amount,
-      current_value: investment.currentValue,
-      return_rate: investment.returnRate,
-      maturity_date: investment.maturityDate,
       status: investment.status || 'active'
     }).select().single();
     
@@ -1450,15 +1444,12 @@ export class SupabasePublicStorage implements IStorage {
     return {
       id: data.id,
       userId: data.user_id,
-      type: data.investment_type,
+      type: data.investment_type || 'stock',
       amount: data.amount?.toString() || '0',
-      currentValue: data.current_value?.toString() || null,
-      returnRate: data.return_rate?.toString() || null,
-      maturityDate: data.maturity_date,
       status: data.status,
       createdAt: data.created_at,
       updatedAt: data.updated_at
-    };
+    } as any;
   }
 
   async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> {
@@ -1472,15 +1463,12 @@ export class SupabasePublicStorage implements IStorage {
     return {
       id: data.id,
       userId: data.user_id,
-      type: data.investment_type,
+      type: data.investment_type || 'stock',
       amount: data.amount?.toString() || '0',
-      currentValue: data.current_value?.toString() || null,
-      returnRate: data.return_rate?.toString() || null,
-      maturityDate: data.maturity_date,
       status: data.status,
       createdAt: data.created_at,
       updatedAt: data.updated_at
-    };
+    } as any;
   }
 
   // Messages methods
