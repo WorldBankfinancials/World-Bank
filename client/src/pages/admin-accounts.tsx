@@ -50,11 +50,14 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
           const accountsData = await response.json();
           setAccounts(accountsData);
         } catch (e) {
+          console.error('Failed to parse accounts JSON:', e);
           throw new Error('Failed to parse accounts');
         }
+      } else {
+        console.error('Failed to fetch accounts - HTTP error:', response.status, response.statusText);
       }
     } catch (error) {
-      // console.error('Error fetching accounts:', error);
+      console.error('Error fetching accounts:', error);
     }
   };
 
@@ -84,6 +87,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
         try {
           newAccount = await response.json();
         } catch (e) {
+          console.error('Failed to parse account creation response:', e);
           throw new Error('Failed to parse new account response');
         }
         setAccounts(prev => [...prev, newAccount]);
@@ -99,9 +103,11 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
           title: 'Account Created',
           description: 'New account has been created successfully.',
         });
+      } else {
+        console.error('Failed to create account - HTTP error:', response.status, response.statusText);
       }
     } catch (error) {
-      // console.error('Error creating account:', error);
+      console.error('Error creating account:', error);
       toast({
         title: 'Creation Failed',
         description: 'Failed to create account. Please try again.',
@@ -134,9 +140,11 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
           title: 'Account Updated',
           description: 'Account information has been updated successfully.',
         });
+      } else {
+        console.error('Failed to update account - HTTP error:', response.status, response.statusText);
       }
     } catch (error) {
-      // console.error('Error updating account:', error);
+      console.error('Error updating account:', error);
       toast({
         title: 'Update Failed',
         description: 'Failed to update account. Please try again.',
@@ -160,9 +168,11 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
           title: 'Account Deleted',
           description: 'Account has been deleted successfully.',
         });
+      } else {
+        console.error('Failed to delete account - HTTP error:', response.status, response.statusText);
       }
     } catch (error) {
-      // console.error('Error deleting account:', error);
+      console.error('Error deleting account:', error);
       toast({
         title: 'Deletion Failed',
         description: 'Failed to delete account. Please try again.',
