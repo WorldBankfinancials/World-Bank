@@ -141,13 +141,13 @@ export function useRealtimePresence(userId: number | undefined) {
         const state = channel.presenceState();
         console.log('👥 Online users:', state);
       })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+      .on('presence', { event: 'join' }, ({ key, newPresences }: any) => {
         console.log('✅ User joined:', key, newPresences);
       })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }: any) => {
         console.log('👋 User left:', key, leftPresences);
       })
-      .subscribe(async (status) => {
+      .subscribe(async (status: any) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({
             user_id: userId,

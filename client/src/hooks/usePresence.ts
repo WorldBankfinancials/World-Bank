@@ -73,10 +73,10 @@ export function useOnlineUsers(onUsersUpdate: (users: any[]) => void) {
         const onlineUsers = Object.values(state).flat();
         onUsersUpdate(onlineUsers);
       })
-      .on('presence', { event: 'join' }, ({ newPresences }) => {
+      .on('presence', { event: 'join' }, ({ newPresences }: any) => {
         console.log('New users joined:', newPresences);
       })
-      .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+      .on('presence', { event: 'leave' }, ({ leftPresences }: any) => {
         console.log('Users left:', leftPresences);
       })
       .subscribe();

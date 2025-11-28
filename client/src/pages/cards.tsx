@@ -56,7 +56,7 @@ export default function Cards() {
 
           if (error) throw error;
           
-          setCreditCards(cards?.map(card => ({
+          setCreditCards(cards?.map((card: any) => ({
             id: card.id,
             name: card.card_name,
             number: card.card_number,
@@ -128,7 +128,7 @@ export default function Cards() {
                 .eq('user_id', bankUser.id);
 
               if (!error) {
-                setCreditCards(cards?.map(card => ({
+                setCreditCards(cards?.map((card: any) => ({
                   id: card.id,
                   name: card.card_name,
                   number: card.card_number,

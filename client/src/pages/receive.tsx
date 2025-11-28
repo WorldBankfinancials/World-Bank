@@ -78,7 +78,7 @@ export default function Receive() {
             .order('created_at', { ascending: false })
             .limit(5);
 
-          setPendingRequests(messages?.map(m => ({
+          setPendingRequests(messages?.map((m: any) => ({
             from: m.sender_name,
             amount: m.metadata?.amount || '$0.00',
             time: new Date(m.created_at).toLocaleDateString(),

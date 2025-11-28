@@ -114,7 +114,7 @@ export default function AddMoney() {
               .order('created_at', { ascending: false })
               .limit(5);
 
-            setRecentTransactions(deposits?.map(d => ({
+            setRecentTransactions(deposits?.map((d: any) => ({
               method: d.description || 'Debit Card',
               amount: `$${parseFloat(d.amount || '0').toFixed(2)}`,
               time: new Date(d.created_at).toLocaleDateString(),

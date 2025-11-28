@@ -328,7 +328,7 @@ class RealtimeChat {
 
     if (error) throw error;
 
-    return data.map(msg => ({
+    return data.map((msg: any) => ({
       id: msg.id,
       senderId: msg.sender_id,
       senderName: msg.sender_name,
@@ -368,7 +368,7 @@ class RealtimeAlerts {
     const { data, error } = await query;
     if (error) throw error;
 
-    return data.map(alert => ({
+    return data.map((alert: any) => ({
       id: alert.id,
       userId: alert.user_id,
       title: alert.title,
