@@ -32,6 +32,7 @@ import { useRealtimeTransactions, useRealtimeSupportTickets } from "@/hooks/useR
 import type { Transaction, User } from "@shared/schema";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { CustomerData } from "@/types";
 
 
 interface SupportTicket {

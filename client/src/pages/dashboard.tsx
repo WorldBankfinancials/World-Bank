@@ -1018,11 +1018,11 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <p className="font-medium">{tx.description}</p>
-                        <p className="text-sm text-gray-500">{new Date(tx.date || tx.created_at).toLocaleDateString()}</p>
+                        <p className="text-sm text-gray-500">{new Date(tx.date || tx.created_at || new Date()).toLocaleDateString()}</p>
                       </div>
                     </div>
                     <span className={`font-medium ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-                      {tx.type === 'credit' ? '+' : '-'}${parseFloat(tx.amount).toFixed(2)}
+                      {tx.type === 'credit' ? '+' : '-'}${parseFloat(String(tx.amount)).toFixed(2)}
                     </span>
                   </div>
                 ))

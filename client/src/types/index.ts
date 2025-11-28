@@ -60,6 +60,8 @@ export interface TransactionData {
 export interface CustomerData {
   id: number | string;
   fullName?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   accountNumber?: string;
   accountId?: string;

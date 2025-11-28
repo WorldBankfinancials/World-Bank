@@ -138,7 +138,16 @@ export default function SimpleAdmin() {
   const [editForm, setEditForm] = useState({
     fullName: '',
     email: '',
-    status: 'active'
+    status: 'active',
+    phone: '',
+    profession: '',
+    address: '',
+    city: '',
+    country: '',
+    postalCode: '',
+    dateOfBirth: '',
+    nationality: '',
+    annualIncome: ''
   });
 
   const fetchUserData = async () => {

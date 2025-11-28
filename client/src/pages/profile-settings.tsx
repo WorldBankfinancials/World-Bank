@@ -83,7 +83,7 @@ export default function ProfileSettings() {
                       position: 'relative'
                     }}
                   >
-                    {displayUser?.firstName?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'U'}
+                    {(displayUser?.firstName || displayUser?.fullName || 'U')?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'U'}
                     <div 
                       style={{
                         position: 'absolute',
@@ -99,7 +99,7 @@ export default function ProfileSettings() {
                   </div>
                 )}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{displayUser?.firstName || 'User'}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">{displayUser?.firstName || displayUser?.fullName || 'User'}</h3>
                   <p className="text-gray-600">{(displayUser as any)?.profession || 'Customer'}</p>
                   <Badge className="bg-green-100 text-green-800 mt-1">
                     <Check className="w-3 h-3 mr-1" />
@@ -111,7 +111,7 @@ export default function ProfileSettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('full_name')}</label>
-                  <p className="text-gray-900 font-medium">{displayUser?.firstName || 'Not provided'}</p>
+                  <p className="text-gray-900 font-medium">{displayUser?.firstName || displayUser?.fullName || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('email_address')}</label>
