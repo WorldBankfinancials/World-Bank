@@ -16,38 +16,22 @@ function generateAccountId(): string {
 export async function createNewUserWithUniqueData(userData: Partial<InsertUser> = {}): Promise<any> {
   const userId = Date.now();
   
-  // SECURITY: Generate secure random PIN (1000-9999) instead of hardcoding
-  const securePIN = Math.floor(Math.random() * 9000 + 1000).toString();
-  
   // Create new user with unique data - NO automatic accounts
   const newUser = await storage.createUser({
     username: userData.username || `user_${userId}`,
-    passwordHash: userData.passwordHash || "supabase_auth", // Always use Supabase for passwords
-    fullName: userData.fullName || `New Customer ${userId}`,
+    password: userData.password || "supabase_auth",
+    firstName: userData.firstName || "New",
+    lastName: userData.lastName || `Customer${userId}`,
     email: userData.email || `user${userId}@example.com`,
     phone: userData.phone || `+1-555-${String(userId).slice(-4)}`,
     accountNumber: generateAccountNumber(),
-    accountId: generateAccountId(),
+    accountId: userId,
     profession: userData.profession || "Professional",
-    dateOfBirth: userData.dateOfBirth || "1990-01-01",
-    address: userData.address || "123 Main Street",
-    city: userData.city || "New York",
-    state: userData.state || "NY",
-    country: userData.country || "United States",
-    postalCode: userData.postalCode || "10001",
-    annualIncome: userData.annualIncome || "$75,000",
-    idType: userData.idType || "Driver License",
-    idNumber: userData.idNumber || `DL${userId}`,
-    transferPin: userData.transferPin || securePIN, // Use secure random PIN, not hardcoded 1234
-    role: userData.role || "customer",
     balance: userData.balance || "0.00",
-    isVerified: false,
-    isOnline: false,
-    isActive: false,
     ...userData
   });
 
-  console.log(`✅ New user created: ${newUser.fullName} (ID: ${newUser.id}) - Admin must manually create accounts`);
+  console.log(`✅ New user created: ${newUser.firstName} ${newUser.lastName} (ID: ${newUser.id}) - Admin must manually create accounts`);
   
   return newUser;
 }

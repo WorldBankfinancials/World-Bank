@@ -4,11 +4,8 @@ export interface TransferApprovalData {
   transactionId: string;
   amount: number;
   currency: string;
-  recipientName: string;
-  recipientAccount: string;
-  bankName: string;
-  transferType: string;
-  purpose: string;
+  type: string;
+  description: string;
   status: 'pending_approval' | 'approved' | 'rejected';
   adminNotes?: string;
   userId: number;
@@ -26,18 +23,13 @@ export async function createTransferForApproval(data: TransferApprovalData) {
 
     // Create transaction record
     const transaction = await storage.createTransaction({
-      createdAt: new Date(),
       fromAccountId: fromAccount.id,
-      transactionType: data.transferType,
+      type: data.type,
       amount: data.amount.toString(),
-      description: `Transfer to ${data.recipientName} - ${data.purpose}`,
+      description: data.description,
       status: 'pending_approval',
-      recipientName: data.recipientName,
-      recipientCountry: 'Unknown',
-      bankName: data.bankName,
-      swiftCode: '',
-      transferPurpose: data.purpose,
-      adminNotes: null
+      currency: data.currency,
+      referenceNumber: `TXN-${Date.now()}`
     });
 
     return transaction;
@@ -111,10 +103,9 @@ async function createSupportTicketForRejection(transaction: any, rejectionReason
     const ticket = await storage.createSupportTicket({
       userId: account.userId,
       subject: `Transfer Rejection - Transaction #${transaction.id}`,
-      description: `Your transfer has been rejected.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Recipient: ${transaction.recipientName}\n- Reason for rejection: ${rejectionReason}\n\nPlease contact support for assistance.`,
-      category: 'transfer_issue',
-      priority: 'high',
-      status: 'open'
+      description: `Your transfer has been rejected.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Reason for rejection: ${rejectionReason}\n\nPlease contact support for assistance.`,
+      status: 'open',
+      priority: 'high'
     });
 
     console.log(`Auto-created support ticket #${ticket.id} for rejected transfer #${transaction.id}`);
