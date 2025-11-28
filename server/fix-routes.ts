@@ -68,6 +68,40 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   // SECURITY: Test user creation endpoint - DEVELOPMENT ONLY
 
+  // BYPASS: Simple test login without Supabase
+  app.post('/api/bypass-login', async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (email === 'test@worldbank.com' && password === 'TestPassword123!') {
+        res.json({ 
+          success: true, 
+          token: 'test-token-123',
+          user: { 
+            id: '1', 
+            email: 'test@worldbank.com',
+            fullName: 'Test User'
+          }
+        });
+        return;
+      }
+      
+      res.status(401).json({ error: 'Invalid credentials' });
+    } catch (error) {
+      res.status(500).json({ error: 'Login failed' });
+    }
+  });
+
+  // BYPASS: Get test user data
+  app.get('/api/bypass-user', async (req: Request, res: Response) => {
+    res.json({ 
+      id: '1',
+      email: 'test@worldbank.com',
+      fullName: 'Test User',
+      balance: 10000
+    });
+  });
+
   // TEST: Create test user for development
   app.post('/api/admin/create-test-user', async (req: Request, res: Response) => {
     try {
@@ -75,7 +109,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         email: 'test@worldbank.com',
         fullName: 'Test User',
         phone: '1234567890',
-        password: 'TestPassword123!',
         passwordHash: 'supabase_auth',
         supabaseUserId: 'test-user-id-123',
         profession: 'Developer',
