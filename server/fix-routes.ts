@@ -140,8 +140,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // STEP 2: Create local database profile - USING VALIDATED DATA ONLY
       try {
         // SECURITY: Hash the transfer PIN with bcrypt
-        const bcrypt = await import('bcryptjs');
-        const hashedPin = await bcrypt.default.hash(validatedData.transferPin, 10);
+        const bcryptModule = await import('bcryptjs');
+        const bcrypt = (bcryptModule.default || bcryptModule) as any;
+        const hashedPin = await bcrypt.hash(validatedData.transferPin, 10);
 
         console.log(`🔧 DEBUG: About to create user in database with supabaseUserId: ${supabaseUserId}`);
         const newUser = await storage.createUser({
