@@ -39,7 +39,7 @@ export default function Cards() {
   useEffect(() => {
     async function fetchCards() {
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
         if (!authUser) return;
 
         const { data: bankUser } = await supabase
@@ -88,7 +88,7 @@ export default function Cards() {
     if (!userProfile) return;
 
     async function setupRealtimeWithFilter() {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
       if (!authUser) return;
 
       const { data: bankUser } = await supabase
@@ -112,7 +112,7 @@ export default function Cards() {
         // Refetch cards when data changes
         async function refetchCards() {
           try {
-            const { data: { user: authUser } } = await supabase.auth.getUser();
+            const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
             if (!authUser) return;
 
             const { data: bankUser } = await supabase

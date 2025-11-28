@@ -307,7 +307,7 @@ class RealtimeChat {
   }
 
   async sendMessage(message: string, senderRole: 'admin' | 'customer') {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = localStorage.getItem('user'); const userData = user ? JSON.parse(user) : null; const user_user = userData;
     if (!user) throw new Error('User not authenticated');
 
     await supabase.from('messages').insert({

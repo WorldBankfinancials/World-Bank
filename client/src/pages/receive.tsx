@@ -60,7 +60,7 @@ export default function Receive() {
   useEffect(() => {
     async function fetchRequests() {
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
         if (!authUser) return;
 
         const { data: bankUser } = await supabase

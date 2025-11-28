@@ -21,7 +21,7 @@ export default function ProfileSettings() {
   useEffect(() => {
     async function fetchUserProfile() {
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
         
         if (!authUser) {
           setLocation('/login');

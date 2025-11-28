@@ -39,7 +39,7 @@ export default function CustomerSupport() {
 
     setIsSubmitting(true);
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
       if (!authUser) throw new Error('Not authenticated');
 
       const { data: bankUser } = await supabase
