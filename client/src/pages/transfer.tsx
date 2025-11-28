@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useToast } from "@/hooks/use-toast";
 import { COUNTRIES } from "@/data/countries";
 import { 
   Send, 
@@ -32,6 +33,7 @@ interface User {
 export default function Transfer() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
+  const { toast } = useToast();
   
   // Fetch user data with proper email parameter
   const { data: user, isLoading } = useQuery<User>({
@@ -97,8 +99,30 @@ export default function Transfer() {
   ];
 
   const handleTransfer = () => {
-    if (!amount || !recipientDetails.fullName || !recipientDetails.accountNumber) {
-      
+    if (!amount) {
+      toast({
+        title: 'Amount required',
+        description: 'Please enter a transfer amount.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    if (!recipientDetails.fullName) {
+      toast({
+        title: 'Recipient name required',
+        description: 'Please enter the recipient name.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    if (!recipientDetails.accountNumber) {
+      toast({
+        title: 'Account number required',
+        description: 'Please enter the recipient account number.',
+        variant: 'destructive'
+      });
       return;
     }
 
@@ -107,6 +131,12 @@ export default function Transfer() {
   };
 
   const verifyPinAndTransfer = async () => {
+    // Validation: Check user and userProfile are loaded
+    if (!user?.email && !userProfile?.email) {
+      setPinError("User profile not loaded. Please refresh the page.");
+      return;
+    }
+    
     if (!transferPin || transferPin.length !== 4) {
       setPinError("Please enter a 4-digit PIN");
       return;

@@ -1,5 +1,3 @@
-import type { User } from "@shared/schema";
-
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -11,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
 import { COUNTRIES } from "@/data/countries";
+import type { User } from "@shared/schema";
 import { 
   Globe, 
   ArrowRightLeft, 
@@ -29,10 +28,14 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 
 export default function InternationalTransfer() {
   const { t } = useLanguage();
+  const { userProfile } = useAuth();
+  const { toast } = useToast();
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [transferAmount, setTransferAmount] = useState('1000');
   const [fromCurrency, setFromCurrency] = useState('USD');
@@ -43,15 +46,40 @@ export default function InternationalTransfer() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showProcessingPage, setShowProcessingPage] = useState(false);
   const [transferId, setTransferId] = useState('');
+  
+  // CRITICAL: Fetch user data FIRST before using it
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ['/api/user', userProfile?.email],
+    queryFn: async () => {
+      if (!userProfile?.email) return null;
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/user?email=${encodeURIComponent(userProfile.email)}`);
+      if (!response.ok) throw new Error('Failed to fetch user');
+      return response.json();
+    },
+    enabled: !!userProfile?.email
+  });
 
   const handleInternationalTransfer = () => {
+    if (!user?.email) {
+      toast({
+        title: 'User data not loaded',
+        description: 'Please wait for your profile to load.',
+        variant: 'destructive'
+      });
+      return;
+    }
     setShowPinModal(true);
   };
 
   const handlePinSubmit = async () => {
-    // PIN verification process
+    // VALIDATION: Check user is loaded
+    if (!user?.email) {
+      setPinError("User profile not loaded. Please refresh the page.");
+      return;
+    }
     
-    // Validate PIN first
+    // PIN verification process
     if (!transferPin || transferPin.length !== 4) {
       setPinError("Please enter a 4-digit PIN");
       return;
@@ -73,7 +101,7 @@ export default function InternationalTransfer() {
         accountNumber: "0000000000",
         transferPurpose: "International Transfer",
         transferPin: transferPin,
-        userEmail: user?.email!
+        userEmail: user.email
       };
       
       const response = await authenticatedFetch('/api/international-transfers', {
@@ -103,14 +131,19 @@ export default function InternationalTransfer() {
     }
   };
 
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user'],
-  });
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">{t('loading')}</div>
+      </div>
+    );
+  }
+  
+  // Guard: ensure user is loaded
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-red-600">Failed to load user profile. Please refresh.</div>
       </div>
     );
   }
