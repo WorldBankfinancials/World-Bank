@@ -420,7 +420,7 @@ export default function SimpleAdmin() {
       
       setIsAuthenticated(true);
     } catch (error) {
-      console.error('Login error:', error);
+      // Login error occurred
       toast({
         title: 'Login Error',
         description: 'Failed to authenticate. Please check your credentials and try again.',

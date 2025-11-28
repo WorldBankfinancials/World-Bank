@@ -408,7 +408,7 @@ function AlertsSection() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
-            {alerts.slice(0, 3).map((alert) => (
+            {alerts.slice(0, 3).map((alert: any) => (
               <div
                 key={alert.id}
                 className={`p-3 border rounded-lg ${!alert.read ? 'bg-blue-50 border-blue-200' : 'bg-white'}`}

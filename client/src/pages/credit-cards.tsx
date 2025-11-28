@@ -33,6 +33,8 @@ export default function CreditCards() {
   const [selectedCard, setSelectedCard] = useState(0);
   const [showTransactions, setShowTransactions] = useState(true);
 
+  const { toast } = useToast();
+
   // NOW safe to return early - all hooks are called
   if (isLoading) {
     return (
@@ -41,8 +43,6 @@ export default function CreditCards() {
       </div>
     );
   }
-
-  const { toast } = useToast();
   
   const quickActions = [
     { icon: Lock, label: t('lock_card'), action: () => toast({ title: 'Card locked', description: 'Your card has been locked.' }) },
