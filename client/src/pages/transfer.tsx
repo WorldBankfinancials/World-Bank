@@ -34,16 +34,22 @@ export default function Transfer() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
   const { toast } = useToast();
+  const [dataError, setDataError] = useState<string | null>(null);
   
   // Fetch user data with proper email parameter
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading, error: fetchError } = useQuery<User>({
     queryKey: ['/api/user', userProfile?.email],
     queryFn: async () => {
-      if (!userProfile?.email) return null;
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch(`/api/user?email=${encodeURIComponent(userProfile.email)}`);
-      if (!response.ok) throw new Error('Failed to fetch user');
-      return response.json();
+      try {
+        if (!userProfile?.email) return null;
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch(`/api/user?email=${encodeURIComponent(userProfile.email)}`);
+        if (!response.ok) throw new Error('Failed to fetch user data');
+        return response.json();
+      } catch (error: any) {
+        setDataError(error?.message || 'Failed to load user data');
+        throw error;
+      }
     },
     enabled: !!userProfile?.email
   });
@@ -98,11 +104,12 @@ export default function Transfer() {
     { name: "Mike Chen", account: "****9012", lastAmount: "$750" }
   ];
 
-  const handleTransfer = () => {
-    if (!amount) {
-      toast({
-        title: 'Amount required',
-        description: 'Please enter a transfer amount.',
+  const handleTransfer = async () => {
+    try {
+      if (!amount) {
+        toast({
+          title: 'Amount required',
+          description: 'Please enter a transfer amount.',
         variant: 'destructive'
       });
       return;

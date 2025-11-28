@@ -2,6 +2,28 @@ import { pgTable, text, serial, decimal, timestamp, boolean, jsonb } from 'drizz
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
+// ==================== VALIDATION SCHEMAS ====================
+export const transferPinSchema = z.object({
+  pin: z.string().min(4, 'PIN must be at least 4 digits').max(6, 'PIN must be at most 6 digits'),
+});
+
+export const transferSchema = z.object({
+  amount: z.string().min(1, 'Amount is required'),
+  recipientAccount: z.string().min(1, 'Recipient account is required'),
+  transferPin: z.string().min(4, 'PIN is required'),
+  purpose: z.string().optional(),
+  description: z.string().optional(),
+});
+
+export const verifyPinSchema = z.object({
+  email: z.string().email('Valid email required'),
+  pin: z.string().min(4, 'PIN required'),
+});
+
+export type TransferPinInput = z.infer<typeof transferPinSchema>;
+export type TransferInput = z.infer<typeof transferSchema>;
+export type VerifyPinInput = z.infer<typeof verifyPinSchema>;
+
 // ==================== CORE TABLES ====================
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),

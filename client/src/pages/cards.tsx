@@ -66,12 +66,20 @@ export default function Cards() {
         body: JSON.stringify({ email: userProfile?.email || 'user@worldbank.com', pin })
       });
 
+      if (!response.ok) {
+        throw new Error('PIN verification failed');
+      }
+
       if (response.ok) {
         // Update card lock status in database (PROTECTED - needs auth)
-        await apiRequest('POST', '/api/cards/lock', {
-          cardId: selectedCard.id,
-          isLocked: !selectedCard.isLocked
-        });
+        try {
+          await apiRequest('POST', '/api/cards/lock', {
+            cardId: selectedCard.id,
+            isLocked: !selectedCard.isLocked
+          });
+        } catch (apiError: any) {
+          throw new Error(apiError?.message || 'Failed to update card lock status');
+        }
         
         // Refresh cards data
         queryClient.invalidateQueries({ queryKey: ['/api/cards'] });

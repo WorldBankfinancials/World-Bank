@@ -7,6 +7,19 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { User } from '@shared/schema';
 import { useToast } from "@/hooks/use-toast";
 
+// Error Boundary for Dashboard
+function ErrorFallback({ error }: { error: Error }) {
+  return (
+    <div className="min-h-screen bg-red-50 p-4 flex flex-col items-center justify-center">
+      <div className="text-red-600 font-semibold">Dashboard Error</div>
+      <div className="text-red-500 text-sm mt-2">{error.message}</div>
+      <button className="mt-4 px-4 py-2 bg-red-600 text-white rounded" onClick={() => window.location.reload()}>
+        Reload Page
+      </button>
+    </div>
+  );
+}
+
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,22 +70,45 @@ import { CustomerData, TransactionData } from "@/types";
 // Transfer Section Component
 function TransferSection() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [transferAmount, setTransferAmount] = useState("");
   const [recipient, setRecipient] = useState("");
   const [transferType, setTransferType] = useState("quick");
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleTransfer = async () => {
-    if (!transferAmount || !recipient) {
-
-      return;
+    try {
+      if (!transferAmount || !recipient) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please enter both amount and recipient',
+          variant: 'destructive'
+        });
+        return;
+      }
+      setIsProcessing(true);
+      const { apiRequest } = await import('@/lib/queryClient');
+      await apiRequest('POST', '/api/transfer', {
+        amount: transferAmount,
+        recipient,
+        type: transferType
+      });
+      
+      toast({
+        title: 'Transfer Initiated',
+        description: 'Your transfer is being processed',
+      });
+      setTransferAmount("");
+      setRecipient("");
+    } catch (error: any) {
+      toast({
+        title: 'Transfer Failed',
+        description: error?.message || 'Please try again',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsProcessing(false);
     }
-    setIsProcessing(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    setTransferAmount("");
-    setRecipient("");
-    setIsProcessing(false);
   };
 
   return (
