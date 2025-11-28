@@ -20,7 +20,7 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
-  const serverOptions = {
+    const serverConfig: InlineConfig['server'] = {
     middlewareMode: true,
     hmr: { server },
     allowedHosts: true,
@@ -36,7 +36,7 @@ export async function setupVite(app: Express, server: Server) {
         process.exit(1);
       },
     },
-    server: serverOptions,
+    server: serverConfig,
     appType: "custom",
   });
 
