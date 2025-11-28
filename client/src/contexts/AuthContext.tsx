@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { User } from '@supabase/supabase-js';
+import { supabase as supabaseClient } from '@/lib/supabase';
 
 interface UserProfile {
   id: string;
@@ -13,12 +15,6 @@ interface UserProfile {
   profession?: string;
   accountId?: string;
   accountNumber?: string;
-}
-
-interface User {
-  id: string;
-  email: string;
-  role: string;
 }
 
 interface AuthContextType {
@@ -38,24 +34,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const supabase = supabaseClient;
+
   useEffect(() => {
-    // Check for stored session token
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
+    // Check current session
     const checkSession = async () => {
       try {
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          // Verify token with backend
-          const response = await fetch('/api/auth/verify', {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          if (response.ok) {
-            const userData = await response.json();
-            setUser(userData.user);
-            await fetchUserData(userData.user);
-          } else {
-            localStorage.removeItem('auth_token');
-          }
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (!sessionError && sessionData?.session?.user) {
+          setUser(sessionData.session.user);
+          await fetchUserData(sessionData.session.user);
         }
       } catch (error) {
         console.error('Session check error:', error);
@@ -66,22 +59,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkSession();
 
+    // Listen for auth changes
+    const { data } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+      try {
+        if (session?.user) {
+          setUser(session.user);
+          await fetchUserData(session.user);
+        } else {
+          setUser(null);
+          setUserProfile(null);
+        }
+      } catch (error) {
+        console.error('Auth state change error:', error);
+      }
+    });
+
     return () => {
       data?.subscription?.unsubscribe();
     };
-  }, [supabase]);
+  }, []);
 
-  const fetchUserData = useCallback(async (authUser: User) => {
+  const fetchUserData = useCallback(async (user: User) => {
+    if (!user) return;
     try {
-      if (!authUser?.id) return;
-
-      const response = await fetch(`/api/users/supabase/${authUser.id}`);
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/users/supabase/${user.id}`);
       if (response.ok) {
         const profile = await response.json();
         setUserProfile({
-          id: authUser.id,
-          email: authUser.email,
-          fullName: profile?.fullName || authUser.user_metadata?.full_name,
+          id: user.id,
+          email: user.email,
+          fullName: profile?.fullName,
           username: profile?.username,
           phone: profile?.phone,
           role: profile?.role,
@@ -91,12 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           profession: profile?.profession,
           accountId: profile?.accountId,
           accountNumber: profile?.accountNumber,
-        });
-      } else {
-        setUserProfile({
-          id: authUser.id,
-          email: authUser.email,
-          fullName: authUser.user_metadata?.full_name,
         });
       }
     } catch (error) {
@@ -112,58 +114,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: 'Authentication service unavailable' };
       }
 
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-        if (error) {
-          console.error('Supabase auth error:', error.message);
-          return { error: error.message };
-        }
+      if (error) {
+        return { error: error.message };
+      }
 
-        if (data.user && data.session) {
-          setUser(data.user);
-          await fetchUserData(data.user);
-          setLoading(false);
-          return {};
-        }
-
-        setLoading(false);
-        return { error: 'Authentication failed' };
-      } catch (supabaseError: any) {
-        console.error('Supabase connection error:', supabaseError);
-        
-        // Fallback to backend login if Supabase fails
-        console.log('Attempting backend login fallback...');
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          return { error: errorData.error || 'Login failed' };
-        }
-
-        const loginData = await response.json();
-        setUser({ 
-          id: loginData.user.id, 
-          email: loginData.user.email,
-          app_metadata: { role: loginData.user.role },
-          user_metadata: {},
-          aud: '',
-          created_at: new Date().toISOString()
-        } as any);
-        
+      if (data.user && data.session) {
+        setUser(data.user);
+        await fetchUserData(data.user);
         setLoading(false);
         return {};
       }
+
+      setLoading(false);
+      return { error: 'Authentication failed' };
     } catch (error) {
       setLoading(false);
-      console.error('Login error:', error);
       return { error: 'Network error occurred' };
     }
   };
