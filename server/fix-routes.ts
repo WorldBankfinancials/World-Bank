@@ -1,5 +1,5 @@
 import { Express, Request, Response, NextFunction } from 'express';
-import { Server, createServer } from 'http';
+import { Server } from 'http';
 import { storage } from './storage-factory';
 import { setupTransferRoutes } from './routes-transfer';
 import { config, logConfiguration } from './config';
@@ -22,7 +22,7 @@ import { errorHandler, notFoundHandler, asyncHandler, createApiError } from './e
 import { runStartupChecks } from './startup-checks';
 
 // Fixed route handlers with proper typing
-export async function registerFixedRoutes(app: Express): Promise<Server> {
+export async function registerFixedRoutes(app: Express): Promise<void> {
   logConfiguration();
   
   // CRITICAL: Run startup sanity checks to verify database functions
@@ -2155,11 +2155,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // All real-time features (chat, notifications, updates) use Supabase Realtime
   // ================================================================
 
-  // Return a dummy server that will be replaced by the main server
-  const httpServer = createServer(app);
-
   // NOTE: Error handlers NOT registered here because Vite middleware
   // needs to handle frontend routes. Error handling is in index.ts
-
-  return httpServer;
 }
