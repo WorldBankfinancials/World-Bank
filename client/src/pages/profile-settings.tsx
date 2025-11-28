@@ -27,7 +27,11 @@ export default function ProfileSettings() {
           return;
         }
 
-        const bankUser = JSON.parse(localStorage.getItem("user") || "{}");
+        const { data: bankUser, error } = await supabase
+          .from('bank_users')
+          .select('*')
+          .eq('supabase_user_id', authUser.id)
+          .single();
 
         if (error) throw error;
         

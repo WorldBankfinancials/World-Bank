@@ -86,6 +86,93 @@ export default function AddMoney() {
 
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
 
+  useEffect(() => {
+    async function fetchDeposits() {
+      try {
+        const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
+        if (!authUser) return;
+
+        const { data: bankUser } = await supabase
+          .from('bank_users')
+          .select('id')
+          .eq('supabase_user_id', authUser.id)
+          .single();
+
+        if (bankUser) {
+          const { data: accounts } = await supabase
+            .from('bank_accounts')
+            .select('id')
+            .eq('user_id', bankUser.id);
+
+          if (accounts && accounts.length > 0 && accounts[0]) {
+            const { data: deposits } = await supabase
+              .from('transactions')
+              .select('*')
+              .eq('to_account_id', accounts[0].id)
+              .eq('transaction_type', 'deposit')
+              .order('created_at', { ascending: false })
+              .limit(5);
+
+            setRecentTransactions(deposits?.map((d: any) => ({
+              method: d.description || 'Debit Card',
+              amount: `$${parseFloat(d.amount || '0').toFixed(2)}`,
+              time: new Date(d.created_at).toLocaleDateString(),
+              status: d.status === 'completed' ? 'Completed' : 'Pending'
+            })) || []);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching deposits:', error);
+      }
+    }
+
+    fetchDeposits();
+  }, []);
+
+  const handleAddMoney = async () => {
+    if (!selectedMethod || !amount) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please select a payment method and enter an amount.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
+      if (!authUser) throw new Error('Not authenticated');
+
+      const { data: bankUser } = await supabase
+        .from('bank_users')
+        .select('id')
+        .eq('supabase_user_id', authUser.id)
+        .single();
+
+      if (!bankUser) throw new Error('User not found');
+
+      const { data: accounts } = await supabase
+        .from('bank_accounts')
+        .select('id')
+        .eq('user_id', bankUser.id);
+
+      if (!accounts || accounts.length === 0) throw new Error('No account found');
+
+      await supabase
+        .from('transactions')
+        .insert({
+          to_account_id: accounts[0].id,
+          amount: parseFloat(amount),
+          currency: 'USD',
+          transaction_type: 'deposit',
+          description: `Add Money via ${selectedMethod}`,
+          status: 'completed'
+        });
+
+      toast({
+        title: 'Money Added',
         description: `Successfully added $${amount} to your account!`,
       });
       setAmount("");

@@ -56,6 +56,41 @@ export default function Receive() {
 
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
+  useEffect(() => {
+    async function fetchRequests() {
+      try {
+        const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
+        if (!authUser) return;
+
+        const { data: bankUser } = await supabase
+          .from('bank_users')
+          .select('id')
+          .eq('supabase_user_id', authUser.id)
+          .single();
+
+        if (bankUser) {
+          const { data: messages } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('recipient_id', authUser.id)
+            .eq('message_type', 'payment_request')
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          setPendingRequests(messages?.map((m: any) => ({
+            from: m.sender_name,
+            amount: m.metadata?.amount || '$0.00',
+            time: new Date(m.created_at).toLocaleDateString(),
+            status: m.is_read ? 'completed' : 'pending'
+          })) || []);
+        }
+      } catch (error) {
+        console.error('Error fetching requests:', error);
+      }
+    }
+
+    fetchRequests();
+  }, []);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareLink);

@@ -70,6 +70,64 @@ export default function TransactionHistory() {
     fetchData();
   }, []);
 
+  // Real-time subscription for transaction updates (row-level filtered)
+  useEffect(() => {
+    if (!user) return;
+
+    // Fetch account IDs first to set up row-level filter
+    async function setupRealtimeWithFilter() {
+      const { data: accounts } = await supabase
+        .from('bank_accounts')
+        .select('id')
+        .eq('user_id', user.id);
+
+      if (!accounts || accounts.length === 0) return;
+
+      const accountId = accounts[0].id;
+
+      // Subscribe with row-level filter to only receive updates for this user's transactions
+      const channel = supabase
+        .channel(`transaction-updates-${accountId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `from_account_id=eq.${accountId}`
+        }, () => {
+        console.log('🔄 Transaction data changed, refreshing...');
+        // Refetch data when transactions change
+        async function refetchData() {
+          try {
+            const user = localStorage.getItem('user'); const authUser = user ? JSON.parse(user) : null;
+            if (!authUser) return;
+
+            const { data: bankUser } = await supabase
+              .from('bank_users')
+              .select('*')
+              .eq('supabase_user_id', authUser.id)
+              .single();
+
+            if (bankUser) {
+              const { data: accounts } = await supabase
+                .from('bank_accounts')
+                .select('id')
+                .eq('user_id', bankUser.id);
+
+              if (accounts && accounts.length > 0) {
+                const { data: txns } = await supabase
+                  .from('transactions')
+                  .select('*')
+                  .or(`from_account_id.eq.${accounts[0].id},to_account_id.eq.${accounts[0].id}`)
+                  .order('created_at', { ascending: false });
+
+                setTransactions(txns || []);
+              }
+            }
+          } catch (error) {
+            console.error('Error refetching transactions:', error);
+          }
+        }
+          refetchData();
         })
         .subscribe();
 
@@ -286,6 +344,28 @@ export default function TransactionHistory() {
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Create Transaction
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Create New Transaction</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Amount</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={formData.amount}
+                          onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Type</Label>
                         <Select value={formData.type} onValueChange={(value: 'credit' | 'debit') => setFormData(prev => ({ ...prev, type: value }))}>
                           <SelectTrigger>
                             <SelectValue />
