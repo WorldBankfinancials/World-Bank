@@ -285,12 +285,17 @@ export class PostgresStorage implements IStorage {
   async createAccount(account: InsertAccount): Promise<Account> {
     try {
       const balance = account.balance ? parseFloat(account.balance as string) : 0.00;
+      const userId = account.userId ?? 0;
+      const accountNumber = account.accountNumber ?? '';
+      const accountType = account.accountType ?? 'savings';
+      const currency = account.currency || 'USD';
+      const status = account.status || 'active';
       const result = await sql`
         INSERT INTO public.bank_accounts (
           user_id, account_number, account_type, balance, currency, status
         ) VALUES (
-          ${account.userId}, ${account.accountNumber}, ${account.accountType}, 
-          ${balance}, ${account.currency || 'USD'}, ${account.status || 'active'}
+          ${userId}, ${accountNumber}, ${accountType}, 
+          ${balance}, ${currency}, ${status}
         ) RETURNING *
       `;
 
