@@ -16,10 +16,13 @@ function generateAccountId(): string {
 export async function createNewUserWithUniqueData(userData: Partial<InsertUser> = {}): Promise<any> {
   const userId = Date.now();
   
+  // SECURITY: Generate secure random PIN (1000-9999) instead of hardcoding
+  const securePIN = Math.floor(Math.random() * 9000 + 1000).toString();
+  
   // Create new user with unique data - NO automatic accounts
   const newUser = await storage.createUser({
     username: userData.username || `user_${userId}`,
-    passwordHash: userData.passwordHash || "password123",
+    passwordHash: userData.passwordHash || "supabase_auth", // Always use Supabase for passwords
     fullName: userData.fullName || `New Customer ${userId}`,
     email: userData.email || `user${userId}@example.com`,
     phone: userData.phone || `+1-555-${String(userId).slice(-4)}`,
@@ -35,7 +38,7 @@ export async function createNewUserWithUniqueData(userData: Partial<InsertUser> 
     annualIncome: userData.annualIncome || "$75,000",
     idType: userData.idType || "Driver License",
     idNumber: userData.idNumber || `DL${userId}`,
-    transferPin: userData.transferPin || "1234",
+    transferPin: userData.transferPin || securePIN, // Use secure random PIN, not hardcoded 1234
     role: userData.role || "customer",
     balance: userData.balance || "0.00",
     isVerified: false,

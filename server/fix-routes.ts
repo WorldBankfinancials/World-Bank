@@ -406,6 +406,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Unable to verify user in authentication system' });
       }
 
+      // SECURITY: Generate secure random PIN for new user (1000-9999)
+      const newUserPin = Math.floor(Math.random() * 9000 + 1000).toString();
+
       // SECURITY: Only accept whitelisted fields from client, hardcode privileged fields server-side
       const newUser = await storage.createUser({
         // WHITELISTED FIELDS (client-provided)
@@ -429,7 +432,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
         // SERVER-CONTROLLED FIELDS (never trust client)
         passwordHash: 'supabase_auth', // Marker indicating password is in Supabase Auth
-        transferPin: '0000', // Default PIN, user MUST change on first login
+        transferPin: newUserPin, // Secure random PIN, not hardcoded
         role: 'customer', // Always customer for new registrations
         isVerified: false, // Admin must verify
         isOnline: true,
@@ -775,8 +778,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // SECURITY: Only accept hashed PINs, no plaintext fallback
-      if (!user.transferPin || user.transferPin.length === 0) {
+      // SECURITY: Only accept valid PINs, no plaintext fallback
+      if (!user.transferPin || user.transferPin.length === 0 || !/^\d{4}$/.test(user.transferPin)) {
         return res.status(400).json({ 
           message: 'PIN not configured for account', 
           verified: false,
@@ -785,7 +788,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
       
       if (user.transferPin !== body.pin) {
-        console.log('❌ PIN mismatch');
+        // SECURITY: Don't log PINs
         return res.status(401).json({ message: 'Invalid PIN', verified: false });
       }
 
@@ -1855,7 +1858,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           accountNumber: `ADMIN-${Math.floor(10000000 + Math.random() * 90000000)}`,
           accountId: `WB-ADMIN-${Date.now()}`,
           passwordHash: 'supabase_auth', // Marker
-          transferPin: '9999', // Admin PIN
+          transferPin: Math.floor(Math.random() * 9000 + 1000).toString(), // Secure random PIN, not hardcoded
           role: 'admin', // ADMIN ROLE
           isVerified: true,
           isOnline: true,
@@ -1875,8 +1878,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
         console.log(`✅ Admin user created successfully: ${fullName} (${email})`);
         console.log(`📧 Email: ${email}`);
-        console.log(`🔐 Password: ${password}`);
         console.log(`👤 Role: admin`);
+        // SECURITY: NEVER log passwords
 
         res.status(201).json({ 
           success: true,
