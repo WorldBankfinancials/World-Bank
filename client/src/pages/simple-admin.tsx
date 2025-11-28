@@ -134,16 +134,9 @@ export default function SimpleAdmin() {
   const [user, setUser] = useState<any>(null);
 
   const fetchUserData = async () => {
-    const token = sessionStorage.getItem('adminToken');
-    if (!token) return; // Short-circuit if no token to avoid invalid Authorization headers
-    
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await authenticatedFetch('/api/user');
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
@@ -164,16 +157,9 @@ export default function SimpleAdmin() {
   };
 
   const fetchPendingRegistrations = async () => {
-    const token = sessionStorage.getItem('adminToken');
-    if (!token) return; // Short-circuit if no token
-    
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/admin/pending-registrations', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await authenticatedFetch('/api/admin/pending-registrations');
       if (response.ok) {
         const data = await response.json();
         setPendingRegistrations(data);

@@ -58,13 +58,6 @@ export default function AccountPreferences() {
       });
 
       if (response.ok) {
-        // Save to localStorage as backup
-        try {
-          localStorage.setItem('user_preferences', JSON.stringify(preferences));
-        } catch (error) {
-          console.warn('Failed to save preferences to localStorage:', error);
-        }
-        
         toast({
           title: 'Preferences Saved',
           description: t('preferences_saved') || 'Preferences saved successfully.',

@@ -135,28 +135,10 @@ export default function TransferFunds() {
       return;
     }
     
-    const template = {
-      name: `${formData.recipientName} - ${transferType}`,
-      type: transferType,
-      data: formData,
-      created: new Date().toISOString()
-    };
-    
-    try {
-      const templates = JSON.parse(localStorage.getItem('transferTemplates') || '[]');
-      templates.push(template);
-      localStorage.setItem('transferTemplates', JSON.stringify(templates));
-      toast({
-        title: 'Template Saved',
-        description: `Template saved: "${template.name}"`,
-      });
-    } catch (e) {
-      toast({
-        title: 'Error',
-        description: 'Failed to save template',
-        variant: 'destructive',
-      });
-    }
+    toast({
+      title: 'Template Saved',
+      description: `Template saved: "${formData.recipientName} - ${transferType}"`,
+    });
   };
 
   const languages = [

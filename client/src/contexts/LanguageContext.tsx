@@ -649,7 +649,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const changeLanguage = (newLang: Language) => {
     setLanguage(newLang);
-    localStorage.setItem('worldbank_language', newLang);
   };
 
   const t = (key: string): string => {
