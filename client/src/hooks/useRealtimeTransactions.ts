@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase';
 
 // Export useRealtimeAlerts for backward compatibility
 export { useRealtimeAlerts } from '@/hooks/useRealtimeAlerts';

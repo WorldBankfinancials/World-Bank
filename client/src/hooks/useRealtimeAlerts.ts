@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase';
 
 export function useRealtimeAlerts(userId?: number | undefined, enabled?: boolean) {
   const handleAlertReceived = useCallback((alert: any) => {

@@ -4,7 +4,7 @@
  * Automatically includes auth headers when available
  */
 
-import { getAccessToken } from './supabase-client';
+import { getAccessToken } from './supabase';
 
 /**
  * Unauthenticated fetch for public endpoints (registration, login, etc)

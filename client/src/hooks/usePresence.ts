@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase';
 
 export function usePresence() {
   return null;
