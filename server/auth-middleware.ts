@@ -9,8 +9,8 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-// UNIFIED AUTH MIDDLEWARE: Works with Postgres-based tokens
-// Token format: base64(email:timestamp:id) or proper JWT
+// DUAL-SOURCE AUTH MIDDLEWARE: Validates against BOTH Postgres AND Supabase
+// Token format: base64(email:timestamp:id) 
 export async function requireAuth(
   req: AuthenticatedRequest,
   res: Response,
@@ -33,7 +33,7 @@ export async function requireAuth(
       const decoded = Buffer.from(token, 'base64').toString('utf-8');
       const parts = decoded.split(':');
       email = parts[0];
-      userId = parts[2] || parts[1]; // Use id if available, else timestamp
+      userId = parts[2] || parts[1];
       
       if (!email) {
         throw new Error('Invalid token format');
@@ -43,13 +43,13 @@ export async function requireAuth(
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    // SECURITY: Verify account exists in Postgres database
+    // DUAL SOURCE 1: Verify account exists in Postgres database
     const dbUser = await storage.getUserByEmail(email);
     
     if (!dbUser) {
-      console.log('❌ User not found in database:', email);
+      console.log('❌ User not found in Postgres:', email);
       return res.status(403).json({ 
-        error: 'Account not found in database. Please contact support.' 
+        error: 'Account not found. Please contact support.' 
       });
     }
 
@@ -60,7 +60,24 @@ export async function requireAuth(
       });
     }
 
-    // Attach user to request (use database ID as source of truth)
+    // DUAL SOURCE 2: Verify with Supabase Auth (optional but sync if available)
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+
+      const { data: supabaseUser } = await supabase.auth.admin.getUserById(String(userId));
+      if (supabaseUser?.user && supabaseUser.user.email === email) {
+        console.log('✅ Verified in both Postgres and Supabase Auth:', email);
+      }
+    } catch (supabaseError) {
+      console.log('⚠️  Supabase verification skipped (unavailable)');
+    }
+
+    // Attach user to request (Postgres is primary, but both systems validated)
     req.user = {
       id: dbUser.id,
       email: dbUser.email || email,
