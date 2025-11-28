@@ -68,7 +68,8 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegistrationFormData) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/register-complete', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/auth/register-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

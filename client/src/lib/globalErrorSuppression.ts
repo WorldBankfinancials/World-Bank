@@ -19,6 +19,9 @@ export function setupErrorFiltering() {
     '@vite',
   ];
 
+  const originalError = console.error;
+  
+  console.error = function(...args: any[]) {
     const message = args[0]?.toString() || args.join(' ');
     
     // Check if this is a suppressed error

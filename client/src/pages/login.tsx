@@ -116,8 +116,8 @@ export default function Login() {
 
     try {
       const identifier = loginData.email;
-      
-      const response = await fetch('/api/verify-pin', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
