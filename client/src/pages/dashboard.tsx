@@ -496,10 +496,11 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
 
   // Track user presence for real-time online/offline status
-  usePresence(
-    userProfile?.id ? (typeof userProfile.id === 'number' ? userProfile.id : parseInt(userProfile.id)) : undefined,
-    userProfile?.fullName || userProfile?.email
-  );
+  // usePresence disabled for backend auth mode
+  // usePresence(
+  //   userProfile?.id ? (typeof userProfile.id === 'number' ? userProfile.id : parseInt(userProfile.id)) : undefined,
+  //   userProfile?.fullName || userProfile?.email
+  // );
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -1039,11 +1040,11 @@ export default function Dashboard() {
 
       <BottomNavigation />
 
-      {/* Live Chat Component */}
-      <LiveChat 
+      {/* Live Chat Component - disabled for backend auth mode */}
+      {/* <LiveChat 
         isOpen={isChatOpen} 
         onClose={() => setIsChatOpen(false)} 
-      />
+      /> */}
     </div>
   );
 }

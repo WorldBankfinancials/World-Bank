@@ -451,11 +451,11 @@ export default function Login() {
         </DialogContent>
       </Dialog>
 
-      {/* Live Chat Component */}
-      <LiveChat 
+      {/* Live Chat Component - disabled for backend auth mode */}
+      {/* <LiveChat 
         isOpen={showLiveChat} 
         onClose={() => setShowLiveChat(false)} 
-      />
+      /> */}
     </div>
   );
 }

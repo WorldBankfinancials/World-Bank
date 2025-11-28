@@ -23,23 +23,11 @@ export default function InvestmentPortfolio() {
     staleTime: 30000,
   });
 
-  // Real-time subscription for investment updates
+  // Real-time subscription for investment updates - disabled for backend auth mode
+  // Using polling/query cache invalidation instead
   useEffect(() => {
-    const channel = supabase
-      .channel('investment-updates')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'investments'
-      }, () => {
-        console.log('🔄 Investment data changed, refreshing...');
-        queryClient.invalidateQueries({ queryKey: ['/api/investments'] });
-      })
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
+    // Polling disabled - using TanStack Query staleTime instead
+    return () => {};
   }, [queryClient]);
 
   const formatCurrency = (amount: number) => {
