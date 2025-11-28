@@ -430,9 +430,6 @@ export async function registerFixedRoutes(app: Express): Promise<void> {
     }
   });
 
-  // WARNING: This endpoint uses service role key and should NEVER be exposed in production
-    }
-  });
 
   // User endpoints - PROTECTED with JWT authentication
   app.get('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -711,8 +708,6 @@ export async function registerFixedRoutes(app: Express): Promise<void> {
         const data = (validation as any)?.data || {};
         const { username, password } = data;
         res.json({ success: true, user });
-      } catch (error) {
-        console.error('Login error:', error);
         res.status(500).json({ error: 'Failed to login' });
       }
     });
@@ -741,8 +736,6 @@ export async function registerFixedRoutes(app: Express): Promise<void> {
   
         if (!user) {
           console.info('❌ User not found for identifier:', identifier);
-          return res.status(404).json({ message: 'User not found', verified: false });
-      }
 
       console.info('✅ Found user:', { id: user.id, email: user.email, isActive: user.isActive });
 
