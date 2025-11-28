@@ -63,6 +63,7 @@ export interface CustomerData {
   firstName?: string;
   lastName?: string;
   email?: string;
+  username?: string;
   accountNumber?: string;
   accountId?: string;
   balance?: number | string;
@@ -70,6 +71,11 @@ export interface CustomerData {
   createdAt?: string;
   isActive?: boolean;
   role?: string;
+  avatarUrl?: string;
+  phone?: string;
+  profession?: string;
+  isVerified?: boolean;
+  isOnline?: boolean;
 }
 
 export interface ApiError {
