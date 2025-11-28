@@ -77,7 +77,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Supabase ID required' });
       }
 
-      const user = await (storage).getUserBySupabaseId(supabaseId);
+      const user = await (storage as any).getUserBySupabaseId(supabaseId);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -183,7 +183,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
         
         // VERIFY user was actually saved
-        const verifyUser = await (storage).getUserByEmail(newUser.email);
+        const verifyUser = await (storage).getUserByEmail(newUser.email || '');
         if (!verifyUser) {
           throw new Error('User created but not found in database');
         }
