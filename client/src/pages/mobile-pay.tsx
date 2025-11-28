@@ -259,7 +259,7 @@ export default function MobilePay() {
                       <div className="text-sm text-wb-text">{merchant.distance}</div>
                     </div>
                     <div className="flex space-x-1">
-                      {merchant.accepts.map((method, idx) => (
+                      {merchant.accepts.map((method: string, idx: number) => (
                         <Badge key={idx} variant="secondary" className="text-xs">
                           {method}
                         </Badge>
