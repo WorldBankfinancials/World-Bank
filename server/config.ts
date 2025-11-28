@@ -1,3 +1,6 @@
+import { config as dotenvConfig } from "dotenv";
+dotenvConfig();
+
 // Environment-based configuration for data sources
 export const config = {
   // Data source configuration
@@ -14,8 +17,21 @@ export const config = {
   // Supabase configuration
   SUPABASE_URL: process.env.SUPABASE_URL,
   SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  SUPABASE_SERVICE_ROLE_KEY: process.env,
   
+
+   // Supabase public client (frontend)
+  supabaseUrl: process.env.SUPABASE_URL!,
+  supabaseAnonKey: process.env.SUPABASE_ANON_KEY!,
+
+  // Supabase service/admin client
+  supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY!,
+
+  // Postgres connection (Drizzle + native)
+  postgresUrl: process.env.POSTGRES_URL!,
+
+  // JWT
+  jwtSecret: process.env.JWT_SECRET!,
   // Mock data settings for development/testing
   ENABLE_MOCK_DATA: process.env.ENABLE_MOCK_DATA === 'true',
   SIMULATE_API_ERRORS: process.env.SIMULATE_API_ERRORS === 'true',
@@ -70,3 +86,5 @@ export function logConfiguration() {
   console.log(`⚠️  API Error Simulation: ${config.SIMULATE_API_ERRORS ? 'Enabled' : 'Disabled'}`);
   console.log('');
 }
+
+

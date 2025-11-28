@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "../dist/shared",
+    "rootDir": "..",
+    "strict": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["**/*"]
+}
