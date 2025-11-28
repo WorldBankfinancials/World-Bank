@@ -1,5 +1,4 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { supabase } from "./supabase";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -9,29 +8,14 @@ async function throwIfResNotOk(res: Response) {
 }
 
 /**
- * Helper to get Authorization header with Supabase token
- * EXPORTED for use in components that need direct fetch() calls
- * CRITICAL FIX: Waits for session with retry logic instead of proceeding without auth
+ * Get authorization headers from localStorage token
  */
-export async function getAuthHeaders(retries = 5, delayMs = 300): Promise<Record<string, string>> {
-  for (let attempt = 0; attempt < retries; attempt++) {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session?.access_token) {
-      return {
-        'Authorization': `Bearer ${session.access_token}`
-      };
-    }
-    
-    // If no session and not last attempt, wait and retry
-    if (attempt < retries - 1) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-      delayMs = Math.min(delayMs * 1.5, 2000); // Exponential backoff with cap
-    }
+export async function getAuthHeaders(): Promise<Record<string, string>> {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('Not authenticated');
   }
-  
-  // After all retries failed, throw error instead of returning empty headers
-  throw new Error('Authentication required: No valid session available. Please log in.');
+  return { 'Authorization': `Bearer ${token}` };
 }
 
 /**

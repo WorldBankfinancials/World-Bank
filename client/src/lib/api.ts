@@ -1,43 +1,31 @@
-import { supabase } from './supabase';
-
 /**
- * Authenticated fetch wrapper that automatically adds user email to requests
+ * Authenticated fetch wrapper
  */
 export async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
-  // Get current user from Supabase
-  const { data: { user } } = await supabase.auth.getUser();
+  const token = localStorage.getItem('token');
+  const user = localStorage.getItem('user');
   
-  if (!user?.email) {
+  if (!token || !user) {
     throw new Error('User not authenticated');
   }
 
-  // Add email parameter to URL if it's a GET request and doesn't already have it
-  let finalUrl = url;
-  if ((!options?.method || options.method === 'GET') && !url.includes('email=')) {
-    const separator = url.includes('?') ? '&' : '?';
-    finalUrl = `${url}${separator}email=${encodeURIComponent(user.email)}`;
-  }
+  const userData = JSON.parse(user);
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    ...options?.headers,
+  };
 
-  // For POST/PUT/PATCH, add email to body if not present
-  if (options?.method && ['POST', 'PUT', 'PATCH'].includes(options.method)) {
-    try {
-      const body = options.body ? JSON.parse(options.body as string) : {};
-      if (!body.email) {
-        body.email = user.email;
-        options.body = JSON.stringify(body);
-      }
-    } catch (e) {
-      // If body is not JSON, skip
-    }
-  }
-
-  return fetch(finalUrl, options);
+  return fetch(url, {
+    ...options,
+    headers,
+  });
 }
 
 /**
- * Get current user email from Supabase Auth
+ * Get current user email
  */
 export async function getCurrentUserEmail(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.email || null;
+  const user = localStorage.getItem('user');
+  if (!user) return null;
+  return JSON.parse(user).email;
 }

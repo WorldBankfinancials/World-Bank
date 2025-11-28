@@ -1,6 +1,4 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase as supabaseClient } from '@/lib/supabase';
 
 interface UserProfile {
   id: string;
@@ -15,6 +13,11 @@ interface UserProfile {
   profession?: string;
   accountId?: string;
   accountNumber?: string;
+}
+
+interface User {
+  id: string;
+  email: string;
 }
 
 interface AuthContextType {
@@ -32,74 +35,32 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const supabase = supabaseClient;
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
+    // Check localStorage on mount
+    const savedToken = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
+    if (savedToken && savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
-
-    // Check current session
-    const checkSession = async () => {
-      try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        if (!sessionError && sessionData?.session?.user) {
-          setUser(sessionData.session.user);
-          await fetchUserData(sessionData.session.user);
-        }
-      } catch (error) {
-        console.error('Session check error:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkSession();
-
-    // Listen for auth changes
-    const { data } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
-      try {
-        if (session?.user) {
-          setUser(session.user);
-          await fetchUserData(session.user);
-        } else {
-          setUser(null);
-          setUserProfile(null);
-        }
-      } catch (error) {
-        console.error('Auth state change error:', error);
-      }
-    });
-
-    return () => {
-      data?.subscription?.unsubscribe();
-    };
   }, []);
 
   const fetchUserData = useCallback(async (user: User) => {
     if (!user) return;
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch(`/api/users/supabase/${user.id}`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/users/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       if (response.ok) {
         const profile = await response.json();
-        setUserProfile({
-          id: user.id,
-          email: user.email,
-          fullName: profile?.fullName,
-          username: profile?.username,
-          phone: profile?.phone,
-          role: profile?.role,
-          balance: profile?.balance,
-          isVerified: profile?.isVerified,
-          isActive: profile?.isActive,
-          profession: profile?.profession,
-          accountId: profile?.accountId,
-          accountNumber: profile?.accountNumber,
-        });
+        setUserProfile(profile);
       }
     } catch (error) {
       console.error('Fetch user data error:', error);

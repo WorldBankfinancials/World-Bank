@@ -106,97 +106,54 @@ export default function Registration() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep(4)) return;
-
     setLoading(true);
 
     try {
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (authError) {
-        toast({
-          title: "Registration Failed",
-          description: authError.message,
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Create user profile
-      const userId = generateUserId();
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          id: authData.user?.id,
+      const response = await fetch('/api/auth/register-complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
           phone: formData.phone,
-          user_id: userId,
-          full_name: `${formData.firstName} ${formData.lastName}`,
-          date_of_birth: formData.dateOfBirth,
+          dateOfBirth: formData.dateOfBirth,
           address: formData.address,
           city: formData.city,
-          state: formData.state || '',
+          state: formData.state,
           country: formData.country,
-          postal_code: formData.postalCode || '',
-          occupation: formData.occupation,
-          annual_income: formData.annualIncome,
-          id_type: formData.idType,
-          id_number: formData.idNumber,
-          transfer_pin: formData.transferPin,
-          is_verified: false,
-        });
+          postalCode: formData.postalCode,
+          profession: formData.occupation,
+          annualIncome: formData.annualIncome,
+          idType: formData.idType,
+          idNumber: formData.idNumber,
+          transferPin: formData.transferPin,
+        })
+      });
 
-      if (profileError) {
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
         toast({
           title: "Registration Failed",
-          description: "Failed to create user profile",
+          description: data.error || "Failed to create account",
           variant: "destructive"
         });
         setLoading(false);
         return;
-      }
-
-      // Create default accounts
-      const accountNumber = generateAccountNumber();
-      const { error: accountError } = await supabase
-        .from('accounts')
-        .insert([
-          {
-            user_id: authData.user?.id,
-            account_number: accountNumber,
-            account_type: 'checking',
-            balance: 0,
-            currency: 'USD',
-            is_active: true,
-          },
-          {
-            user_id: authData.user?.id,
-            account_number: generateAccountNumber(),
-            account_type: 'savings',
-            balance: 0,
-            currency: 'USD',
-            is_active: true,
-          }
-        ]);
-
-      if (accountError) {
-        // Silent account creation handling
       }
 
       toast({
         title: "Registration Successful",
-        description: "Please check your email to verify your account",
+        description: "Your account has been created. Please log in.",
       });
 
       setLocation("/login");
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Registration Failed",
-        description: "An unexpected error occurred",
+        description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
       setLoading(false);
