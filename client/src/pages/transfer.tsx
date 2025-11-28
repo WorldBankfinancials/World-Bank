@@ -110,31 +110,38 @@ export default function Transfer() {
         toast({
           title: 'Amount required',
           description: 'Please enter a transfer amount.',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    if (!recipientDetails.fullName) {
-      toast({
-        title: 'Recipient name required',
-        description: 'Please enter the recipient name.',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    if (!recipientDetails.accountNumber) {
-      toast({
-        title: 'Account number required',
-        description: 'Please enter the recipient account number.',
-        variant: 'destructive'
-      });
-      return;
-    }
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      if (!recipientDetails.fullName) {
+        toast({
+          title: 'Recipient name required',
+          description: 'Please enter the recipient name.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      if (!recipientDetails.accountNumber) {
+        toast({
+          title: 'Account number required',
+          description: 'Please enter the recipient account number.',
+          variant: 'destructive'
+        });
+        return;
+      }
 
-    // Show PIN verification modal
-    setShowPinVerification(true);
+      // Show PIN verification modal
+      setShowPinVerification(true);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error?.message || 'An error occurred',
+        variant: 'destructive'
+      });
+    }
   };
 
   const verifyPinAndTransfer = async () => {
