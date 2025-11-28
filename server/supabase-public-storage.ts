@@ -307,11 +307,13 @@ export class SupabasePublicStorage implements IStorage {
       
       if (error || !users) return [];
       
-      return users.map(user => ({
+      return users.map(user => {
+        const [firstName, lastName] = (user.full_name || '').split(' ');
+        return {
         id: user.id,
         username: user.username,
         password: user.password,
-        firstName: user.first_name || "", lastName: user.last_name || "",
+        firstName: firstName || "", lastName: lastName || "",
         email: user.email,
         phone: user.phone,
         accountNumber: user.account_number,
@@ -336,7 +338,7 @@ export class SupabasePublicStorage implements IStorage {
         modifiedByAdmin: user.modified_by_admin,
         
         updatedAt: user.updated_at
-      }));
+      }});
     } catch (error) {
       console.error('Error getting all users:', error);
       return [];
@@ -352,8 +354,8 @@ export class SupabasePublicStorage implements IStorage {
         .single();
       
       if (error || !user) return undefined;
-      
-      return { id: user.id, username: user.username, password: user.password, firstName: user.first_name || "", lastName: user.last_name || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
+      const [firstName, lastName] = (user.full_name || '').split(' ');
+      return { id: user.id, username: user.username, password: user.password, firstName: firstName || "", lastName: lastName || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
     } catch (error) {
       console.error('Error getting user by username:', error);
       return undefined;
@@ -362,13 +364,13 @@ export class SupabasePublicStorage implements IStorage {
 
   async createUser(data: InsertUser): Promise<User> {
     try {
+      const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
       const { data: user, error } = await supabase
         .from('bank_users')
         .insert({
           username: data.username,
           password: data.password,
-          first_name: data.firstName,
-          last_name: data.lastName,
+          full_name: fullName,
           email: data.email,
           phone: data.phone,
           account_number: data.accountNumber,
@@ -407,7 +409,8 @@ export class SupabasePublicStorage implements IStorage {
         throw new Error('Failed to create user - no data returned');
       }
 
-      return { id: user.id, username: user.username, password: user.password, firstName: user.first_name || "", lastName: user.last_name || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
+      const [firstName, lastName] = (user.full_name || '').split(' ');
+      return { id: user.id, username: user.username, password: user.password, firstName: firstName || "", lastName: lastName || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
     } catch (error) {
       console.error('Error creating user:', error);
       throw error;
@@ -418,8 +421,11 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const updateData: any = { updated_at: new Date().toISOString() };
       if (updates.username !== undefined) updateData.username = updates.username;
-      if (updates.firstName !== undefined) updateData.first_name = updates.firstName;
-      if (updates.lastName !== undefined) updateData.last_name = updates.lastName;
+      if (updates.firstName !== undefined || updates.lastName !== undefined) {
+        const first = updates.firstName || '';
+        const last = updates.lastName || '';
+        updateData.full_name = `${first} ${last}`.trim();
+      }
       if (updates.email !== undefined) updateData.email = updates.email;
       if (updates.phone !== undefined) updateData.phone = updates.phone;
       if (updates.profession !== undefined) updateData.profession = updates.profession;
@@ -436,8 +442,8 @@ export class SupabasePublicStorage implements IStorage {
       const { data: user, error } = await supabase.from('bank_users').update(updateData).eq('id', id).select().single();
 
       if (error || !user) return undefined;
-      
-      return { id: user.id, username: user.username, password: user.password, firstName: user.first_name || "", lastName: user.last_name || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
+      const [firstName, lastName] = (user.full_name || '').split(' ');
+      return { id: user.id, username: user.username, password: user.password, firstName: firstName || "", lastName: lastName || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
     } catch (error) {
       console.error('Error updating user:', error);
       return undefined;
@@ -454,8 +460,8 @@ export class SupabasePublicStorage implements IStorage {
         .single();
 
       if (error || !user) return undefined;
-      
-      return { id: user.id, username: user.username, password: user.password, firstName: user.first_name || "", lastName: user.last_name || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
+      const [firstName, lastName] = (user.full_name || '').split(' ');
+      return { id: user.id, username: user.username, password: user.password, firstName: firstName || "", lastName: lastName || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
     } catch (error) {
       console.error('Error updating user balance:', error);
       return undefined;
