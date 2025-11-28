@@ -1,10 +1,13 @@
 /**
- * REAL-TIME TRANSACTIONS HOOK
- * Listens for live transaction updates and admin approvals
+ * REAL-TIME TRANSACTIONS & ALERTS HOOK
+ * Listens for live transaction updates, admin approvals, and alerts
  */
 
 import { useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+
+// Export useRealtimeAlerts for backward compatibility
+export { useRealtimeAlerts } from '@/hooks/useRealtimeAlerts';
 
 export function useRealtimeTransactions(userId?: string, enabled?: boolean) {
   const handleTransactionUpdate = useCallback((transaction: any) => {

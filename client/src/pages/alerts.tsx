@@ -8,7 +8,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useRealtimeAlerts } from "@/hooks/useRealtimeTransactions";
+import { useRealtimeAlerts } from "@/hooks/useRealtimeAlerts";
 import { 
   Bell, 
   

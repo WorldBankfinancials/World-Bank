@@ -921,6 +921,18 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // BROADCAST: Notify all clients of admin change
+      try {
+        const { supabase } = await import('./supabase-public-storage');
+        const adminChannel = supabase.channel('admin-actions');
+        adminChannel.send({
+          type: 'broadcast',
+          event: 'registration_approved',
+          payload: { userId: registrationId, approvedBy: admin?.email, user: updatedUser }
+        });
+      } catch (error) {
+        console.error('Failed to broadcast admin update:', error);
+      }
       
       res.json({ 
         success: true,
@@ -972,7 +984,19 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      
+      // BROADCAST: Notify all clients of admin change
+      try {
+        const { supabase } = await import('./supabase-public-storage');
+        const adminChannel = supabase.channel('admin-actions');
+        adminChannel.send({
+          type: 'broadcast',
+          event: 'registration_rejected',
+          payload: { userId: registrationId, rejectedBy: admin?.email, reason }
+        });
+      } catch (error) {
+        console.error('Failed to broadcast admin update:', error);
+      }
+
       res.json({ 
         success: true,
         message: 'Registration rejected successfully'
