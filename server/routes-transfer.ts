@@ -207,7 +207,7 @@ export function setupTransferRoutes(app: Express) {
           action: 'reject_transfer',
           targetType: 'transaction',
           targetId: transactionId,
-          description: `Rejected transfer #${transactionId}`,
+          details: { notes }, description: `Rejected transfer #${transactionId}`,
           metadata: JSON.stringify({ notes })
         });
 

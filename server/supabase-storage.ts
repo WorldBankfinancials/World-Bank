@@ -107,8 +107,8 @@ export class SupabaseStorage implements IStorage {
       .from('bank_users')
       .insert({
         username: user.username,
-        password_hash: user.passwordHash,
-        full_name: user.fullName,
+        password: user.password,
+        first_name: user.firstName, last_name: user.lastName,
         email: user.email,
         phone: user.phone,
         account_number: user.accountNumber,
@@ -126,11 +126,8 @@ export class SupabaseStorage implements IStorage {
         transfer_pin: user.transferPin,
         role: user.role || 'customer',
         is_verified: user.isVerified || false,
-        is_online: user.isOnline || false,
         is_active: user.isActive || true,
-        avatar_url: user.avatarUrl,
         balance: user.balance?.toString() || '0.00',
-        supabase_user_id: user.supabaseUserId
       })
       .select()
       .single();
@@ -147,7 +144,6 @@ export class SupabaseStorage implements IStorage {
       .from('bank_users')
       .update({
         username: updates.username,
-        full_name: updates.fullName,
         email: updates.email,
         phone: updates.phone,
         profession: updates.profession,
@@ -158,9 +154,6 @@ export class SupabaseStorage implements IStorage {
         postal_code: updates.postalCode,
         annual_income: updates.annualIncome,
         is_verified: updates.isVerified,
-        is_online: updates.isOnline,
-        is_active: updates.isActive,
-        avatar_url: updates.avatarUrl,
         balance: updates.balance?.toString()
       })
       .eq('id', id)
@@ -207,7 +200,6 @@ export class SupabaseStorage implements IStorage {
       id: account.id,
       userId: account.user_id,
       accountNumber: account.account_number,
-      accountName: account.account_name || null,
       accountType: account.account_type,
       balance: account.balance,
       currency: account.currency,
