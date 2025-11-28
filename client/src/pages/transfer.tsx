@@ -107,8 +107,6 @@ export default function Transfer() {
   };
 
   const verifyPinAndTransfer = async () => {
-    
-    
     if (!transferPin || transferPin.length !== 4) {
       setPinError("Please enter a 4-digit PIN");
       return;
@@ -121,7 +119,7 @@ export default function Transfer() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: userProfile?.email || user?.email!,
+          email: userProfile?.email || user?.email!,
           pin: transferPin
         })
       });

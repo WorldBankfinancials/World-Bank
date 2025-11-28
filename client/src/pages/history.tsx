@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Filter, Search, Calendar, Download, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 
 interface Transaction {
   id: number;
@@ -32,77 +33,67 @@ interface Account {
 export default function History() {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  const fetchAccounts = async () => {
-    try {
+  // Fetch accounts with React Query
+  const { data: accounts = [], isLoading: accountsLoading, error: accountsError } = useQuery<Account[]>({
+    queryKey: ['/api/accounts'],
+    queryFn: async () => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/accounts');
-      if (response.ok) {
-        try {
-          const data = await response.json();
-          setAccounts(data);
-        } catch (e) {
-          throw new Error('Failed to parse accounts');
-        }
-      } else {
+      if (!response.ok) throw new Error('Failed to load accounts');
+      return response.json();
+    }
+  });
+
+  // Fetch transactions with React Query
+  const { data: transactions = [], isLoading: loading, error: transactionsError } = useQuery<Transaction[]>({
+    queryKey: ['/api/transactions', accounts],
+    queryFn: async () => {
+      if (accounts.length === 0) return [];
+      
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const accountPromises = accounts.map(account => 
+          authenticatedFetch(`/api/accounts/${account.id}/transactions`).then(async res => {
+            if (!res.ok) throw new Error(`Failed to fetch transactions for account ${account.id}`);
+            return res.json();
+          })
+        );
+        
+        const allTransactionArrays = await Promise.all(accountPromises);
+        const allTransactions = allTransactionArrays.flat();
+        
+        // Sort by date (newest first)
+        allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        return allTransactions;
+      } catch (error) {
         toast({
-          title: 'Error loading accounts',
-          description: 'Unable to load your accounts. Please try again.',
+          title: 'Error loading transactions',
+          description: 'Unable to load transaction history. Please try again.',
           variant: 'destructive',
         });
+        return [];
       }
-    } catch (error) {
+    },
+    enabled: accounts.length > 0
+  });
+
+  // Show errors
+  useEffect(() => {
+    if (accountsError) {
       toast({
-        title: 'Network error',
-        description: 'Unable to connect to the server. Please check your connection.',
+        title: 'Error loading accounts',
+        description: 'Unable to load your accounts. Please try again.',
         variant: 'destructive',
       });
     }
-  };
-
-  const fetchAllTransactions = async () => {
-    try {
-      setLoading(true);
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const accountPromises = accounts.map(account => 
-        authenticatedFetch(`/api/accounts/${account.id}/transactions`).then(async res => {
-          if (!res.ok) throw new Error(`Failed to fetch transactions for account ${account.id}`);
-          return res.json();
-        })
-      );
-      
-      const allTransactionArrays = await Promise.all(accountPromises);
-      const allTransactions = allTransactionArrays.flat();
-      
-      // Sort by date (newest first)
-      allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
-      setTransactions(allTransactions);
-    } catch (error) {
-      toast({
-        title: 'Error loading transactions',
-        description: 'Unable to load transaction history. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [accountsError, toast]);
 
   useEffect(() => {
-    fetchAccounts();
-  }, []);
-
-  useEffect(() => {
-    if (accounts.length > 0) {
-      fetchAllTransactions();
-    }
   }, [accounts]);
 
   const filteredTransactions = transactions.filter(transaction => {

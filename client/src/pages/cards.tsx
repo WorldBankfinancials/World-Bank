@@ -32,10 +32,17 @@ export default function Cards() {
   const [accountNumber, setAccountNumber] = useState('');
 
   const queryClient = useQueryClient();
-  const [creditCards, setCreditCards] = useState<CardType[]>([]);
-  const [cardsLoading, setCardsLoading] = useState(true);
-  const [cardsError, setCardsError] = useState<ApiError | null>(null);
 
+  // Fetch cards with React Query
+  const { data: creditCards = [], isLoading: cardsLoading, error: cardsError } = useQuery<CardType[]>({
+    queryKey: ['/api/cards'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/cards');
+      if (!response.ok) throw new Error('Failed to load cards');
+      return response.json();
+    }
+  });
 
   // Show error message if cards fail to load
   useEffect(() => {
@@ -56,7 +63,7 @@ export default function Cards() {
       const response = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
+        body: JSON.stringify({ email: userProfile?.email || 'user@worldbank.com', pin })
       });
 
       if (response.ok) {
@@ -99,7 +106,7 @@ export default function Cards() {
       const response = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
+        body: JSON.stringify({ email: userProfile?.email || 'user@worldbank.com', pin })
       });
 
       if (response.ok) {
