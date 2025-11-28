@@ -18,7 +18,7 @@ export default function ProfileSettings() {
   const { data: user, isLoading } = useQuery<CustomerData>({
     queryKey: ['/api/user'],
   });
-  const displayUser: CustomerData = user || {};
+  const displayUser: CustomerData = user || { id: '' };
   const loading = isLoading;
 
   if (loading) {

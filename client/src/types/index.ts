@@ -71,7 +71,7 @@ export interface CustomerData {
   createdAt?: string;
   isActive?: boolean;
   role?: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   phone?: string;
   profession?: string;
   isVerified?: boolean;

@@ -94,7 +94,7 @@ export default function AdminDashboard() {
 
   // Profile picture upload mutation
   const uploadProfilePicMutation = useMutation({
-    mutationFn: async ({ userId, imageFile }: { userId: number; imageFile: File }) => {
+    mutationFn: async ({ userId, imageFile }: { userId: number | string; imageFile: File }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const formData = new FormData();
       formData.append('profilePic', imageFile);

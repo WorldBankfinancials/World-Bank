@@ -74,7 +74,7 @@ interface Customer {
   profession: string;
   isVerified: boolean;
   isOnline: boolean;
-  avatarUrl: string | null;
+  avatarUrl?: string | null;
   balance?: number;
   accounts?: CustomerAccount[];
   supabaseUserId?: string;
