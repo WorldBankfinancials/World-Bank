@@ -1,5 +1,6 @@
 import { Express, Request, Response, NextFunction } from 'express';
 import { Server, createServer } from 'http';
+import bcryptjs from 'bcryptjs';
 import { storage } from './storage-factory';
 import { setupTransferRoutes } from './routes-transfer';
 import { config, logConfiguration } from './config';
@@ -140,8 +141,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // STEP 2: Create local database profile - USING VALIDATED DATA ONLY
       try {
         // SECURITY: Hash the transfer PIN with bcrypt
-        const bcrypt = await import('bcryptjs');
-        const hashedPin = await bcrypt.default.hash(validatedData.transferPin, 10);
+        const hashedPin = await bcryptjs.hash(validatedData.transferPin, 10);
 
         console.log(`🔧 DEBUG: About to create user in database with supabaseUserId: ${supabaseUserId}`);
         const newUser = await storage.createUser({
@@ -400,8 +400,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // SECURITY: Hash default PIN with bcrypt
-      const bcrypt = await import('bcryptjs');
-      const hashedDefaultPin = await bcrypt.default.hash('0000', 10);
+      const hashedDefaultPin = await bcryptjs.hash('0000', 10);
 
       // SECURITY: Only accept whitelisted fields from client, hardcode privileged fields server-side
       const newUser = await storage.createUser({
@@ -521,8 +520,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         }
 
         // SECURITY: Hash default PIN with bcrypt
-        const bcrypt = await import('bcryptjs');
-        const hashedTestPin = await bcrypt.default.hash('0000', 10);
+        const hashedTestPin = await bcryptjs.hash('0000', 10);
 
         // Create user in local database with default values
         await storage.createUser({
@@ -875,8 +873,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       let pinValid = false;
       if (user.transferPin && user.transferPin.startsWith('$2')) {
         // Hashed PIN - use bcrypt compare
-        const bcrypt = await import('bcryptjs');
-        pinValid = await bcrypt.default.compare(pin, user.transferPin);
+        pinValid = await bcryptjs.compare(pin, user.transferPin);
       } else {
         // Plaintext PIN - direct comparison (legacy support)
         pinValid = user.transferPin === pin;
@@ -1117,8 +1114,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       let currentPinValid = false;
       if (user.transferPin && user.transferPin.startsWith('$2')) {
         // Hashed PIN - use bcrypt compare
-        const bcrypt = await import('bcryptjs');
-        currentPinValid = await bcrypt.default.compare(currentPin, user.transferPin);
+        currentPinValid = await bcryptjs.compare(currentPin, user.transferPin);
       } else {
         // Plaintext PIN - direct comparison (legacy support)
         currentPinValid = user.transferPin === currentPin;
@@ -1134,8 +1130,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // SECURITY: Hash the new PIN with bcrypt
-      const bcrypt = await import('bcryptjs');
-      const hashedPin = await bcrypt.default.hash(newPin, 10);
+      const hashedPin = await bcryptjs.hash(newPin, 10);
 
       // Use authenticated user's ID (not hardcoded)
       await storage.updateUser(user.id, { transferPin: hashedPin });

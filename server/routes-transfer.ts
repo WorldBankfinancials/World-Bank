@@ -20,7 +20,7 @@ export function setupTransferRoutes(app: Express) {
       if (!validation.success) {
         return res.status(400).json({ 
           message: "Validation failed",
-          errors: validation.errors
+          errors: (validation as any).errors
         });
       }
 
@@ -32,7 +32,7 @@ export function setupTransferRoutes(app: Express) {
         bankName,
         swiftCode,
         transferPin
-      } = validation.data;
+      } = (validation as any).data;
 
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
       const user = await (storage as any).getUserByEmail(req.user!.email);
@@ -156,7 +156,7 @@ export function setupTransferRoutes(app: Express) {
       if (!validation.success) {
         return res.status(400).json({ 
           message: "Validation failed",
-          errors: validation.errors
+          errors: (validation as any).errors
         });
       }
 
@@ -167,7 +167,7 @@ export function setupTransferRoutes(app: Express) {
         bankName,
         swiftCode,
         transferPin
-      } = validation.data;
+      } = (validation as any).data;
 
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
       const user = await (storage as any).getUserByEmail(req.user!.email);
@@ -277,15 +277,10 @@ export function setupTransferRoutes(app: Express) {
 
       // Create transaction record for admin approval (all transfers require approval)
       const transaction = await storage.createTransaction({
-        createdAt: new Date(),
         fromAccountId: fromAccount.id,
         transactionType: transferType || "international_transfer",
         amount: amount.toString(),
         description: `Transfer to ${recipientName}`,
-        recipientName: recipientName,
-        recipientCountry: recipientCountry || "Unknown",
-        bankName: bankName || "Unknown Bank",
-        swiftCode: swiftCode || "",
         status: "pending_approval" // All transfers require admin approval
       });
 
@@ -319,8 +314,7 @@ export function setupTransferRoutes(app: Express) {
           actionType: 'approve_transfer',
           targetType: 'transaction',
           targetId: transactionId.toString(),
-          description: `Approved transfer #${transactionId}`,
-          metadata: notes ? JSON.stringify({ notes }) : null
+          description: `Approved transfer #${transactionId}`
         });
       }
 
@@ -350,8 +344,7 @@ export function setupTransferRoutes(app: Express) {
           actionType: 'reject_transfer',
           targetType: 'transaction',
           targetId: transactionId.toString(),
-          description: `Rejected transfer #${transactionId}`,
-          metadata: JSON.stringify({ notes })
+          description: `Rejected transfer #${transactionId}`
         });
 
         // Create automatic support ticket for rejected transfer
@@ -360,11 +353,8 @@ export function setupTransferRoutes(app: Express) {
           if (account) {
           await storage.createSupportTicket({
             userId: account.userId,
-            subject: `Transfer Rejection - Transaction #${transaction.id}`,
-            description: `Your transfer has been rejected.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Recipient: ${transaction.recipientName}\n- Reason for rejection: ${notes}\n\nPlease contact support for assistance.`,
-            category: 'transfer_issue',
-            priority: 'high',
-            status: 'open'
+            description: `Your transfer has been rejected.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Reason for rejection: ${notes}\n\nPlease contact support for assistance.`,
+            subject: `Transfer Rejection - Transaction #${transaction.id}`
           });
           }
         }
