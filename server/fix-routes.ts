@@ -28,6 +28,15 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   
   // CRITICAL: Run startup sanity checks to verify database functions
   await runStartupChecks();
+  
+  // Runtime config endpoint - serves Supabase credentials to frontend
+  app.get('/api/config', (req: Request, res: Response) => {
+    res.json({
+      supabaseUrl: process.env.VITE_SUPABASE_URL,
+      supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY,
+    });
+  });
+  
   // Health check endpoint
   app.get('/api/health', (req: Request, res: Response) => {
     res.json({ status: 'OK', timestamp: new Date() });
