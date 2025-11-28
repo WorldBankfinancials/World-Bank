@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Avatar } from './Avatar';
 
 interface HeaderProps {
-  user?: UserType;
+  user?: UserType | any;
 }
 
 export default function Header({}: HeaderProps) {
