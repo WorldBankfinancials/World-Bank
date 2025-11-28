@@ -1420,7 +1420,7 @@ export class SupabasePublicStorage implements IStorage {
       return {
         id: data.id,
         userId: data.user_id,
-        investmentType: data.investment_type,
+        type: data.investment_type,
         amount: data.amount?.toString() || '0',
         currentValue: data.current_value?.toString() || null,
         returnRate: data.return_rate?.toString() || null,
@@ -1450,7 +1450,7 @@ export class SupabasePublicStorage implements IStorage {
     return {
       id: data.id,
       userId: data.user_id,
-      investmentType: data.investment_type,
+      type: data.investment_type,
       amount: data.amount?.toString() || '0',
       currentValue: data.current_value?.toString() || null,
       returnRate: data.return_rate?.toString() || null,
@@ -1463,11 +1463,6 @@ export class SupabasePublicStorage implements IStorage {
 
   async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> {
     const updateData: any = {};
-    if (updates.investmentType !== undefined) updateData.investment_type = updates.investmentType;
-    if (updates.amount !== undefined) updateData.amount = updates.amount;
-    if (updates.currentValue !== undefined) updateData.current_value = updates.currentValue;
-    if (updates.returnRate !== undefined) updateData.return_rate = updates.returnRate;
-    if (updates.maturityDate !== undefined) updateData.maturity_date = updates.maturityDate;
     if (updates.status !== undefined) updateData.status = updates.status;
     updateData.updated_at = new Date().toISOString();
     
@@ -1477,7 +1472,7 @@ export class SupabasePublicStorage implements IStorage {
     return {
       id: data.id,
       userId: data.user_id,
-      investmentType: data.investment_type,
+      type: data.investment_type,
       amount: data.amount?.toString() || '0',
       currentValue: data.current_value?.toString() || null,
       returnRate: data.return_rate?.toString() || null,

@@ -223,13 +223,11 @@ export class SupabaseStorage implements IStorage {
       userId: data.user_id,
       accountNumber: data.account_number,
       accountType: data.account_type,
-      balance: data.balance,
-      currency: data.currency,
-      isActive: data.is_active,
-      interestRate: data.interest_rate || null,
-      minimumBalance: data.minimum_balance || null,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
+      balance: data.balance || '0.00',
+      currency: data.currency || 'USD',
+      status: data.status || 'active',
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
     };
   }
 
@@ -239,10 +237,10 @@ export class SupabaseStorage implements IStorage {
       .insert({
         user_id: account.userId,
         account_number: account.accountNumber,
-        account_name: account.accountName,
         account_type: account.accountType,
-        balance: account.balance,
+        balance: account.balance || '0.00',
         currency: account.currency || 'USD',
+        status: 'active'
       })
       .select()
       .single();
@@ -256,13 +254,11 @@ export class SupabaseStorage implements IStorage {
       userId: data.user_id,
       accountNumber: data.account_number,
       accountType: data.account_type,
-      balance: data.balance,
-      currency: data.currency,
-      isActive: data.is_active,
-      interestRate: data.interest_rate || null,
-      minimumBalance: data.minimum_balance || null,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
+      balance: data.balance || '0.00',
+      currency: data.currency || 'USD',
+      status: data.status || 'active',
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
     };
   }
 
@@ -457,17 +453,36 @@ export class SupabaseStorage implements IStorage {
   private mapSupabaseTransaction(data: any): Transaction {
     return {
       id: data.id,
+      transactionId: data.transaction_id || '',
+      transactionType: data.transaction_type || 'transfer',
+      fromUserId: data.from_user_id || 0,
+      toUserId: data.to_user_id || 0,
       fromAccountId: data.from_account_id,
       toAccountId: data.to_account_id,
       amount: data.amount,
       currency: data.currency || 'USD',
-      type: data.type,
-      status: data.status,
-      description: data.description,
+      type: data.type || 'transfer',
+      status: data.status || 'pending',
+      description: data.description || null,
+      recipientName: data.recipient_name || null,
+      recipientAccount: data.recipient_account || null,
+      recipientAddress: data.recipient_address || null,
+      recipientCountry: data.recipient_country || null,
       referenceNumber: data.reference_number || null,
-      fee: data.fee || null,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
+      fee: data.fee || '0.00',
+      exchangeRate: data.exchange_rate || null,
+      countryCode: data.country_code || null,
+      bankName: data.bank_name || null,
+      swiftCode: data.swift_code || null,
+      transferPurpose: data.transfer_purpose || null,
+      category: data.category || null,
+      adminNotes: data.admin_notes || null,
+      approvedBy: data.approved_by || null,
+      approvedAt: data.approved_at || null,
+      rejectedBy: data.rejected_by || null,
+      rejectedAt: data.rejected_at || null,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
     };
   }
 

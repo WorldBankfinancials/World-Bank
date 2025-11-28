@@ -207,8 +207,7 @@ export function setupTransferRoutes(app: Express) {
           action: 'reject_transfer',
           targetType: 'transaction',
           targetId: transactionId,
-          details: { notes }, description: `Rejected transfer #${transactionId}`,
-          metadata: JSON.stringify({ notes })
+          details: notes ? { notes } : {}
         });
 
         // Create automatic support ticket for rejected transfer
