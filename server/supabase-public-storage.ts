@@ -53,36 +53,7 @@ export class SupabasePublicStorage implements IStorage {
       
       if (error || !user) return undefined;
       
-      return {
-        id: user.id,
-        username: user.username,
-        password: user.password,
-        firstName: user.first_name || "", lastName: user.last_name || "",
-        email: user.email,
-        phone: user.phone,
-        accountNumber: user.account_number,
-        accountId: user.account_id,
-        profession: user.profession,
-        dateOfBirth: user.date_of_birth,
-        address: user.address,
-        city: user.city,
-        state: user.state,
-        country: user.country,
-        postalCode: user.postal_code,
-        annualIncome: user.annual_income,
-        idType: user.id_type,
-        idNumber: user.id_number,
-        transferPin: user.transfer_pin,
-        role: user.role,
-        isVerified: user.is_verified,
-        isActive: user.is_active,
-        balance: user.balance || "0",
-        createdAt: user.created_at,
-        createdByAdmin: user.created_by_admin,
-        modifiedByAdmin: user.modified_by_admin,
-        adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
-      };
+      return { id: user.id, username: user.username, password: user.password, firstName: user.first_name || "", lastName: user.last_name || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
     } catch (error) {
       console.error('Error getting user:', error);
       return undefined;
@@ -99,36 +70,7 @@ export class SupabasePublicStorage implements IStorage {
       
       if (error || !user) return undefined;
       
-      return {
-        id: user.id,
-        username: user.username,
-        password: user.password,
-        firstName: user.first_name || "", lastName: user.last_name || "",
-        email: user.email,
-        phone: user.phone,
-        accountNumber: user.account_number,
-        accountId: user.account_id,
-        profession: user.profession,
-        dateOfBirth: user.date_of_birth,
-        address: user.address,
-        city: user.city,
-        state: user.state,
-        country: user.country,
-        postalCode: user.postal_code,
-        annualIncome: user.annual_income,
-        idType: user.id_type,
-        idNumber: user.id_number,
-        transferPin: user.transfer_pin,
-        role: user.role,
-        isVerified: user.is_verified,
-        isActive: user.is_active,
-        balance: user.balance || "0",
-        createdAt: user.created_at,
-        createdByAdmin: user.created_by_admin,
-        modifiedByAdmin: user.modified_by_admin,
-        adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
-      };
+      return { id: user.id, username: user.username, password: user.password, firstName: user.first_name || "", lastName: user.last_name || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
     } catch (error) {
       console.error('Error getting user by email:', error);
       return undefined;
@@ -145,36 +87,7 @@ export class SupabasePublicStorage implements IStorage {
       
       if (error || !user) return undefined;
       
-      return {
-        id: user.id,
-        username: user.username,
-        password: user.password,
-        firstName: user.first_name || "", lastName: user.last_name || "",
-        email: user.email,
-        phone: user.phone,
-        accountNumber: user.account_number,
-        accountId: user.account_id,
-        profession: user.profession,
-        dateOfBirth: user.date_of_birth,
-        address: user.address,
-        city: user.city,
-        state: user.state,
-        country: user.country,
-        postalCode: user.postal_code,
-        annualIncome: user.annual_income,
-        idType: user.id_type,
-        idNumber: user.id_number,
-        transferPin: user.transfer_pin,
-        role: user.role,
-        isVerified: user.is_verified,
-        isActive: user.is_active,
-        balance: user.balance || "0",
-        createdAt: user.created_at,
-        createdByAdmin: user.created_by_admin,
-        modifiedByAdmin: user.modified_by_admin,
-        adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
-      };
+      return { id: user.id, username: user.username, password: user.password, firstName: user.first_name || "", lastName: user.last_name || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
     } catch (error) {
       console.error('Error getting user by Supabase ID:', error);
       return undefined;
@@ -193,36 +106,7 @@ export class SupabasePublicStorage implements IStorage {
         return undefined;
       }
       
-      return {
-        id: user.id,
-        username: user.username,
-        password: user.password,
-        firstName: user.first_name || "", lastName: user.last_name || "",
-        email: user.email,
-        phone: user.phone,
-        accountNumber: user.account_number,
-        accountId: user.account_id,
-        profession: user.profession,
-        dateOfBirth: user.date_of_birth,
-        address: user.address,
-        city: user.city,
-        state: user.state,
-        country: user.country,
-        postalCode: user.postal_code,
-        annualIncome: user.annual_income,
-        idType: user.id_type,
-        idNumber: user.id_number,
-        transferPin: user.transfer_pin,
-        role: user.role,
-        isVerified: user.is_verified,
-        isActive: user.is_active,
-        balance: user.balance || "0",
-        createdAt: user.created_at,
-        createdByAdmin: user.created_by_admin,
-        modifiedByAdmin: user.modified_by_admin,
-        adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
-      };
+      return { id: user.id, username: user.username, password: user.password, firstName: user.first_name || "", lastName: user.last_name || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
     } catch (error) {
       console.error('❌ Error getting user by phone:', error);
       return undefined;
@@ -495,36 +379,7 @@ export class SupabasePublicStorage implements IStorage {
       
       if (error || !user) return undefined;
       
-      return {
-        id: user.id,
-        username: user.username,
-        password: user.password,
-        firstName: user.first_name || "", lastName: user.last_name || "",
-        email: user.email,
-        phone: user.phone,
-        accountNumber: user.account_number,
-        accountId: user.account_id,
-        profession: user.profession,
-        dateOfBirth: user.date_of_birth,
-        address: user.address,
-        city: user.city,
-        state: user.state,
-        country: user.country,
-        postalCode: user.postal_code,
-        annualIncome: user.annual_income,
-        idType: user.id_type,
-        idNumber: user.id_number,
-        transferPin: user.transfer_pin,
-        role: user.role,
-        isVerified: user.is_verified,
-        isActive: user.is_active,
-        balance: user.balance || "0",
-        createdAt: user.created_at,
-        createdByAdmin: user.created_by_admin,
-        modifiedByAdmin: user.modified_by_admin,
-        adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
-      };
+      return { id: user.id, username: user.username, password: user.password, firstName: user.first_name || "", lastName: user.last_name || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
     } catch (error) {
       console.error('Error getting user by username:', error);
       return undefined;
@@ -580,36 +435,7 @@ export class SupabasePublicStorage implements IStorage {
         throw new Error('Failed to create user - no data returned');
       }
 
-      return {
-        id: user.id,
-        username: user.username,
-        password: user.password,
-        firstName: user.first_name || "", lastName: user.last_name || "",
-        email: user.email,
-        phone: user.phone,
-        accountNumber: user.account_number,
-        accountId: user.account_id,
-        profession: user.profession,
-        dateOfBirth: user.date_of_birth,
-        address: user.address,
-        city: user.city,
-        state: user.state,
-        country: user.country,
-        postalCode: user.postal_code,
-        annualIncome: user.annual_income,
-        idType: user.id_type,
-        idNumber: user.id_number,
-        transferPin: user.transfer_pin,
-        role: user.role,
-        isVerified: user.is_verified,
-        isActive: user.is_active,
-        balance: user.balance || "0",
-        createdAt: user.created_at,
-        createdByAdmin: user.created_by_admin,
-        modifiedByAdmin: user.modified_by_admin,
-        adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
-      };
+      return { id: user.id, username: user.username, password: user.password, firstName: user.first_name || "", lastName: user.last_name || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
     } catch (error) {
       console.error('Error creating user:', error);
       throw error;
@@ -648,36 +474,7 @@ export class SupabasePublicStorage implements IStorage {
 
       if (error || !user) return undefined;
       
-      return {
-        id: user.id,
-        username: user.username,
-        password: user.password,
-        firstName: user.first_name || "", lastName: user.last_name || "",
-        email: user.email,
-        phone: user.phone,
-        accountNumber: user.account_number,
-        accountId: user.account_id,
-        profession: user.profession,
-        dateOfBirth: user.date_of_birth,
-        address: user.address,
-        city: user.city,
-        state: user.state,
-        country: user.country,
-        postalCode: user.postal_code,
-        annualIncome: user.annual_income,
-        idType: user.id_type,
-        idNumber: user.id_number,
-        transferPin: user.transfer_pin,
-        role: user.role,
-        isVerified: user.is_verified,
-        isActive: user.is_active,
-        balance: user.balance || "0",
-        createdAt: user.created_at,
-        createdByAdmin: user.created_by_admin,
-        modifiedByAdmin: user.modified_by_admin,
-        adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
-      };
+      return { id: user.id, username: user.username, password: user.password, firstName: user.first_name || "", lastName: user.last_name || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
     } catch (error) {
       console.error('Error updating user:', error);
       return undefined;
@@ -695,36 +492,7 @@ export class SupabasePublicStorage implements IStorage {
 
       if (error || !user) return undefined;
       
-      return {
-        id: user.id,
-        username: user.username,
-        password: user.password,
-        firstName: user.first_name || "", lastName: user.last_name || "",
-        email: user.email,
-        phone: user.phone,
-        accountNumber: user.account_number,
-        accountId: user.account_id,
-        profession: user.profession,
-        dateOfBirth: user.date_of_birth,
-        address: user.address,
-        city: user.city,
-        state: user.state,
-        country: user.country,
-        postalCode: user.postal_code,
-        annualIncome: user.annual_income,
-        idType: user.id_type,
-        idNumber: user.id_number,
-        transferPin: user.transfer_pin,
-        role: user.role,
-        isVerified: user.is_verified,
-        isActive: user.is_active,
-        balance: user.balance || "0",
-        createdAt: user.created_at,
-        createdByAdmin: user.created_by_admin,
-        modifiedByAdmin: user.modified_by_admin,
-        adminNotes: user.admin_notes,
-        updatedAt: user.updated_at
-      };
+      return { id: user.id, username: user.username, password: user.password, firstName: user.first_name || "", lastName: user.last_name || "", email: user.email, phone: user.phone, accountNumber: user.account_number, accountId: user.account_id, profession: user.profession, dateOfBirth: user.date_of_birth, address: user.address, city: user.city, state: user.state, country: user.country, postalCode: user.postal_code, annualIncome: user.annual_income, idType: user.id_type, idNumber: user.id_number, transferPin: user.transfer_pin, role: user.role, isVerified: user.is_verified, isActive: user.is_active, balance: user.balance || "0", createdAt: user.created_at, updatedAt: user.updated_at } as any;
     } catch (error) {
       console.error('Error updating user balance:', error);
       return undefined;
@@ -1050,59 +818,18 @@ export class SupabasePublicStorage implements IStorage {
 
   async createAdminAction(action: InsertAdminAction): Promise<AdminAction> {
     try {
-      const { data, error } = await supabase.from('admin_actions').insert({
-        admin_id: action.adminId,
-        action_type: action.actionType,
-        target_id: action.targetId,
-        target_type: action.targetType,
-        description: action.description,
-        metadata: action.metadata || null,
-      }).select().single();
-      
-      if (error) {
-        console.error('Error creating admin action:', error);
-        throw error;
-      }
-      
-      return {
-        id: data.id,
-        adminId: data.admin_id,
-        actionType: data.action_type,
-        targetId: data.target_id,
-        targetType: data.target_type,
-        description: data.description,
-        metadata: data.metadata,
-        createdAt: new Date(data.created_at),
-      } as AdminAction;
-    } catch (error) {
-      console.error('Failed to create admin action:', error);
-      throw error;
-    }
+      const { data, error } = await supabase.from('admin_actions').insert({ admin_id: action.adminId, action: action.action, target_id: action.targetId, target_type: action.targetType, details: action.details || null }).select().single();
+      if (error) throw error;
+      return { id: data.id, adminId: data.admin_id, action: data.action, targetId: data.target_id, targetType: data.target_type, details: data.details, createdAt: data.created_at } as any;
+    } catch (error) { console.error('Failed to create admin action:', error); throw error; }
   }
 
   async getAdminActions(adminId?: number): Promise<AdminAction[]> {
     let query = supabase.from('admin_actions').select('*').order('created_at', { ascending: false });
-    
-    if (adminId !== undefined) {
-      query = query.eq('admin_id', adminId);
-    }
-    
+    if (adminId !== undefined) query = query.eq('admin_id', adminId);
     const { data, error } = await query;
-    if (error) {
-      console.error('Error fetching admin actions:', error);
-      throw new Error(`Failed to fetch admin actions: ${error.message}`);
-    }
-    
-    return (data || []).map(action => ({
-      id: action.id,
-      adminId: action.admin_id,
-      actionType: action.action_type,
-      targetId: action.target_id,
-      targetType: action.target_type,
-      description: action.description,
-      metadata: action.metadata,
-      createdAt: new Date(action.created_at),
-    } as AdminAction));
+    if (error) throw new Error(`Failed to fetch admin actions: ${error.message}`);
+    return (data || []).map(a => ({ id: a.id, adminId: a.admin_id, action: a.action, targetId: a.target_id, targetType: a.target_type, details: a.details, createdAt: a.created_at } as any));
   }
 
   async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> {
