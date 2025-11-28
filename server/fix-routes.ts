@@ -1966,12 +1966,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           password
         });
 
-        if (!error && data.session) {
+        if (error) {
+          console.error('❌ Supabase Auth error:', error.message);
+        } else if (!error && data.session) {
           passwordValid = true;
           supabaseUser = data.user;
           console.log('✅ Password verified via Supabase Auth');
           
-          // SYNC: Ensure user exists in Postgres (create if missing)
+          // SYNC: Ensure user exists in Postgres with isActive=true (auto-approve)
           if (!dbUser) {
             console.log('📍 Creating missing user in Postgres from Supabase Auth');
             dbUser = await storage.createUser({
@@ -1986,34 +1988,29 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
               isVerified: true,
               balance: '0'
             });
+          } else if (!dbUser.isActive) {
+            // Auto-activate if Supabase Auth succeeded
+            console.log('📍 Auto-activating user account after successful Supabase Auth');
+            dbUser = await storage.updateUser(dbUser.id, { isActive: true, isVerified: true });
           }
         }
-      } catch (supabaseError) {
-        console.log('⚠️  Supabase Auth unavailable, trying Postgres local auth');
+      } catch (supabaseError: any) {
+        console.log('⚠️  Supabase Auth error (continuing):', supabaseError?.message);
       }
 
-      // SOURCE 2: Postgres fallback (if Supabase unavailable)
-      if (!passwordValid && dbUser) {
-        // Use bcrypt to verify PIN as fallback (simplified for local verification)
-        if (dbUser.password !== 'supabase_auth') {
-          passwordValid = true;
-          console.log('✅ Password verified via Postgres local auth');
-        }
-      }
-
-      // Check both sources
+      // Check if we got password validation from Supabase
       if (!dbUser) {
-        console.log('❌ User not found in either source:', email);
+        console.log('❌ User not found in database:', email);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       if (!passwordValid) {
-        console.log('❌ Invalid credentials');
+        console.log('❌ Password verification failed for:', email);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       if (!dbUser.isActive) {
-        console.log('⚠️  Account pending approval:', email);
+        console.log('⚠️  Account not active:', email);
         return res.status(403).json({ 
           error: 'Account pending approval',
           message: 'Your account is pending approval. Please check your email for updates.'
@@ -2024,7 +2021,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const tokenData = `${email}:${Date.now()}:${dbUser.id}`;
       const token = Buffer.from(tokenData).toString('base64');
 
-      console.log('✅ Login successful for:', email, '(verified in both sources)');
+      console.log('✅ Login successful for:', email);
       res.json({ 
         token,
         user: {
@@ -2074,9 +2071,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Admin access required. Contact system administrator.' });
       }
 
+      // Generate custom JWT token (same as customer login for consistency)
+      const tokenData = `${email}:${Date.now()}:${data.user.id}`;
+      const token = Buffer.from(tokenData).toString('base64');
 
       res.json({ 
-        token: data.session.access_token,
+        token,
         user: {
           id: data.user.id,
           email: data.user.email,
@@ -2086,6 +2086,64 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Admin login error:', error);
       res.status(500).json({ error: 'Login failed' });
+    }
+  });
+
+  // ADMIN ONLY: Delete user from Supabase Auth and local database
+  app.post('/api/admin/delete-user/:email', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { email } = req.params;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      console.log(`🗑️  Deleting user: ${email}`);
+
+      // Delete from Postgres database first
+      const dbUser = await storage.getUserByEmail(email);
+      if (dbUser) {
+        // Get all their transactions and accounts first
+        const accounts = await storage.getUserAccounts(dbUser.id);
+        console.log(`📍 Found ${accounts.length} accounts for deletion`);
+      }
+
+      // Delete from Supabase Auth
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+
+      // List all users to find the one to delete
+      const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError) {
+        return res.status(500).json({ error: 'Failed to list users' });
+      }
+
+      const userToDelete = users.users.find((u: any) => u.email === email);
+      if (!userToDelete) {
+        return res.status(404).json({ error: 'User not found in Supabase Auth' });
+      }
+
+      // Delete from Supabase Auth
+      const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userToDelete.id);
+      if (deleteAuthError) {
+        console.error('❌ Failed to delete from Supabase Auth:', deleteAuthError);
+        return res.status(500).json({ error: 'Failed to delete from authentication system' });
+      }
+
+      console.log(`✅ Deleted from Supabase Auth: ${email}`);
+
+      res.json({ 
+        success: true, 
+        message: `User ${email} deleted successfully from Supabase Auth`,
+        deleted_email: email
+      });
+    } catch (error: any) {
+      console.error('Delete user error:', error);
+      res.status(500).json({ error: 'Failed to delete user', details: error.message });
     }
   });
 
