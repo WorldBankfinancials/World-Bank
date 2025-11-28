@@ -1,129 +1,124 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from '../lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { User } from '@supabase/supabase-js';
+import { supabaseClient } from '@/lib/supabase';
 
 interface UserProfile {
   id: string;
-  email: string;
+  email?: string;
   fullName?: string;
+  username?: string;
   phone?: string;
-  accountNumber?: string;
-  accountId?: string;
-  profession?: string;
-  dateOfBirth?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  postalCode?: string;
-  annualIncome?: string;
-  idType?: string;
-  idNumber?: string;
-  transferPin?: string;
   role?: string;
+  balance?: string | number;
   isVerified?: boolean;
-  isOnline?: boolean;
   isActive?: boolean;
-  avatarUrl?: string;
-  balance?: number;
+  profession?: string;
+  accountId?: string;
+  accountNumber?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
+  loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (email: string, password: string, metadata?: any) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
-  loading: boolean;
-  fetchUserData: () => Promise<void>;
+  fetchUserData: (user: User) => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserData = async (supabaseUser?: User) => {
-    try {
-      const currentUser = supabaseUser || user;
-      if (!currentUser) {
-        return;
-      }
+  const supabase = supabaseClient;
 
-      console.log('🔍 Fetching fresh user data for:', currentUser.email);
-
-      // Wait a moment for trigger to complete if this is a new user
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      
-      const createUserProfile = (bankingUser: any): UserProfile => ({
-        id: currentUser.id,
-        email: currentUser.email || '',
-        fullName: bankingUser.fullName,
-        phone: bankingUser.phone,
-        accountNumber: bankingUser.accountNumber,
-        accountId: bankingUser.accountId,
-        profession: bankingUser.profession,
-        dateOfBirth: bankingUser.dateOfBirth,
-        address: bankingUser.address,
-        city: bankingUser.city,
-        state: bankingUser.state,
-        country: bankingUser.country,
-        postalCode: bankingUser.postalCode,
-        annualIncome: bankingUser.annualIncome,
-        idType: bankingUser.idType,
-        idNumber: bankingUser.idNumber,
-        transferPin: bankingUser.transferPin,
-        role: bankingUser.role,
-        isVerified: bankingUser.isVerified,
-        isOnline: bankingUser.isOnline,
-        isActive: bankingUser.isActive,
-        avatarUrl: bankingUser.avatarUrl || currentUser.user_metadata?.avatar_url,
-        balance: bankingUser.balance
-      });
-
-      const response = await authenticatedFetch(`/api/users/supabase/${currentUser.id}`, {
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
-
-      if (response.ok) {
-        const bankingUser = await response.json();
-        console.log('✅ User profile loaded and updated');
-        setUserProfile(createUserProfile(bankingUser));
-      } else {
-        // Retry after another second for new users
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        const retryResponse = await authenticatedFetch(`/api/users/supabase/${currentUser.id}`, {
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
-        });
-
-        if (retryResponse.ok) {
-          const bankingUser = await retryResponse.json();
-          console.log('✅ User profile loaded and updated');
-          setUserProfile(createUserProfile(bankingUser));
-        }
-      }
-    } catch (error: unknown) {
-      // Log non-WebSocket errors, silently handle WebSocket context errors
-      if (error instanceof Error && !error.message.includes('WebSocket')) {
-        console.warn('Failed to fetch user data:', error.message);
-      }
+  useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
     }
-  };
+
+    // Check current session
+    const checkSession = async () => {
+      try {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (!sessionError && sessionData?.session?.user) {
+          setUser(sessionData.session.user);
+          await fetchUserData(sessionData.session.user);
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+
+    // Listen for auth changes
+    const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+      try {
+        if (session?.user) {
+          setUser(session.user);
+          await fetchUserData(session.user);
+        } else {
+          setUser(null);
+          setUserProfile(null);
+        }
+      } catch (error) {
+        console.error('Auth state change error:', error);
+      }
+    });
+
+    return () => {
+      data?.subscription?.unsubscribe();
+    };
+  }, [supabase]);
+
+  const fetchUserData = useCallback(async (authUser: User) => {
+    try {
+      if (!authUser?.id) return;
+
+      const response = await fetch(`/api/users/supabase/${authUser.id}`);
+      if (response.ok) {
+        const profile = await response.json();
+        setUserProfile({
+          id: authUser.id,
+          email: authUser.email,
+          fullName: profile?.fullName || authUser.user_metadata?.full_name,
+          username: profile?.username,
+          phone: profile?.phone,
+          role: profile?.role,
+          balance: profile?.balance,
+          isVerified: profile?.isVerified,
+          isActive: profile?.isActive,
+          profession: profile?.profession,
+          accountId: profile?.accountId,
+          accountNumber: profile?.accountNumber,
+        });
+      } else {
+        setUserProfile({
+          id: authUser.id,
+          email: authUser.email,
+          fullName: authUser.user_metadata?.full_name,
+        });
+      }
+    } catch (error) {
+      console.error('Fetch user data error:', error);
+    }
+  }, []);
 
   const signIn = async (email: string, password: string): Promise<{ error?: string }> => {
     try {
       setLoading(true);
+
+      if (!supabase) {
+        return { error: 'Authentication service unavailable' };
+      }
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -131,7 +126,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        setLoading(false);
         return { error: error.message };
       }
 
@@ -143,21 +137,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setLoading(false);
-      return { error: "Authentication failed" };
+      return { error: 'Authentication failed' };
     } catch (error) {
       setLoading(false);
-      return { error: "Network error occurred" };
+      return { error: 'Network error occurred' };
     }
   };
 
   const signUp = async (email: string, password: string, metadata?: any): Promise<{ error?: string }> => {
     try {
+      if (!supabase) {
+        return { error: 'Authentication service unavailable' };
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: metadata || {}
-        }
+        options: { data: metadata }
       });
 
       if (error) {
@@ -166,136 +162,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return {};
     } catch (error) {
-      console.error("Sign up error:", error);
-      return { error: "Network error occurred" };
+      return { error: 'Signup failed' };
     }
   };
 
   const signOut = async () => {
     try {
-      try {
-        localStorage.clear();
-      } catch (e) {}
-      try {
-        sessionStorage.clear();
-      } catch (e) {}
-
-      await supabase.auth.signOut();
-      setUser(null);
-      setUserProfile(null);
+      if (supabase) {
+        await supabase.auth.signOut();
+        setUser(null);
+        setUserProfile(null);
+      }
     } catch (error) {
-      // Logout error
+      console.error('Sign out error:', error);
     }
   };
 
-  useEffect(() => {
-    let mounted = true;
-    const authSubscriptions: any[] = [];
-
-    const initializeSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!mounted) return;
-
-        if (session?.user && session.expires_at) {
-          const expirationTime = new Date(session.expires_at * 1000);
-          const now = new Date();
-
-          if (expirationTime > now) {
-            setUser(session.user);
-            await fetchUserData(session.user);
-          } else {
-            await supabase.auth.signOut();
-            setUser(null);
-            setUserProfile(null);
-          }
-        } else {
-          setUser(null);
-          setUserProfile(null);
-        }
-
-        setLoading(false);
-      } catch (error) {
-        if (mounted) {
-          setUser(null);
-          setUserProfile(null);
-          setLoading(false);
-        }
-      }
-    };
-
-    initializeSession();
-
-    // Defer auth state listener to avoid WebSocket errors on mount
-    const initAuthListener = async () => {
-      try {
-        const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-          if (!mounted) return;
-
-          try {
-            if (event === 'SIGNED_OUT') {
-              setUser(null);
-              setLoading(false);
-            } else if (event === 'INITIAL_SESSION' && session) {
-              fetchUserData(session.user);
-            } else if (event === 'SIGNED_IN' && session) {
-              setUser(session.user);
-              await fetchUserData(session.user);
-              setLoading(false);
-            } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-              setUser(session.user);
-              await fetchUserData(session.user);
-              setLoading(false);
-            } else if (event === 'INITIAL_SESSION') {
-              setLoading(false);
-            }
-          } catch (e) {
-            // Silently handle event errors
-          }
-        });
-
-        if (data?.subscription && mounted) {
-          authSubscriptions.push(data.subscription);
-        }
-      } catch (e) {
-        // Silently handle auth listener errors
-      }
-    };
-
-    initAuthListener();
-
-    return () => {
-      mounted = false;
-      authSubscriptions.forEach(sub => {
-        try {
-          sub.unsubscribe();
-        } catch (e) {}
-      });
-    };
-  }, []);
-
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        userProfile,
-        signIn,
-        signUp,
-        signOut,
-        loading,
-        fetchUserData
-      }}
-    >
+    <AuthContext.Provider value={{ user, userProfile, loading, signIn, signUp, signOut, fetchUserData }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth must be used within AuthProvider');
   }
   return context;
-};
+}
