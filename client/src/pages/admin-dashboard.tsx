@@ -225,14 +225,16 @@ export default function AdminDashboard() {
       <Header user={{
         id: 1,
         username: "admin",
-        fullName: "System Administrator",
+        firstName: "System",
+        lastName: "Administrator",
+        email: "admin@worldbank.com",
+        password: "",
         accountNumber: "ADMIN-001",
-        accountId: "WB-ADMIN-001",
+        accountId: 1,
         profession: "System Administrator",
         isVerified: true,
-        isOnline: true,
-        avatarUrl: null
-      }} />
+        role: "admin"
+      } as any} />
       
       <div className="px-4 py-6">
         {/* Admin Header */}

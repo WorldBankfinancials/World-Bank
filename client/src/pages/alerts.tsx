@@ -240,7 +240,7 @@ export default function Alerts() {
                 filteredAlerts.map((alertItem) => {
                   const IconComponent = getAlertIcon(alertItem.alert_type);
                   const { color, bgColor } = getAlertStyle(alertItem.alert_type);
-                  const timeAgo = new Date(alertItem.created_at).toLocaleString();
+                  const timeAgo = alertItem.created_at ? new Date(alertItem.created_at).toLocaleString() : new Date().toLocaleString();
                   
                   return (
                     <div
@@ -255,7 +255,7 @@ export default function Alerts() {
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-1">
-                              <h3 className="font-medium text-sm" data-testid={`alert-title-${alertItem.id}`}>{alertItem.title}</h3>
+                              <h3 className="font-medium text-sm" data-testid={`alert-title-${alertItem.id}`}>{alertItem.title || alertItem.message}</h3>
                               {!alertItem.is_read && (
                                 <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                               )}
