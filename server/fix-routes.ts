@@ -745,6 +745,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const body = req.body as { email?: string; username?: string; pin: string };
       const identifier = body.email || body.username;
 
+      if (!identifier) {
+        return res.status(400).json({ message: 'Email or username required', verified: false });
+      }
+
       // Use email for lookup (supports both email and username fields for compatibility)
       const user = await (storage).getUserByEmail(identifier);
 
@@ -2036,7 +2040,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           const role = authUser.app_metadata?.role || 'customer';
 
           // Fetch user from database to get userId
-          const dbUser = await (storage).getUserByEmail(authUser.email);
+          const userEmail = authUser.email;
+          if (!userEmail) {
+            ws.send(JSON.stringify({ type: 'error', message: 'User email not found' }));
+            ws.close();
+            return;
+          }
+          const dbUser = await (storage).getUserByEmail(userEmail);
 
           if (!dbUser) {
             console.warn(`🚫 WebSocket auth failed: User ${authUser.email} not found in database`);
