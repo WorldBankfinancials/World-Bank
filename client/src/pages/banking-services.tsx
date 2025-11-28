@@ -1,4 +1,4 @@
-import type { User } from "@/lib/schema";
+import type { User } from "@shared/schema";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -26,7 +26,7 @@ import {
 
 export default function BankingServices() {
   const { t } = useLanguage();
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading } = useQuery<User | any>({
     queryKey: ['/api/user'],
   });
 

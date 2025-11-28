@@ -127,7 +127,7 @@ export default function VerificationCenter() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={userProfile} />
+      <Header user={userProfile as any} />
       
       <div className="max-w-6xl mx-auto p-6 pt-24">
         {/* Page Header */}

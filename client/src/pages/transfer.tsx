@@ -261,7 +261,7 @@ export default function Transfer() {
   if (showPendingStatus) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header user={userProfile || undefined} />
+        <Header user={userProfile as any} />
         
         <div className="px-4 py-6 pb-20">
           <div className="max-w-md mx-auto">
