@@ -250,9 +250,6 @@ export class SupabaseStorage implements IStorage {
         account_type: account.accountType,
         balance: account.balance,
         currency: account.currency || 'USD',
-        is_active: account.isActive ?? true,
-        interest_rate: account.interestRate,
-        minimum_balance: account.minimumBalance
       })
       .select()
       .single();

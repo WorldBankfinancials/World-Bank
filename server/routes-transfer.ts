@@ -136,14 +136,15 @@ export function setupTransferRoutes(app: Express) {
       const transaction = await storage.createTransaction({
         createdAt: new Date(),
         fromAccountId: fromAccount.id,
-        transactionType: transferType || "international_transfer",
+        type: transferType || "international_transfer",
         amount: amount.toString(),
         description: `Transfer to ${recipientName}`,
         recipientName: recipientName,
         recipientCountry: recipientCountry || "Unknown",
         bankName: bankName || "Unknown Bank",
         swiftCode: swiftCode || "",
-        status: "pending_approval" // All transfers require admin approval
+        currency: currency || "USD",
+        status: "pending_approval"
       });
 
       res.json({ 
@@ -173,11 +174,10 @@ export function setupTransferRoutes(app: Express) {
         // Log admin action
         await storage.createAdminAction({
           adminId: adminId,
-          actionType: 'approve_transfer',
+          action: 'approve_transfer',
           targetType: 'transaction',
-          targetId: transactionId.toString(),
-          description: `Approved transfer #${transactionId}`,
-          metadata: notes ? JSON.stringify({ notes }) : null
+          targetId: transactionId,
+          details: notes ? { notes } : {}
         });
       }
 
@@ -204,9 +204,9 @@ export function setupTransferRoutes(app: Express) {
         // Log admin action
         await storage.createAdminAction({
           adminId: adminId,
-          actionType: 'reject_transfer',
+          action: 'reject_transfer',
           targetType: 'transaction',
-          targetId: transactionId.toString(),
+          targetId: transactionId,
           description: `Rejected transfer #${transactionId}`,
           metadata: JSON.stringify({ notes })
         });

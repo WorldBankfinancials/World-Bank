@@ -411,14 +411,14 @@ export class PostgresStorage implements IStorage {
   async updateAccount(id: number, updates: Partial<Account>): Promise<Account | undefined> {
     try {
       const balanceVal = updates.balance || null;
-      const isActiveVal = updates.isActive ?? null;
+      const statusVal = updates.status || null;
       const accountTypeVal = updates.accountType || null;
       
       const result = await sql`
         UPDATE public.bank_accounts 
         SET 
           balance = COALESCE(${balanceVal}, balance),
-          is_active = COALESCE(${isActiveVal}, is_active),
+          status = COALESCE(${statusVal}, status),
           account_type = COALESCE(${accountTypeVal}, account_type),
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
@@ -507,6 +507,7 @@ export class PostgresStorage implements IStorage {
     return {
       id: data.id,
       transactionId: data.transaction_id,
+      transactionType: data.transaction_type,
       fromUserId: data.from_user_id,
       toUserId: data.to_user_id,
       fromAccountId: data.from_account_id,
