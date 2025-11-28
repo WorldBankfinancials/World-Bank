@@ -1,9 +1,9 @@
 
 import { useState } from "react";
-import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
-import Header from '../components/Header';
-import BottomNavigation from '../components/BottomNavigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import Header from '@/components/Header';
+import BottomNavigation from '@/components/BottomNavigation';
 import { MessageSquare, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
