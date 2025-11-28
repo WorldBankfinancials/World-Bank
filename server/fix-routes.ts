@@ -2064,8 +2064,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   return httpServer;
 }
+
 // ==================== LIVE CHAT ENDPOINTS ====================
 import { setupLiveChatWebSocket, getChatHistory, getActiveSessions, createTicketFromChat } from './supabase-live-chat';
+import { supabase } from './supabase-public-storage';
 
 export function registerLiveChatRoutes(app: Express) {
   // Get chat history

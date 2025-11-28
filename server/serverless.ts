@@ -4,8 +4,12 @@
  * Deploy to Vercel with: vercel deploy
  */
 
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import { Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
+
+// Type aliases for Vercel compatibility
+type VercelRequest = Request;
+type VercelResponse = Response;
 
 // Initialize Supabase client for serverless context
 const supabase = createClient(
