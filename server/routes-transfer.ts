@@ -219,7 +219,6 @@ export function setupTransferRoutes(app: Express) {
             userId: account.userId,
             subject: `Transfer Rejection - Transaction #${transaction.id}`,
             description: `Your transfer has been rejected.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Recipient: ${transaction.recipientName}\n- Reason for rejection: ${notes}\n\nPlease contact support for assistance.`,
-            category: 'transfer_issue',
             priority: 'high',
             status: 'open'
           });

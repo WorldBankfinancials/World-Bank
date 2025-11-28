@@ -284,19 +284,12 @@ export class PostgresStorage implements IStorage {
 
   async createAccount(account: InsertAccount): Promise<Account> {
     try {
-      const accountNameVal = account.accountName || null;
-      const balanceVal = account.balance || '0';
-      const currencyVal = account.currency || 'USD';
-      const isActiveVal = account.isActive ?? true;
-      const interestRateVal = account.interestRate || null;
-      const minimumBalanceVal = account.minimumBalance || null;
-      
       const result = await sql`
         INSERT INTO public.bank_accounts (
-          user_id, account_number, account_name, account_type, balance, currency, is_active, interest_rate, minimum_balance
+          user_id, account_number, account_type, balance, currency, status
         ) VALUES (
-          ${account.userId}, ${account.accountNumber}, ${accountNameVal}, ${account.accountType}, 
-          ${balanceVal}, ${currencyVal}, ${isActiveVal}, ${interestRateVal}, ${minimumBalanceVal}
+          ${account.userId}, ${account.accountNumber}, ${account.accountType}, 
+          ${account.balance || '0.00'}, ${account.currency || 'USD'}, ${account.status || 'active'}
         ) RETURNING *
       `;
 
@@ -470,7 +463,8 @@ export class PostgresStorage implements IStorage {
       id: data.id,
       username: data.username,
       password: data.password,
-      firstName: data.first_name, lastName: data.last_name,
+      firstName: data.first_name || '',
+      lastName: data.last_name || '',
       email: data.email,
       phone: data.phone,
       accountNumber: data.account_number,
@@ -489,14 +483,9 @@ export class PostgresStorage implements IStorage {
       role: data.role,
       isVerified: data.is_verified,
       isActive: data.is_active,
-      balance: data.balance || '0',
-      lastLogin: data.last_login || null,
-      createdByAdmin: data.created_by_admin || null,
-      modifiedByAdmin: data.modified_by_admin || null,
-      adminNotes: data.admin_notes || null,
+      balance: data.balance || '0.00',
       createdAt: data.created_at,
-      updatedAt: data.updated_at || null,
-      supabaseUserId: data.supabase_user_id
+      updatedAt: data.updated_at || null
     };
   }
 
@@ -505,13 +494,10 @@ export class PostgresStorage implements IStorage {
       id: data.id,
       userId: data.user_id,
       accountNumber: data.account_number,
-      accountName: data.account_name || null,
       accountType: data.account_type,
-      balance: data.balance || '0',
-      currency: data.currency,
-      isActive: data.is_active,
-      interestRate: data.interest_rate || null,
-      minimumBalance: data.minimum_balance || null,
+      balance: data.balance || '0.00',
+      currency: data.currency || 'USD',
+      status: data.status || 'active',
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -527,7 +513,7 @@ export class PostgresStorage implements IStorage {
       toAccountId: data.to_account_id,
       amount: data.amount,
       currency: data.currency,
-      transactionType: data.transaction_type,
+      type: data.type,
       status: data.status,
       description: data.description,
       recipientName: data.recipient_name,
