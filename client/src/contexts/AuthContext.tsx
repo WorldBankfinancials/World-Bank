@@ -113,8 +113,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserProfile(createUserProfile(bankingUser));
         }
       }
-    } catch (error) {
-      // Silently handle expected transient errors during session initialization
+    } catch (error: unknown) {
+      // Log non-WebSocket errors, silently handle WebSocket context errors
+      if (error instanceof Error && !error.message.includes('WebSocket')) {
+        console.warn('Failed to fetch user data:', error.message);
+      }
     }
   };
 

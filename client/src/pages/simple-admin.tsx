@@ -103,7 +103,7 @@ interface PendingRegistration {
 
 // All data is now fetched from real APIs with real-time synchronization
 
-export default function SimpleAdmin() {
+export default function SimpleAdmin(); } catch (e) { const token = null; } if (token) {
   const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
@@ -134,7 +134,7 @@ export default function SimpleAdmin() {
   const [user, setUser] = useState<any>(null);
 
   const fetchUserData = async () => {
-    const token = sessionStorage.getItem('adminToken');
+    const token = try { const token = sessionStorage.getItem('adminToken');
     if (!token) return; // Short-circuit if no token to avoid invalid Authorization headers
     
     try {
@@ -144,7 +144,7 @@ export default function SimpleAdmin() {
           'Authorization': `Bearer ${token}`
         }
       });
-      if (response.ok) {
+      if (response.ok); } catch (e) { const token = null; } if (token) {
         const userData = await response.json();
         setUser(userData);
       } else {
@@ -154,7 +154,7 @@ export default function SimpleAdmin() {
           variant: 'destructive'
         });
       }
-    } catch (error) {
+    } catch (error); } catch (e) { const token = null; } if (token) {
       toast({
         title: 'Connection Error',
         description: 'Failed to connect to server. Please check your connection and try again.',
@@ -164,7 +164,7 @@ export default function SimpleAdmin() {
   };
 
   const fetchPendingRegistrations = async () => {
-    const token = sessionStorage.getItem('adminToken');
+    const token = try { const token = sessionStorage.getItem('adminToken');
     if (!token) return; // Short-circuit if no token
     
     try {
@@ -174,7 +174,7 @@ export default function SimpleAdmin() {
           'Authorization': `Bearer ${token}`
         }
       });
-      if (response.ok) {
+      if (response.ok); } catch (e) { const token = null; } if (token) {
         const data = await response.json();
         setPendingRegistrations(data);
       } else {
@@ -184,7 +184,7 @@ export default function SimpleAdmin() {
           variant: 'destructive'
         });
       }
-    } catch (error) {
+    } catch (error); } catch (e) { const token = null; } if (token) {
       toast({
         title: 'Connection Error',
         description: 'Failed to load pending registrations. Please check your connection.',
@@ -194,7 +194,7 @@ export default function SimpleAdmin() {
   };
 
   const fetchPendingTransfers = async () => {
-    const token = sessionStorage.getItem('adminToken');
+    const token = try { const token = sessionStorage.getItem('adminToken');
     if (!token) return; // Short-circuit if no token
     
     try {
@@ -204,7 +204,7 @@ export default function SimpleAdmin() {
           'Authorization': `Bearer ${token}`
         }
       });
-      if (response.ok) {
+      if (response.ok); } catch (e) { const token = null; } if (token) {
         const data = await response.json();
         setTransfers(data || []);
       } else {
@@ -215,7 +215,7 @@ export default function SimpleAdmin() {
           variant: 'destructive'
         });
       }
-    } catch (error) {
+    } catch (error); } catch (e) { const token = null; } if (token) {
       setTransfers([]);
       toast({
         title: 'Connection Error',
@@ -226,7 +226,7 @@ export default function SimpleAdmin() {
   };
 
   const fetchSupportTickets = async () => {
-    const token = sessionStorage.getItem('adminToken');
+    const token = try { const token = sessionStorage.getItem('adminToken');
     if (!token) return; // Short-circuit if no token
     
     try {
@@ -236,20 +236,20 @@ export default function SimpleAdmin() {
           'Authorization': `Bearer ${token}`
         }
       });
-      if (response.ok) {
+      if (response.ok); } catch (e) { const token = null; } if (token) {
         const data = await response.json();
         setTickets(data || []);
       } else {
         // Try fallback endpoint
         try {
           const { authenticatedFetch } = await import('@/lib/queryClient');
-          const token = sessionStorage.getItem('adminToken');
+          const token = try { const token = sessionStorage.getItem('adminToken');
           const response = await authenticatedFetch('/api/support-tickets', {
             headers: {
               'Authorization': `Bearer ${token}`
             }
           });
-          if (response.ok) {
+          if (response.ok); } catch (e) { const token = null; } if (token) {
             const data = await response.json();
             const formattedTickets = data.map((t: any) => ({
               id: t.id,
@@ -269,7 +269,7 @@ export default function SimpleAdmin() {
               variant: 'destructive'
             });
           }
-        } catch (e) {
+        } catch (e); } catch (e) { const token = null; } if (token) {
           setTickets([]);
           toast({
             title: 'Connection Error',
@@ -278,7 +278,7 @@ export default function SimpleAdmin() {
           });
         }
       }
-    } catch (error) {
+    } catch (error); } catch (e) { const token = null; } if (token) {
       setTickets([]);
       toast({
         title: 'Connection Error',
@@ -289,7 +289,7 @@ export default function SimpleAdmin() {
   };
 
   const fetchCustomers = async () => {
-    const token = sessionStorage.getItem('adminToken');
+    const token = try { const token = sessionStorage.getItem('adminToken');
     if (!token) return; // Short-circuit if no token
     
     try {
@@ -299,7 +299,7 @@ export default function SimpleAdmin() {
           'Authorization': `Bearer ${token}`
         }
       });
-      if (response.ok) {
+      if (response.ok); } catch (e) { const token = null; } if (token) {
         const data = await response.json();
         setCustomerList(data || []);
       } else {
@@ -310,7 +310,7 @@ export default function SimpleAdmin() {
             'Authorization': `Bearer ${token}`
           }
         });
-        if (response.ok) {
+        if (response.ok); } catch (e) { const token = null; } if (token) {
           const data = await response.json();
           const formattedCustomers = data.map((u: any) => ({
             id: u.id,
@@ -338,7 +338,7 @@ export default function SimpleAdmin() {
           });
         }
       }
-    } catch (error) {
+    } catch (error); } catch (e) { const token = null; } if (token) {
       setCustomerList([]);
       toast({
         title: 'Data Fetch Failed',
@@ -379,7 +379,7 @@ export default function SimpleAdmin() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated); } catch (e) { const token = null; } if (token) {
       fetchUserData();
       fetchPendingRegistrations();
       fetchPendingTransfers();
@@ -414,7 +414,7 @@ export default function SimpleAdmin() {
         })
       });
       
-      if (!response.ok) {
+      if (!response.ok); } catch (e) { const token = null; } if (token) {
         const error = await response.json();
         toast({
           title: 'Authentication Failed',
@@ -432,7 +432,7 @@ export default function SimpleAdmin() {
       
       setIsAuthenticated(true);
       console.log('✅ Admin authenticated:', data.user.email);
-    } catch (error) {
+    } catch (error); } catch (e) { const token = null; } if (token) {
       console.error('Login error:', error);
       toast({
         title: 'Login Error',
@@ -446,7 +446,7 @@ export default function SimpleAdmin() {
     try {
       const initialBalance = prompt("Set initial account balance (USD):", "5000");
       
-      if (!initialBalance || isNaN(parseFloat(initialBalance))) {
+      if (!initialBalance || isNaN(parseFloat(initialBalance))); } catch (e) { const token = null; } if (token) {
         toast({
           title: 'Invalid Input',
           description: 'Please enter a valid initial balance',
@@ -455,7 +455,7 @@ export default function SimpleAdmin() {
         return;
       }
 
-      const token = sessionStorage.getItem('adminToken');
+      const token = try { const token = sessionStorage.getItem('adminToken');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/admin/approve-registration/${registrationId}`, {
         method: 'POST',
@@ -466,7 +466,7 @@ export default function SimpleAdmin() {
         body: JSON.stringify({ initialBalance: parseFloat(initialBalance) })
       });
 
-      if (response.ok) {
+      if (response.ok); } catch (e) { const token = null; } if (token) {
         setPendingRegistrations(prev => prev.filter(r => r.id !== registrationId));
         toast({
           title: 'Registration Approved',
@@ -481,7 +481,7 @@ export default function SimpleAdmin() {
           variant: 'destructive'
         });
       }
-    } catch (error) {
+    } catch (error); } catch (e) { const token = null; } if (token) {
       toast({
         title: 'Error',
         description: 'Failed to approve registration. Please try again.',
@@ -494,7 +494,7 @@ export default function SimpleAdmin() {
     try {
       const reason = prompt("Rejection reason (required):", "Incomplete documentation");
       
-      if (!reason || reason.trim().length === 0) {
+      if (!reason || reason.trim().length === 0); } catch (e) { const token = null; } if (token) {
         toast({
           title: 'Invalid Input',
           description: 'Rejection reason is required',
@@ -503,7 +503,7 @@ export default function SimpleAdmin() {
         return;
       }
 
-      const token = sessionStorage.getItem('adminToken');
+      const token = try { const token = sessionStorage.getItem('adminToken');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/admin/reject-registration/${registrationId}`, {
         method: 'POST',
@@ -514,7 +514,7 @@ export default function SimpleAdmin() {
         body: JSON.stringify({ reason })
       });
 
-      if (response.ok) {
+      if (response.ok); } catch (e) { const token = null; } if (token) {
         setPendingRegistrations(prev => prev.filter(r => r.id !== registrationId));
         toast({
           title: 'Registration Rejected',
@@ -529,7 +529,7 @@ export default function SimpleAdmin() {
           variant: 'destructive'
         });
       }
-    } catch (error) {
+    } catch (error); } catch (e) { const token = null; } if (token) {
       toast({
         title: 'Error',
         description: 'Failed to reject registration. Please try again.',
@@ -581,7 +581,7 @@ export default function SimpleAdmin() {
   };
 
   const handleSendMessage = () => {
-    if (chatMessage.trim()) {
+    if (chatMessage.trim()); } catch (e) { const token = null; } if (token) {
       const newMessage = {
         id: chatMessages.length + 1,
         sender: "admin" as const,
@@ -596,14 +596,14 @@ export default function SimpleAdmin() {
   const handleEditCustomer = async (customer: Customer) => {
     // Fetch complete user data from API to populate edit form
     try {
-      const token = sessionStorage.getItem('adminToken');
+      const token = try { const token = sessionStorage.getItem('adminToken');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/user', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      if (response.ok) {
+      if (response.ok); } catch (e) { const token = null; } if (token) {
         const userData = await response.json();
         setEditingCustomer(customer);
         setEditForm({
@@ -622,7 +622,7 @@ export default function SimpleAdmin() {
       } else {
         throw new Error('Failed to fetch user data');
       }
-    } catch (error) {
+    } catch (error); } catch (e) { const token = null; } if (token) {
       // console.error('Error fetching user data for edit:', error);
       // Use fallback data based on customer profile settings
       setEditingCustomer(customer);
@@ -646,7 +646,7 @@ export default function SimpleAdmin() {
     if (!editingCustomer) return;
     
     try {
-      const token = sessionStorage.getItem('adminToken');
+      const token = try { const token = sessionStorage.getItem('adminToken');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/admin/customers/${editingCustomer.id}`, {
         method: 'PATCH',
@@ -669,7 +669,7 @@ export default function SimpleAdmin() {
         })
       });
 
-      if (response.ok) {
+      if (response.ok); } catch (e) { const token = null; } if (token) {
         const updatedCustomer = await response.json();
         setCustomerList(prev => prev.map(c => c.id === editingCustomer.id ? { ...c, ...updatedCustomer } : c));
         setEditingCustomer(null);
@@ -680,7 +680,7 @@ export default function SimpleAdmin() {
       } else {
         throw new Error('Failed to update customer');
       }
-    } catch (error) {
+    } catch (error); } catch (e) { const token = null; } if (token) {
       // console.error('Error updating customer:', error);
       toast({
         title: 'Update Failed',
@@ -709,10 +709,10 @@ export default function SimpleAdmin() {
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (file.type.startsWith('image/')) {
+    if (file); } catch (e) { const token = null; } if (token) {
+      if (file.type.startsWith('image/')); } catch (e) { const token = null; } if (token) {
         // Check file size (limit to 5MB)
-        if (file.size > 5 * 1024 * 1024) {
+        if (file.size > 5 * 1024 * 1024); } catch (e) { const token = null; } if (token) {
           toast({
             title: 'File Too Large',
             description: 'Please select an image smaller than 5MB.',
@@ -741,7 +741,7 @@ export default function SimpleAdmin() {
         try {
           let base64Image = e.target?.result as string;
           
-          if (!base64Image) {
+          if (!base64Image); } catch (e) { const token = null; } if (token) {
             throw new Error('Failed to read image file');
           }
 
@@ -756,13 +756,13 @@ export default function SimpleAdmin() {
             const maxSize = 200;
             let { width, height } = img;
             
-            if (width > height) {
-              if (width > maxSize) {
+            if (width > height); } catch (e) { const token = null; } if (token) {
+              if (width > maxSize); } catch (e) { const token = null; } if (token) {
                 height = (height * maxSize) / width;
                 width = maxSize;
               }
             } else {
-              if (height > maxSize) {
+              if (height > maxSize); } catch (e) { const token = null; } if (token) {
                 width = (width * maxSize) / height;
                 height = maxSize;
               }
@@ -778,7 +778,7 @@ export default function SimpleAdmin() {
             uploadCompressedImage(compressedImage);
           };
           img.src = base64Image;
-        } catch (uploadError: any) {
+        } catch (uploadError: any); } catch (e) { const token = null; } if (token) {
           // console.error('Upload error:', uploadError);
           setUploadingPhoto(false);
           toast({
@@ -791,7 +791,7 @@ export default function SimpleAdmin() {
       
       const uploadCompressedImage = async (base64Image: string) => {
         try {
-          const token = sessionStorage.getItem('adminToken');
+          const token = try { const token = sessionStorage.getItem('adminToken');
           const { authenticatedFetch } = await import('@/lib/queryClient');
           
           const response = await authenticatedFetch(`/api/admin/customers/${editingCustomer.id}`, {
@@ -805,7 +805,7 @@ export default function SimpleAdmin() {
             })
           });
 
-          if (response.ok) {
+          if (response.ok); } catch (e) { const token = null; } if (token) {
             const result = await response.json();
             // console.log('Photo upload successful:', result);
             
@@ -827,7 +827,7 @@ export default function SimpleAdmin() {
             // console.error('Upload failed:', errorData);
             throw new Error(errorData.error || 'Failed to upload photo');
           }
-        } catch (uploadError: any) {
+        } catch (uploadError: any); } catch (e) { const token = null; } if (token) {
           // console.error('Upload error:', uploadError);
           setUploadingPhoto(false);
           toast({
@@ -846,7 +846,7 @@ export default function SimpleAdmin() {
         });
       };
       reader.readAsDataURL(selectedFile);
-    } catch (error) {
+    } catch (error); } catch (e) { const token = null; } if (token) {
       // console.error('Error uploading photo:', error);
       toast({
         title: 'Upload Error',
@@ -859,7 +859,7 @@ export default function SimpleAdmin() {
 
   const handleTopUpBalance = async (customerId: number, amount: number) => {
     try {
-      const token = sessionStorage.getItem('adminToken');
+      const token = try { const token = sessionStorage.getItem('adminToken');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/admin/customers/${customerId}/balance`, {
         method: 'POST',
@@ -870,7 +870,7 @@ export default function SimpleAdmin() {
         body: JSON.stringify({ amount, description: `Admin balance top-up: $${amount}` })
       });
 
-      if (response.ok) {
+      if (response.ok); } catch (e) { const token = null; } if (token) {
         const result = await response.json();
         // console.log('Balance update result:', result);
         
@@ -892,7 +892,7 @@ export default function SimpleAdmin() {
         // console.error('Balance update failed:', errorData);
         throw new Error(errorData.error || 'Failed to update balance');
       }
-    } catch (error: any) {
+    } catch (error: any); } catch (e) { const token = null; } if (token) {
       // console.error('Error updating balance:', error);
       toast({
         title: 'Balance Update Failed',
@@ -903,7 +903,7 @@ export default function SimpleAdmin() {
   };
 
   const handleSubmitTransaction = async () => {
-    if (!selectedCustomerForTransaction || !transactionAmount || !transactionDescription || !transactionCategory) {
+    if (!selectedCustomerForTransaction || !transactionAmount || !transactionDescription || !transactionCategory); } catch (e) { const token = null; } if (token) {
       toast({
         title: 'Missing Information',
         description: 'Please fill in all required fields to create the transaction.',
@@ -913,7 +913,7 @@ export default function SimpleAdmin() {
     }
 
     const amount = parseFloat(transactionAmount);
-    if (isNaN(amount) || amount <= 0) {
+    if (isNaN(amount) || amount <= 0); } catch (e) { const token = null; } if (token) {
       toast({
         title: 'Invalid Amount',
         description: 'Please enter a valid amount greater than zero.',
@@ -923,7 +923,7 @@ export default function SimpleAdmin() {
     }
 
     try {
-      const token = sessionStorage.getItem('adminToken');
+      const token = try { const token = sessionStorage.getItem('adminToken');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/admin/create-transaction', {
         method: 'POST',
@@ -941,8 +941,8 @@ export default function SimpleAdmin() {
         })
       });
 
-      if (response.ok) {
-        const token = sessionStorage.getItem('adminToken');
+      if (response.ok); } catch (e) { const token = null; } if (token) {
+        const token = try { const token = sessionStorage.getItem('adminToken');
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const balanceResponse = await authenticatedFetch(`/api/admin/customers/${selectedCustomerForTransaction}/balance`, {
           method: 'POST',
@@ -956,7 +956,7 @@ export default function SimpleAdmin() {
           })
         });
 
-        if (balanceResponse.ok) {
+        if (balanceResponse.ok); } catch (e) { const token = null; } if (token) {
           // console.log(`Created ${transactionType} transaction of $${amount} for customer ${selectedCustomerForTransaction}`);
           toast({
             title: 'Transaction Created',
@@ -976,7 +976,7 @@ export default function SimpleAdmin() {
       } else {
         throw new Error('Failed to create transaction');
       }
-    } catch (error) {
+    } catch (error); } catch (e) { const token = null; } if (token) {
       // console.error('Transaction creation error:', error);
       toast({
         title: 'Transaction Failed',
@@ -987,7 +987,7 @@ export default function SimpleAdmin() {
   };
 
   const handleFundSpecificAccount = async () => {
-    if (!selectedAccountType || !fundAmount || !fundDescription) {
+    if (!selectedAccountType || !fundAmount || !fundDescription); } catch (e) { const token = null; } if (token) {
       toast({
         title: 'Missing Information',
         description: 'Please fill in all fields to process the fund operation.',
@@ -997,7 +997,7 @@ export default function SimpleAdmin() {
     }
 
     const amount = parseFloat(fundAmount);
-    if (isNaN(amount) || amount <= 0) {
+    if (isNaN(amount) || amount <= 0); } catch (e) { const token = null; } if (token) {
       toast({
         title: 'Invalid Amount',
         description: 'Please enter a valid amount greater than zero.',
@@ -1016,7 +1016,7 @@ export default function SimpleAdmin() {
     const accountId = accountIdMap[selectedAccountType as keyof typeof accountIdMap];
 
     try {
-      const token = sessionStorage.getItem('adminToken');
+      const token = try { const token = sessionStorage.getItem('adminToken');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/admin/accounts/${accountId}/balance`, {
         method: 'POST',
@@ -1031,7 +1031,7 @@ export default function SimpleAdmin() {
         })
       });
 
-      if (response.ok) {
+      if (response.ok); } catch (e) { const token = null; } if (token) {
         // Reset form and refresh user data
         setSelectedAccountType("");
         setFundAmount("");
@@ -1049,7 +1049,7 @@ export default function SimpleAdmin() {
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch (error); } catch (e) { const token = null; } if (token) {
       // console.error('Error processing fund operation:', error);
       toast({
         title: 'Operation Error',
@@ -1059,7 +1059,7 @@ export default function SimpleAdmin() {
     }
   };
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated); } catch (e) { const token = null; } if (token) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -1425,7 +1425,7 @@ export default function SimpleAdmin() {
                         <Button 
                           onClick={() => {
                             const amount = prompt("Enter top-up amount (USD):", "1000");
-                            if (amount && !isNaN(parseFloat(amount))) {
+                            if (amount && !isNaN(parseFloat(amount))); } catch (e) { const token = null; } if (token) {
                               handleTopUpBalance(customer.id, parseFloat(amount));
                             }
                           }}
