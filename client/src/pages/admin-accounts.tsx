@@ -46,8 +46,12 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/accounts');
       if (response.ok) {
-        const accountsData = await response.json();
-        setAccounts(accountsData);
+        try {
+          const accountsData = await response.json();
+          setAccounts(accountsData);
+        } catch (e) {
+          throw new Error('Failed to parse accounts');
+        }
       }
     } catch (error) {
       // console.error('Error fetching accounts:', error);
@@ -76,7 +80,12 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
       });
 
       if (response.ok) {
-        const newAccount = await response.json();
+        let newAccount;
+        try {
+          newAccount = await response.json();
+        } catch (e) {
+          throw new Error('Failed to parse new account response');
+        }
         setAccounts(prev => [...prev, newAccount]);
         setShowCreateForm(false);
         setFormData({

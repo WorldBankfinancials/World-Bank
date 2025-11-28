@@ -60,7 +60,17 @@ export default function RegistrationStep1({ initialData = {}, onNext }: Step1Pro
         return;
       }
       
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch (e) {
+        toast({
+          title: 'Error',
+          description: 'Failed to parse server response. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
       
       // Check if email is already registered
       if (!result.available) {

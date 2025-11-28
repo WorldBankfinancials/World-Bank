@@ -44,8 +44,12 @@ export default function History() {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/accounts');
       if (response.ok) {
-        const data = await response.json();
-        setAccounts(data);
+        try {
+          const data = await response.json();
+          setAccounts(data);
+        } catch (e) {
+          throw new Error('Failed to parse accounts');
+        }
       } else {
         toast({
           title: 'Error loading accounts',

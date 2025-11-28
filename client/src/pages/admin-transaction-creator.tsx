@@ -38,8 +38,12 @@ export default function AdminTransactionCreator() {
     try {
       const response = await authenticatedFetch('/api/accounts');
       if (response.ok) {
-        const data = await response.json();
-        setAccounts(data);
+        try {
+          const data = await response.json();
+          setAccounts(data);
+        } catch (e) {
+          throw new Error('Failed to parse accounts');
+        }
       } else {
         console.error('Failed to fetch accounts:', await response.text());
         toast({
@@ -102,7 +106,12 @@ export default function AdminTransactionCreator() {
       });
 
       if (response.ok) {
-        const result = await response.json();
+        let result;
+        try {
+          result = await response.json();
+        } catch (e) {
+          throw new Error('Failed to parse transaction response');
+        }
         console.log(`Transaction created successfully: ${transactionType.toUpperCase()} $${numAmount.toLocaleString()}`);
         
         toast({

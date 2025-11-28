@@ -93,7 +93,12 @@ export default function PinSettings() {
         }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        throw new Error('Failed to parse PIN change response');
+      }
 
       if (response.ok) {
         setSuccess(t('pin_changed_successfully'));
@@ -104,9 +109,10 @@ export default function PinSettings() {
         setCurrentPin('');
         setNewPin('');
         setConfirmPin('');
-        setTimeout(() => {
+        const timeout = setTimeout(() => {
           navigate('/profile-settings');
         }, 2000);
+        return () => clearTimeout(timeout);
       } else {
         console.error('PIN change failed:', data);
         setError(data.message || t('pin_change_failed'));

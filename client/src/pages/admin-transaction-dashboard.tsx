@@ -42,8 +42,12 @@ export default function AdminTransactionDashboard() {
     try {
       const response = await authenticatedFetch('/api/admin/transactions');
       if (response.ok) {
-        const data = await response.json();
-        setTransactions(data);
+        try {
+          const data = await response.json();
+          setTransactions(data);
+        } catch (e) {
+          throw new Error('Failed to parse transactions');
+        }
       } else {
         console.error('Failed to fetch transactions:', await response.text());
         toast({

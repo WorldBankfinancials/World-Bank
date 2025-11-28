@@ -73,8 +73,12 @@ export default function FundManagement() {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/admin/customers');
       if (response.ok) {
-        const data = await response.json();
-        setCustomers(data);
+        try {
+          const data = await response.json();
+          setCustomers(data);
+        } catch (e) {
+          throw new Error('Failed to parse customers');
+        }
       } else {
         console.error('Failed to fetch customers:', await response.text());
         toast({
@@ -98,8 +102,12 @@ export default function FundManagement() {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/admin/transactions');
       if (response.ok) {
-        const data = await response.json();
-        setTransactions(data);
+        try {
+          const data = await response.json();
+          setTransactions(data);
+        } catch (e) {
+          throw new Error('Failed to parse transactions');
+        }
       } else {
         console.error('Failed to fetch transactions:', await response.text());
         toast({
