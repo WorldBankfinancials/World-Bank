@@ -1,6 +1,7 @@
 import { config } from './config';
 import { PostgresStorage } from './postgres-storage';
 import { SupabasePublicStorage } from './supabase-public-storage';
+import { CompleteSupabaseStorage } from './supabase-storage-complete';
 import type { IStorage } from './storage';
 
 // Environment-based storage factory
@@ -12,6 +13,12 @@ export function createStorage(): IStorage {
   console.log(`💾 Data Source: ${dataSource}`);
   console.log(`🔐 Auth Source: ${config.getAuthSource()}`);
   console.log('');
+  
+  // Check if we have Supabase database URL to use complete Supabase integration
+  if (process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.log('✅ Using Complete Supabase Storage with all 9 tables integrated');
+    return new CompleteSupabaseStorage();
+  }
   
   // Check if we have Supabase database URL to use Supabase public schema
   if (process.env.SUPABASE_DATABASE_URL) {

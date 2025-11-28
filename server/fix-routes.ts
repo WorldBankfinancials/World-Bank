@@ -43,8 +43,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     res.json({ status: 'OK', timestamp: new Date() });
   });
 
-  // Test Supabase connection and verify tables exist
-  app.get('/test-supabase-connection', async (req: Request, res: Response) => {
+  // Test Supabase connection and verify tables exist - ADMIN ONLY
+  app.get('/test-supabase-connection', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { SupabasePublicStorage } = await import('./supabase-public-storage');
       const { supabase } = await import('./supabase-public-storage');
