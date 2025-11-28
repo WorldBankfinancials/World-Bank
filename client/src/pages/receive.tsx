@@ -35,6 +35,7 @@ export default function Receive() {
   const [message, setMessage] = useState("");
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
   if (isLoading) {
     return (
@@ -53,8 +54,6 @@ export default function Receive() {
   };
 
   const shareLink = `https://worldbank.app/pay/LW-${Date.now()}`;
-
-  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareLink);
