@@ -144,41 +144,31 @@ export class PostgresStorage implements IStorage {
       const stateVal = user.state || null;
       const countryVal = user.country || null;
       const postalCodeVal = user.postalCode || null;
-      const nationalityVal = user.nationality || null;
       const annualIncomeVal = user.annualIncome || null;
       const idTypeVal = user.idType || null;
       const idNumberVal = user.idNumber || null;
       const transferPinVal = user.transferPin || null;
       const roleVal = user.role || 'customer';
       const isVerifiedVal = user.isVerified ?? false;
-      const isOnlineVal = user.isOnline ?? false;
       const isActiveVal = user.isActive ?? true;
-      const avatarUrlVal = user.avatarUrl || null;
       const balanceVal = user.balance || 0;
-      const supabaseUserIdVal = user.supabaseUserId || null;
-      const lastLoginVal = user.lastLogin || null;
-      const createdByAdminVal = user.createdByAdmin || null;
-      const modifiedByAdminVal = user.modifiedByAdmin || null;
-      const adminNotesVal = user.adminNotes || null;
       
       const accountNumberVal = user.accountNumber || null;
       const accountIdVal = user.accountId || null;
       
       const result = await sql`
         INSERT INTO public.bank_users (
-          username, password_hash, full_name, email, phone,
+          username, password, first_name, last_name, email, phone,
           account_number, account_id, profession, date_of_birth,
-          address, city, state, country, postal_code, nationality,
+          address, city, state, country, postal_code,
           annual_income, id_type, id_number, transfer_pin, role,
-          is_verified, is_online, is_active, avatar_url, balance, supabase_user_id,
-          last_login, created_by_admin, modified_by_admin, admin_notes
+          is_verified, is_active, balance
         ) VALUES (
-          ${user.username}, ${user.passwordHash}, ${user.fullName}, ${emailVal}, ${phoneVal},
+          ${user.username}, ${user.password}, ${user.firstName}, ${user.lastName}, ${emailVal}, ${phoneVal},
           ${accountNumberVal}, ${accountIdVal}, ${professionVal}, ${dobVal},
-          ${addressVal}, ${cityVal}, ${stateVal}, ${countryVal}, ${postalCodeVal}, ${nationalityVal},
+          ${addressVal}, ${cityVal}, ${stateVal}, ${countryVal}, ${postalCodeVal},
           ${annualIncomeVal}, ${idTypeVal}, ${idNumberVal}, ${transferPinVal}, ${roleVal},
-          ${isVerifiedVal}, ${isOnlineVal}, ${isActiveVal}, ${avatarUrlVal}, ${balanceVal}, ${supabaseUserIdVal},
-          ${lastLoginVal}, ${createdByAdminVal}, ${modifiedByAdminVal}, ${adminNotesVal}
+          ${isVerifiedVal}, ${isActiveVal}, ${balanceVal}
         ) RETURNING *
       `;
 
@@ -192,7 +182,8 @@ export class PostgresStorage implements IStorage {
   async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
     try {
       const usernameVal = updates.username || null;
-      const fullNameVal = updates.fullName || null;
+      const firstNameVal = updates.firstName || null;
+      const lastNameVal = updates.lastName || null;
       const emailVal = updates.email || null;
       const phoneVal = updates.phone || null;
       const professionVal = updates.profession || null;
@@ -201,19 +192,17 @@ export class PostgresStorage implements IStorage {
       const stateVal = updates.state || null;
       const countryVal = updates.country || null;
       const postalCodeVal = updates.postalCode || null;
-      const nationalityVal = updates.nationality || null;
       const annualIncomeVal = updates.annualIncome || null;
       const isVerifiedVal = updates.isVerified ?? null;
-      const isOnlineVal = updates.isOnline ?? null;
       const isActiveVal = updates.isActive ?? null;
-      const avatarUrlVal = updates.avatarUrl || null;
       const balanceVal = updates.balance ?? null;
       
       const result = await sql`
         UPDATE public.bank_users 
         SET 
           username = COALESCE(${usernameVal}, username),
-          full_name = COALESCE(${fullNameVal}, full_name),
+          first_name = COALESCE(${firstNameVal}, first_name),
+          last_name = COALESCE(${lastNameVal}, last_name),
           email = COALESCE(${emailVal}, email),
           phone = COALESCE(${phoneVal}, phone),
           profession = COALESCE(${professionVal}, profession),
@@ -222,12 +211,9 @@ export class PostgresStorage implements IStorage {
           state = COALESCE(${stateVal}, state),
           country = COALESCE(${countryVal}, country),
           postal_code = COALESCE(${postalCodeVal}, postal_code),
-          nationality = COALESCE(${nationalityVal}, nationality),
           annual_income = COALESCE(${annualIncomeVal}, annual_income),
           is_verified = COALESCE(${isVerifiedVal}, is_verified),
-          is_online = COALESCE(${isOnlineVal}, is_online),
           is_active = COALESCE(${isActiveVal}, is_active),
-          avatar_url = COALESCE(${avatarUrlVal}, avatar_url),
           balance = COALESCE(${balanceVal}, balance),
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
@@ -483,8 +469,8 @@ export class PostgresStorage implements IStorage {
     return {
       id: data.id,
       username: data.username,
-      passwordHash: data.password_hash,
-      fullName: data.full_name,
+      password: data.password,
+      firstName: data.first_name, lastName: data.last_name,
       email: data.email,
       phone: data.phone,
       accountNumber: data.account_number,
@@ -496,16 +482,13 @@ export class PostgresStorage implements IStorage {
       state: data.state,
       country: data.country,
       postalCode: data.postal_code,
-      nationality: data.nationality,
       annualIncome: data.annual_income,
       idType: data.id_type,
       idNumber: data.id_number,
       transferPin: data.transfer_pin,
       role: data.role,
       isVerified: data.is_verified,
-      isOnline: data.is_online,
       isActive: data.is_active,
-      avatarUrl: data.avatar_url,
       balance: data.balance || '0',
       lastLogin: data.last_login || null,
       createdByAdmin: data.created_by_admin || null,

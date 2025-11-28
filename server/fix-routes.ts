@@ -142,12 +142,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: validatedData.email,
         password: validatedData.password,
-        email_confirm: true, // Auto-confirm for banking app
-        user_details: {
+        email_confirm: true,
+        user_metadata: {
           first_name: validatedData.firstName,
           last_name: validatedData.lastName,
-          phone: validatedData.phone,
-          registration_date: new Date().toISOString()
+          phone: validatedData.phone
         }
       });
 
@@ -670,11 +669,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
-          actionType: 'update_customer_balance',
+          action: 'update_customer_balance',
           targetType: 'user',
-          targetId: customerId.toString(),
-          description: `Updated customer balance by $${body.amount} - ${body.description}`,
-          details: JSON.stringify({ customerId, amount: body.amount, oldBalance: oldUser?.balance, newBalance: updatedUser.balance, description: body.description })
+          targetId: customerId,
+          details: { customerId, amount: body.amount, oldBalance: oldUser?.balance, newBalance: updatedUser.balance, description: body.description }
         });
       }
 
@@ -709,11 +707,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
-          actionType: 'update_customer',
+          action: 'update_customer',
           targetType: 'user',
-          targetId: customerId.toString(),
-          description: `Updated customer profile: ${Object.keys(updates).join(', ')}`,
-          details: JSON.stringify({ customerId, updates })
+          targetId: customerId,
+          details: { customerId, updates }
         });
       }
 
@@ -924,11 +921,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
-          actionType: 'approve_registration',
+          action: 'approve_registration',
           targetType: 'user',
           targetId: registrationId,
-          description: `Approved registration for ${updatedUser.fullName} (${updatedUser.email})`,
-          details: JSON.stringify({ userId: registrationId, initialBalance: initialBalance || 0 })
+          details: { userId: registrationId, initialBalance: initialBalance || 0 }
         });
       }
 
@@ -957,7 +953,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Update user with rejection reason
       await storage.updateUser(registrationId, {
-        status: 'pending',
+        isActive: false,
         isVerified: false,
       });
 
@@ -979,8 +975,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           action: 'reject_registration',
           targetType: 'user',
           targetId: registrationId,
-          description: `Rejected registration for ${user.fullName} (${user.email})`,
-          details: JSON.stringify({ userId: registrationId, reason })
+          details: { userId: registrationId, reason }
         });
       }
 
@@ -1106,7 +1101,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied' });
       }
 
-      const updatedCard = await storage.updateCard(cardId, { isLocked });
+      const updatedCard = await storage.updateCard(cardId, { status: isLocked ? 'locked' : 'active' });
       res.json({ success: true, card: updatedCard });
     } catch (error) {
       console.error('Error updating card:', error);
@@ -1413,7 +1408,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // SECURITY: Derive senderRole and senderName from authenticated user (server-side only)
       // Never trust client-supplied role/name to prevent impersonation
       const senderRole = req.user!.role === 'admin' ? 'admin' : 'customer';
-      const senderName = user.fullName || user.email;
+      const senderName = `${user.firstName} ${user.lastName}` || user.email;
 
       // Create message with correct schema properties
       const messageData = {
@@ -1622,11 +1617,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         
         await storage.createAdminAction({
           adminId: admin.id,
-          actionType: 'update_support_ticket',
+          action: 'update_support_ticket',
           targetType: 'support_ticket',
-          targetId: id.toString(),
-          description: actionDescription,
-          details: JSON.stringify({ ticketId: id, updates, previousStatus: ticket?.status })
+          targetId: id,
+          details: { ticketId: id, updates, previousStatus: ticket?.status }
         });
       }
 
@@ -1715,7 +1709,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         try {
           const user = await storage.getUser(t.userId);
           if (user) {
-            customerName = user.fullName || user.email || customerName;
+            customerName = `${user.firstName} ${user.lastName}` || user.email || customerName;
           }
         } catch (e) {
           // Use default
@@ -1824,12 +1818,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
-        email_confirm: true, // Auto-confirm
-        user_details: {
-          full_name: fullName
-        },
-        app_details: {
-          role: 'admin' // CRITICAL: Sets admin role in app_metadata
+        email_confirm: true,
+        user_metadata: {
+          role: 'admin'
         }
       });
 
@@ -1843,20 +1834,21 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // STEP 2: Create local database profile
       try {
+        const [firstName, ...lastNameParts] = fullName.split(' ');
+        const lastName = lastNameParts.join(' ') || 'Admin';
         const adminUser = await storage.createUser({
           username: email.split('@')[0] + '_admin',
-          fullName: fullName,
+          firstName: firstName,
+          lastName: lastName,
           email: email,
           phone: '+1-000-000-0000',
-          supabaseUserId: authData.user.id,
           accountNumber: `ADMIN-${Math.floor(10000000 + Math.random() * 90000000)}`,
-          accountId: Date.now()`WB-ADMIN-${Date.now()}`,
-          passwordHash: 'supabase_auth', // Marker
-          transferPin: Math.floor(Math.random() * 9000 + 1000).toString(), // Secure random PIN, not hardcoded
-          role: 'admin', // ADMIN ROLE
+          accountId: Date.now(),
+          password: 'supabase_auth',
+          transferPin: Math.floor(Math.random() * 9000 + 1000).toString(),
+          role: 'admin',
           isVerified: true,
-          isOnline: true,
-          status: 'active',
+          isActive: true,
           balance: "0",
           dateOfBirth: '1990-01-01',
           address: 'World Bank HQ',
@@ -1878,7 +1870,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           user: {
             id: adminUser.id,
             email: adminUser.email,
-            fullName: adminUser.fullName,
+            fullName: `${adminUser.firstName} ${adminUser.lastName}`,
             role: adminUser.role
           },
           credentials: {

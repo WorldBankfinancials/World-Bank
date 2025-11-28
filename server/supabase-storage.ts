@@ -213,9 +213,6 @@ export class SupabaseStorage implements IStorage {
       accountType: account.account_type,
       balance: account.balance,
       currency: account.currency,
-      isActive: account.is_active,
-      interestRate: account.interest_rate || null,
-      minimumBalance: account.minimum_balance || null,
       createdAt: account.created_at,
       updatedAt: account.updated_at
     }));
@@ -234,7 +231,6 @@ export class SupabaseStorage implements IStorage {
       id: data.id,
       userId: data.user_id,
       accountNumber: data.account_number,
-      accountName: data.account_name || null,
       accountType: data.account_type,
       balance: data.balance,
       currency: data.currency,
@@ -271,7 +267,6 @@ export class SupabaseStorage implements IStorage {
       id: data.id,
       userId: data.user_id,
       accountNumber: data.account_number,
-      accountName: data.account_name || null,
       accountType: data.account_type,
       balance: data.balance,
       currency: data.currency,
