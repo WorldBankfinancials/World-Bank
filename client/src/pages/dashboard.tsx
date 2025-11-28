@@ -502,33 +502,9 @@ export default function Dashboard() {
   // );
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (!userProfile?.id) {
-        return;
-      }
-      
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch(`/api/users/supabase/${userProfile.id}`, {
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setUserData(data);
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-
-    fetchUserData();
-    
-    // Refresh every 10 seconds for real-time updates
-    const interval = setInterval(fetchUserData, 10000);
-    return () => clearInterval(interval);
+    if (userProfile) {
+      setUserData(userProfile);
+    }
   }, [userProfile]);
 
   useEffect(() => {

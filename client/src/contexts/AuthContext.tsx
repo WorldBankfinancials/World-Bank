@@ -37,47 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = supabaseClient;
 
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-
-    // Check current session
-    const checkSession = async () => {
-      try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        if (!sessionError && sessionData?.session?.user) {
-          setUser(sessionData.session.user);
-          await fetchUserData(sessionData.session.user);
-        }
-      } catch (error) {
-        console.error('Session check error:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkSession();
-
-    // Listen for auth changes
-    const { data } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
-      try {
-        if (session?.user) {
-          setUser(session.user);
-          await fetchUserData(session.user);
-        } else {
-          setUser(null);
-          setUserProfile(null);
-        }
-      } catch (error) {
-        console.error('Auth state change error:', error);
-      }
-    });
-
-    return () => {
-      data?.subscription?.unsubscribe();
-    };
-  }, [supabase]);
+    // Skip Supabase auth - using backend login only
+    setLoading(false);
+  }, []);
 
   const fetchUserData = useCallback(async (authUser: User) => {
     try {
@@ -171,21 +133,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, metadata?: any): Promise<{ error?: string }> => {
     try {
-      if (!supabase) {
-        return { error: 'Authentication service unavailable' };
-      }
-
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: metadata }
-      });
-
-      if (error) {
-        return { error: error.message };
-      }
-
-      return {};
+      // Sign up disabled - use registration endpoint
+      return { error: 'Please use the registration page' };
     } catch (error) {
       return { error: 'Signup failed' };
     }
@@ -193,11 +142,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      if (supabase) {
-        await supabase.auth.signOut();
-        setUser(null);
-        setUserProfile(null);
-      }
+      setUser(null);
+      setUserProfile(null);
     } catch (error) {
       console.error('Sign out error:', error);
     }
