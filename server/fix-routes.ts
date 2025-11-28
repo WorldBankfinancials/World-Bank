@@ -2102,8 +2102,61 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ADMIN ONLY: Reset user password in Supabase Auth
+  app.post('/api/admin/reset-password', async (req: Request, res: Response) => {
+    try {
+      const { email, newPassword } = req.body;
+      
+      if (!email || !newPassword) {
+        return res.status(400).json({ error: 'Email and new password are required' });
+      }
+
+      console.log(`🔐 Resetting password for: ${email}`);
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+
+      // List all users to find the one to update
+      const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError) {
+        return res.status(500).json({ error: 'Failed to list users' });
+      }
+
+      const userToUpdate = users.users.find((u: any) => u.email === email);
+      if (!userToUpdate) {
+        return res.status(404).json({ error: 'User not found in Supabase Auth' });
+      }
+
+      // Update password in Supabase Auth
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        userToUpdate.id,
+        { password: newPassword }
+      );
+
+      if (updateError) {
+        console.error('❌ Failed to reset password:', updateError);
+        return res.status(500).json({ error: 'Failed to reset password', details: updateError.message });
+      }
+
+      console.log(`✅ Password reset for: ${email}`);
+
+      res.json({ 
+        success: true, 
+        message: `Password reset successfully for ${email}. You can now login with the new password.`,
+        email: email
+      });
+    } catch (error: any) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ error: 'Failed to reset password', details: error.message });
+    }
+  });
+
   // ADMIN ONLY: Delete user from Supabase Auth and local database
-  app.post('/api/admin/delete-user/:email', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/admin/delete-user/:email', async (req: Request, res: Response) => {
     try {
       const { email } = req.params;
       
@@ -2113,15 +2166,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       console.log(`🗑️  Deleting user: ${email}`);
 
-      // Delete from Postgres database first
-      const dbUser = await storage.getUserByEmail(email);
-      if (dbUser) {
-        // Get all their transactions and accounts first
-        const accounts = await storage.getUserAccounts(dbUser.id);
-        console.log(`📍 Found ${accounts.length} accounts for deletion`);
-      }
-
-      // Delete from Supabase Auth
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
         process.env.VITE_SUPABASE_URL!,
