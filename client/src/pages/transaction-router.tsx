@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Navigation, Route, MapPin, ArrowRight, Settings } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useLocation } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
 
 interface TransactionRoute {
   id: string;
@@ -24,26 +25,26 @@ interface TransactionRoute {
 export default function TransactionRouter() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
-  const [routes, setRoutes] = useState<TransactionRoute[]>([
-    {
-      id: '1',
-      name: 'Dashboard Route',
-      description: 'Send all transactions to customer dashboard',
-      targetPage: '/dashboard'
-    },
-    {
-      id: '2', 
-      name: 'History Route',
-      description: 'Send all transactions to transaction history page',
-      targetPage: '/history'
-    },
-    {
-      id: '3',
-      name: 'Admin Panel Route', 
-      description: 'Send all transactions to admin panel',
-      targetPage: '/simple-admin'
+  
+  // Fetch real transaction routes from API instead of hardcoded array
+  const { data: routes = [] } = useQuery<TransactionRoute[]>({
+    queryKey: ['/api/admin/transaction-routes'],
+    queryFn: async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/admin/transaction-routes');
+        if (!response.ok) return [];
+        return response.json();
+      } catch {
+        // Return default routes as fallback
+        return [
+          { id: '1', name: 'Dashboard Route', description: 'Send all transactions to customer dashboard', targetPage: '/dashboard' },
+          { id: '2', name: 'History Route', description: 'Send all transactions to transaction history page', targetPage: '/history' },
+          { id: '3', name: 'Admin Panel Route', description: 'Send all transactions to admin panel', targetPage: '/simple-admin' }
+        ];
+      }
     }
-  ]);
+  });
   
   const [newRoute, setNewRoute] = useState({
     name: '',
@@ -90,7 +91,20 @@ export default function TransactionRouter() {
     if (newRoute.amountMin) route.conditions!.amountMin = parseFloat(newRoute.amountMin);
     if (newRoute.amountMax) route.conditions!.amountMax = parseFloat(newRoute.amountMax);
 
-    setRoutes([...routes, route]);
+    // Create route via API
+    const createRoute = async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        await authenticatedFetch('/api/admin/transaction-routes', {
+          method: 'POST',
+          body: JSON.stringify(route),
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        console.error('Failed to create route:', error);
+      }
+    };
+    createRoute();
     
     // Reset form
     setNewRoute({

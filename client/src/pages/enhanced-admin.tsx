@@ -59,71 +59,35 @@ interface Document {
 }
 
 export default function EnhancedAdmin() {
+  const { useQuery } = require('@tanstack/react-query');
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerProfile | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('accounts');
-  const [customers] = useState<CustomerProfile[]>([
-    {
-      id: 1,
-      fullName: "Mr. Liu Wei",
-      email: "liu.wei@oilrig.com",
-      phone: "+86 138 0013 8000",
-      profession: "Marine Engineer",
-      isVerified: true,
-      accounts: [
-        {
-          id: 1,
-          accountNumber: "4789-6523-1087-9234",
-          accountName: "Primary Checking",
-          accountType: "checking",
-          balance: 1047832.15,
-          currency: "USD",
-          isActive: true,
-          minimumBalance: 100
-        },
-        {
-          id: 2,
-          accountNumber: "4789-6523-1087-9235",
-          accountName: "Emergency Savings",
-          accountType: "savings",
-          balance: 250000.00,
-          currency: "USD",
-          isActive: true,
-          interestRate: 2.5,
-          minimumBalance: 1000
-        },
-        {
-          id: 3,
-          accountNumber: "4789-6523-1087-9236",
-          accountName: "Investment Portfolio",
-          accountType: "investment",
-          balance: 850000.00,
-          currency: "USD",
-          isActive: true,
-          interestRate: 7.2
-        }
-      ],
-      documents: [
-        {
-          id: 1,
-          documentType: "passport",
-          documentName: "Passport_Liu_Wei.pdf",
-          isVerified: true,
-          verificationStatus: "approved",
-          uploadedAt: "2024-12-01T10:00:00Z",
-          verificationNotes: "Document verified and approved"
-        },
-        {
-          id: 2,
-          documentType: "proof_of_address",
-          documentName: "Utility_Bill_Dec2024.pdf",
-          isVerified: false,
-          verificationStatus: "pending",
-          uploadedAt: "2024-12-15T14:30:00Z"
-        }
-      ]
+  
+  // Fetch real customers from API instead of hardcoded array
+  const { data: customers = [] } = useQuery<CustomerProfile[]>({
+    queryKey: ['/api/admin/customers'],
+    queryFn: async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/admin/customers');
+        if (!response.ok) return [];
+        const data = await response.json();
+        return Array.isArray(data) ? data.map((c: any) => ({
+          id: c.id,
+          fullName: c.fullName || c.email,
+          email: c.email,
+          phone: c.phone || '',
+          profession: c.profession || 'Not provided',
+          isVerified: c.isVerified || false,
+          accounts: c.accounts || [],
+          documents: c.documents || []
+        })) : [];
+      } catch {
+        return [];
+      }
     }
-  ]);
+  });
 
   const [formData, setFormData] = useState({
     accountType: 'checking',

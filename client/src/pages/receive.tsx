@@ -35,7 +35,21 @@ export default function Receive() {
   const [message, setMessage] = useState("");
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  
+  // Fetch real pending requests from API
+  const { data: pendingRequests = [] } = useQuery({
+    queryKey: ['/api/payment-requests'],
+    queryFn: async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/payment-requests');
+        if (!response.ok) return [];
+        return response.json();
+      } catch {
+        return [];
+      }
+    }
+  });
 
   if (isLoading) {
     return (

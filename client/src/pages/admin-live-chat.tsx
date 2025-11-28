@@ -27,7 +27,23 @@ export default function AdminLiveChat() {
   const [isConnected, setIsConnected] = useState(false);
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
   const [messageText, setMessageText] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
+  
+  // Fetch messages from API when session is selected
+  const { data: messages = [], isLoading: messagesLoading } = useQuery<Message[]>({
+    queryKey: ['/api/messages', selectedSession?.id],
+    queryFn: async () => {
+      if (!selectedSession?.id) return [];
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch(`/api/messages/session/${selectedSession.id}`);
+        if (!response.ok) return [];
+        return response.json();
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!selectedSession?.id
+  });
 
   const { data: chatSessions = [] } = useQuery<ChatSession[]>({
     queryKey: ['/api/admin/chat-sessions'],
