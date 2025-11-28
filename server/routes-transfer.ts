@@ -1,10 +1,6 @@
 import { Express, Request, Response } from 'express';
 import { storage } from './storage-factory';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
-import { transferSchema, validateRequest } from './validation-schemas';
-import { atomicTransfer } from './transaction-wrapper';
-import { supabase } from './supabase-public-storage';
-import bcrypt from 'bcryptjs';
 
 function generateReferenceNumber(): string {
   return `WB-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
@@ -14,16 +10,6 @@ export function setupTransferRoutes(app: Express) {
   // Regular Transfer API - PROTECTED: requires authentication
   app.post('/api/transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Validate request body with Zod schema
-      const validation = validateRequest(transferSchema, req.body);
-      
-      if (!validation.success) {
-        return res.status(400).json({ 
-          message: "Validation failed",
-          errors: (validation as any).errors
-        });
-      }
-
       const {
         amount,
         recipientName,
@@ -32,7 +18,7 @@ export function setupTransferRoutes(app: Express) {
         bankName,
         swiftCode,
         transferPin
-      } = (validation as any).data;
+      } = req.body;
 
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
       const user = await (storage as any).getUserByEmail(req.user!.email);
@@ -42,91 +28,22 @@ export function setupTransferRoutes(app: Express) {
       }
       
       // Validate PIN against real user data from Supabase
-      // Check if PIN is hashed (starts with $2) or plaintext (for backwards compatibility)
-      let pinValid = false;
-      if (user.transferPin && user.transferPin.startsWith('$2')) {
-        // Hashed PIN - use bcrypt compare
-        pinValid = await bcrypt.compare(transferPin, user.transferPin);
-      } else {
-        // Plaintext PIN - direct comparison (legacy support)
-        pinValid = transferPin === user.transferPin;
-      }
-      
-      if (!pinValid) {
+      if (transferPin !== user.transferPin) {
         return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
       }
 
-      // Get user's primary account
-      const userAccounts = await (storage as any).getUserAccounts(user.id);
-      if (userAccounts.length === 0) {
-        return res.status(400).json({ message: "No account found for transfer" });
-      }
-      
-      const fromAccount = userAccounts[0];
-      const currentBalance = parseFloat(fromAccount.balance || '0');
-      
-      // Check sufficient balance
-      if (currentBalance < amount) {
-        return res.status(400).json({ 
-          message: "Insufficient balance. Please add funds to your account.",
-          availableBalance: currentBalance,
-          requestedAmount: amount
-        });
+      // Validate required fields
+      if (!amount || !recipientName || !recipientAccount) {
+        return res.status(400).json({ message: "Missing required transfer details" });
       }
 
-      // CRITICAL: Look up recipient account by account number for domestic transfers
-      const { data: recipientAccountData } = await supabase
-        .from('bank_accounts')
-        .select('id, user_id, account_number, is_active')
-        .eq('account_number', recipientAccount)
-        .single();
-
-      if (!recipientAccountData) {
-        return res.status(404).json({ 
-          message: "Recipient account not found. Please verify the account number.",
-          error: "Invalid recipient account"
-        });
-      }
-
-      if (!recipientAccountData.is_active) {
-        return res.status(400).json({ 
-          message: "Recipient account is not active. Transfer cannot be completed.",
-          error: "Inactive recipient account"
-        });
-      }
-
-      // Prevent self-transfers
-      if (recipientAccountData.id === fromAccount.id) {
-        return res.status(400).json({ 
-          message: "Cannot transfer to your own account. Please use a different recipient.",
-          error: "Self-transfer not allowed"
-        });
-      }
-
-      // CRITICAL FIX: Actually move money using atomicTransfer with BOTH sender and recipient
-      const transferResult = await atomicTransfer({
-        fromAccountId: fromAccount.id,
-        toAccountId: recipientAccountData.id,  // CRITICAL: Credit recipient account
-        amount: amount,
-        transactionType: 'domestic_transfer',
-        description: `Transfer to ${recipientName} (${recipientAccount})`,
-        recipientName: recipientName,
-        recipientCountry: recipientCountry
-      });
-
-      if (!transferResult.success) {
-        return res.status(500).json({ 
-          message: "Transfer failed", 
-          error: transferResult.error 
-        });
-      }
+      const transactionId = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
       res.json({ 
-        message: "Transfer completed successfully", 
-        transactionId: transferResult.transaction?.id || `WB-${Date.now()}`,
-        status: "completed",
-        amount: amount,
-        newBalance: parseFloat(fromAccount.balance) - amount
+        message: "Transfer submitted successfully", 
+        transactionId: transactionId,
+        status: "processing",
+        amount: amount
       });
     } catch (error) {
       console.error("Regular transfer error:", error);
@@ -137,37 +54,16 @@ export function setupTransferRoutes(app: Express) {
   // International Transfer API - PROTECTED: requires authentication
   app.post('/api/international-transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // SECURITY: Require real account number - no fallback values allowed
-      const recipientAccount = req.body.accountNumber || req.body.recipientAccount;
-      
-      if (!recipientAccount || recipientAccount.trim() === '') {
-        return res.status(400).json({ 
-          message: "Recipient account number is required",
-          error: "Missing required field: recipientAccount"
-        });
-      }
-
-      // Validate request body with Zod schema
-      const validation = validateRequest(transferSchema, {
-        ...req.body,
-        recipientAccount: recipientAccount
-      });
-      
-      if (!validation.success) {
-        return res.status(400).json({ 
-          message: "Validation failed",
-          errors: (validation as any).errors
-        });
-      }
-
       const {
         amount,
         recipientName,
         recipientCountry,
         bankName,
         swiftCode,
+        accountNumber,
+        transferPurpose,
         transferPin
-      } = (validation as any).data;
+      } = req.body;
 
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
       const user = await (storage as any).getUserByEmail(req.user!.email);
@@ -177,61 +73,22 @@ export function setupTransferRoutes(app: Express) {
       }
       
       // Validate PIN against real user data from Supabase
-      // Check if PIN is hashed (starts with $2) or plaintext (for backwards compatibility)
-      let pinValid = false;
-      if (user.transferPin && user.transferPin.startsWith('$2')) {
-        // Hashed PIN - use bcrypt compare
-        pinValid = await bcrypt.compare(transferPin, user.transferPin);
-      } else {
-        // Plaintext PIN - direct comparison (legacy support)
-        pinValid = transferPin === user.transferPin;
-      }
-      
-      if (!pinValid) {
+      if (transferPin !== user.transferPin) {
         return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
       }
 
-      // Get user's primary account
-      const userAccounts = await (storage as any).getUserAccounts(user.id);
-      if (userAccounts.length === 0) {
-        return res.status(400).json({ message: "No account found for transfer" });
-      }
-      
-      const fromAccount = userAccounts[0];
-      const currentBalance = parseFloat(fromAccount.balance || '0');
-      
-      // Check sufficient balance
-      if (currentBalance < amount) {
-        return res.status(400).json({ 
-          message: "Insufficient balance. Please add funds to your account.",
-          availableBalance: currentBalance,
-          requestedAmount: amount
-        });
+      // Validate required fields
+      if (!amount || !recipientName || !recipientCountry) {
+        return res.status(400).json({ message: "Missing required international transfer details" });
       }
 
-      // CRITICAL FIX: Actually move money using atomicTransfer
-      const transferResult = await atomicTransfer({
-        fromAccountId: fromAccount.id,
-        amount: amount,
-        transactionType: 'international_transfer',
-        description: `International transfer to ${recipientName} (${recipientAccount}) - ${bankName}, ${recipientCountry}`,
-        recipientName: recipientName,
-        recipientCountry: recipientCountry
-      });
-
-      if (!transferResult.success) {
-        return res.status(500).json({ 
-          message: "Transfer failed", 
-          error: transferResult.error 
-        });
-      }
+      const transactionId = `INT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
       res.json({ 
-        message: "International transfer completed successfully", 
-        id: transferResult.transaction?.id || `INT-${Date.now()}`,
-        status: "completed",
-        amount: amount,
-        newBalance: parseFloat(fromAccount.balance) - amount
+        message: "International transfer submitted successfully", 
+        id: transactionId,
+        status: "processing",
+        amount: amount
       });
     } catch (error) {
       console.error("International transfer error:", error);
@@ -276,13 +133,18 @@ export function setupTransferRoutes(app: Express) {
       const fromAccount = accounts[0];
 
       // Create transaction record for admin approval (all transfers require approval)
-      const transaction = await (storage as any).createTransaction({
+      const transaction = await storage.createTransaction({
+        createdAt: new Date(),
         fromAccountId: fromAccount.id,
         transactionType: transferType || "international_transfer",
         amount: amount.toString(),
         description: `Transfer to ${recipientName}`,
+        recipientName: recipientName,
+        recipientCountry: recipientCountry || "Unknown",
+        bankName: bankName || "Unknown Bank",
+        swiftCode: swiftCode || "",
         status: "pending_approval" // All transfers require admin approval
-      }) as any);
+      });
 
       res.json({ 
         message: "Transfer submitted for approval", 
@@ -314,7 +176,8 @@ export function setupTransferRoutes(app: Express) {
           actionType: 'approve_transfer',
           targetType: 'transaction',
           targetId: transactionId.toString(),
-          description: `Approved transfer #${transactionId}`
+          description: `Approved transfer #${transactionId}`,
+          metadata: notes ? JSON.stringify({ notes }) : null
         });
       }
 
@@ -344,7 +207,8 @@ export function setupTransferRoutes(app: Express) {
           actionType: 'reject_transfer',
           targetType: 'transaction',
           targetId: transactionId.toString(),
-          description: `Rejected transfer #${transactionId}`
+          description: `Rejected transfer #${transactionId}`,
+          metadata: JSON.stringify({ notes })
         });
 
         // Create automatic support ticket for rejected transfer
@@ -353,8 +217,11 @@ export function setupTransferRoutes(app: Express) {
           if (account) {
           await storage.createSupportTicket({
             userId: account.userId,
-            description: `Your transfer has been rejected.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Reason for rejection: ${notes}\n\nPlease contact support for assistance.`,
-            subject: `Transfer Rejection - Transaction #${transaction.id}`
+            subject: `Transfer Rejection - Transaction #${transaction.id}`,
+            description: `Your transfer has been rejected.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Recipient: ${transaction.recipientName}\n- Reason for rejection: ${notes}\n\nPlease contact support for assistance.`,
+            category: 'transfer_issue',
+            priority: 'high',
+            status: 'open'
           });
           }
         }

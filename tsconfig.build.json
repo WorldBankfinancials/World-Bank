@@ -5,10 +5,12 @@
     "outDir": "./dist",
     "rootDir": "./",
     "skipLibCheck": true,
-    "allowJs": true,
-    "forceConsistentCasingInFileNames": true
+    "allowJs": true
   },
-  "include": ["server/**/*", "shared/**/*"],
+  "include": [
+    "server/**/*",
+    "shared/**/*"
+  ],
   "exclude": [
     "client/**/*",
     "node_modules",

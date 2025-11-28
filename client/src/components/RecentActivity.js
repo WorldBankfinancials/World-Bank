@@ -1,7 +1,0 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-export default function RecentActivity({ transactions }) {
-    if (!transactions)
-        return null;
-    return (_jsxs(Card, { children: [_jsx(CardHeader, { children: _jsx(CardTitle, { children: "Recent Activity" }) }), _jsx(CardContent, { children: _jsx("div", { className: "space-y-4", children: transactions.slice(0, 5).map((transaction) => (_jsxs("div", { className: "flex items-center justify-between p-3 border rounded-lg", children: [_jsx("div", { className: "flex items-center space-x-3", children: _jsxs("div", { children: [_jsx("p", { className: "font-medium text-gray-900", children: transaction.description }), transaction.recipient_name && (_jsxs("p", { className: "text-sm text-gray-600", children: ["To: ", transaction.recipient_name] })), _jsx("p", { className: "text-xs text-gray-500", children: new Date(transaction.created_at).toLocaleDateString() })] }) }), _jsxs("div", { className: "text-right space-y-1", children: [_jsxs("p", { className: `font-semibold ${transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'}`, children: [transaction.amount >= 0 ? '+' : '', "$", Math.abs(transaction.amount).toFixed(2)] }), _jsx("span", { className: "text-xs text-gray-500", children: transaction.status })] })] }, transaction.id))) }) })] }));
-}

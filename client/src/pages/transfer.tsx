@@ -98,14 +98,7 @@ export default function Transfer() {
 
   const handleTransfer = () => {
     if (!amount || !recipientDetails.fullName || !recipientDetails.accountNumber) {
-      setPinError("Please fill in all required fields: amount, recipient name, and account number");
-      return;
-    }
-    
-    // Validate amount is positive number
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      setPinError("Please enter a valid positive amount");
+      
       return;
     }
 
@@ -114,14 +107,10 @@ export default function Transfer() {
   };
 
   const verifyPinAndTransfer = async () => {
+    
+    
     if (!transferPin || transferPin.length !== 4) {
       setPinError("Please enter a 4-digit PIN");
-      return;
-    }
-    
-    // Validate PIN is numeric
-    if (!/^\d{4}$/.test(transferPin)) {
-      setPinError("PIN must be exactly 4 digits");
       return;
     }
 

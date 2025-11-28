@@ -10,7 +10,7 @@ import {
   type InsertAdminAction,
   type SupportTicket,
   type InsertSupportTicket
-} from "../shared/schema";
+} from "@shared/schema";
 import { IStorage } from "./storage";
 
 // Use DATABASE_URL for direct PostgreSQL connection instead of Supabase
@@ -108,7 +108,6 @@ export class SupabaseStorage implements IStorage {
       .insert({
         username: user.username,
         password_hash: user.passwordHash,
-    // @ts-ignore - insert schema only has base fields, actual user has all fields
         full_name: user.fullName,
         email: user.email,
         phone: user.phone,

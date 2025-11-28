@@ -179,87 +179,6 @@ export const alerts = pgTable("alerts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const branches = pgTable("branches", {
-  id: serial("id").primaryKey(),
-  branchName: text("branch_name").notNull(),
-  branchCode: text("branch_code").notNull(),
-  address: text("address").notNull(),
-  city: text("city").notNull(),
-  state: text("state"),
-  country: text("country").notNull(),
-  postalCode: text("postal_code"),
-  phone: text("phone").notNull(),
-  email: text("email"),
-  latitude: decimal("latitude", { precision: 10, scale: 6 }),
-  longitude: decimal("longitude", { precision: 10, scale: 6 }),
-  openingHours: text("opening_hours"),
-  services: text("services").array(),
-  amenities: text("amenities").array(),
-  isActive: boolean("is_active").default(true),
-  managerName: text("manager_name"),
-  managerEmail: text("manager_email"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const atms = pgTable("atms", {
-  id: serial("id").primaryKey(),
-  branchId: integer("branch_id"),
-  location: text("location").notNull(),
-  address: text("address").notNull(),
-  city: text("city").notNull(),
-  state: text("state"),
-  country: text("country").notNull(),
-  postalCode: text("postal_code"),
-  latitude: decimal("latitude", { precision: 10, scale: 6 }),
-  longitude: decimal("longitude", { precision: 10, scale: 6 }),
-  features: text("features").array(),
-  isOperational: boolean("is_operational").default(true),
-  lastServiceDate: timestamp("last_service_date"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const exchangeRates = pgTable("exchange_rates", {
-  id: serial("id").primaryKey(),
-  baseCurrency: text("base_currency").notNull().default("USD"),
-  targetCurrency: text("target_currency").notNull(),
-  rate: decimal("rate", { precision: 15, scale: 6 }).notNull(),
-  buyRate: decimal("buy_rate", { precision: 15, scale: 6 }),
-  sellRate: decimal("sell_rate", { precision: 15, scale: 6 }),
-  provider: text("provider"),
-  lastUpdated: timestamp("last_updated").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const marketRates = pgTable("market_rates", {
-  id: serial("id").primaryKey(),
-  marketType: text("market_type").notNull(),
-  symbol: text("symbol"),
-  currentValue: decimal("current_value", { precision: 15, scale: 2 }).notNull(),
-  changePercent: decimal("change_percent", { precision: 5, scale: 2 }).notNull(),
-  changeValue: decimal("change_value", { precision: 15, scale: 2 }),
-  trending: text("trending"),
-  volume: decimal("volume", { precision: 20, scale: 2 }),
-  marketCap: decimal("market_cap", { precision: 20, scale: 2 }),
-  lastUpdated: timestamp("last_updated").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const statements = pgTable("statements", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  accountId: integer("account_id").notNull(),
-  statementPeriod: text("statement_period").notNull(),
-  statementType: text("statement_type").notNull(),
-  fileSize: text("file_size"),
-  documentUrl: text("document_url"),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  generatedAt: timestamp("generated_at").defaultNow(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 // Type exports
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -281,37 +200,35 @@ export type Message = typeof messages.$inferSelect;
 export type InsertMessage = typeof messages.$inferInsert;
 export type Alert = typeof alerts.$inferSelect;
 export type InsertAlert = typeof alerts.$inferInsert;
-export type Branch = typeof branches.$inferSelect;
-export type InsertBranch = typeof branches.$inferInsert;
-export type Atm = typeof atms.$inferSelect;
-export type InsertAtm = typeof atms.$inferInsert;
-export type ExchangeRate = typeof exchangeRates.$inferSelect;
-export type InsertExchangeRate = typeof exchangeRates.$inferInsert;
-export type MarketRate = typeof marketRates.$inferSelect;
-export type InsertMarketRate = typeof marketRates.$inferInsert;
-export type Statement = typeof statements.$inferSelect;
-export type InsertStatement = typeof statements.$inferInsert;
 
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
-  lastLogin: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertAccountSchema = createInsertSchema(accounts).omit({
   id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertTransactionSchema = createInsertSchema(transactions).omit({
   id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertAdminActionSchema = createInsertSchema(adminActions).omit({
   id: true,
+  createdAt: true,
 });
 
 export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
   id: true,
+  createdAt: true,
+  updatedAt: true,
   resolvedAt: true,
 });
 
@@ -341,34 +258,4 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
 export const insertAlertSchema = createInsertSchema(alerts).omit({
   id: true,
   createdAt: true,
-});
-
-export const insertBranchSchema = createInsertSchema(branches).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertAtmSchema = createInsertSchema(atms).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertExchangeRateSchema = createInsertSchema(exchangeRates).omit({
-  id: true,
-  createdAt: true,
-  lastUpdated: true,
-});
-
-export const insertMarketRateSchema = createInsertSchema(marketRates).omit({
-  id: true,
-  createdAt: true,
-  lastUpdated: true,
-});
-
-export const insertStatementSchema = createInsertSchema(statements).omit({
-  id: true,
-  createdAt: true,
-  generatedAt: true,
 });
