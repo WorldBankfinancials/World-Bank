@@ -551,11 +551,9 @@ export default function SimpleAdmin() {
 
       if (response.ok) {
         const updatedCustomer = await response.json();
-        // Optimistic update - customer data will refresh from API
-        if (typeof setCustomerList === 'function') {
-          setCustomerList((prev: Customer[]) => prev.map((c: Customer) => c.id === editingCustomer.id ? { ...c, ...updatedCustomer } : c));
-        }
         setEditingCustomer(null);
+        // Invalidate query to trigger refresh
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/customers-list'] });
         toast({
           title: 'Customer Updated',
           description: 'Customer information has been updated successfully.',
@@ -687,15 +685,10 @@ export default function SimpleAdmin() {
 
           if (response.ok) {
             const result = await response.json();
-            
-            // Optimistic update
-            if (typeof setCustomerList === 'function') {
-              setCustomerList((prev: Customer[]) => prev.map((c: Customer) => 
-                c.id === editingCustomer.id ? { ...c, avatarUrl: base64Image } : c
-              ));
-            }
             setSelectedFile(null);
             setUploadingPhoto(false);
+            // Invalidate query to trigger refresh
+            queryClient.invalidateQueries({ queryKey: ['/api/admin/customers-list'] });
             toast({
               title: 'Photo Uploaded',
               description: 'Profile photo has been uploaded successfully.',
@@ -751,13 +744,6 @@ export default function SimpleAdmin() {
 
       if (response.ok) {
         const result = await response.json();
-        
-        // Update the local state with new balance
-        if (typeof setCustomerList === 'function') {
-          setCustomerList((prev: Customer[]) => prev.map((c: Customer) => 
-            c.id === customerId ? { ...c, balance: result.user.balance } : c
-          ));
-        }
         
         toast({
           title: 'Balance Updated',

@@ -27,9 +27,10 @@ export default function AdminLiveChat() {
   const [isConnected, setIsConnected] = useState(false);
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
   const [messageText, setMessageText] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
   
   // Fetch messages from API when session is selected
-  const { data: messages = [], isLoading: messagesLoading } = useQuery<Message[]>({
+  const { data: queryMessages = [], isLoading: messagesLoading } = useQuery<Message[]>({
     queryKey: ['/api/messages', selectedSession?.id],
     queryFn: async () => {
       if (!selectedSession?.id) return [];
@@ -42,7 +43,8 @@ export default function AdminLiveChat() {
         return [];
       }
     },
-    enabled: !!selectedSession?.id
+    enabled: !!selectedSession?.id,
+    onSuccess: (data) => setMessages(data)
   });
 
   const { data: chatSessions = [] } = useQuery<ChatSession[]>({
