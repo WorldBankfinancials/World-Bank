@@ -147,6 +147,7 @@ function ReceiveSection() {
   const { t } = useLanguage();
   const { data: user } = useQuery<User>({
     queryKey: ['/api/user'],
+    retry: 1,
   });
   const [requestAmount, setRequestAmount] = useState("");
   const [showQR, setShowQR] = useState(false);
@@ -161,7 +162,8 @@ function ReceiveSection() {
   const handleCopyDetails = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const timeout = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timeout);
   };
 
   const handleRequestMoney = () => {
