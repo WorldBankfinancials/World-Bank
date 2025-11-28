@@ -181,113 +181,105 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      localStorage.clear();
-      sessionStorage.clear();
+      try {
+        localStorage.clear();
+      } catch (e) {}
+      try {
+        sessionStorage.clear();
+      } catch (e) {}
 
       await supabase.auth.signOut();
       setUser(null);
       setUserProfile(null);
-
-      console.log('🔐 Logout completed');
     } catch (error) {
-      console.error("Sign out error:", error);
+      // Logout error
     }
   };
 
   useEffect(() => {
+    let mounted = true;
+    const authSubscriptions: any[] = [];
+
     const initializeSession = async () => {
       try {
-        try {
-          const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
 
-          if (session?.user && session.expires_at) {
-            const expirationTime = new Date(session.expires_at * 1000);
-            const now = new Date();
+        if (!mounted) return;
 
-            if (expirationTime > now) {
-              setUser(session.user);
-              await fetchUserData(session.user);
-            } else {
-              await supabase.auth.signOut();
-              setUser(null);
-              setUserProfile(null);
-            }
+        if (session?.user && session.expires_at) {
+          const expirationTime = new Date(session.expires_at * 1000);
+          const now = new Date();
+
+          if (expirationTime > now) {
+            setUser(session.user);
+            await fetchUserData(session.user);
           } else {
+            await supabase.auth.signOut();
             setUser(null);
             setUserProfile(null);
           }
-        } catch (wsError: unknown) {
-          // Silently handle WebSocket insecure context errors in development
-          if (wsError instanceof Error && !wsError.message.includes('WebSocket')) {
-            console.error('Session error:', wsError.message);
-          }
+        } else {
+          setUser(null);
+          setUserProfile(null);
         }
 
         setLoading(false);
-
       } catch (error) {
-        setUser(null);
-        setUserProfile(null);
-        setLoading(false);
+        if (mounted) {
+          setUser(null);
+          setUserProfile(null);
+          setLoading(false);
+        }
       }
     };
 
     initializeSession();
 
-    let subscription: any = null;
-    let userChannel: any = null;
+    // Defer auth state listener to avoid WebSocket errors on mount
+    const initAuthListener = async () => {
+      try {
+        const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+          if (!mounted) return;
 
-    try {
-      const authSubscription = supabase.auth.onAuthStateChange(async (event, session) => {
-        try {
-          if (event === 'SIGNED_OUT') {
-            setUser(null);
-            setLoading(false);
-          } else if (event === 'INITIAL_SESSION' && session) {
-            fetchUserData(session.user);
-          } else if (event === 'SIGNED_IN' && session) {
-            setUser(session.user);
-            await fetchUserData(session.user);
-            setLoading(false);
-          } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-            setUser(session.user);
-            await fetchUserData(session.user);
-            setLoading(false);
-          } else if (event === 'INITIAL_SESSION') {
-            setLoading(false);
-          }
-        } catch (e) {
-          // Silently handle event errors
-        }
-      });
-      subscription = authSubscription.data?.subscription;
-    } catch (e) {
-      // Silently handle WebSocket insecure context errors
-    }
-
-    try {
-      userChannel = supabase
-        .channel('user_profile_changes')
-        .on('postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'bank_users' },
-          async (payload: any) => {
-            if (user) {
-              await fetchUserData(user);
+          try {
+            if (event === 'SIGNED_OUT') {
+              setUser(null);
+              setLoading(false);
+            } else if (event === 'INITIAL_SESSION' && session) {
+              fetchUserData(session.user);
+            } else if (event === 'SIGNED_IN' && session) {
+              setUser(session.user);
+              await fetchUserData(session.user);
+              setLoading(false);
+            } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+              setUser(session.user);
+              await fetchUserData(session.user);
+              setLoading(false);
+            } else if (event === 'INITIAL_SESSION') {
+              setLoading(false);
             }
+          } catch (e) {
+            // Silently handle event errors
           }
-        )
-        .subscribe();
-    } catch (e) {
-      // Silently handle realtime subscription errors
-    }
+        });
+
+        if (data?.subscription && mounted) {
+          authSubscriptions.push(data.subscription);
+        }
+      } catch (e) {
+        // Silently handle auth listener errors
+      }
+    };
+
+    initAuthListener();
 
     return () => {
-      try {
-        subscription?.unsubscribe();
-      } catch (e) {}
-      try {
-        supabase.removeChannel(userChannel);
-      } catch (e) {}
+      mounted = false;
+      authSubscriptions.forEach(sub => {
+        try {
+          sub.unsubscribe();
+        } catch (e) {}
+      });
     };
   }, []);
 
