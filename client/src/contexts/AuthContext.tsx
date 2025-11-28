@@ -125,27 +125,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
 
-      // BYPASS: Use test login endpoint
-      const response = await fetch('/api/bypass-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      if (!response.ok) {
+      if (error) {
         setLoading(false);
-        return { error: 'Invalid credentials' };
+        return { error: error.message };
       }
 
-      const data = await response.json();
-      
-      if (data.success && data.user) {
-        setUser(data.user as any);
-        setUserProfile({
-          id: data.user.id,
-          email: data.user.email,
-          fullName: data.user.fullName
-        });
+      if (data.user && data.session) {
+        setUser(data.user);
+        await fetchUserData(data.user);
         setLoading(false);
         return {};
       }
@@ -153,7 +145,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       return { error: "Authentication failed" };
     } catch (error) {
-      console.error("Sign in error:", error);
       setLoading(false);
       return { error: "Network error occurred" };
     }
