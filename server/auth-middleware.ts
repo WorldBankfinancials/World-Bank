@@ -42,21 +42,13 @@ export async function requireAuth(
     // Only server code can set app_metadata, preventing privilege escalation
     const role = data.user.app_metadata?.role || 'customer';
     
-    // SECURITY: Check if account is active (customer accounts only)
-    // Admins always bypass this check
+    // SECURITY: Verify account exists in database
     if (role === 'customer') {
       const dbUser = await (storage).getUserByEmail(data.user.email!);
       
       if (!dbUser) {
         return res.status(403).json({ 
           error: 'Account not found in database. Please contact support.' 
-        });
-      }
-      
-      if (!dbUser.isActive) {
-        return res.status(403).json({ 
-          error: 'Your account is pending approval by our customer support team. You will receive a notification once your account is activated.',
-          code: 'ACCOUNT_PENDING_APPROVAL'
         });
       }
     }

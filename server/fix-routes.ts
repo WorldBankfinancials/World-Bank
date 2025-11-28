@@ -75,19 +75,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const testUser = await storage.createUser({
         username: 'testuser',
         email: 'test@worldbank.com',
-        fullName: 'Test User',
+        firstName: 'Test',
+        lastName: 'User',
         phone: '1234567890',
-        passwordHash: 'supabase_auth',
-        supabaseUserId: 'test-user-id-123',
+        password: 'supabase_auth',
         profession: 'Developer',
-        transferPin: '1234',
         accountNumber: '123456789',
-        accountId: 'TEST001',
-        isVerified: true,
-        isOnline: false,
-        isActive: true,
-        balance: '10000',
-        role: 'customer'
+        accountId: 1001,
+        balance: '10000'
       });
       res.json({ success: true, user: testUser });
     } catch (error) {

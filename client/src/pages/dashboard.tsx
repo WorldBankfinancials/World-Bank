@@ -153,7 +153,7 @@ function ReceiveSection() {
   const [copied, setCopied] = useState(false);
 
   const accountDetails = {
-    name: user?.fullName || "Account Holder",
+    name: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : "Account Holder",
     accountNumber: user?.accountNumber || t('loading'),
     accountId: (user as any)?.accountId || t('loading')
   };

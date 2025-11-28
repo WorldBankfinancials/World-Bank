@@ -46,7 +46,7 @@ export default function Receive() {
   }
 
   const accountDetails = {
-    name: user?.fullName || "Account Holder",
+    name: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : "Account Holder",
     accountNumber: user?.accountNumber || t('loading'),
     accountId: (user as any)?.accountId || t('loading'),
     bankName: "World Bank Group",

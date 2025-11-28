@@ -375,13 +375,12 @@ export default function AdminDashboard() {
                         <div className="flex justify-between items-start mb-4">
                           <div>
                             <h3 className="font-semibold text-lg">Transfer #{transfer.id}</h3>
-                            <p className="text-sm text-gray-600">From: {transfer.userInfo?.fullName || 'Unknown User'}</p>
-                            <p className="text-sm text-gray-600">Amount: ${transfer.amount}</p>
-                            <p className="text-sm text-gray-600">To: {transfer.recipientName}</p>
-                            <p className="text-sm text-gray-600">Country: {transfer.recipientCountry}</p>
-                            <p className="text-sm text-gray-600">Bank: {transfer.bankName}</p>
-                            <p className="text-sm text-gray-600">SWIFT: {transfer.swiftCode}</p>
-                            <p className="text-sm text-gray-600">Purpose: {transfer.transferPurpose}</p>
+                            <p className="text-sm text-gray-600">Amount: ${transfer.amount} {transfer.currency}</p>
+                            <p className="text-sm text-gray-600">Type: {transfer.type}</p>
+                            <p className="text-sm text-gray-600">Description: {transfer.description}</p>
+                            <p className="text-sm text-gray-600">Status: {transfer.status}</p>
+                            <p className="text-sm text-gray-600">Reference: {transfer.referenceNumber}</p>
+                            <p className="text-sm text-gray-600">Fee: ${transfer.fee}</p>
                           </div>
                           <Badge className="bg-orange-100 text-orange-800">
                             <Clock className="w-3 h-3 mr-1" />
