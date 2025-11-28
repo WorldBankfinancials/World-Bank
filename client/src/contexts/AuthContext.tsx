@@ -120,26 +120,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: 'Authentication service unavailable' };
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      if (error) {
-        return { error: error.message };
-      }
+        if (error) {
+          console.error('Supabase auth error:', error.message);
+          return { error: error.message };
+        }
 
-      if (data.user && data.session) {
-        setUser(data.user);
-        await fetchUserData(data.user);
+        if (data.user && data.session) {
+          setUser(data.user);
+          await fetchUserData(data.user);
+          setLoading(false);
+          return {};
+        }
+
+        setLoading(false);
+        return { error: 'Authentication failed' };
+      } catch (supabaseError: any) {
+        console.error('Supabase connection error:', supabaseError);
+        
+        // Fallback to backend login if Supabase fails
+        console.log('Attempting backend login fallback...');
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          return { error: errorData.error || 'Login failed' };
+        }
+
+        const loginData = await response.json();
+        setUser({ 
+          id: loginData.user.id, 
+          email: loginData.user.email,
+          app_metadata: { role: loginData.user.role },
+          user_metadata: {},
+          aud: '',
+          created_at: new Date().toISOString()
+        } as any);
+        
         setLoading(false);
         return {};
       }
-
-      setLoading(false);
-      return { error: 'Authentication failed' };
     } catch (error) {
       setLoading(false);
+      console.error('Login error:', error);
       return { error: 'Network error occurred' };
     }
   };
