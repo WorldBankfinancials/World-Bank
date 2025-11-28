@@ -1938,6 +1938,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // IN-MEMORY SESSION CACHE FOR PIN VALIDATION
+  const sessionCache = new Map<string, any>();
+
   // EMERGENCY LOGIN - Supabase Auth ONLY (bypass database for now)
   app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
@@ -1973,35 +1976,23 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const supabaseUser = data.user;
       console.log('✅ Password verified via Supabase Auth');
 
-      // Try to sync with Postgres database (if available)
-      let dbUser: any = null;
-      try {
-        dbUser = await storage.getUserByEmail(email);
-        if (!dbUser) {
-          console.log('📍 Creating missing user in Postgres from Supabase Auth');
-          dbUser = await storage.createUser({
-            username: email.split('@')[0],
-            firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
-            lastName: supabaseUser.user_metadata?.last_name || 'User',
-            email: email,
-            phone: supabaseUser.user_metadata?.phone || '',
-            password: 'supabase_auth',
-            role: supabaseUser.app_metadata?.role || 'customer',
-            isActive: true,
-            isVerified: true,
-            balance: '0'
-          });
-        } else if (!dbUser.isActive) {
-          console.log('📍 Auto-activating user after Supabase Auth success');
-          dbUser = await storage.updateUser(dbUser.id, { isActive: true, isVerified: true });
-        }
-      } catch (dbError: any) {
-        console.warn('⚠️  Database sync failed (continuing with Supabase Auth only):', dbError?.message?.substring(0, 100));
-        // Don't fail - Supabase Auth succeeded, that's enough
-      }
+      // Cache session data in memory for PIN validation
+      const cacheKey = email.toLowerCase();
+      sessionCache.set(cacheKey, {
+        email,
+        id: supabaseUser.id,
+        role: supabaseUser.app_metadata?.role || 'customer',
+        firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
+        lastName: supabaseUser.user_metadata?.last_name || 'User',
+        phone: supabaseUser.user_metadata?.phone || '',
+        transferPin: supabaseUser.user_metadata?.transfer_pin || '0192',
+        isActive: true,
+        balance: '0',
+        lastLogin: Date.now()
+      });
 
       // Generate token: base64(email:timestamp:id)
-      const userId = dbUser?.id || supabaseUser.id;
+      const userId = supabaseUser.id;
       const tokenData = `${email}:${Date.now()}:${userId}`;
       const token = Buffer.from(tokenData).toString('base64');
 
