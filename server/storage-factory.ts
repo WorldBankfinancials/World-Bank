@@ -5,6 +5,7 @@ import { CompleteSupabaseStorage } from './supabase-storage-complete';
 import type { IStorage } from './storage';
 
 // Environment-based storage factory
+// SINGLE SOURCE OF TRUTH: Postgres is primary, Supabase is optional secondary
 export function createStorage(): IStorage {
   const dataSource = config.getDataSource();
   
@@ -14,22 +15,23 @@ export function createStorage(): IStorage {
   console.log(`🔐 Auth Source: ${config.getAuthSource()}`);
   console.log('');
   
-  // Check if we have Supabase database URL to use complete Supabase integration
+  // PRIMARY: Use PostgreSQL as the single source of truth when available
+  if (process.env.DATABASE_URL) {
+    console.log('✅ Using PostgreSQL as PRIMARY source of truth');
+    console.log('📍 Supabase Auth (optional): available for sync if configured');
+    return new PostgresStorage();
+  }
+  
+  // FALLBACK: Supabase complete integration (if Postgres unavailable)
   if (process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.log('✅ Using Complete Supabase Storage with all 9 tables integrated');
+    console.log('⚠️  Using Supabase as fallback (Postgres not available)');
     return new CompleteSupabaseStorage();
   }
   
-  // Check if we have Supabase database URL to use Supabase public schema
+  // FALLBACK: Supabase public schema
   if (process.env.SUPABASE_DATABASE_URL) {
-    console.log('Using Supabase public schema with realtime synchronization');
+    console.log('⚠️  Using Supabase public schema as fallback');
     return new SupabasePublicStorage();
-  }
-  
-  // Use PostgreSQL database when available
-  if (process.env.DATABASE_URL) {
-    console.log('Using PostgreSQL database storage');
-    return new PostgresStorage();
   }
   
   // PRODUCTION-READY: No fallback to mock data - database required
