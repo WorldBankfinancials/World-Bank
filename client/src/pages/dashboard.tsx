@@ -1055,11 +1055,11 @@ export default function Dashboard() {
 
       <BottomNavigation />
 
-      {/* Live Chat Component - disabled for backend auth mode */}
-      {/* <LiveChat 
-        isOpen={isChatOpen} 
-        onClose={() => setIsChatOpen(false)} 
-      /> */}
+      {/* Live Chat Component */}
+      <LiveChat 
+        isOpen={showLiveChat} 
+        onClose={() => setShowLiveChat(false)} 
+      />
     </div>
   );
 }
