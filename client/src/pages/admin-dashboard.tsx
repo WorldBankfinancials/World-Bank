@@ -66,8 +66,8 @@ export default function AdminDashboard() {
   const [, setLocation] = useLocation();
 
   // Enable real-time updates for transactions and support tickets
-  useRealtimeTransactions(true);
-  useRealtimeSupportTickets(true);
+  useRealtimeTransactions();
+  useRealtimeSupportTickets();
 
   // Fetch real customer data from API
   const { data: customers = [], isLoading: customersLoading } = useQuery<any[]>({
