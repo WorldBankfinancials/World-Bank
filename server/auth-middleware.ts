@@ -39,7 +39,6 @@ export async function requireAuth(
         throw new Error('Invalid token format');
       }
     } catch (parseError) {
-      console.log('❌ Token parsing failed:', parseError);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
@@ -47,14 +46,12 @@ export async function requireAuth(
     const dbUser = await storage.getUserByEmail(email);
     
     if (!dbUser) {
-      console.log('❌ User not found in Postgres:', email);
       return res.status(403).json({ 
         error: 'Account not found. Please contact support.' 
       });
     }
 
     if (!dbUser.isActive) {
-      console.log('⚠️  Account not active:', email);
       return res.status(403).json({ 
         error: 'Account not approved. Please contact support.' 
       });
@@ -71,10 +68,8 @@ export async function requireAuth(
 
       const { data: supabaseUser } = await supabase.auth.admin.getUserById(String(userId));
       if (supabaseUser?.user && supabaseUser.user.email === email) {
-        console.log('✅ Verified in both Postgres and Supabase Auth:', email);
       }
     } catch (supabaseError) {
-      console.log('⚠️  Supabase verification skipped (unavailable)');
     }
 
     // Attach user to request (Postgres is primary, but both systems validated)
@@ -84,11 +79,9 @@ export async function requireAuth(
       role: dbUser.role || 'customer'
     };
 
-    console.log('✅ Auth passed for:', email, 'role:', req.user.role);
     next();
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
-    console.error('❌ Auth error:', errorMessage);
     res.status(401).json({ error: 'Authentication failed' });
   }
 }

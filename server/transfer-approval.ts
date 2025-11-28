@@ -34,7 +34,6 @@ export async function createTransferForApproval(data: TransferApprovalData) {
 
     return transaction;
   } catch (error) {
-    console.error('Error creating transfer for approval:', error);
     throw error;
   }
 }
@@ -57,7 +56,6 @@ export async function approveTransfer(transactionId: number, adminId: number, no
 
     return transaction;
   } catch (error) {
-    console.error('Error approving transfer:', error);
     throw error;
   }
 }
@@ -83,7 +81,6 @@ export async function rejectTransfer(transactionId: number, adminId: number, not
 
     return transaction;
   } catch (error) {
-    console.error('Error rejecting transfer:', error);
     throw error;
   }
 }
@@ -93,7 +90,6 @@ async function createSupportTicketForRejection(transaction: any, rejectionReason
     // Get account details to find user
     const account = await storage.getAccount(transaction.accountId);
     if (!account) {
-      console.error('Account not found for transaction');
       return;
     }
 
@@ -106,10 +102,8 @@ async function createSupportTicketForRejection(transaction: any, rejectionReason
       priority: 'high'
     });
 
-    console.log(`Auto-created support ticket #${ticket.id} for rejected transfer #${transaction.id}`);
     return ticket;
   } catch (error) {
-    console.error('Error creating support ticket for rejection:', error);
   }
 }
 
@@ -117,7 +111,6 @@ export async function getPendingTransfers() {
   try {
     return await storage.getPendingTransactions();
   } catch (error) {
-    console.error('Error getting pending transfers:', error);
     throw error;
   }
 }

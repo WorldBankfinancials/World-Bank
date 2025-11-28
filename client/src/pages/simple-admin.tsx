@@ -539,12 +539,10 @@ export default function SimpleAdmin() {
 
   const handleApproveTransfer = (transferId: number) => {
     setTransfers(prev => prev.filter(t => t.id !== transferId));
-    // console.log(`Approved transfer ${transferId}`);
   };
 
   const handleRejectTransfer = (transferId: number) => {
     setTransfers(prev => prev.filter(t => t.id !== transferId));
-    // console.log(`Rejected transfer ${transferId}`);
   };
 
   const handleOpenChat = (ticket: SupportTicket) => {
@@ -595,7 +593,6 @@ export default function SimpleAdmin() {
         throw new Error('Failed to fetch user data');
       }
     } catch (error) {
-      // console.error('Error fetching user data for edit:', error);
       // Use fallback data based on customer profile settings
       setEditingCustomer(customer);
       setEditForm({
@@ -654,7 +651,6 @@ export default function SimpleAdmin() {
         throw new Error('Failed to update customer');
       }
     } catch (error) {
-      // console.error('Error updating customer:', error);
       toast({
         title: 'Update Failed',
         description: 'Unable to update customer information. Please try again.',
@@ -720,7 +716,6 @@ export default function SimpleAdmin() {
           }
 
           // Always compress image for reliable upload
-          // console.log('Compressing image for upload...');
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
@@ -748,12 +743,10 @@ export default function SimpleAdmin() {
             ctx?.drawImage(img, 0, 0, width, height);
             const compressedImage = canvas.toDataURL('image/jpeg', 0.6); // Lower quality for smaller size
             
-            // console.log(`Image compressed from ${base64Image.length} to ${compressedImage.length} bytes`);
             uploadCompressedImage(compressedImage);
           };
           img.src = base64Image;
         } catch (uploadError: any) {
-          // console.error('Upload error:', uploadError);
           setUploadingPhoto(false);
           toast({
             title: 'Upload Failed',
@@ -781,7 +774,6 @@ export default function SimpleAdmin() {
 
           if (response.ok) {
             const result = await response.json();
-            // console.log('Photo upload successful:', result);
             
             setCustomerList(prev => prev.map(c => 
               c.id === editingCustomer.id ? { ...c, avatarUrl: base64Image } : c
@@ -798,11 +790,9 @@ export default function SimpleAdmin() {
             queryClient.invalidateQueries({ queryKey: ['/api/users'] });
           } else {
             const errorData = await response.json();
-            // console.error('Upload failed:', errorData);
             throw new Error(errorData.error || 'Failed to upload photo');
           }
         } catch (uploadError: any) {
-          // console.error('Upload error:', uploadError);
           setUploadingPhoto(false);
           toast({
             title: 'Upload Failed',
@@ -821,7 +811,6 @@ export default function SimpleAdmin() {
       };
       reader.readAsDataURL(selectedFile);
     } catch (error) {
-      // console.error('Error uploading photo:', error);
       toast({
         title: 'Upload Error',
         description: 'An unexpected error occurred while uploading the photo.',
@@ -846,7 +835,6 @@ export default function SimpleAdmin() {
 
       if (response.ok) {
         const result = await response.json();
-        // console.log('Balance update result:', result);
         
         // Update the local state with new balance
         setCustomerList(prev => prev.map(c => 
@@ -863,11 +851,9 @@ export default function SimpleAdmin() {
         queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
       } else {
         const errorData = await response.json();
-        // console.error('Balance update failed:', errorData);
         throw new Error(errorData.error || 'Failed to update balance');
       }
     } catch (error: any) {
-      // console.error('Error updating balance:', error);
       toast({
         title: 'Balance Update Failed',
         description: `Failed to update customer balance: ${error?.message || 'Unknown error'}`,
@@ -931,7 +917,6 @@ export default function SimpleAdmin() {
         });
 
         if (balanceResponse.ok) {
-          // console.log(`Created ${transactionType} transaction of $${amount} for customer ${selectedCustomerForTransaction}`);
           toast({
             title: 'Transaction Created',
             description: `Successfully created ${transactionType} transaction of $${amount.toFixed(2)}.`,
@@ -951,7 +936,6 @@ export default function SimpleAdmin() {
         throw new Error('Failed to create transaction');
       }
     } catch (error) {
-      // console.error('Transaction creation error:', error);
       toast({
         title: 'Transaction Failed',
         description: 'Failed to create transaction. Please try again.',
@@ -1024,7 +1008,6 @@ export default function SimpleAdmin() {
         });
       }
     } catch (error) {
-      // console.error('Error processing fund operation:', error);
       toast({
         title: 'Operation Error',
         description: 'An error occurred while processing the fund operation.',

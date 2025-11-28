@@ -34,17 +34,14 @@ export class CompleteSupabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    console.log('🔍 Querying bank_users for email:', email);
     const { data, error } = await supabase
       .from('bank_users')
       .select('*')
       .eq('email', email)
       .single();
     if (error) {
-      console.error('❌ Supabase error:', error);
       return undefined;
     }
-    console.log('✅ Found user:', data?.email);
     return data ? mapSupabaseUserToUser(data) : undefined;
   }
 

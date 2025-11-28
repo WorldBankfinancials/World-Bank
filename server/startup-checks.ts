@@ -11,7 +11,6 @@ import { supabase } from './supabase-public-storage';
  */
 export async function verifyAtomicBalanceFunction(): Promise<boolean> {
   try {
-    console.log('🔍 Verifying atomic_balance_update SQL function...');
     
     // Test with a fake account ID (-1) - should fail gracefully
     const { data, error } = await supabase.rpc('atomic_balance_update', {
@@ -21,17 +20,13 @@ export async function verifyAtomicBalanceFunction(): Promise<boolean> {
 
     // If the function doesn't exist, we'll get a specific error
     if (error && error.message?.includes('function') && error.message?.includes('does not exist')) {
-      console.error('❌ CRITICAL: atomic_balance_update function NOT FOUND in database!');
-      console.error('   Run the SQL migration to create it');
       return false;
     }
 
     // The function exists (even if it returns empty for fake ID)
-    console.log('✅ atomic_balance_update function verified');
     return true;
 
   } catch (error: any) {
-    console.error('❌ Failed to verify atomic_balance_update:', error);
     return false;
   }
 }
@@ -46,11 +41,9 @@ export async function runStartupChecks(): Promise<void> {
   const dataSource = process.env.DATA_SOURCE || 'supabase';
   
   if (dataSource !== 'supabase') {
-    console.log('ℹ️  Skipping startup checks (not using Supabase storage)');
     return;
   }
   
-  console.log('🚀 Running startup sanity checks...');
   
   const checks = [
     { name: 'Atomic Balance Function', test: verifyAtomicBalanceFunction }
@@ -62,19 +55,14 @@ export async function runStartupChecks(): Promise<void> {
     const passed = await check.test();
     if (!passed) {
       const message = `Startup check FAILED: ${check.name}`;
-      console.error(`❌ ${message}`);
       failures.push(message);
     }
   }
 
   if (failures.length > 0) {
-    console.error('🚨 CRITICAL: Startup checks failed - ABORTING SERVER STARTUP');
-    console.error('   Failed checks:', failures);
-    console.error('   Fix database configuration and restart server');
     
     // CRITICAL: Throw error to ABORT startup - prevents broken server from starting
     throw new Error(`Startup checks failed: ${failures.join('; ')}`);
   }
 
-  console.log('✅ All startup checks passed - server starting');
 }

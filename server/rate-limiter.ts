@@ -67,7 +67,6 @@ export function createRateLimiter(options: RateLimitOptions) {
     if (store[key].count > maxRequests) {
       const retryAfter = Math.ceil((store[key].resetTime - now) / 1000);
       
-      console.warn(`🚫 Rate limit exceeded for ${key}: ${store[key].count} requests`);
       
       res.setHeader('Retry-After', retryAfter.toString());
       res.setHeader('X-RateLimit-Limit', maxRequests.toString());

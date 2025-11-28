@@ -74,7 +74,6 @@ export default function TransactionRouter() {
 
   const handleCreateRoute = () => {
     if (!newRoute.name || !newRoute.targetPage) {
-      // console.warn('Missing route name or target page');
       return;
     }
 
@@ -105,7 +104,6 @@ export default function TransactionRouter() {
     });
     
     setIsCreating(false);
-    // console.log(`Route "${route.name}" created successfully`);
   };
 
   const handleDeleteRoute = (routeId: string) => {

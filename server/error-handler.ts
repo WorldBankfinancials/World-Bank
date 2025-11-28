@@ -40,16 +40,16 @@ export function errorHandler(
   // SECURITY FIX: Log error WITHOUT sensitive data (passwords, PINs, tokens)
   const isProduction = process.env.NODE_ENV === 'production';
   
-  console.error('🚨 ERROR:', {
+  // Log error details safely
+  const errorLog = {
     message: err.message,
-    stack: isProduction ? undefined : err.stack, // Hide stack traces in production
+    stack: isProduction ? undefined : err.stack,
     path: req.path,
     method: req.method,
-    // CRITICAL: NEVER log request body in production (contains passwords/PINs/tokens)
     body: isProduction ? '[REDACTED]' : req.body,
     statusCode: err.statusCode,
     timestamp: new Date().toISOString()
-  });
+  };
 
   // Determine status code
   const statusCode = err.statusCode || 500;

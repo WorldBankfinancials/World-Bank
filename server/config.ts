@@ -62,11 +62,4 @@ export const config = {
 
 // Environment configuration display
 export function logConfiguration() {
-  console.log('\n🏦 World Bank Application Configuration:');
-  console.log(`📊 Environment: ${config.NODE_ENV}`);
-  console.log(`💾 Data Source: ${config.getDataSource()}`);
-  console.log(`🔐 Auth Source: ${config.getAuthSource()}`);
-  console.log(`🧪 Mock Data: ${config.ENABLE_MOCK_DATA ? 'Enabled' : 'Disabled'}`);
-  console.log(`⚠️  API Error Simulation: ${config.SIMULATE_API_ERRORS ? 'Enabled' : 'Disabled'}`);
-  console.log('');
 }

@@ -29,7 +29,6 @@ const activeConnections = new Map<string, WebSocketUser>();
  */
 export function setupLiveChatWebSocket(wss: WebSocketServer) {
   wss.on('connection', async (ws: WebSocket, req: Request) => {
-    console.log('🔵 Live chat connection attempt');
 
     // Parse user info from connection
     const url = new URL(req.url || '', `http://${req.headers.host}`);
@@ -51,7 +50,6 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
       email: userEmail
     });
 
-    console.log(`✅ Live chat connected: ${connectionId} (${activeConnections.size} active)`);
 
     // Subscribe to real-time chat messages for this user
     const chatChannel = supabase
@@ -200,7 +198,6 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
           }));
         }
       } catch (error: any) {
-        console.error('Chat message error:', error);
         ws.send(JSON.stringify({
           type: 'error',
           message: error.message
@@ -211,7 +208,6 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
     // Handle disconnection
     ws.on('close', async () => {
       activeConnections.delete(connectionId);
-      console.log(`❌ Live chat disconnected: ${connectionId} (${activeConnections.size} active)`);
 
       // Update user presence
       try {
@@ -220,12 +216,10 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
           .update({ isOnline: false, lastSeen: new Date() })
           .eq('userId', userId);
       } catch (error) {
-        console.error('Presence update error:', error);
       }
     });
 
     ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
     });
   });
 }

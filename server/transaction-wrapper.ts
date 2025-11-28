@@ -36,21 +36,16 @@ export class BankingTransaction {
     this.executedSteps = [];
     
     try {
-      console.log(`🔄 Starting atomic transaction with ${this.steps.length} steps`);
 
       // Execute each step in order
       for (const step of this.steps) {
         try {
-          console.log(`  ▶ Executing step: ${step.name}`);
           const result = await step.execute();
           this.executedSteps.push(step);
           this.results.push(result);
-          console.log(`  ✅ Step completed: ${step.name}`);
         } catch (stepError: any) {
-          console.error(`  ❌ Step failed: ${step.name}`, stepError);
           
           // ROLLBACK all executed steps in reverse order
-          console.log(`🔄 Rolling back ${this.executedSteps.length} executed steps...`);
           const rollbackFailures = await this.rollback();
           
           if (rollbackFailures.length > 0) {
@@ -67,14 +62,12 @@ export class BankingTransaction {
         }
       }
 
-      console.log(`✅ Transaction completed successfully - all ${this.steps.length} steps executed`);
       return {
         success: true,
         data: this.results[this.results.length - 1] as T
       };
 
     } catch (error: any) {
-      console.error(`❌ Transaction error:`, error);
       const rollbackFailures = await this.rollback();
       
       if (rollbackFailures.length > 0) {
@@ -102,12 +95,9 @@ export class BankingTransaction {
     for (const step of stepsToRollback) {
       if (step.rollback) {
         try {
-          console.log(`  ⏪ Rolling back: ${step.name}`);
           await step.rollback();
-          console.log(`  ✅ Rollback successful: ${step.name}`);
         } catch (rollbackError: any) {
           const errorMsg = `Rollback failed for "${step.name}": ${rollbackError.message}`;
-          console.error(`  🚨 CRITICAL: ${errorMsg}`, rollbackError);
           rollbackFailures.push(errorMsg);
           
           // Continue rolling back other steps even if one fails
@@ -117,11 +107,8 @@ export class BankingTransaction {
     }
     
     if (rollbackFailures.length > 0) {
-      console.error(`🚨 ROLLBACK FAILURES DETECTED - MANUAL INTERVENTION REQUIRED:`);
-      rollbackFailures.forEach(failure => console.error(`   - ${failure}`));
       // In production, this should trigger alerts to administrators
     } else {
-      console.log(`✅ Rollback completed successfully`);
     }
     
     return rollbackFailures;
@@ -150,7 +137,6 @@ export async function atomicBalanceUpdate(
       if (error.message?.includes('insufficient') || error.message?.includes('negative')) {
         return { success: false, error: 'Insufficient funds' };
       }
-      console.error('❌ Atomic balance update error:', error);
       return { success: false, error: error.message };
     }
 
@@ -159,7 +145,6 @@ export async function atomicBalanceUpdate(
     }
 
     const result = data[0];
-    console.log(`💰 Balance updated atomically: Account ${accountId} ${amountChange >= 0 ? '+' : ''}${amountChange} = ${result.new_balance} (was ${result.previous_balance})`);
     
     return { 
       success: true, 
@@ -168,7 +153,6 @@ export async function atomicBalanceUpdate(
     };
 
   } catch (error: any) {
-    console.error('❌ Atomic balance update failed:', error);
     // Fallback to direct SQL update if RPC not available
     return await fallbackAtomicUpdate(accountId, amountChange, description);
   }
@@ -184,7 +168,6 @@ async function fallbackAtomicUpdate(
   description: string
 ): Promise<{ success: boolean; newBalance?: string; error?: string }> {
   try {
-    console.log(`⚠️ Using fallback atomic update for account ${accountId}`);
     
     // Use a single SQL UPDATE that checks balance constraint
     const { data, error } = await supabase
@@ -218,15 +201,12 @@ async function fallbackAtomicUpdate(
       .single();
 
     if (updateError || !updateData) {
-      console.error('❌ Concurrent update detected - balance changed during operation');
       return { success: false, error: 'Balance was modified by another transaction. Please try again.' };
     }
 
-    console.log(`💰 Balance updated: Account ${accountId} ${amountChange >= 0 ? '+' : ''}${amountChange} = ${newBalance}`);
     return { success: true, newBalance: newBalance.toString() };
 
   } catch (error: any) {
-    console.error('❌ Fallback atomic update failed:', error);
     return { success: false, error: error.message };
   }
 }

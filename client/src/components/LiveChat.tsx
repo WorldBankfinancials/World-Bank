@@ -60,7 +60,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
             }]);
           }
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
         }
       };
 
@@ -77,7 +76,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
         setIsConnected(false);
       };
     } catch (error) {
-      console.error('WebSocket error:', error);
       setIsConnected(false);
     }
 

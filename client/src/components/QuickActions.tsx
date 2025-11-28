@@ -66,7 +66,6 @@ export default function QuickActions() {
 
       ws.onopen = () => {
         setIsConnected(true);
-        // console.log("Connected to live chat");
         
         // Send customer connection message
         ws.send(JSON.stringify({
@@ -107,7 +106,6 @@ export default function QuickActions() {
 
       ws.onclose = () => {
         setIsConnected(false);
-        // console.log("Disconnected from live chat");
       };
 
       ws.onerror = (error) => {

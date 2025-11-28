@@ -31,7 +31,6 @@ export async function createNewUserWithUniqueData(userData: Partial<InsertUser> 
     ...userData
   });
 
-  console.log(`✅ New user created: ${newUser.firstName} ${newUser.lastName} (ID: ${newUser.id}) - Admin must manually create accounts`);
   
   return newUser;
 }

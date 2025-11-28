@@ -37,7 +37,6 @@ export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   db: { schema: 'public' }
 });
 
-console.log('🔗 Connected to Supabase public schema');
 
 const mapUser = (user: any): User => {
   const [firstName, lastName] = (user.full_name || '').split(' ');
@@ -82,7 +81,6 @@ export class SupabasePublicStorage implements IStorage {
       if (error || !user) return undefined;
       return mapUser(user);
     } catch (error) {
-      console.error('Error getting user:', error);
       return undefined;
     }
   }
@@ -94,16 +92,13 @@ export class SupabasePublicStorage implements IStorage {
         .select('id, full_name, email, balance, created_at, updated_at')
         .eq('email', email);
       if (error) {
-        console.error('Supabase error for email:', email, error);
         return undefined;
       }
       if (!user || user.length === 0) {
-        console.log('No user found for email:', email);
         return undefined;
       }
       return mapUser(user[0]);
     } catch (error) {
-      console.error('Error getting user by email:', error);
       return undefined;
     }
   }
@@ -148,7 +143,6 @@ export class SupabasePublicStorage implements IStorage {
       if (!user) throw new Error('Failed to create user');
       return mapUser(user);
     } catch (error) {
-      console.error('Error creating user:', error);
       throw error;
     }
   }
@@ -173,7 +167,6 @@ export class SupabasePublicStorage implements IStorage {
       if (error || !user) return undefined;
       return mapUser(user);
     } catch (error) {
-      console.error('Error updating user:', error);
       return undefined;
     }
   }
@@ -189,7 +182,6 @@ export class SupabasePublicStorage implements IStorage {
       if (error || !user) return undefined;
       return mapUser(user);
     } catch (error) {
-      console.error('Error updating user balance:', error);
       return undefined;
     }
   }
@@ -232,7 +224,6 @@ export class SupabasePublicStorage implements IStorage {
       if (error || !account) throw error;
       return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at } as any;
     } catch (error) {
-      console.error('Error creating account:', error);
       throw error;
     }
   }
@@ -532,7 +523,6 @@ export class SupabasePublicStorage implements IStorage {
     try {
       await supabase.from('alerts').delete().eq('id', id);
     } catch (error) {
-      console.error('Error deleting alert:', error);
     }
   }
 

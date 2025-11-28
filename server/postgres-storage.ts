@@ -55,7 +55,6 @@ export class PostgresStorage implements IStorage {
       
       return this.mapDbUser(result[0]);
     } catch (error) {
-      console.error('❌ Error fetching user:', error);
       return undefined;
     }
   }
@@ -70,47 +69,38 @@ export class PostgresStorage implements IStorage {
       
       return this.mapDbUser(result[0]);
     } catch (error) {
-      console.error('❌ Error fetching user by username:', error);
       return undefined;
     }
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    console.log('🔍 Searching for user with email:', email);
     try {
       const result = await getConnection()`
         SELECT * FROM public.bank_users WHERE email = ${email}
       `;
       
       if (result.length === 0) {
-        console.log('❌ No user found with email:', email);
         return undefined;
       }
       
-      console.log('✅ Found user in database:', result[0]);
       return this.mapDbUser(result[0]);
     } catch (error) {
-      console.error('❌ Database error fetching user by email:', error);
       return undefined;
     }
   }
 
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
-    console.log('🔍 Searching for user with Supabase UUID:', supabaseUserId);
     try {
       const result = await getConnection()`
         SELECT * FROM public.bank_users WHERE supabase_user_id = ${supabaseUserId}::uuid
       `;
       
       if (result.length === 0) {
-        console.log('❌ No user found with Supabase UUID:', supabaseUserId);
         return undefined;
       }
       
-      console.log('✅ Found user by Supabase UUID:', result[0]);
       return this.mapDbUser(result[0]);
     } catch (error) {
-      console.error('❌ Database error fetching user by Supabase UUID:', error);
       return undefined;
     }
   }
@@ -125,7 +115,6 @@ export class PostgresStorage implements IStorage {
       
       return this.mapDbUser(result[0]);
     } catch (error) {
-      console.error('❌ Error fetching user by phone:', error);
       return undefined;
     }
   }
@@ -138,7 +127,6 @@ export class PostgresStorage implements IStorage {
       
       return result.map((user: any) => this.mapDbUser(user));
     } catch (error) {
-      console.error('❌ Error fetching all users:', error);
       return [];
     }
   }
@@ -184,7 +172,6 @@ export class PostgresStorage implements IStorage {
 
       return this.mapDbUser(result[0]);
     } catch (error) {
-      console.error('❌ Error creating user:', error);
       throw new Error(`Failed to create user: ${error}`);
     }
   }
@@ -234,7 +221,6 @@ export class PostgresStorage implements IStorage {
       
       return this.mapDbUser(result[0]);
     } catch (error) {
-      console.error('❌ Error updating user:', error);
       return undefined;
     }
   }
@@ -252,27 +238,22 @@ export class PostgresStorage implements IStorage {
       
       return this.mapDbUser(result[0]);
     } catch (error) {
-      console.error('❌ Error updating user balance:', error);
       return undefined;
     }
   }
 
   async getUserAccounts(userId: number): Promise<Account[]> {
-    console.log('🏦 Fetching accounts for user ID:', userId);
     try {
       const result = await getConnection()`
         SELECT * FROM public.bank_accounts WHERE user_id = ${userId}
       `;
       
       if (result.length === 0) {
-        console.log('❌ No accounts found for user ID:', userId);
         return [];
       }
       
-      console.log('✅ Found accounts in database:', result);
       return result.map((account: any) => this.mapDbAccount(account));
     } catch (error) {
-      console.error('❌ Database error fetching accounts:', error);
       return [];
     }
   }
@@ -287,7 +268,6 @@ export class PostgresStorage implements IStorage {
       
       return this.mapDbAccount(result[0]);
     } catch (error) {
-      console.error('❌ Error fetching account:', error);
       return undefined;
     }
   }
@@ -311,7 +291,6 @@ export class PostgresStorage implements IStorage {
 
       return this.mapDbAccount(result[0]);
     } catch (error) {
-      console.error('❌ Error creating account:', error);
       throw new Error(`Failed to create account: ${error}`);
     }
   }
@@ -327,7 +306,6 @@ export class PostgresStorage implements IStorage {
       
       return result.map((tx: any) => this.mapDbTransaction(tx));
     } catch (error) {
-      console.error('❌ Error fetching account transactions:', error);
       return [];
     }
   }
@@ -370,7 +348,6 @@ export class PostgresStorage implements IStorage {
 
       return this.mapDbTransaction(result[0]);
     } catch (error) {
-      console.error('❌ Error creating transaction:', error);
       throw new Error(`Failed to create transaction: ${error}`);
     }
   }
@@ -390,7 +367,6 @@ export class PostgresStorage implements IStorage {
       
       return this.mapDbTransaction(result[0]);
     } catch (error) {
-      console.error('❌ Error updating transaction status:', error);
       return undefined;
     }
   }
@@ -405,7 +381,6 @@ export class PostgresStorage implements IStorage {
       
       return result.map((tx: any) => this.mapDbTransaction(tx));
     } catch (error) {
-      console.error('❌ Error fetching pending transactions:', error);
       return [];
     }
   }
@@ -419,7 +394,6 @@ export class PostgresStorage implements IStorage {
       
       return result.map((tx: any) => this.mapDbTransaction(tx));
     } catch (error) {
-      console.error('❌ Error fetching all transactions:', error);
       return [];
     }
   }
@@ -445,7 +419,6 @@ export class PostgresStorage implements IStorage {
       
       return this.mapDbAccount(result[0]);
     } catch (error) {
-      console.error('❌ Error updating account:', error);
       return undefined;
     }
   }
@@ -560,7 +533,6 @@ export class PostgresStorage implements IStorage {
       const result = await getConnection()`SELECT * FROM public.cards WHERE user_id = ${userId}`;
       return result as unknown as Card[];
     } catch (error) {
-      console.error('Error fetching cards:', error);
       return [];
     }
   }
@@ -570,7 +542,6 @@ export class PostgresStorage implements IStorage {
       const result = await getConnection()`SELECT * FROM public.cards WHERE id = ${id}`;
       return result[0] as Card | undefined;
     } catch (error) {
-      console.error('Error fetching card:', error);
       return undefined;
     }
   }
@@ -599,7 +570,6 @@ export class PostgresStorage implements IStorage {
       const result = await getConnection()`SELECT * FROM public.investments WHERE user_id = ${userId}`;
       return result as unknown as Investment[];
     } catch (error) {
-      console.error('Error fetching investments:', error);
       return [];
     }
   }

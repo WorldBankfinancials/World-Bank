@@ -161,10 +161,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
       if (authError || !authData.user) {
-        console.error('❌ Supabase Auth creation failed for email:', validatedData.email);
-        console.error('❌ Error details:', JSON.stringify(authError, null, 2));
-        console.error('❌ Error message:', authError?.message);
-        console.error('❌ Error status:', authError?.status);
         return res.status(500).json({ 
           error: authError?.message || 'Failed to create authentication account' 
         });
@@ -230,14 +226,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
 
       } catch (dbError: any) {
-        console.error('❌ Database error during registration:', dbError);
 
         // Attempt to rollback Supabase Auth account
         if (supabaseUserId) {
           const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(supabaseUserId);
           if (deleteError) {
-            console.error('⚠️ Failed to rollback Supabase Auth account:', deleteError);
-            console.error(`⚠️ ORPHANED ACCOUNT: ${registrationData.email} (${supabaseUserId})`);
           } else {
           }
         }
@@ -250,7 +243,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
     } catch (error: any) {
-      console.error('❌ Registration failed:', error);
       res.status(500).json({ 
         error: 'Registration failed',
         details: error.message 
@@ -304,7 +296,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         message: 'Email available'
       });
     } catch (error) {
-      console.error('Email check error:', error);
       res.status(500).json({ error: 'Failed to check email availability. Please try again.' });
     }
   });
@@ -357,7 +348,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       );
 
       if (updateError) {
-        console.error('Password update error:', updateError);
         return res.status(500).json({ error: 'Failed to update password', details: updateError.message });
       }
 
@@ -368,7 +358,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error: any) {
-      console.error('Password reset error:', error);
       res.status(500).json({ error: 'Password reset failed', details: error.message });
     }
   });
@@ -388,7 +377,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // SECURITY: Block if password is included - this is a security violation
       if (userData.password) {
-        console.error('🚨 SECURITY VIOLATION: Password sent to /api/auth/register endpoint!');
         return res.status(400).json({ 
           error: 'Invalid request - passwords must not be sent to this endpoint' 
         });
@@ -396,7 +384,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // SECURITY: Block privilege escalation attempts
       if (userData.role && userData.role !== 'customer') {
-        console.error(`🚨 PRIVILEGE ESCALATION ATTEMPT: Client tried to set role to "${userData.role}"`);
         return res.status(400).json({ 
           error: 'Invalid request - role cannot be set by client' 
         });
@@ -426,7 +413,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           return res.status(409).json({ error: 'User already exists in authentication system' });
         }
       } else if (authError) {
-        console.error('Error checking Supabase Auth during registration:', authError);
         return res.status(500).json({ error: 'Unable to verify user in authentication system' });
       }
 
@@ -486,7 +472,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error: any) {
-      console.error('Registration error:', error);
       res.status(500).json({ 
         error: 'Failed to create user profile',
         details: error.message 
@@ -526,7 +511,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       res.json(user);
     } catch (error) {
-      console.error('Get user profile error:', error);
       res.status(500).json({ error: 'Failed to get user profile' });
     }
   });
@@ -542,7 +526,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const accounts = await storage.getUserAccounts(user.id);
       res.json(accounts);
     } catch (error) {
-      console.error('Get user accounts error:', error);
       res.status(500).json({ error: 'Failed to get user accounts' });
     }
   });
@@ -605,7 +588,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         message: 'Transaction created successfully'
       });
     } catch (error) {
-      console.error('Create transaction error:', error);
       res.status(500).json({ error: 'Failed to create transaction' });
     }
   });
@@ -657,7 +639,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Account balance update error:', error);
       res.status(500).json({ error: 'Failed to update account balance' });
     }
   });
@@ -695,7 +676,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Update balance error:', error);
       res.status(500).json({ error: 'Failed to update balance' });
     }
   });
@@ -732,7 +712,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         message: 'Customer updated successfully'
       });
     } catch (error) {
-      console.error('Update customer error:', error);
       res.status(500).json({ error: 'Failed to update customer' });
     }
   });
@@ -743,7 +722,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const transactions = await storage.getAllTransactions();
       res.json(transactions);
     } catch (error) {
-      console.error('Get transactions error:', error);
       res.status(500).json({ error: 'Failed to get transactions' });
     }
   });
@@ -784,29 +762,23 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
       
       // SECURITY: Use bcrypt to compare hashed PIN
-      console.log('🔐 PIN Verification for:', identifier);
       
       let pinMatch = false;
       
       // Try bcrypt comparison if it's hashed
       if (user.transferPin && user.transferPin.startsWith('$2')) {
         pinMatch = await bcrypt.compare(body.pin, user.transferPin);
-        console.log('✅ bcrypt comparison result:', pinMatch);
       } else if (user.transferPin === body.pin) {
         // Fallback for plaintext (legacy compatibility)
         pinMatch = true;
-        console.log('⚠️  PIN matched as plaintext');
       }
       
       if (!pinMatch) {
-        console.log('❌ PIN mismatch for:', identifier);
         return res.status(401).json({ message: 'Invalid PIN', verified: false });
       }
 
-      console.log('✅ PIN verified for:', identifier);
       res.json({ success: true, verified: true });
     } catch (error) {
-      console.error('❌ PIN verification error:', error);
       res.status(500).json({ error: 'Failed to verify PIN', verified: false });
     }
   });
@@ -826,7 +798,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const accounts = await storage.getUserAccounts(user.id);
       res.json(accounts);
     } catch (error: any) {
-      console.error('❌ Failed to get accounts:', error);
       res.status(500).json({ error: 'Failed to get accounts' });
     }
   });
@@ -845,14 +816,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const ownsAccount = userAccounts.some(acc => acc.id === accountId);
 
       if (!ownsAccount) {
-        console.warn(`🚫 Unauthorized account access attempt: user ${req.user!.email} tried to access account ${accountId}`);
         return res.status(403).json({ error: 'Access denied' });
       }
 
       const transactions = await storage.getAccountTransactions(accountId);
       res.json(transactions);
     } catch (error) {
-      console.error('Get account transactions error:', error);
       res.status(500).json({ error: 'Failed to get transactions' });
     }
   });
@@ -864,7 +833,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const pending = users.filter(user => !user.isActive && user.role === 'customer');
       res.json(pending);
     } catch (error) {
-      console.error('Get pending registrations error:', error);
       res.status(500).json({ error: 'Failed to get pending registrations' });
     }
   });
@@ -949,7 +917,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           payload: { userId: registrationId, approvedBy: admin?.email, user: updatedUser }
         });
       } catch (error) {
-        console.error('Failed to broadcast admin update:', error);
       }
       
       res.json({ 
@@ -958,7 +925,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         user: updatedUser
       });
     } catch (error) {
-      console.error('Approve registration error:', error);
       res.status(500).json({ error: 'Failed to approve registration' });
     }
   });
@@ -1012,7 +978,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           payload: { userId: registrationId, rejectedBy: admin?.email, reason }
         });
       } catch (error) {
-        console.error('Failed to broadcast admin update:', error);
       }
 
       res.json({ 
@@ -1020,7 +985,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         message: 'Registration rejected successfully'
       });
     } catch (error) {
-      console.error('Reject registration error:', error);
       res.status(500).json({ error: 'Failed to reject registration' });
     }
   });
@@ -1065,7 +1029,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       await storage.updateUser(user.id, { transferPin: hashedNewPin });
       res.json({ success: true, message: 'PIN updated successfully' });
     } catch (error) {
-      console.error('Change PIN error:', error);
       res.status(500).json({ error: 'Failed to change PIN' });
     }
   });
@@ -1086,7 +1049,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const cards = await storage.getUserCards(user.id);
       res.json(cards);
     } catch (error) {
-      console.error('Error fetching cards:', error);
       res.status(500).json({ error: 'Failed to fetch cards' });
     }
   });
@@ -1109,13 +1071,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // SECURITY: Verify card's account belongs to user
       const account = await storage.getAccount(card.accountId);
       if (!account || account.userId !== user.id) {
-        console.warn(`🚫 Unauthorized card access: user ${req.user!.email} tried to access card ${cardId}`);
         return res.status(403).json({ error: 'Access denied' });
       }
 
       res.json(card);
     } catch (error) {
-      console.error('Error fetching card:', error);
       res.status(500).json({ error: 'Failed to fetch card' });
     }
   });
@@ -1138,14 +1098,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // SECURITY: Verify card's account belongs to user
       const account = await storage.getAccount(card.accountId);
       if (!account || account.userId !== user.id) {
-        console.warn(`🚫 Unauthorized card lock attempt: user ${req.user!.email} tried to lock card ${cardId}`);
         return res.status(403).json({ error: 'Access denied' });
       }
 
       const updatedCard = await storage.updateCard(cardId, { status: isLocked ? 'locked' : 'active' });
       res.json({ success: true, card: updatedCard });
     } catch (error) {
-      console.error('Error updating card:', error);
       res.status(500).json({ error: 'Failed to update card' });
     }
   });
@@ -1168,7 +1126,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // SECURITY: Verify card's account belongs to user
       const account = await storage.getAccount(card.accountId);
       if (!account || account.userId !== user.id) {
-        console.warn(`🚫 Unauthorized card settings update: user ${req.user!.email} tried to update card ${cardId}`);
         return res.status(403).json({ error: 'Access denied' });
       }
 
@@ -1179,7 +1136,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const updatedCard = await storage.updateCard(cardId, updates);
       res.json({ success: true, card: updatedCard });
     } catch (error) {
-      console.error('Error updating card settings:', error);
       res.status(500).json({ error: 'Failed to update card settings' });
     }
   });
@@ -1194,7 +1150,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const investments = await storage.getUserInvestments(user.id);
       res.json(investments);
     } catch (error) {
-      console.error('Error fetching investments:', error);
       res.status(500).json({ error: 'Failed to fetch investments' });
     }
   });
@@ -1215,13 +1170,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       if (investment.userId !== user.id) {
-        console.warn(`🚫 Unauthorized investment access: user ${req.user!.email} tried to access investment ${id}`);
         return res.status(403).json({ error: 'Access denied' });
       }
 
       res.json(investment);
     } catch (error) {
-      console.error('Error fetching investment:', error);
       res.status(500).json({ error: 'Failed to fetch investment' });
     }
   });
@@ -1252,7 +1205,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       res.json(result);
     } catch (error) {
-      console.error('Error fetching market rates:', error);
       res.status(500).json({ error: 'Failed to fetch market rates' });
     }
   });
@@ -1272,7 +1224,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       ];
       res.json(indices);
     } catch (error) {
-      console.error('Error fetching market indices:', error);
       res.status(500).json({ error: 'Failed to fetch market indices' });
     }
   });
@@ -1292,7 +1243,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       ];
       res.json(stocks);
     } catch (error) {
-      console.error('Error fetching top stocks:', error);
       res.status(500).json({ error: 'Failed to fetch top stocks' });
     }
   });
@@ -1337,7 +1287,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       res.json(assets);
     } catch (error) {
-      console.error('Error fetching portfolio assets:', error);
       res.status(500).json({ error: 'Failed to fetch portfolio assets' });
     }
   });
@@ -1385,7 +1334,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error processing currency exchange:', error);
       res.status(500).json({ error: 'Failed to process currency exchange' });
     }
   });
@@ -1404,7 +1352,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // Note: Messages schema doesn't have conversationId, so we return all user messages
       res.json(messages);
     } catch (error) {
-      console.error('Error fetching messages:', error);
       res.status(500).json({ error: 'Failed to fetch messages' });
     }
   });
@@ -1418,7 +1365,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const messages = await storage.getUserMessages(user.id);
       res.json(messages);
     } catch (error) {
-      console.error('Error fetching user messages:', error);
       res.status(500).json({ error: 'Failed to fetch user messages' });
     }
   });
@@ -1442,7 +1388,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const isAdmin = req.user!.role === 'admin';
 
       if (!isAdmin && conversationId && conversationId !== user.id.toString()) {
-        console.warn(`🚫 Unauthorized conversation access: user ${req.user!.email} tried to post to conversation ${conversationId}`);
         return res.status(403).json({ error: 'Access denied: Cannot post to other users\' conversations' });
       }
 
@@ -1462,7 +1407,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const createdMessage = await storage.createMessage(messageData);
       res.json(createdMessage);
     } catch (error) {
-      console.error('Error creating message:', error);
       res.status(500).json({ error: 'Failed to create message' });
     }
   });
@@ -1481,14 +1425,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const ownsMessage = userMessages.some(msg => msg.id === id);
 
       if (!ownsMessage) {
-        console.warn(`🚫 Unauthorized message modification: user ${req.user!.email} tried to mark message ${id} as read`);
         return res.status(403).json({ error: 'Access denied' });
       }
 
       const message = await storage.markMessageAsRead(id);
       res.json(message);
     } catch (error) {
-      console.error('Error marking message as read:', error);
       res.status(500).json({ error: 'Failed to mark message as read' });
     }
   });
@@ -1503,7 +1445,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const alerts = await storage.getUserAlerts(user.id);
       res.json(alerts);
     } catch (error) {
-      console.error('Error fetching alerts:', error);
       res.status(500).json({ error: 'Failed to fetch alerts' });
     }
   });
@@ -1517,7 +1458,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const alerts = await storage.getUnreadAlerts(user.id);
       res.json(alerts);
     } catch (error) {
-      console.error('Error fetching unread alerts:', error);
       res.status(500).json({ error: 'Failed to fetch unread alerts' });
     }
   });
@@ -1539,7 +1479,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const alert = await storage.createAlert(alertData);
       res.json(alert);
     } catch (error) {
-      console.error('Error creating alert:', error);
       res.status(500).json({ error: 'Failed to create alert' });
     }
   });
@@ -1559,14 +1498,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const alert = alerts.find((a: any) => a.id === id);
 
       if (!alert) {
-        console.warn(`🚫 Unauthorized alert delete attempt: user ${req.user!.email} tried to delete alert ${id}`);
         return res.status(403).json({ error: 'Access denied' });
       }
 
       await storage.deleteAlert(id);
       res.json({ success: true });
     } catch (error) {
-      console.error('Error deleting alert:', error);
       res.status(500).json({ error: 'Failed to delete alert' });
     }
   });
@@ -1585,14 +1522,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const ownsAlert = userAlerts.some(alert => alert.id === id);
 
       if (!ownsAlert) {
-        console.warn(`🚫 Unauthorized alert modification: user ${req.user!.email} tried to mark alert ${id} as read`);
         return res.status(403).json({ error: 'Access denied' });
       }
 
       const alert = await storage.markAlertAsRead(id);
       res.json(alert);
     } catch (error) {
-      console.error('Error marking alert as read:', error);
       res.status(500).json({ error: 'Failed to mark alert as read' });
     }
   });
@@ -1612,7 +1547,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       res.json(tickets);
     } catch (error) {
-      console.error('Error fetching support tickets:', error);
       res.status(500).json({ error: 'Failed to fetch support tickets' });
     }
   });
@@ -1636,7 +1570,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const ticket = await storage.createSupportTicket(ticketData);
       res.json(ticket);
     } catch (error) {
-      console.error('Error creating support ticket:', error);
       res.status(500).json({ error: 'Failed to create support ticket' });
     }
   });
@@ -1667,7 +1600,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       res.json(updatedTicket);
     } catch (error) {
-      console.error('Error updating support ticket:', error);
       res.status(500).json({ error: 'Failed to update support ticket' });
     }
   });
@@ -1679,7 +1611,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const branches = await storage.getBranches();
       res.json(branches);
     } catch (error) {
-      console.error('Get branches error:', error);
       res.status(500).json({ error: 'Failed to fetch branches' });
     }
   });
@@ -1690,7 +1621,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const atms = await storage.getAtms();
       res.json(atms);
     } catch (error) {
-      console.error('Get ATMs error:', error);
       res.status(500).json({ error: 'Failed to fetch ATMs' });
     }
   });
@@ -1706,7 +1636,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
       res.json(ratesObject);
     } catch (error) {
-      console.error('Get exchange rates error:', error);
       res.status(500).json({ error: 'Failed to fetch exchange rates' });
     }
   });
@@ -1733,7 +1662,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       res.json(formattedTransfers);
     } catch (error: any) {
-      console.error('Error fetching pending transfers:', error);
       res.status(500).json({ message: 'Failed to fetch pending transfers', error: error.message });
     }
   });
@@ -1769,7 +1697,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       res.json(formattedTickets);
     } catch (error: any) {
-      console.error('Error fetching support tickets:', error);
       res.status(500).json({ message: 'Failed to fetch support tickets', error: error.message });
     }
   });
@@ -1781,7 +1708,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const customerList = customers.filter((user: any) => user.role === 'customer');
       res.json(customerList);
     } catch (error) {
-      console.error('Get customers error:', error);
       res.status(500).json({ error: 'Failed to fetch customers' });
     }
   });
@@ -1797,7 +1723,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const statements = await storage.getStatementsByUserId(userId);
       res.json(statements);
     } catch (error) {
-      console.error('Get statements error:', error);
       res.status(500).json({ error: 'Failed to fetch statements' });
     }
   });
@@ -1830,7 +1755,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       res.json(uploadResult);
     } catch (error) {
-      console.error('Error uploading file:', error);
       res.status(500).json({ error: 'Failed to upload file' });
     }
   });
@@ -1866,7 +1790,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
       if (authError || !authData.user) {
-        console.error('❌ Supabase Auth admin creation failed:', authError);
         return res.status(500).json({ 
           error: authError?.message || 'Failed to create admin authentication account' 
         });
@@ -1922,7 +1845,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       } catch (dbError: any) {
         // ROLLBACK: Delete Supabase Auth account if database creation fails
-        console.error('❌ Database creation failed, rolling back Supabase Auth account:', dbError);
 
         await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
 
@@ -1930,7 +1852,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
     } catch (error: any) {
-      console.error('❌ Admin user creation failed:', error);
       res.status(500).json({ 
         error: 'Admin user creation failed',
         details: error.message 
@@ -1945,7 +1866,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
-      console.log('🔐 Login attempt:', email);
       if (!email || !password) {
         return res.status(400).json({ error: 'Email and password required' });
       }
@@ -1964,17 +1884,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
       if (error) {
-        console.error('❌ Supabase Auth error:', error.message);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       if (!data.session || !data.user) {
-        console.error('❌ No session returned from Supabase');
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       const supabaseUser = data.user;
-      console.log('✅ Password verified via Supabase Auth');
 
       // Cache session data in memory for PIN validation
       const cacheKey = email.toLowerCase();
@@ -1996,7 +1913,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const tokenData = `${email}:${Date.now()}:${userId}`;
       const token = Buffer.from(tokenData).toString('base64');
 
-      console.log('✅ Login successful for:', email);
       res.json({ 
         token,
         user: {
@@ -2006,7 +1922,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error: any) {
-      console.error('❌ Login error:', error);
       res.status(500).json({ error: 'Login failed', details: error.message });
     }
   });
@@ -2063,7 +1978,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
       if (error) {
-        console.error('Admin auth failed:', error);
         return res.status(401).json({ error: 'Invalid admin credentials' });
       }
 
@@ -2071,7 +1985,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const role = data.user.app_metadata?.role || 'customer';
 
       if (role !== 'admin') {
-        console.warn(`🚫 Non-admin login attempt by ${email}`);
         return res.status(403).json({ error: 'Admin access required. Contact system administrator.' });
       }
 
@@ -2088,7 +2001,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error) {
-      console.error('Admin login error:', error);
       res.status(500).json({ error: 'Login failed' });
     }
   });
@@ -2102,7 +2014,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Email and new password are required' });
       }
 
-      console.log(`🔐 Resetting password for: ${email}`);
 
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
@@ -2129,11 +2040,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       );
 
       if (updateError) {
-        console.error('❌ Failed to reset password:', updateError);
         return res.status(500).json({ error: 'Failed to reset password', details: updateError.message });
       }
 
-      console.log(`✅ Password reset for: ${email}`);
 
       res.json({ 
         success: true, 
@@ -2141,7 +2050,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         email: email
       });
     } catch (error: any) {
-      console.error('Reset password error:', error);
       res.status(500).json({ error: 'Failed to reset password', details: error.message });
     }
   });
@@ -2155,7 +2063,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Email is required' });
       }
 
-      console.log(`🗑️  Deleting user: ${email}`);
 
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
@@ -2178,11 +2085,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // Delete from Supabase Auth
       const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userToDelete.id);
       if (deleteAuthError) {
-        console.error('❌ Failed to delete from Supabase Auth:', deleteAuthError);
         return res.status(500).json({ error: 'Failed to delete from authentication system' });
       }
 
-      console.log(`✅ Deleted from Supabase Auth: ${email}`);
 
       res.json({ 
         success: true, 
@@ -2190,7 +2095,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         deleted_email: email
       });
     } catch (error: any) {
-      console.error('Delete user error:', error);
       res.status(500).json({ error: 'Failed to delete user', details: error.message });
     }
   });
@@ -2214,7 +2118,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           const token = data.token;
 
           if (!token) {
-            console.warn('🚫 WebSocket auth attempt without token');
             ws.send(JSON.stringify({ type: 'error', message: 'Authentication required' }));
             ws.close();
             return;
@@ -2225,7 +2128,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           const { data: { user: authUser }, error } = await supabase.auth.getUser(token);
 
           if (error || !authUser) {
-            console.warn('🚫 WebSocket auth failed: Invalid token');
             ws.send(JSON.stringify({ type: 'error', message: 'Invalid authentication token' }));
             ws.close();
             return;
@@ -2244,7 +2146,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           const dbUser = await (storage).getUserByEmail(userEmail);
 
           if (!dbUser) {
-            console.warn(`🚫 WebSocket auth failed: User ${authUser.email} not found in database`);
             ws.send(JSON.stringify({ type: 'error', message: 'User not found' }));
             ws.close();
             return;
@@ -2263,12 +2164,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           ws.send(JSON.stringify({ type: 'auth_success', role, userId: dbUser.id }));
         } else if (!isAuthenticated) {
           // Reject all messages until client authenticates
-          console.warn('🚫 WebSocket message rejected: Client not authenticated');
           ws.send(JSON.stringify({ type: 'error', message: 'Must authenticate first' }));
           ws.close();
         }
       } catch (error) {
-        console.error('WebSocket message error:', error);
         ws.send(JSON.stringify({ type: 'error', message: 'Internal server error' }));
       }
     });

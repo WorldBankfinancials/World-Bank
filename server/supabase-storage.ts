@@ -58,7 +58,6 @@ export class SupabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    console.log('🔍 Searching for user with email:', email);
     const { data, error } = await supabase
       .from('bank_users')
       .select('*')
@@ -66,16 +65,13 @@ export class SupabaseStorage implements IStorage {
       .single();
     
     if (error) {
-      console.error('❌ Supabase error fetching user:', error);
       return undefined;
     }
     
     if (!data) {
-      console.log('❌ No user found with email:', email);
       return undefined;
     }
     
-    console.log('✅ Found user in Supabase:', data);
     return this.mapSupabaseUser(data);
   }
 
@@ -179,23 +175,19 @@ export class SupabaseStorage implements IStorage {
   }
 
   async getUserAccounts(userId: number): Promise<Account[]> {
-    console.log('🏦 Fetching accounts for user ID:', userId);
     const { data, error } = await supabase
       .from('bank_accounts')
       .select('*')
       .eq('user_id', userId);
     
     if (error) {
-      console.error('❌ Supabase error fetching accounts:', error);
       return [];
     }
     
     if (!data || data.length === 0) {
-      console.log('❌ No accounts found for user ID:', userId);
       return [];
     }
     
-    console.log('✅ Found accounts in Supabase:', data);
     return data.map(account => ({
       id: account.id,
       userId: account.user_id,

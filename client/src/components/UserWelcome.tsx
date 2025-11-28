@@ -1,9 +1,9 @@
 import * as React from "react";
 import type { User } from "../lib/schema";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from "react";
 import { CheckCircle } from "lucide-react";
-import { useLanguage } from "../contexts/LanguageContext";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface UserWelcomeProps {
   user: User;
@@ -41,7 +41,6 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
   const displayProfession = freshUserData?.profession || userProfile?.profession || 'Loading...';
   const displayEmail = freshUserData?.email || userProfile?.email || 'Loading...';
 
-  // console.log('UserWelcome displaying:', { displayName, displayProfession, displayEmail });
 
   const displayBalance = user?.balance || 0;
 

@@ -46,7 +46,6 @@ export function setupTransferRoutes(app: Express) {
         amount: amount
       });
     } catch (error) {
-      console.error("Regular transfer error:", error);
       res.status(500).json({ message: "Transfer system error" });
     }
   });
@@ -91,7 +90,6 @@ export function setupTransferRoutes(app: Express) {
         amount: amount
       });
     } catch (error) {
-      console.error("International transfer error:", error);
       res.status(500).json({ message: "International transfer system error" });
     }
   });
@@ -153,7 +151,6 @@ export function setupTransferRoutes(app: Express) {
         transactionId: transactionId || generateReferenceNumber()
       });
     } catch (error) {
-      console.error("Error creating transfer:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -183,7 +180,6 @@ export function setupTransferRoutes(app: Express) {
 
       res.json({ message: "Transfer approved successfully", transaction });
     } catch (error) {
-      console.error("Error approving transfer:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -227,7 +223,6 @@ export function setupTransferRoutes(app: Express) {
 
       res.json({ message: "Transfer rejected and support ticket created", transaction });
     } catch (error) {
-      console.error("Error rejecting transfer:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -238,7 +233,6 @@ export function setupTransferRoutes(app: Express) {
       const pendingTransfers = await storage.getPendingTransactions();
       res.json(pendingTransfers);
     } catch (error) {
-      console.error("Error getting pending transfers:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

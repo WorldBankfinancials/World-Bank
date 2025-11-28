@@ -180,7 +180,7 @@ export default function Alerts() {
             </p>
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm" onClick={() => console.log("Filter options")}>
+            <Button variant="outline" size="sm" onClick={() => {}}>
               <Filter className="w-4 h-4" />
             </Button>
             <Button variant="outline" size="sm" onClick={() => toast({ title: 'Settings', description: 'Alert settings opened.' })}>
