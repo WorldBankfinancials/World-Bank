@@ -183,7 +183,7 @@ export function validateBody<T>(schema: z.ZodSchema<T>) {
     if (!result.success) {
       return res.status(400).json({
         error: 'Validation failed',
-        details: result(validation as any).errors
+        details: result.errors
       });
     }
     

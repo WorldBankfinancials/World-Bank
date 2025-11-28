@@ -364,7 +364,7 @@ export async function registerFixedRoutes(app: Express): Promise<void> {
       }
 
       // SECURITY: Hash default PIN with bcrypt
-      const hashedDefaultPin = await bcrypt.hash('0000', 10);
+      const hashedDefaultPin = await bcryptjs.hash('0000', 10);
 
       // SECURITY: Only accept whitelisted fields from client, hardcode privileged fields server-side
       const newUser = await (storage as any).createUser({
@@ -997,7 +997,7 @@ export async function registerFixedRoutes(app: Express): Promise<void> {
       let currentPinValid = false;
       if (user.transferPin && user.transferPin.startsWith('$2')) {
         // Hashed PIN - use bcrypt compare
-        currentPinValid = await bcrypt.compare(currentPin, user.transferPin);
+        currentPinValid = await bcryptjs.compare(currentPin, user.transferPin);
       } else {
         // Plaintext PIN - direct comparison (legacy support)
         currentPinValid = user.transferPin === currentPin;
@@ -1013,7 +1013,7 @@ export async function registerFixedRoutes(app: Express): Promise<void> {
       }
 
       // SECURITY: Hash the new PIN with bcrypt
-      const hashedPin = await bcrypt.hash(newPin, 10);
+      const hashedPin = await bcryptjs.hash(newPin, 10);
 
       // Use authenticated user's ID (not hardcoded)
       await storage.updateUser(user.id, { transferPin: hashedPin });
