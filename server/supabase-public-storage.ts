@@ -472,20 +472,7 @@ export class SupabasePublicStorage implements IStorage {
       
       if (error || !account) return undefined;
       
-      return {
-        id: account.id,
-        userId: account.user_id,
-        accountNumber: account.account_number,
-        accountType: account.account_type,
-        accountName: account.account_name,
-        balance: account.balance.toString(),
-        currency: account.currency,
-        isActive: account.is_active,
-        createdAt: account.created_at,
-        updatedAt: account.updated_at,
-        interestRate: account.interest_rate?.toString() || null,
-        minimumBalance: account.minimum_balance?.toString() || null
-      };
+      return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at } as any;
     } catch (error) {
       console.error('Error getting account:', error);
       return undefined;
@@ -494,40 +481,13 @@ export class SupabasePublicStorage implements IStorage {
 
   async createAccount(data: InsertAccount): Promise<Account> {
     try {
-      const { data: account, error } = await supabase
-        .from('bank_accounts')
-        .insert({
-          user_id: data.userId,
-          account_number: data.accountNumber,
-          account_type: data.accountType,
-          account_name: data.accountName,
-          balance: data.balance,
-          currency: data.currency || 'USD',
-          is_active: data.isActive !== undefined ? data.isActive : true,
-          interest_rate: data.interestRate,
-          minimum_balance: data.minimumBalance
-        })
-        .select()
-        .single();
+      const { data: account, error } = await supabase.from('bank_accounts').insert({ user_id: data.userId, account_number: data.accountNumber, account_type: data.accountType, balance: data.balance, currency: data.currency || 'USD', status: data.status || 'active' }).select().single();
 
       if (error || !account) {
         throw error || new Error('Failed to create account');
       }
 
-      return {
-        id: account.id,
-        userId: account.user_id,
-        accountNumber: account.account_number,
-        accountType: account.account_type,
-        accountName: account.account_name,
-        balance: account.balance.toString(),
-        currency: account.currency,
-        isActive: account.is_active,
-        createdAt: account.created_at,
-        updatedAt: account.updated_at,
-        interestRate: account.interest_rate?.toString() || null,
-        minimumBalance: account.minimum_balance?.toString() || null
-      };
+      return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at } as any;
     } catch (error) {
       console.error('Error creating account:', error);
       throw error;
@@ -536,35 +496,15 @@ export class SupabasePublicStorage implements IStorage {
 
   async updateAccount(id: number, updates: Partial<Account>): Promise<Account | undefined> {
     try {
-      const { data: account, error } = await supabase
-        .from('bank_accounts')
-        .update({
-          balance: updates.balance,
-          is_active: updates.isActive,
-          account_type: updates.accountType,
-          account_name: updates.accountName,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
+      const updateData: any = { updated_at: new Date().toISOString() };
+      if (updates.balance !== undefined) updateData.balance = updates.balance;
+      if (updates.status !== undefined) updateData.status = updates.status;
+      if (updates.accountType !== undefined) updateData.account_type = updates.accountType;
+      const { data: account, error } = await supabase.from('bank_accounts').update(updateData).eq('id', id).select().single();
 
       if (error || !account) return undefined;
       
-      return {
-        id: account.id,
-        userId: account.user_id,
-        accountNumber: account.account_number,
-        accountType: account.account_type,
-        accountName: account.account_name,
-        balance: account.balance.toString(),
-        currency: account.currency,
-        isActive: account.is_active,
-        createdAt: account.created_at,
-        updatedAt: account.updated_at,
-        interestRate: account.interest_rate?.toString() || null,
-        minimumBalance: account.minimum_balance?.toString() || null
-      };
+      return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at } as any;
     } catch (error) {
       console.error('Error updating account:', error);
       return undefined;
