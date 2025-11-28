@@ -63,10 +63,20 @@ export default function Alerts() {
 
   const [activeTab, setActiveTab] = useState('all');
 
-  // Mutation for marking alert as read
+  // Mutation for marking alert as read - MUST be before conditional return
   const markAsReadMutation = useMutation({
     mutationFn: async (alertId: number) => {
       return apiRequest(`/api/alerts/${alertId}/read`, 'PATCH');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
+    },
+  });
+
+  // Mutation for deleting alert - MUST be before conditional return
+  const deleteAlertMutation = useMutation({
+    mutationFn: async (alertId: number) => {
+      return apiRequest(`/api/alerts/${alertId}`, 'DELETE');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
@@ -128,16 +138,6 @@ export default function Alerts() {
       [key]: !prev[key]
     }));
   };
-
-  // Mutation for deleting alert
-  const deleteAlertMutation = useMutation({
-    mutationFn: async (alertId: number) => {
-      return apiRequest(`/api/alerts/${alertId}`, 'DELETE');
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
-    },
-  });
 
   const markAsRead = (alertId: number) => {
     markAsReadMutation.mutate(alertId);
