@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePresence } from "@/hooks/usePresence";
+// import { usePresence } from "@/hooks/usePresence"; // Disabled: WebSocket not available on HTTP
 import { 
   Eye,
   EyeOff,

@@ -149,7 +149,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } as any;
 
       setUser(mockUser);
-      await fetchUserData(mockUser);
+      
+      // Set user profile directly from login response - no need to fetch again
+      setUserProfile({
+        id: String(loginData.user.id),
+        email: loginData.user.email,
+        fullName: `${loginData.user.firstName} ${loginData.user.lastName}`,
+        role: loginData.user.role || 'customer',
+        balance: '0'
+      });
       
       setLoading(false);
       return {};
