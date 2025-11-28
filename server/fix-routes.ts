@@ -21,6 +21,7 @@ import {
 import { BankingTransaction, atomicBalanceUpdate, atomicTransfer } from './transaction-wrapper';
 import { errorHandler, notFoundHandler, asyncHandler, createApiError } from './error-handler';
 import { runStartupChecks } from './startup-checks';
+import * as bcrypt from 'bcryptjs';
 
 // Fixed route handlers with proper typing
 export async function registerFixedRoutes(app: Express): Promise<Server> {
@@ -139,6 +140,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const validatedData = validation.data;
 
+      // SECURITY: Hash PIN before storing
+      const hashedPin = await bcrypt.hash(validatedData.transferPin, 10);
+
       // Create Supabase service client
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
@@ -192,7 +196,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
           accountId: Date.now(),
           password: 'supabase_auth',
-          transferPin: validatedData.transferPin,
+          transferPin: hashedPin,
           role: 'customer',
           isVerified: false,
           isActive: false,
@@ -258,7 +262,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   });
 
   // Check email availability endpoint - checks both Supabase and local DB
-  app.post('/api/auth/check-email', async (req: Request, res: Response) => {
+  app.post('/api/auth/check-email', authRateLimiter, async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
 
@@ -431,6 +435,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // SECURITY: Generate secure random PIN for new user (1000-9999)
       const newUserPin = Math.floor(Math.random() * 9000 + 1000).toString();
+      // SECURITY: Hash PIN before storing
+      const hashedNewUserPin = await bcrypt.hash(newUserPin, 10);
 
       // SECURITY: Only accept whitelisted fields from client, hardcode privileged fields server-side
       const newUser = await storage.createUser({
@@ -452,7 +458,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         accountNumber: userData.accountNumber || `${Math.floor(10000000 + Math.random() * 90000000)}`,
         accountId: Date.now(),
         password: 'supabase_auth',
-        transferPin: newUserPin,
+        transferPin: hashedNewUserPin,
         role: 'customer',
         isVerified: false,
         isActive: false,
@@ -745,8 +751,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Verify PIN endpoint
-  app.post('/api/verify-pin', async (req: Request, res: Response) => {
+  // Verify PIN endpoint - REQUIRES EMAIL & PIN (used during login, not protected by JWT)
+  app.post('/api/verify-pin', authRateLimiter, async (req: Request, res: Response) => {
     try {
       const body = req.body as { email?: string; username?: string; pin: string };
       const identifier = body.email || body.username;
@@ -773,7 +779,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // SECURITY: Only accept valid PINs, no plaintext fallback
-      if (!user.transferPin || user.transferPin.length === 0 || !/^\d{4}$/.test(user.transferPin)) {
+      if (!user.transferPin || user.transferPin.length === 0) {
         return res.status(400).json({ 
           message: 'PIN not configured for account', 
           verified: false,
@@ -781,8 +787,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
       
-      if (user.transferPin !== body.pin) {
-        // SECURITY: Don't log PINs
+      // SECURITY: Use bcrypt to compare hashed PIN
+      const pinMatch = await bcrypt.compare(body.pin, user.transferPin);
+      if (!pinMatch) {
         return res.status(401).json({ message: 'Invalid PIN', verified: false });
       }
 
@@ -1028,17 +1035,23 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      if (user.transferPin !== currentPin) {
+      // SECURITY: Use bcrypt to compare current PIN
+      const pinMatch = await bcrypt.compare(currentPin, user.transferPin || '');
+      if (!pinMatch) {
         return res.status(401).json({ message: 'Current PIN is incorrect' });
       }
 
       // Prevent reusing the same PIN
-      if (currentPin === newPin) {
+      const newPinMatch = await bcrypt.compare(newPin, user.transferPin || '');
+      if (newPinMatch) {
         return res.status(400).json({ message: 'New PIN must be different from current PIN' });
       }
 
+      // SECURITY: Hash new PIN before storing
+      const hashedNewPin = await bcrypt.hash(newPin, 10);
+
       // Use authenticated user's ID (not hardcoded)
-      await storage.updateUser(user.id, { transferPin: newPin });
+      await storage.updateUser(user.id, { transferPin: hashedNewPin });
       res.json({ success: true, message: 'PIN updated successfully' });
     } catch (error) {
       console.error('Change PIN error:', error);
