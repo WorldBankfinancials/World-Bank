@@ -1,7 +1,7 @@
 import type { Config } from "drizzle-kit";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL, ensure the database is provisioned");
+if (!process.env.SUPABASE_DATABASE_URL) {
+  throw new Error("SUPABASE_DATABASE_URL required, ensure Supabase database is provisioned");
 }
 
 export default {
@@ -9,6 +9,6 @@ export default {
   schema: "./shared/schema.ts",
   dialect: "postgresql",
   dbCredentials: {
-  url: process.env.SUPABASE_DATABASE_URL,
-  };
+    url: process.env.SUPABASE_DATABASE_URL,
+  },
 } satisfies Config;
