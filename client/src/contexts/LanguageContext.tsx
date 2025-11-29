@@ -404,6 +404,16 @@ const translations = {
     'status_processing': 'Processing',
     'status_completed': 'Completed',
     'status_failed': 'Failed',
+    'verified': 'Verified',
+    'unverified': 'Unverified',
+    'saving': 'Saving...',
+    'save_changes': 'Save Changes',
+    'transfer_processing': 'Processing Transfer',
+    'please_wait_processing': 'Please wait while we process your transaction',
+    'verifying_details': 'Verifying transfer details...',
+    'security_validation_complete': 'Security validation complete',
+    'processing_transaction': 'Processing transaction...',
+    'transfer_processing_secure': 'Your transfer is being processed securely. This may take a few moments.',
 
     // Support & Help
     'help_center': 'Help Center',
@@ -835,6 +845,16 @@ const translations = {
     'status_processing': '处理中',
     'status_completed': '已完成',
     'status_failed': '失败',
+    'verified': '已验证',
+    'unverified': '未验证',
+    'saving': '保存中...',
+    'save_changes': '保存更改',
+    'transfer_processing': '正在处理转账',
+    'please_wait_processing': '请等待我们处理您的交易',
+    'verifying_details': '正在验证转账详情...',
+    'security_validation_complete': '安全验证完成',
+    'processing_transaction': '处理交易中...',
+    'transfer_processing_secure': '您的转账正在安全处理中。这可能需要几分钟。',
 
     // Support & Help
     'help_center': '帮助中心',

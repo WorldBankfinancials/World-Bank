@@ -513,8 +513,8 @@ export default function CustomerManagement() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="verified">Verified</SelectItem>
-                          <SelectItem value="unverified">Unverified</SelectItem>
+                          <SelectItem value="verified">{t('verified')}</SelectItem>
+                          <SelectItem value="unverified">{t('unverified')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -534,7 +534,7 @@ export default function CustomerManagement() {
                     disabled={updateCustomerMutation.isPending}
                   >
                     <Save className="w-4 h-4 mr-1" />
-                    {updateCustomerMutation.isPending ? "Saving..." : "Save Changes"}
+                    {updateCustomerMutation.isPending ? t('saving') : t('save_changes')}
                   </Button>
                 </div>
               </Tabs>

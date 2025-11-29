@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { Loader2, Clock, Shield } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function TransferProcessing() {
   const [, setLocation] = useLocation();
+  const { t } = useLanguage();
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -36,8 +38,8 @@ export default function TransferProcessing() {
           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
           </div>
-          <CardTitle>Processing Transfer</CardTitle>
-          <p className="text-gray-600">Please wait while we process your transaction</p>
+          <CardTitle>{t('transfer_processing')}</CardTitle>
+          <p className="text-gray-600">{t('please_wait_processing')}</p>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
@@ -53,20 +55,20 @@ export default function TransferProcessing() {
           <div className="space-y-3 text-left">
             <div className="flex items-center space-x-2 text-sm">
               <Clock className="w-4 h-4 text-blue-600" />
-              <span>Verifying transfer details...</span>
+              <span>{t('verifying_details')}</span>
             </div>
             <div className="flex items-center space-x-2 text-sm">
               <Shield className="w-4 h-4 text-green-600" />
-              <span>Security validation complete</span>
+              <span>{t('security_validation_complete')}</span>
             </div>
             <div className="flex items-center space-x-2 text-sm">
               <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-              <span>Processing transaction...</span>
+              <span>{t('processing_transaction')}</span>
             </div>
           </div>
 
           <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
-            <p>Your transfer is being processed securely. This may take a few moments.</p>
+            <p>{t('transfer_processing_secure')}</p>
           </div>
         </CardContent>
       </Card>
