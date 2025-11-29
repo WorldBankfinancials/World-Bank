@@ -356,6 +356,17 @@ const translations = {
     'explore_options': 'Explore Options',
     'comprehensive_solutions': 'Comprehensive financial solutions designed for individuals and businesses operating globally',
 
+    // Admin Tools
+    'create_transaction': 'Create Transaction',
+    'create_transactions_description': 'Manually create transactions for customer accounts',
+    'manual_adjustment': 'Manual Adjustment',
+    'deposit_action': 'Deposit',
+    'withdrawal_action': 'Withdrawal',
+    'interest_action': 'Interest',
+    'bonus_action': 'Bonus',
+    'refund_action': 'Refund',
+    'correction_action': 'Correction',
+
     // Support & Help
     'help_center': 'Help Center',
     'contact_us': 'Contact Us',

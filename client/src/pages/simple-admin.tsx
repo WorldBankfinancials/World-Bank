@@ -1745,14 +1745,14 @@ export default function SimpleAdmin() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mt-1"
                 >
                   <option value="">Select category...</option>
-                  <option value="manual_adjustment">{t('manual_adjustment')}</option>
-                  <option value="Deposit">Deposit</option>
-                  <option value="Withdrawal">Withdrawal</option>
-                  <option value="Fee">Fee</option>
-                  <option value="Interest">Interest</option>
-                  <option value="Bonus">Bonus</option>
-                  <option value="Refund">Refund</option>
-                  <option value="Correction">Correction</option>
+                  <option value="manual_adjustment">Manual Adjustment</option>
+                  <option value="deposit">Deposit</option>
+                  <option value="withdrawal">Withdrawal</option>
+                  <option value="fee">Fee</option>
+                  <option value="interest">Interest</option>
+                  <option value="bonus">Bonus</option>
+                  <option value="refund">Refund</option>
+                  <option value="correction">Correction</option>
                 </select>
               </div>
             </div>
