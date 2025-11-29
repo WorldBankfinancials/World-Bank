@@ -348,7 +348,7 @@ export default function TransferFunds() {
 
               {/* Bank Details */}
               <div className="border-t pt-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">{t('bank_information') || 'Bank Information'}</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">{t('bank_details')}</h3>
                 
                 <div className="space-y-4">
                   <div>

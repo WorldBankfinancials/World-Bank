@@ -74,8 +74,8 @@ export default function InternationalTransfer() {
 
   const handlePinSubmit = async () => {
     // VALIDATION: Check user is loaded
-    if (!user?.email) {
-      setPinError("User profile not loaded. Please refresh the page.");
+    if (!user || !userProfile?.email) {
+      setPinError("User profile not loaded. Please wait and try again.");
       return;
     }
     

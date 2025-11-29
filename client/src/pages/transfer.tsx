@@ -462,7 +462,7 @@ export default function Transfer() {
 
             {/* Bank Information */}
             <div>
-              <h3 className="font-semibold text-lg mb-3 text-gray-800">{t('bank_information') || 'Bank Information'}</h3>
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">{t('bank_details')}</h3>
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label htmlFor="bankName">Bank Name</Label>
