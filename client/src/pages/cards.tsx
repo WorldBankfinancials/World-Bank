@@ -265,61 +265,62 @@ export default function Cards() {
                 <div className="absolute top-16 left-6 w-8 h-6 bg-yellow-400 rounded opacity-80"></div>
               </div>
               
-              <CardContent className="p-4">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-sm text-gray-600">Current Balance</span>
-                  <span className="font-semibold">
-                    {showBalance ? `$${card.balance.toLocaleString()}` : '••••••'}
-                  </span>
+              <CardContent className="p-5 space-y-4">
+                {/* Balance Info */}
+                <div className="grid grid-cols-2 gap-4 pb-4 border-b border-gray-200">
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Current Balance</p>
+                    <p className="text-lg font-bold text-gray-900">{showBalance ? `$${card.balance.toLocaleString()}` : '••••••'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 font-medium mb-1">Credit Limit</p>
+                    <p className="text-lg font-bold text-gray-900">${card.limit.toLocaleString()}</p>
+                  </div>
                 </div>
                 
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-sm text-gray-600">Credit Limit</span>
-                  <span className="font-semibold">${card.limit.toLocaleString()}</span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2 mb-3">
+                {/* Action Buttons - All full width, stacked */}
+                <div className="space-y-2">
                   <Button 
-                    variant="outline" 
-                    size="sm" 
                     onClick={() => {
                       setSelectedCard(card);
                       setLockDialogOpen(true);
                     }}
-                    className={card.isLocked ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}
+                    className={`w-full font-semibold ${card.isLocked ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
                   >
-                    {card.isLocked ? <Unlock className="w-4 h-4 mr-1" /> : <Lock className="w-4 h-4 mr-1" />}
+                    {card.isLocked ? <Unlock className="w-4 h-4 mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
                     {card.isLocked ? (t('unlock_card') || 'Unlock') : (t('lock_card') || 'Lock')}
                   </Button>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      onClick={() => setMobilePayDialogOpen(true)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                      size="sm"
+                    >
+                      <Smartphone className="w-4 h-4 mr-1" />
+                      Mobile Pay
+                    </Button>
+                    <Button 
+                      onClick={() => setPayBillDialogOpen(true)}
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+                      size="sm"
+                    >
+                      <DollarSign className="w-4 h-4 mr-1" />
+                      Pay Bill
+                    </Button>
+                  </div>
+                  
                   <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setMobilePayDialogOpen(true)}
-                    className="bg-blue-50 border-blue-200"
-                  >
-                    <Smartphone className="w-4 h-4 mr-1" />
-                    {t('mobile_pay') || 'Mobile Pay'}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setPayBillDialogOpen(true)}
-                    className="bg-yellow-50 border-yellow-200"
-                  >
-                    <DollarSign className="w-4 h-4 mr-1" />
-                    {t('pay_bill') || 'Pay Bill'}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
                     onClick={() => {
                       setSelectedCard(card);
                       setSettingsDialogOpen(true);
                     }}
-                    className="bg-gray-50 border-gray-200"
+                    variant="outline"
+                    className="w-full border-gray-300 hover:bg-gray-100 font-semibold"
+                    size="sm"
                   >
-                    <Settings className="w-4 h-4 mr-1" />
-                    {t('settings') || 'Settings'}
+                    <Settings className="w-4 h-4 mr-2" />
+                    Card Settings
                   </Button>
                 </div>
               </CardContent>

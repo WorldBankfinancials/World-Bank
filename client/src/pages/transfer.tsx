@@ -401,10 +401,10 @@ export default function Transfer() {
 
         {/* International Transfer Form */}
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>International Transfer Details</CardTitle>
+          <CardHeader className="bg-blue-50 border-b">
+            <CardTitle>Enter Transfer Details</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-5 pt-6">
             {/* Transfer Amount */}
             <div className="bg-blue-50 p-4 rounded-lg">
               <Label htmlFor="amount" className="text-lg font-semibold">Transfer Amount (USD)</Label>

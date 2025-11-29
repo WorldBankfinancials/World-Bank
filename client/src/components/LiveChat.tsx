@@ -114,16 +114,16 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
 
   return (
     <div className="fixed bottom-6 right-6 w-96 z-50 shadow-2xl">
-      <Card className="rounded-xl overflow-hidden border border-gray-200">
-        {/* Header */}
-        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex items-center justify-between">
+      <Card className="rounded-xl overflow-hidden border-2 border-blue-500 bg-white">
+        {/* Header - Prominent */}
+        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="bg-white/20 p-2 rounded-full">
+            <div className="bg-white/30 p-2 rounded-full">
               <MessageCircle className="w-5 h-5" />
             </div>
             <div>
-              <CardTitle className="text-white text-base font-semibold">Support</CardTitle>
-              <p className="text-xs text-blue-100">We typically reply within minutes</p>
+              <CardTitle className="text-white text-base font-bold">Live Chat Support</CardTitle>
+              <p className="text-xs text-blue-100">Usually replies in minutes</p>
             </div>
           </div>
           {onClose && (
@@ -131,16 +131,16 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
               onClick={onClose}
               variant="ghost"
               size="sm"
-              className="text-white hover:bg-blue-600 h-8 w-8 p-0"
+              className="text-white hover:bg-blue-700 h-8 w-8 p-0"
             >
               <X className="w-5 h-5" />
             </Button>
           )}
         </CardHeader>
 
-        {/* Messages Area */}
-        <CardContent className="p-0 flex flex-col h-96">
-          <div className="flex-1 overflow-y-auto bg-gray-50 p-4 space-y-4">
+        {/* Messages Area - Clear separation */}
+        <div className="flex flex-col h-96 bg-gray-50">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 border-b-2 border-gray-200">
             {messages.map(msg => (
               <div
                 key={msg.id}
@@ -149,11 +149,11 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
                 <div
                   className={`max-w-xs px-4 py-3 rounded-lg text-sm break-words ${
                     msg.sender === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-sm'
-                      : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm'
+                      ? 'bg-blue-600 text-white rounded-br-none shadow'
+                      : 'bg-white text-gray-900 border border-gray-300 rounded-bl-none shadow'
                   }`}
                 >
-                  <p className="mb-1">{msg.text}</p>
+                  <p className="mb-1 leading-relaxed">{msg.text}</p>
                   <p className={`text-xs ${msg.sender === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
                     {msg.timestamp.toLocaleTimeString([], {
                       hour: '2-digit',
@@ -166,31 +166,39 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area */}
-          <div className="border-t bg-white p-4 space-y-3">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Type your message..."
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                disabled={!isConnected}
-                className="text-sm"
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={!inputText.trim() || !isConnected}
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 h-10"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
+          {/* Input Area - SUPER PROMINENT */}
+          <div className="bg-white p-4 space-y-3 border-t-2 border-gray-200">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-700 block">Type your message:</label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Write here and press Enter..."
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  disabled={!isConnected}
+                  className="text-base p-3 border-2 border-gray-300 rounded-lg font-medium"
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!inputText.trim() || !isConnected}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-12 font-bold rounded-lg"
+                  size="sm"
+                >
+                  <Send className="w-5 h-5" />
+                </Button>
+              </div>
             </div>
             {!isConnected && (
-              <p className="text-xs text-orange-600 font-medium">⚠ Connecting to support...</p>
+              <div className="bg-amber-100 border-2 border-amber-300 rounded-lg p-2 text-center">
+                <p className="text-sm font-bold text-amber-800">⚠️ Connecting...</p>
+              </div>
+            )}
+            {isConnected && (
+              <p className="text-xs text-green-700 font-semibold text-center">✓ Connected to support</p>
             )}
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
   );
