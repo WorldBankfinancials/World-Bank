@@ -82,8 +82,8 @@ export default function AdminTransactionCreator() {
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-2xl mx-auto space-y-6">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Create Transaction</h1>
-          <p className="text-gray-600">Manually create transactions for customer accounts</p>
+          <h1 className="text-3xl font-bold mb-2">{t('create_transaction')}</h1>
+          <p className="text-gray-600">{t('create_transactions_description')}</p>
         </div>
 
         <Card>
