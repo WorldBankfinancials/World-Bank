@@ -491,7 +491,21 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // User endpoints - PROTECTED with JWT authentication
   app.get('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.json(user);
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to get user' });
+    }
+  });
+  
+  // Get user by ID - PROTECTED with JWT authentication
+  app.get('/api/users/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id, 10);
+      const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -1894,7 +1908,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const supabaseUser = data.user;
 
       // STEP 2: Sync user to bank_users table
-      let dbUser = await (storage).getUserByEmail(email);
+      let dbUser = await storage.getUserByEmail(email);
       
       if (!dbUser) {
         // User authenticated but not in bank_users - create them NOW
@@ -1915,9 +1929,18 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             transferPin: supabaseUser.user_metadata?.transfer_pin || '0192',
             role: supabaseUser.app_metadata?.role || 'customer'
           });
+          // Also create initial account for user
+          await storage.createAccount({
+            userId: dbUser.id,
+            accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
+            accountType: 'checking',
+            balance: '0.00',
+            currency: 'USD',
+            status: 'active'
+          });
         } catch (dbError: any) {
-          // User authenticated - still return token even if DB create fails
           console.error('Failed to create user in bank_users:', dbError);
+          // User authenticated - still return token even if DB create fails
         }
       }
 

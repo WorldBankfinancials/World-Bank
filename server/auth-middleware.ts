@@ -43,7 +43,42 @@ export async function requireAuth(
     }
 
     // DUAL SOURCE 1: Verify account exists in Postgres database
-    const dbUser = await storage.getUserByEmail(email);
+    let dbUser = await storage.getUserByEmail(email);
+    
+    if (!dbUser) {
+      // Try to sync from Supabase Auth if not in database
+      try {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(
+          process.env.VITE_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!,
+          { auth: { autoRefreshToken: false, persistSession: false } }
+        );
+        
+        const { data: supabaseUser } = await supabase.auth.admin.getUserById(String(userId));
+        if (supabaseUser?.user && supabaseUser.user.email === email) {
+          // User exists in Supabase Auth, create in database
+          dbUser = await storage.createUser({
+            username: email.split('@')[0],
+            email: email,
+            password: 'supabase_auth',
+            firstName: supabaseUser.user.user_metadata?.first_name || email.split('@')[0],
+            lastName: supabaseUser.user.user_metadata?.last_name || 'User',
+            phone: supabaseUser.user.user_metadata?.phone || '',
+            profession: 'Not provided',
+            accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
+            accountId: Date.now(),
+            balance: '0',
+            isActive: true,
+            isVerified: true,
+            transferPin: supabaseUser.user.user_metadata?.transfer_pin || '0192',
+            role: supabaseUser.user.app_metadata?.role || 'customer'
+          });
+        }
+      } catch (e) {
+        // Supabase sync failed
+      }
+    }
     
     if (!dbUser) {
       return res.status(403).json({ 
