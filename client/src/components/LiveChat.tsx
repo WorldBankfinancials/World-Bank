@@ -28,51 +28,37 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   useEffect(() => {
     if (!isOpen) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
+    // Use Supabase real-time subscriptions instead of WebSocket
+    const { supabase } = require('@/lib/supabase');
+    setIsConnected(true);
+    
+    // Load chat history
+    setMessages([{
+      id: '1',
+      sender: 'agent',
+      text: 'Hello! How can we help you today?',
+      timestamp: new Date()
+    }]);
 
-    try {
-      wsRef.current = new WebSocket(wsUrl);
-
-      wsRef.current.onopen = () => {
-        setIsConnected(true);
-        wsRef.current?.send(JSON.stringify({
-          type: 'chat_init',
-          userId: localStorage.getItem('userId') || 'guest'
-        }));
-        setMessages([{
-          id: '1',
-          sender: 'agent',
-          text: 'Hello! How can we help you today?',
-          timestamp: new Date()
-        }]);
-      };
-
-      wsRef.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'message') {
-            setMessages(prev => [...prev, {
-              id: Date.now().toString(),
-              sender: 'agent',
-              text: data.text,
-              timestamp: new Date()
-            }]);
-          }
-        } catch (error) {
+    // Subscribe to chat messages via Supabase
+    const subscription = supabase
+      .channel('live_chat')
+      .on('broadcast', { event: 'message' }, (payload: any) => {
+        if (payload.payload?.text) {
+          setMessages(prev => [...prev, {
+            id: payload.payload.id || Date.now().toString(),
+            sender: 'agent',
+            text: payload.payload.text,
+            timestamp: new Date(payload.payload.timestamp || Date.now())
+          }]);
         }
-      };
+      })
+      .subscribe();
 
-      wsRef.current.onerror = () => {
-        setIsConnected(false);
-        toast({
-          title: 'Connection Error',
-          description: 'Failed to connect to live chat. Please try again.',
-          variant: 'destructive',
-        });
-      };
-
-      wsRef.current.onclose = () => {
+    return () => {
+      if (subscription) {
+        supabase.removeChannel(subscription);
+      }
         setIsConnected(false);
       };
     } catch (error) {
