@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Send, MessageCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ChatSession {
   id: string;
@@ -23,6 +24,7 @@ interface Message {
 
 export default function AdminLiveChat() {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
@@ -159,7 +161,7 @@ export default function AdminLiveChat() {
           <Card className="h-full flex flex-col">
             <CardHeader>
               <CardTitle>
-                {selectedSession ? `Chat with ${selectedSession.customerName}` : 'Select a chat session'}
+                {selectedSession ? `${t('chat_with')} ${selectedSession.customerName}` : t('select_chat_session')}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto space-y-3 mb-4">

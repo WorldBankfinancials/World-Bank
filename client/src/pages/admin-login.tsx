@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BankLogo } from "@/components/BankLogo";
 import { Shield } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function AdminLogin() {
   const [username, setUsername] = useState("");
@@ -16,6 +17,7 @@ export default function AdminLogin() {
   const [error, setError] = useState("");
   const { signIn } = useAuth();
   const [, setLocation] = useLocation();
+  const { t } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { XCircle, RefreshCw, Phone, Mail, AlertTriangle } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function TransferFailed() {
   const [, setLocation] = useLocation();
+  const { t } = useLanguage();
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -36,20 +38,20 @@ export default function TransferFailed() {
               <h4 className="font-medium mb-2">Transaction Details</h4>
               <div className="space-y-2 text-sm text-left">
                 <div className="flex justify-between">
-                  <span>Reference ID:</span>
+                  <span>{t('reference_id')}</span>
                   <span className="font-mono">WB{Date.now().toString().slice(-8)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Status:</span>
-                  <span className="text-red-600 font-medium">Failed</span>
+                  <span>{t('status')}</span>
+                  <span className="text-red-600 font-medium">{t('status_failed')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Attempted:</span>
+                  <span>{t('attempted')}</span>
                   <span>{new Date().toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Reason:</span>
-                  <span className="text-red-600">Security verification required</span>
+                  <span>{t('reason')}</span>
+                  <span className="text-red-600">{t('security_verification_required')}</span>
                 </div>
               </div>
             </div>

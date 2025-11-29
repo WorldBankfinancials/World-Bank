@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { CheckCircle, Download, Share, ArrowRight } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function TransferSuccess() {
   const [, setLocation] = useLocation();
+  const { t } = useLanguage();
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -30,27 +32,27 @@ export default function TransferSuccess() {
               <h4 className="font-medium mb-2">Transaction Summary</h4>
               <div className="space-y-2 text-sm text-left">
                 <div className="flex justify-between">
-                  <span>Reference ID:</span>
+                  <span>{t('reference_id')}</span>
                   <span className="font-mono">WB{Date.now().toString().slice(-8)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Amount Sent:</span>
+                  <span>{t('amount_sent')}</span>
                   <span className="font-medium">$1,000.00 USD</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Amount Received:</span>
+                  <span>{t('amount_received')}</span>
                   <span className="font-medium">¥7,230.00 CNY</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Exchange Rate:</span>
+                  <span>{t('exchange_rate')}</span>
                   <span>1 USD = 7.23 CNY</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Transfer Fee:</span>
+                  <span>{t('transfer_fee')}</span>
                   <span>$8.00</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Completed:</span>
+                  <span>{t('completed')}</span>
                   <span>{new Date().toLocaleString()}</span>
                 </div>
               </div>

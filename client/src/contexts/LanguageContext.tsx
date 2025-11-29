@@ -435,6 +435,10 @@ const translations = {
     'confirm_password_label': 'Confirm Password',
     'agree_terms': 'You must agree to terms and conditions',
     'transfer_reference': 'Transfer Reference',
+    'attempted': 'Attempted:',
+    'reason': 'Reason:',
+    'status': 'Status:',
+    'security_verification_required': 'Security verification required',
 
     // Support & Help
     'help_center': 'Help Center',
@@ -897,6 +901,10 @@ const translations = {
     'confirm_password_label': '确认密码',
     'agree_terms': '您必须同意条款和条件',
     'transfer_reference': '转账参考号',
+    'attempted': '尝试时间:',
+    'reason': '原因:',
+    'status': '状态:',
+    'security_verification_required': '需要安全验证',
 
     // Support & Help
     'help_center': '帮助中心',
