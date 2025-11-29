@@ -404,6 +404,10 @@ const translations = {
     'energy_desc': 'Oil, gas and renewable energy',
     'industry_retail': 'Retail',
     'retail_desc': 'E-commerce and traditional retail',
+    'countries_served': 'Countries Served',
+    'currencies_supported': 'Currencies Supported',
+    'corporate_clients_label': 'Corporate Clients',
+    'assets_under_mgmt_label': 'Assets Under Management',
 
     // Support & Help
     'help_center': 'Help Center',
