@@ -33,7 +33,7 @@ export default function TransferPending() {
 
           <div className="space-y-4">
             <div className="border-t pt-4">
-              <h4 className="font-medium mb-2">Transfer Details</h4>
+              <h4 className="font-medium mb-2">Transfer Details (Pending Review)</h4>
               <div className="space-y-2 text-sm text-left">
                 <div className="flex justify-between">
                   <span>Reference ID:</span>

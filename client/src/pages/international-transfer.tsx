@@ -346,7 +346,7 @@ export default function InternationalTransfer() {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <UserIcon className="w-5 h-5" />
-                  <span>Recipient Information</span>
+                  <span>{t('recipient_information') || 'Recipient Information'}</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -495,7 +495,7 @@ export default function InternationalTransfer() {
 
                     {/* Transfer Details */}
                     <div className="pt-4 border-t">
-                      <h3 className="font-medium mb-3">Transfer Details</h3>
+                      <h3 className="font-medium mb-3">{t('transfer_details') || 'Transfer Details'}</h3>
                       <div className="space-y-4">
                         <div>
                           <Label>Transfer Purpose *</Label>

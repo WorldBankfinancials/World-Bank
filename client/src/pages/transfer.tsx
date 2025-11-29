@@ -402,7 +402,7 @@ export default function Transfer() {
         {/* International Transfer Form */}
         <Card className="mb-6">
           <CardHeader className="bg-blue-50 border-b">
-            <CardTitle>Enter Transfer Details</CardTitle>
+            <CardTitle>{t('transfer_details') || 'Enter Transfer Details'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5 pt-6">
             {/* Transfer Amount */}
@@ -421,7 +421,7 @@ export default function Transfer() {
 
             {/* Recipient Information - Simplified */}
             <div>
-              <h3 className="font-semibold text-lg mb-3 text-gray-800">Recipient Information</h3>
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">{t('recipient_information') || 'Recipient Information'}</h3>
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label htmlFor="fullName">Full Name *</Label>
@@ -462,7 +462,7 @@ export default function Transfer() {
 
             {/* Bank Information */}
             <div>
-              <h3 className="font-semibold text-lg mb-3 text-gray-800">Bank Information</h3>
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">{t('bank_information') || 'Bank Information'}</h3>
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label htmlFor="bankName">Bank Name</Label>
