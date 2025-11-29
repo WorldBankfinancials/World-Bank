@@ -28,31 +28,62 @@ export function setupTransferRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Validate PIN - convert both to strings for comparison
-      const pinToVerify = String(transferPin).trim();
-      const userPin = String(user.transferPin || "").trim();
-      
-      if (!pinToVerify || pinToVerify.length < 4) {
-        return res.status(400).json({ message: "Invalid PIN provided" });
-      }
-      
-      if (pinToVerify !== userPin) {
-        return res.status(400).json({ message: "Incorrect transfer PIN" });
-      }
-
-      // Validate required fields
+      // Validate required fields first
       if (!amount || !recipientName || !recipientAccount) {
         return res.status(400).json({ message: "Missing required transfer details: amount, recipient name, and account number" });
       }
 
+      // PIN VALIDATION - Verify against stored PIN
+      if (!transferPin || String(transferPin).length !== 4) {
+        return res.status(401).json({ message: "Invalid PIN format - must be 4 digits" });
+      }
+
+      // Get fresh user data to verify PIN
+      const userForPin = await (storage as any).getUserByEmail(req.user!.email);
+      if (!userForPin || !userForPin.transferPin) {
+        return res.status(401).json({ message: "PIN not set on account" });
+      }
+
+      const storedPin = String(userForPin.transferPin).trim();
+      const providedPin = String(transferPin).trim();
+
+      if (storedPin !== providedPin) {
+        return res.status(401).json({ message: "Incorrect PIN - transfer denied" });
+      }
+
+      // Create transaction with PENDING_APPROVAL status - requires admin review
       const transactionId = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
-      res.json({ 
-        message: "Transfer submitted successfully", 
-        transactionId: transactionId,
-        status: "processing",
-        amount: amount
-      });
+      // Save transaction to database with pending_approval status
+      try {
+        const transaction = await (storage as any).createTransaction({
+          transactionId: transactionId,
+          fromUserId: user.id,
+          amount: amount,
+          currency: 'USD',
+          type: 'transfer',
+          status: 'pending_approval',  // *** REQUIRES ADMIN APPROVAL ***
+          recipientName: recipientName,
+          recipientAccount: recipientAccount,
+          recipientCountry: recipientCountry,
+          bankName: bankName,
+          swiftCode: swiftCode,
+          transferPurpose: purpose,
+          description: `Transfer to ${recipientName} at ${bankName}`
+        });
+
+        // Return pending_approval response - NOT successful
+        res.json({ 
+          message: "Transfer submitted and pending admin approval",
+          transactionId: transactionId,
+          status: "pending_approval",
+          requiresApproval: true,
+          amount: amount,
+          note: "Your transfer has been verified with PIN. An administrator will review and approve it within 24 hours."
+        });
+      } catch (dbError: any) {
+        return res.status(500).json({ message: "Failed to process transfer", error: dbError.message });
+      }
     } catch (error) {
       res.status(500).json({ message: "Transfer system error" });
     }

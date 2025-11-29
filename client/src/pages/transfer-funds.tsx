@@ -139,19 +139,27 @@ export default function TransferFunds() {
       });
 
       if (response.ok) {
-        toast({
-          title: 'Transfer Verified',
-          description: `Transfer of $${amount.toFixed(2)} has been initiated successfully.`,
-        });
+        const result = await response.json();
+        if (result.status === 'pending_approval') {
+          toast({
+            title: '✓ Transfer Submitted',
+            description: 'Transfer verified with PIN. Admin approval required within 24 hours. Transaction ID: ' + result.transactionId,
+          });
+        } else {
+          toast({
+            title: 'Transfer Status',
+            description: result.message || 'Transfer processing',
+          });
+        }
         form.reset();
         setShowPinModal(false);
         setTransferPin("");
         setFormData(null);
       } else {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         toast({
           title: 'Transfer Failed',
-          description: errorData.message || 'Failed to process transfer',
+          description: errorData.message || 'Failed to process transfer. Please check PIN and try again.',
           variant: 'destructive'
         });
       }
