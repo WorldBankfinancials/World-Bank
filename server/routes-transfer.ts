@@ -215,8 +215,6 @@ export function setupTransferRoutes(app: Express) {
         description: `Transfer to ${recipientName}`,
         recipientName: recipientName,
         recipientCountry: recipientCountry || "Unknown",
-        bankName: bankName || "Unknown Bank",
-        swiftCode: swiftCode || "",
         currency: currency || "USD",
         status: "pending_approval"
       });
