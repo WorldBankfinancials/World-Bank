@@ -158,34 +158,42 @@ export class CompleteSupabaseStorage implements IStorage {
   }
 
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
-    const insertData: any = {
-      from_account_id: transaction.fromAccountId,
-      to_account_id: transaction.toAccountId,
-      amount: transaction.amount,
-      currency: transaction.currency || 'USD',
-      type: transaction.type || 'transfer',
-      status: transaction.status || 'pending',
-    };
+    const insertData: any = {};
     
-    if (transaction.fromUserId) insertData.from_user_id = transaction.fromUserId;
-    if (transaction.toUserId) insertData.to_user_id = transaction.toUserId;
+    // Set required fields with defaults
+    insertData.amount = transaction.amount || '0.00';
+    insertData.currency = transaction.currency || 'USD';
+    insertData.transaction_type = transaction.transactionType || transaction.type || 'transfer';
+    insertData.type = transaction.type || 'transfer';
+    insertData.status = transaction.status || 'pending';
+    
+    // Set optional fields
+    if (transaction.fromAccountId !== undefined && transaction.fromAccountId !== null) insertData.from_account_id = transaction.fromAccountId;
+    if (transaction.toAccountId !== undefined && transaction.toAccountId !== null) insertData.to_account_id = transaction.toAccountId;
+    if (transaction.fromUserId !== undefined && transaction.fromUserId !== null) insertData.from_user_id = transaction.fromUserId;
+    if (transaction.toUserId !== undefined && transaction.toUserId !== null) insertData.to_user_id = transaction.toUserId;
     if (transaction.description) insertData.description = transaction.description;
     if (transaction.recipientName) insertData.recipient_name = transaction.recipientName;
     if (transaction.recipientAccount) insertData.recipient_account = transaction.recipientAccount;
     if (transaction.recipientAddress) insertData.recipient_address = transaction.recipientAddress;
     if (transaction.recipientCountry) insertData.recipient_country = transaction.recipientCountry;
     if (transaction.referenceNumber) insertData.reference_number = transaction.referenceNumber;
-    if (transaction.fee) insertData.fee = transaction.fee;
-    if (transaction.exchangeRate) insertData.exchange_rate = transaction.exchangeRate;
+    if (transaction.fee !== undefined && transaction.fee !== null) insertData.fee = transaction.fee;
+    if (transaction.exchangeRate !== undefined && transaction.exchangeRate !== null) insertData.exchange_rate = transaction.exchangeRate;
     if (transaction.countryCode) insertData.country_code = transaction.countryCode;
     if (transaction.transferPurpose) insertData.transfer_purpose = transaction.transferPurpose;
+    if (transaction.bankName) insertData.bank_name = transaction.bankName;
+    if (transaction.swiftCode) insertData.swift_code = transaction.swiftCode;
 
     const { data, error } = await supabase
       .from('transactions')
       .insert([insertData])
       .select()
       .single();
-    if (error) throw error;
+    if (error) {
+      console.error('Transaction insert error details:', error);
+      throw error;
+    }
     return mapSupabaseTransactionToTransaction(data);
   }
 

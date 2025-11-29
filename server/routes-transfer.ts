@@ -61,11 +61,14 @@ export function setupTransferRoutes(app: Express) {
           amount: String(amount),
           currency: 'USD',
           type: 'transfer',
+          transactionType: 'transfer',
           status: 'pending',
           description: `Transfer to ${recipientName}`,
           recipientName: recipientName,
           recipientAccount: recipientAccount,
           recipientCountry: recipientCountry,
+          bankName: bankName,
+          swiftCode: swiftCode,
           transferPurpose: purpose || 'transfer'
         };
         const transaction = await storage.createTransaction(transactionData);
