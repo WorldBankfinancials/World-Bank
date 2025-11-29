@@ -520,10 +520,6 @@ export default function Dashboard() {
   const [showNotifications] = useState(false);
   const [userData, setUserData] = useState<CustomerData | null>(null);
   const queryClient = useQueryClient();
-  
-  // Enable real-time chat and transaction updates
-  useRealtimeChat(userProfile?.id?.toString(), undefined, undefined, undefined);
-  useRealtimeTransactions(userProfile?.id?.toString(), true);
 
   // Fetch real transaction data from API instead of hardcoded array
   const { data: recentTransactions = [], isLoading: transactionsLoading, error: transactionsError } = useQuery<TransactionData[]>({
