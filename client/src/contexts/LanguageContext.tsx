@@ -891,7 +891,7 @@ const translations = {
     'amount_received': '收到金额:',
     'exchange_rate': '汇率:',
     'transfer_fee': '转账费用:',
-    'completed': '已完成:',
+    'completed_label': '已完成:',
     'transaction_completed': '交易已完成',
     'select_chat_session': '选择聊天会话',
     'chat_with': '与...聊天',
