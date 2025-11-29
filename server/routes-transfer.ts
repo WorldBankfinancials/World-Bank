@@ -57,23 +57,24 @@ export function setupTransferRoutes(app: Express) {
       // Save transaction to database with pending status
       try {
         const now = new Date();
-        const transaction = await (storage as any).createTransaction({
-          transactionId: transactionId,
-          fromUserId: user.id,
+        const transactionData = {
+          transaction_id: transactionId,
+          from_user_id: user.id,
           amount: String(amount),
           currency: 'USD',
           type: 'transfer',
           status: 'pending',
           description: `Transfer to ${recipientName} at ${bankName}`,
-          recipientName: recipientName,
-          recipientAccount: recipientAccount,
-          recipientCountry: recipientCountry,
-          bankName: bankName,
-          swiftCode: swiftCode,
-          transferPurpose: purpose || 'transfer',
-          createdAt: now,
-          updatedAt: now
-        });
+          recipient_name: recipientName,
+          recipient_account: recipientAccount,
+          recipient_country: recipientCountry,
+          bank_name: bankName,
+          swift_code: swiftCode,
+          transfer_purpose: purpose || 'transfer',
+          created_at: now,
+          updated_at: now
+        };
+        const transaction = await (storage as any).createTransaction(transactionData as any);
 
         // Return pending response - transaction submitted
         res.json({ 
@@ -140,22 +141,23 @@ export function setupTransferRoutes(app: Express) {
       // Create transaction with pending status
       try {
         const now = new Date();
-        const transaction = await (storage as any).createTransaction({
-          transactionId: transactionId,
-          fromUserId: user.id,
+        const transactionData = {
+          transaction_id: transactionId,
+          from_user_id: user.id,
           amount: String(amount),
           currency: 'USD',
           type: 'international_transfer',
           status: 'pending',
           description: `International transfer to ${recipientName} in ${recipientCountry}`,
-          recipientName: recipientName,
-          recipientCountry: recipientCountry,
-          bankName: bankName,
-          swiftCode: swiftCode,
-          transferPurpose: transferPurpose || 'international_transfer',
-          createdAt: now,
-          updatedAt: now
-        });
+          recipient_name: recipientName,
+          recipient_country: recipientCountry,
+          bank_name: bankName,
+          swift_code: swiftCode,
+          transfer_purpose: transferPurpose || 'international_transfer',
+          created_at: now,
+          updated_at: now
+        };
+        const transaction = await (storage as any).createTransaction(transactionData as any);
 
         res.json({ 
           message: "International transfer submitted successfully", 

@@ -655,7 +655,7 @@ export default function Dashboard() {
         { icon: CreditCard, label: "Credit Cards", href: "/credit-cards" },
         { icon: ArrowUpRight, label: "Transaction History", href: "/transaction-history" },
         { icon: Download, label: "Statements & Reports", href: "/statements-reports" },
-        { icon: Building2, label: "Banking Services", href: "/banking-services" },
+        { icon: Briefcase, label: "Banking Services", href: "/banking-services" },
         { icon: RotateCcw, label: "Transfer Funds", href: "/transfer-funds" }
       ]
     },
@@ -663,26 +663,26 @@ export default function Dashboard() {
       category: "INVESTMENT & WEALTH",
       items: [
         { icon: TrendingUp, label: "Investment Portfolio", href: "/investment" },
-        { icon: Building2, label: "Wealth Management", href: "/wealth-management" },
-        { icon: TrendingUp, label: "Investment Trading", href: "/investment-trading" },
-        { icon: Building2, label: "Business Banking", href: "/business-banking" }
+        { icon: PieChart, label: "Wealth Management", href: "/wealth-management" },
+        { icon: BarChart3, label: "Investment Trading", href: "/investment-trading" },
+        { icon: Banknote, label: "Business Banking", href: "/business-banking" }
       ]
     },
     {
       category: "DIGITAL SERVICES",
       items: [
         { icon: CreditCard, label: "Digital Wallet", href: "/digital-wallet" },
-        { icon: UserCircle, label: "Mobile Pay", href: "/mobile-pay" },
-        { icon: ArrowUpRight, label: "International Transfer", href: "/international-transfer" }
+        { icon: Smartphone, label: "Mobile Pay", href: "/mobile-pay" },
+        { icon: Globe, label: "International Transfer", href: "/international-transfer" }
       ]
     },
     {
       category: "SUPPORT & HELP",
       items: [
         { icon: HelpCircle, label: "Support Center", href: "/support-center" },        
-        { icon: UserCircle, label: "Customer Support", href: "/customer-support" },
-        { icon: Shield, label: "Security Center", href: "/security-center" },
-        { icon: Building2, label: "Find Branches", href: "/find-branches" },
+        { icon: Headphones, label: "Customer Support", href: "/customer-support" },
+        { icon: Lock, label: "Security Center", href: "/security-center" },
+        { icon: MapPin, label: "Find Branches", href: "/find-branches" },
         { icon: LogOut, label: "Sign Out", href: "/login" }
       ]
     }
