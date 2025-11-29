@@ -404,10 +404,8 @@ const translations = {
     'energy_desc': 'Oil, gas and renewable energy',
     'industry_retail': 'Retail',
     'retail_desc': 'E-commerce and traditional retail',
-    'countries_served': 'Countries Served',
-    'currencies_supported': 'Currencies Supported',
-    'corporate_clients_label': 'Corporate Clients',
-    'assets_under_mgmt_label': 'Assets Under Management',
+    'account_active': 'Active',
+    'account_inactive': 'Inactive',
 
     // Support & Help
     'help_center': 'Help Center',
@@ -836,10 +834,8 @@ const translations = {
     'energy_desc': '石油、天然气和可再生能源',
     'industry_retail': '零售',
     'retail_desc': '电子商务和传统零售',
-    'countries_served': '服务的国家',
-    'currencies_supported': '支持的货币',
-    'corporate_clients_label': '企业客户',
-    'assets_under_mgmt_label': '管理资产',
+    'account_active': '活跃',
+    'account_inactive': '不活跃',
 
     // Support & Help
     'help_center': '帮助中心',

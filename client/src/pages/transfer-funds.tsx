@@ -126,8 +126,6 @@ export default function TransferFunds() {
           recipientName: formData.recipientName,
           recipientCountry: formData.recipientCountry,
           recipientAccount: formData.accountNumber || formData.recipientAccount,
-          bankName: formData.bankName,
-          swiftCode: formData.swiftCode,
           purpose: formData.purpose,
           transferPin: String(transferPin)
         })

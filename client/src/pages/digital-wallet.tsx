@@ -112,7 +112,7 @@ export default function DigitalWallet() {
               </div>
               <div className="flex items-center space-x-4 text-blue-100">
                 <span>Account: {user?.accountNumber || t('loading')}</span>
-                <Badge className="bg-green-500 text-white">{(user as any)?.isActive ? 'Active' : 'Inactive'}</Badge>
+                <Badge className="bg-green-500 text-white">{(user as any)?.isActive ? t('account_active') : t('account_inactive')}</Badge>
               </div>
             </div>
           </CardContent>
