@@ -122,33 +122,31 @@ export default function TransferFunds() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: amount,
-          fee: fee,
-          total: total,
-          transferType: transferType,
+          amount: Number(formData.amount),
           recipientName: formData.recipientName,
           recipientCountry: formData.recipientCountry,
-          recipientAccount: formData.accountNumber,
+          recipientAccount: formData.accountNumber || formData.recipientAccount,
           bankName: formData.bankName,
           swiftCode: formData.swiftCode,
-          routingNumber: formData.routingNumber,
           purpose: formData.purpose,
-          reference: formData.reference,
-          transferPin: transferPin
+          transferPin: String(transferPin)
         })
       });
 
       if (response.ok) {
+        const result = await response.json();
         toast({
           title: '✓ Transfer Submitted',
-          description: 'Your transfer has been submitted successfully.',
+          description: `Your transfer ${result.transactionId} has been submitted successfully and is pending approval.`,
         });
         form.reset();
         setShowPinModal(false);
         setTransferPin("");
         setFormData(null);
+        setTimeout(() => window.location.href = '/dashboard', 2000);
       } else {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('Transfer error:', errorData);
         toast({
           title: 'Transfer Failed',
           description: errorData.message || 'Failed to process transfer. Please check your details and try again.',
