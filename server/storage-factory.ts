@@ -5,19 +5,17 @@ import { CompleteSupabaseStorage } from './supabase-storage-complete';
 import type { IStorage } from './storage';
 
 // Environment-based storage factory
-// COMBINED STORAGE: Supabase Auth (login) + Supabase REST API (data) - works from Replit
 export function createStorage(): IStorage {
   const dataSource = config.getDataSource();
   
-  
-  // PRIMARY: Use Supabase REST API (works from Replit, direct Postgres blocked by DNS)
-  if (process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return new CompleteSupabaseStorage();
-  }
-  
-  // FALLBACK: Direct PostgreSQL (only if Supabase not available)
+  // PRIMARY: Use direct PostgreSQL (Replit's database - RELIABLE)
   if (process.env.DATABASE_URL) {
     return new PostgresStorage();
+  }
+  
+  // FALLBACK: Supabase REST API if Postgres not available
+  if (process.env.VITE_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return new CompleteSupabaseStorage();
   }
   
   // FALLBACK: Supabase public schema
@@ -26,7 +24,7 @@ export function createStorage(): IStorage {
   }
   
   // PRODUCTION-READY: No fallback to mock data - database required
-  throw new Error('❌ CRITICAL: No database configured! Set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.');
+  throw new Error('❌ CRITICAL: No database configured! Set DATABASE_URL or SUPABASE credentials.');
 }
 
 // Export singleton storage instance
