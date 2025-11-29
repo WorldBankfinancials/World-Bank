@@ -3,9 +3,11 @@ import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";
 
-// Wire LiveChat for dashboard support - ACTIVE
+// Wire LiveChat for dashboard support - ACTIVE + REAL-TIME
 import { useUserData, useAccountData } from "@/hooks/useUserData";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRealtimeChat } from "@/hooks/useRealtimeChat";
+import { useRealtimeTransactions } from "@/hooks/useRealtimeTransactions";
 import type { User } from '@shared/schema';
 import { useToast } from "@/hooks/use-toast";
 
