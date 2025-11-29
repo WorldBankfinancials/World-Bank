@@ -52,7 +52,7 @@ export default function TransferSuccess() {
                   <span>$8.00</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>{t('completed')}</span>
+                  <span>{t('completed_timestamp')}</span>
                   <span>{new Date().toLocaleString()}</span>
                 </div>
               </div>
