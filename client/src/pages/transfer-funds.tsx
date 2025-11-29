@@ -140,15 +140,15 @@ export default function TransferFunds() {
 
       if (response.ok) {
         const result = await response.json();
-        if (result.status === 'pending_approval') {
+        if (result.status === 'pending') {
           toast({
             title: '✓ Transfer Submitted',
-            description: 'Transfer verified with PIN. Admin approval required within 24 hours. Transaction ID: ' + result.transactionId,
+            description: `Transfer verified with PIN. Status: PENDING. Transaction ID: ${result.transactionId}. Admin will review within 24 hours.`,
           });
         } else {
           toast({
-            title: 'Transfer Status',
-            description: result.message || 'Transfer processing',
+            title: 'Transfer Submitted',
+            description: result.message || 'Transfer submitted successfully',
           });
         }
         form.reset();

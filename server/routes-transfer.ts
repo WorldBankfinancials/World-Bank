@@ -51,10 +51,10 @@ export function setupTransferRoutes(app: Express) {
         return res.status(401).json({ message: "Incorrect PIN - transfer denied" });
       }
 
-      // Create transaction with PENDING_APPROVAL status - requires admin review
+      // Create transaction with PENDING status - awaiting admin review
       const transactionId = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
-      // Save transaction to database with pending_approval status
+      // Save transaction to database with pending status
       try {
         const transaction = await (storage as any).createTransaction({
           transactionId: transactionId,
@@ -62,27 +62,26 @@ export function setupTransferRoutes(app: Express) {
           amount: amount,
           currency: 'USD',
           type: 'transfer',
-          status: 'pending_approval',  // *** REQUIRES ADMIN APPROVAL ***
+          status: 'pending',  // *** PENDING: AWAITING ADMIN REVIEW ***
           recipientName: recipientName,
           recipientAccount: recipientAccount,
           recipientCountry: recipientCountry,
           bankName: bankName,
           swiftCode: swiftCode,
-          transferPurpose: purpose,
+          transferPurpose: purpose || 'transfer',
           description: `Transfer to ${recipientName} at ${bankName}`
         });
 
-        // Return pending_approval response - NOT successful
+        // Return pending response - transaction submitted, awaiting approval
         res.json({ 
-          message: "Transfer submitted and pending admin approval",
+          message: "Transfer submitted successfully",
           transactionId: transactionId,
-          status: "pending_approval",
-          requiresApproval: true,
+          status: "pending",
           amount: amount,
-          note: "Your transfer has been verified with PIN. An administrator will review and approve it within 24 hours."
+          note: "Your transfer is pending admin review. Status will change to success or failed within 24 hours."
         });
       } catch (dbError: any) {
-        return res.status(500).json({ message: "Failed to process transfer", error: dbError.message });
+        return res.status(500).json({ message: "Failed to submit transfer", error: dbError.message });
       }
     } catch (error) {
       res.status(500).json({ message: "Transfer system error" });
@@ -110,9 +109,22 @@ export function setupTransferRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Validate PIN against real user data from Supabase
-      if (transferPin !== user.transferPin) {
-        return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
+      // PIN VALIDATION - Verify against stored PIN
+      if (!transferPin || String(transferPin).length !== 4) {
+        return res.status(401).json({ message: "Invalid PIN format - must be 4 digits" });
+      }
+
+      // Get fresh user data to verify PIN
+      const userForPin = await (storage as any).getUserByEmail(req.user!.email);
+      if (!userForPin || !userForPin.transferPin) {
+        return res.status(401).json({ message: "PIN not set on account" });
+      }
+
+      const storedPin = String(userForPin.transferPin).trim();
+      const providedPin = String(transferPin).trim();
+
+      if (storedPin !== providedPin) {
+        return res.status(401).json({ message: "Incorrect PIN - transfer denied" });
       }
 
       // Validate required fields
@@ -122,12 +134,33 @@ export function setupTransferRoutes(app: Express) {
 
       const transactionId = `INT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
-      res.json({ 
-        message: "International transfer submitted successfully", 
-        id: transactionId,
-        status: "processing",
-        amount: amount
-      });
+      // Create transaction with pending status
+      try {
+        const transaction = await (storage as any).createTransaction({
+          transactionId: transactionId,
+          fromUserId: user.id,
+          amount: amount,
+          currency: 'USD',
+          type: 'international_transfer',
+          status: 'pending',  // *** PENDING: AWAITING ADMIN REVIEW ***
+          recipientName: recipientName,
+          recipientCountry: recipientCountry,
+          bankName: bankName,
+          swiftCode: swiftCode,
+          transferPurpose: transferPurpose || 'international_transfer',
+          description: `International transfer to ${recipientName} in ${recipientCountry}`
+        });
+
+        res.json({ 
+          message: "International transfer submitted successfully", 
+          transactionId: transactionId,
+          status: "pending",
+          amount: amount,
+          note: "Your international transfer is pending admin review. Status will change to success or failed within 24 hours."
+        });
+      } catch (dbError: any) {
+        return res.status(500).json({ message: "Failed to submit international transfer", error: dbError.message });
+      }
     } catch (error) {
       res.status(500).json({ message: "International transfer system error" });
     }
