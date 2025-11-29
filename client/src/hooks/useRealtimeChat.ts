@@ -30,7 +30,7 @@ export function useRealtimeChat(
 
     // Connect WebSocket
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws?userId=${userId}`;
+    const wsUrl = `${protocol}//${window.location.host}/ws/chat?userId=${userId}`;
 
     try {
       wsRef.current = new WebSocket(wsUrl);

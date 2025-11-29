@@ -29,7 +29,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
     if (!isOpen) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
 
     try {
       wsRef.current = new WebSocket(wsUrl);

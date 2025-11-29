@@ -76,7 +76,7 @@ export default function AdminLiveChat() {
 
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
 
     wsRef.current = new WebSocket(wsUrl);
 
