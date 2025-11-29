@@ -527,13 +527,21 @@ export default function Dashboard() {
     queryFn: async () => {
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch('/api/admin/transactions');
+        const response = await authenticatedFetch('/api/transactions');
         if (!response.ok) {
           console.error('Failed to fetch transactions:', response.status);
           return [];
         }
         const data = await response.json();
-        return Array.isArray(data) ? data.slice(0, 10) : [];
+        return Array.isArray(data) ? data.slice(0, 10).map((txn: any) => ({
+          id: txn.id,
+          type: txn.type || 'transfer',
+          amount: txn.amount,
+          status: txn.status || 'pending',
+          recipient: txn.recipientName || 'Recipient',
+          timestamp: txn.createdAt || new Date().toISOString(),
+          referenceId: txn.referenceNumber || txn.id
+        })) : [];
       } catch (error: any) {
         console.error('Transaction fetch error:', error);
         return [];

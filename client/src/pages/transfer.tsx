@@ -62,6 +62,8 @@ export default function Transfer() {
   const [pinError, setPinError] = useState("");
   const [showPendingStatus, setShowPendingStatus] = useState(false);
   const [transferReference, setTransferReference] = useState("");
+  const [transferStatus, setTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
+  const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
   
   // International transfer details
   const [recipientDetails, setRecipientDetails] = useState({
@@ -229,10 +231,34 @@ export default function Transfer() {
         
         setShowPinVerification(false);
         setTransferPin("");
-        setTransferReference(result.transactionId || result.id || `WB-${Date.now()}`);
-        
-        // Show pending status instead of alert
+        const txnId = result.transactionId || result.id || `WB-${Date.now()}`;
+        setTransferReference(txnId);
+        setTransferStatus("processing");
         setShowPendingStatus(true);
+        
+        // Poll for transfer status updates (secret admin approval happens in background)
+        const interval = setInterval(async () => {
+          try {
+            const { authenticatedFetch } = await import('@/lib/queryClient');
+            const statusResponse = await authenticatedFetch(`/api/transfers/${txnId}/status`);
+            if (statusResponse.ok) {
+              const statusData = await statusResponse.json();
+              if (statusData.status === 'approved') {
+                setTransferStatus('success');
+                clearInterval(interval);
+              } else if (statusData.status === 'rejected') {
+                setTransferStatus('failed');
+                clearInterval(interval);
+              } else if (statusData.status === 'pending_approval') {
+                setTransferStatus('pending');
+              }
+            }
+          } catch (error) {
+            console.error('Failed to fetch transfer status:', error);
+          }
+        }, 3000); // Poll every 3 seconds
+        
+        setPollInterval(interval);
         
         // Reset form
         setAmount("");
@@ -275,8 +301,74 @@ export default function Transfer() {
     }
   };
 
-  // Show pending status interface
+  // Show transfer status interface
   if (showPendingStatus) {
+    const statusConfig = {
+      processing: {
+        icon: Clock,
+        bgColor: 'bg-blue-100',
+        iconColor: 'text-blue-600',
+        title: 'Processing',
+        message: 'Your transfer is being securely processed...',
+        statusText: 'Processing',
+        statusColor: 'text-blue-600',
+        steps: [
+          { done: true, text: 'Transfer request verified' },
+          { done: true, text: 'Security verification complete' },
+          { done: true, text: 'Submitted for compliance review' },
+          { done: false, text: 'Awaiting admin approval' }
+        ]
+      },
+      pending: {
+        icon: Clock,
+        bgColor: 'bg-orange-100',
+        iconColor: 'text-orange-600',
+        title: 'Pending Admin Review',
+        message: 'Your transfer is under review by our compliance team...',
+        statusText: 'Pending Review',
+        statusColor: 'text-orange-600',
+        steps: [
+          { done: true, text: 'Transfer request verified' },
+          { done: true, text: 'Security verification complete' },
+          { done: true, text: 'Submitted for compliance review' },
+          { done: true, text: 'Admin review in progress' }
+        ]
+      },
+      success: {
+        icon: CheckCircle,
+        bgColor: 'bg-green-100',
+        iconColor: 'text-green-600',
+        title: 'Transfer Approved & Processing',
+        message: 'Your transfer has been approved and is now being processed.',
+        statusText: 'Approved',
+        statusColor: 'text-green-600',
+        steps: [
+          { done: true, text: 'Transfer request verified' },
+          { done: true, text: 'Security verification complete' },
+          { done: true, text: 'Admin approval received' },
+          { done: true, text: 'Processing to recipient bank' }
+        ]
+      },
+      failed: {
+        icon: AlertCircle,
+        bgColor: 'bg-red-100',
+        iconColor: 'text-red-600',
+        title: 'Transfer Declined',
+        message: 'Your transfer has been declined by our compliance team.',
+        statusText: 'Declined',
+        statusColor: 'text-red-600',
+        steps: [
+          { done: true, text: 'Transfer request verified' },
+          { done: true, text: 'Security verification complete' },
+          { done: true, text: 'Admin review completed' },
+          { done: false, text: 'Transfer declined - contact support' }
+        ]
+      }
+    };
+
+    const config = statusConfig[transferStatus];
+    const Icon = config.icon;
+
     return (
       <div className="min-h-screen bg-gray-50">
         <Header user={userProfile as any} />
@@ -286,13 +378,11 @@ export default function Transfer() {
             <Card className="text-center">
               <CardContent className="pt-6">
                 <div className="mb-6">
-                  <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Clock className="w-10 h-10 text-orange-600 animate-spin" />
+                  <div className={`w-20 h-20 ${config.bgColor} rounded-full flex items-center justify-center mx-auto mb-4`}>
+                    <Icon className={`w-10 h-10 ${config.iconColor} ${transferStatus === 'processing' || transferStatus === 'pending' ? 'animate-spin' : ''}`} />
                   </div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Transfer Processing</h2>
-                  <p className="text-gray-600 mb-4">
-                    Your international transfer is being processed securely through our banking network.
-                  </p>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">{config.title}</h2>
+                  <p className="text-gray-600 mb-4">{config.message}</p>
                 </div>
                 
                 <div className="bg-gray-50 rounded-lg p-4 mb-6">
@@ -302,46 +392,47 @@ export default function Transfer() {
                   </div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-600">Status</span>
-                    <span className="text-sm font-medium text-orange-600">Processing</span>
+                    <span className={`text-sm font-medium ${config.statusColor}`}>{config.statusText}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Estimated Time</span>
-                    <span className="text-sm font-medium">1-3 business days</span>
+                    <span className="text-sm font-medium">{transferStatus === 'success' ? '1-3 business days' : 'Reviewing...'}</span>
                   </div>
                 </div>
                 
                 <div className="text-left space-y-3 mb-6">
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-                    <span className="text-sm text-gray-700">Transfer request verified</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full mr-3 animate-pulse"></div>
-                    <span className="text-sm text-gray-700">Compliance review in progress</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
-                    <span className="text-sm text-gray-500">Processing to recipient bank</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
-                    <span className="text-sm text-gray-500">Transfer completed</span>
-                  </div>
+                  {config.steps.map((step, idx) => (
+                    <div key={idx} className="flex items-center">
+                      <div className={`w-2 h-2 ${step.done ? 'bg-green-500' : 'bg-gray-300'} rounded-full mr-3 ${!step.done && transferStatus !== 'failed' ? 'animate-pulse' : ''}`}></div>
+                      <span className={`text-sm ${step.done ? 'text-gray-700' : 'text-gray-500'}`}>{step.text}</span>
+                    </div>
+                  ))}
                 </div>
                 
                 <div className="flex space-x-3">
                   <Button 
                     variant="outline" 
                     className="flex-1"
-                    onClick={() => setShowPendingStatus(false)}
+                    onClick={() => {
+                      setShowPendingStatus(false);
+                      if (pollInterval) clearInterval(pollInterval);
+                    }}
                   >
                     New Transfer
                   </Button>
-                  <Button 
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Track Transfer
-                  </Button>
+                  {transferStatus === 'failed' && (
+                    <Button 
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => {
+                        toast({
+                          title: 'Support',
+                          description: 'Opening live chat...',
+                        });
+                      }}
+                    >
+                      Contact Support
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
