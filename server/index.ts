@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerFixedRoutes } from "./fix-routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { WebSocketServer } from "ws";
+import { setupLiveChatWebSocket } from "./supabase-live-chat";
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -62,6 +64,10 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerFixedRoutes(app);
+
+  // Setup WebSocket for live chat - CRITICAL FOR REALTIME FEATURES
+  const wss = new WebSocketServer({ server });
+  setupLiveChatWebSocket(wss);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

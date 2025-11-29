@@ -23,12 +23,18 @@ import { errorHandler, notFoundHandler, asyncHandler, createApiError } from './e
 import { runStartupChecks } from './startup-checks';
 import * as bcrypt from 'bcryptjs';
 
+// Import LiveChat setup
+import { registerLiveChatRoutes } from './supabase-live-chat';
+
 // Fixed route handlers with proper typing
 export async function registerFixedRoutes(app: Express): Promise<Server> {
   logConfiguration();
   
   // CRITICAL: Run startup sanity checks to verify database functions
   await runStartupChecks();
+  
+  // Setup live chat routes - REALTIME SUPPORT
+  await registerLiveChatRoutes(app);
   
   // Runtime config endpoint - serves Supabase credentials to frontend
   app.get('/api/config', (req: Request, res: Response) => {
@@ -2237,10 +2243,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 }
 
 // ==================== LIVE CHAT ENDPOINTS ====================
-import { setupLiveChatWebSocket, getChatHistory, getActiveSessions, createTicketFromChat } from './supabase-live-chat';
-import { supabase } from './supabase-public-storage';
-
-export function registerLiveChatRoutes(app: Express) {
+export async function registerLiveChatRoutes(app: Express) {
+  const { getChatHistory, getActiveSessions, createTicketFromChat } = await import('./supabase-live-chat');
+  const { supabase } = await import('./supabase-public-storage');
+  
   // Get chat history
   app.get('/api/chat/history', getChatHistory);
 
