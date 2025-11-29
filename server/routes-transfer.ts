@@ -317,3 +317,35 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 }
+// ADMIN: Approve or reject transfers
+app.patch('/api/transfers/:id/approve', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status, adminNotes } = req.body;
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const transaction = await (storage as any).updateTransaction(id, {
+      status: status === 'approved' ? 'completed' : 'failed',
+      adminNotes: adminNotes || '',
+      approvedAt: new Date(),
+      approvedBy: req.user?.id || 0
+    });
+
+    res.json({ message: `Transfer ${status}`, transaction });
+  } catch (error: any) {
+    res.status(500).json({ message: "Admin approval failed", error: error.message });
+  }
+});
+
+// GET pending transfers for admin
+app.get('/api/transfers/pending', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const transfers = await (storage as any).getTransactionsByStatus('pending');
+    res.json(transfers);
+  } catch (error: any) {
+    res.status(500).json({ message: "Failed to fetch pending transfers" });
+  }
+});
