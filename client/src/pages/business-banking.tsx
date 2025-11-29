@@ -81,10 +81,10 @@ export default function BusinessBanking() {
   ];
 
   const globalCapabilities = [
-    { metric: "50+", label: "Countries Served", icon: Globe },
-    { metric: "25", label: "Currencies Supported", icon: DollarSign },
-    { metric: "10,000+", label: "Corporate Clients", icon: Users },
-    { metric: "$2.5T", label: "Assets Under Management", icon: TrendingUp }
+    { metric: "50+", label: t('countries_served'), icon: Globe },
+    { metric: "25", label: t('currencies_supported'), icon: DollarSign },
+    { metric: "10,000+", label: t('corporate_clients_label'), icon: Users },
+    { metric: "$2.5T", label: t('assets_under_mgmt_label'), icon: TrendingUp }
   ];
 
   return (
