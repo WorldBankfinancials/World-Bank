@@ -160,7 +160,7 @@ export default function BankingServices() {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full mt-4" variant="outline">Learn More</Button>
+                  <Button className="w-full mt-4" variant="outline">{t('learn_more') || 'Learn More'}</Button>
                 </CardContent>
               </Card>
             ))}
@@ -187,7 +187,7 @@ export default function BankingServices() {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full mt-4" variant="outline">Learn More</Button>
+                  <Button className="w-full mt-4" variant="outline">{t('learn_more') || 'Learn More'}</Button>
                 </CardContent>
               </Card>
             ))}
@@ -213,7 +213,7 @@ export default function BankingServices() {
                       </Badge>
                     ))}
                   </div>
-                  <Button className="w-full mt-4" variant="outline">Explore Options</Button>
+                  <Button className="w-full mt-4" variant="outline">{t('explore_options') || 'Explore Options'}</Button>
                 </CardContent>
               </Card>
             ))}

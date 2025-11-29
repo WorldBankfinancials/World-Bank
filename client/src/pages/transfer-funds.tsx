@@ -261,13 +261,13 @@ export default function TransferFunds() {
         {/* Transfer Form */}
         <Card>
           <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-            <CardTitle>Transfer Details</CardTitle>
+            <CardTitle>{t('transfer_details')}</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Amount Section */}
               <div className="bg-blue-50 p-5 rounded-lg border-2 border-blue-200">
-                <Label htmlFor="amount" className="text-lg font-bold text-blue-900">Transfer Amount (USD) *</Label>
+                <Label htmlFor="amount" className="text-lg font-bold text-blue-900">{t('transfer_amount') || 'Transfer Amount (USD)'} *</Label>
                 <Input 
                   id="amount"
                   type="number"
@@ -284,7 +284,7 @@ export default function TransferFunds() {
 
               {/* Recipient Information */}
               <div className="border-t pt-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Recipient Information</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">{t('recipient_information') || 'Recipient Information'}</h3>
                 
                 <div className="space-y-4">
                   <div>
@@ -350,7 +350,7 @@ export default function TransferFunds() {
 
               {/* Bank Details */}
               <div className="border-t pt-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Bank Information</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">{t('bank_information') || 'Bank Information'}</h3>
                 
                 <div className="space-y-4">
                   <div>

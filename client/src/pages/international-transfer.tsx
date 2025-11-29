@@ -241,9 +241,9 @@ export default function InternationalTransfer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Enhanced Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">International Money Transfer</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">{t('international_money_transfer')}</h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-6">
-            Send money to over 190 countries with competitive exchange rates and ultra-fast delivery
+            {t('send_money_description') || 'Send money to over 190 countries with competitive exchange rates and ultra-fast delivery'}
           </p>
           <div className="flex justify-center flex-wrap gap-3">
             <Badge variant="outline" className="flex items-center">
