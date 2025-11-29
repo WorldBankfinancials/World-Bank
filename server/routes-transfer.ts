@@ -56,23 +56,19 @@ export function setupTransferRoutes(app: Express) {
 
       // Save transaction to database with pending status
       try {
-        const now = new Date();
-        const transactionData = {
-          transaction_id: transactionId,
-          from_user_id: user.id,
+        const transactionData: any = {
+          fromUserId: user.id,
           amount: String(amount),
           currency: 'USD',
           type: 'transfer',
           status: 'pending',
           description: `Transfer to ${recipientName}`,
-          recipient_name: recipientName,
-          recipient_account: recipientAccount,
-          recipient_country: recipientCountry,
-          transfer_purpose: purpose || 'transfer',
-          created_at: now,
-          updated_at: now
+          recipientName: recipientName,
+          recipientAccount: recipientAccount,
+          recipientCountry: recipientCountry,
+          transferPurpose: purpose || 'transfer'
         };
-        const transaction = await (storage as any).createTransaction(transactionData as any);
+        const transaction = await storage.createTransaction(transactionData);
 
         // Return pending response - transaction submitted
         res.json({ 
