@@ -367,6 +367,45 @@ const translations = {
     'refund_action': 'Refund',
     'correction_action': 'Correction',
 
+    // Add Money Methods
+    'debit_card': 'Debit Card',
+    'debit_card_desc': 'Instant transfer from your debit card',
+    'bank_transfer': 'Bank Transfer',
+    'bank_transfer_desc': 'Transfer from your bank account',
+    'cash_deposit': 'Cash Deposit',
+    'cash_deposit_desc': 'Deposit cash at World Bank branches',
+    'mobile_money': 'Mobile Money',
+    'mobile_money_desc': 'Transfer from mobile money services',
+    'free': 'Free',
+    'instant': 'Instant',
+    'one_to_three_business_days': '1-3 business days',
+    'one_point_five_percent': '1.5%',
+    'add_money': 'Add Money',
+    'add_funds_to_account': 'Add funds to your World Bank account',
+    'select_amount': 'Select Amount',
+    'enter_custom_amount': 'Enter custom amount',
+    'missing_information': 'Missing Information',
+    'select_payment_and_amount': 'Please select a payment method and enter an amount.',
+    'add_money_success': 'Successfully added',
+    'add_money_via': 'via',
+    'add_money_failed': 'Failed to add money. Please try again.',
+    'select_payment_method': 'Select Payment Method',
+    'enter_amount': 'Enter Amount',
+
+    // Industries
+    'industry_technology': 'Technology',
+    'technology_desc': 'Fintech and software companies',
+    'industry_healthcare': 'Healthcare',
+    'healthcare_desc': 'Medical and pharmaceutical',
+    'industry_manufacturing': 'Manufacturing',
+    'manufacturing_desc': 'Industrial and production',
+    'industry_real_estate': 'Real Estate',
+    'real_estate_desc': 'Property development and investment',
+    'industry_energy': 'Energy',
+    'energy_desc': 'Oil, gas and renewable energy',
+    'industry_retail': 'Retail',
+    'retail_desc': 'E-commerce and traditional retail',
+
     // Support & Help
     'help_center': 'Help Center',
     'contact_us': 'Contact Us',
@@ -745,6 +784,17 @@ const translations = {
     'learn_more': '了解更多',
     'explore_options': '探索选项',
     'comprehensive_solutions': '为在全球范围内开展业务的个人和企业设计的全面金融解决方案',
+
+    // Admin Tools
+    'create_transaction': '创建交易',
+    'create_transactions_description': '为客户账户手动创建交易',
+    'manual_adjustment': '手动调整',
+    'deposit_action': '存款',
+    'withdrawal_action': '取款',
+    'interest_action': '利息',
+    'bonus_action': '奖金',
+    'refund_action': '退款',
+    'correction_action': '更正',
 
     // Support & Help
     'help_center': '帮助中心',

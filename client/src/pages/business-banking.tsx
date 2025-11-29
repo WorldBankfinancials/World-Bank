@@ -72,12 +72,12 @@ export default function BusinessBanking() {
   ];
 
   const industryExpertise = [
-    { name: "Technology", icon: "💻", description: "Fintech and software companies" },
-    { name: "Healthcare", icon: "🏥", description: "Medical and pharmaceutical" },
-    { name: "Manufacturing", icon: "🏭", description: "Industrial and production" },
-    { name: "Real Estate", icon: "🏢", description: "Property development and investment" },
-    { name: "Energy", icon: "⚡", description: "Oil, gas and renewable energy" },
-    { name: "Retail", icon: "🛍️", description: "E-commerce and traditional retail" }
+    { name: t('industry_technology'), icon: "💻", description: t('technology_desc') },
+    { name: t('industry_healthcare'), icon: "🏥", description: t('healthcare_desc') },
+    { name: t('industry_manufacturing'), icon: "🏭", description: t('manufacturing_desc') },
+    { name: t('industry_real_estate'), icon: "🏢", description: t('real_estate_desc') },
+    { name: t('industry_energy'), icon: "⚡", description: t('energy_desc') },
+    { name: t('industry_retail'), icon: "🛍️", description: t('retail_desc') }
   ];
 
   const globalCapabilities = [

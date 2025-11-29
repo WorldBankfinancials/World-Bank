@@ -35,43 +35,43 @@ export default function AddMoney() {
   const addMoneyMethods = [
     {
       id: "debit_card",
-      name: "Debit Card",
-      description: "Instant transfer from your debit card",
+      name: t('debit_card'),
+      description: t('debit_card_desc'),
       icon: CreditCard,
-      fee: "Free",
-      time: "Instant",
+      fee: t('free'),
+      time: t('instant'),
     },
     {
       id: "bank_transfer",
-      name: "Bank Transfer",
-      description: "Transfer from your bank account",
+      name: t('bank_transfer'),
+      description: t('bank_transfer_desc'),
       icon: Building,
-      fee: "Free",
-      time: "1-3 business days",
+      fee: t('free'),
+      time: t('one_to_three_business_days'),
     },
     {
       id: "cash_deposit",
-      name: "Cash Deposit",
-      description: "Deposit cash at World Bank branches",
+      name: t('cash_deposit'),
+      description: t('cash_deposit_desc'),
       icon: Banknote,
-      fee: "Free",
-      time: "Instant",
+      fee: t('free'),
+      time: t('instant'),
     },
     {
       id: "mobile_money",
-      name: "Mobile Money",
-      description: "Transfer from mobile money services",
+      name: t('mobile_money'),
+      description: t('mobile_money_desc'),
       icon: Smartphone,
-      fee: "1.5%",
-      time: "Instant",
+      fee: t('one_point_five_percent'),
+      time: t('instant'),
     }
   ];
 
   const handleAddMoney = async () => {
     if (!selectedMethod || !amount) {
       toast({
-        title: "Missing Information",
-        description: "Please select a payment method and enter an amount.",
+        title: t('missing_information'),
+        description: t('select_payment_and_amount'),
         variant: "destructive",
       });
       return;
@@ -89,15 +89,15 @@ export default function AddMoney() {
       if (!response.ok) throw new Error('Failed to add money');
 
       toast({
-        title: "Success",
-        description: `Successfully added $${amount} via ${selectedMethod}`,
+        title: t('success'),
+        description: `${t('add_money_success')} $${amount} ${t('add_money_via')} ${selectedMethod}`,
       });
       setAmount("");
       setSelectedMethod("");
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to add money. Please try again.",
+        title: t('error'),
+        description: t('add_money_failed'),
         variant: "destructive",
       });
     } finally {
@@ -111,21 +111,21 @@ export default function AddMoney() {
       <div className="px-4 py-6 pb-20">
         <div className="max-w-2xl mx-auto space-y-6">
           <div>
-            <h1 className="text-2xl font-bold mb-2">Add Money</h1>
-            <p className="text-gray-600">Add funds to your World Bank account</p>
+            <h1 className="text-2xl font-bold mb-2">{t('add_money')}</h1>
+            <p className="text-gray-600">{t('add_funds_to_account')}</p>
           </div>
 
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Wallet className="w-5 h-5 text-blue-600" />
-                <span>Select Amount</span>
+                <span>{t('select_amount')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <Input
                 type="number"
-                placeholder="Enter custom amount"
+                placeholder={t('enter_custom_amount')}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="text-lg"
