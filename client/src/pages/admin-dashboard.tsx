@@ -225,13 +225,13 @@ export default function AdminDashboard() {
       <Header user={{
         id: 1,
         username: "admin",
-        firstName: "System",
-        lastName: "Administrator",
+        firstName: "World",
+        lastName: "Bank",
         email: "admin@worldbank.com",
         password: "",
         accountNumber: "ADMIN-001",
         accountId: 1,
-        profession: "System Administrator",
+        profession: "Banking Administrator",
         isVerified: true,
         role: "admin"
       } as any} />

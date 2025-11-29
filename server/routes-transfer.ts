@@ -68,8 +68,6 @@ export function setupTransferRoutes(app: Express) {
           recipient_name: recipientName,
           recipient_account: recipientAccount,
           recipient_country: recipientCountry,
-          ...(bankName && { bank_name: bankName }),
-          ...(swiftCode && { swift_code: swiftCode }),
           transfer_purpose: purpose || 'transfer',
           created_at: now,
           updated_at: now
@@ -151,8 +149,6 @@ export function setupTransferRoutes(app: Express) {
           description: `International transfer to ${recipientName} in ${recipientCountry}`,
           recipient_name: recipientName,
           recipient_country: recipientCountry,
-          ...(bankName && { bank_name: bankName }),
-          ...(swiftCode && { swift_code: swiftCode }),
           transfer_purpose: transferPurpose || 'international_transfer',
           created_at: now,
           updated_at: now
