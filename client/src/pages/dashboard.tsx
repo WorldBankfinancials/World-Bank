@@ -729,9 +729,9 @@ export default function Dashboard() {
                     <div className="flex items-center space-x-3">
                       <Avatar size={64} />
                       <div className="flex-1">
-                        <div className="font-semibold text-gray-900">Liu Wei</div>
-                        <div className="text-sm text-gray-600">Marine Engineer</div>
-                        <div className="text-sm text-gray-600">bankmanagerworld5@gmail.com</div>
+                        <div className="font-semibold text-gray-900">{userProfile?.fullName || 'Account Holder'}</div>
+                        <div className="text-sm text-gray-600">{userProfile?.profession || 'Customer'}</div>
+                        <div className="text-sm text-gray-600">{userProfile?.email || 'Loading...'}</div>
                         <div className="flex items-center space-x-2 mt-1">
                           <Badge variant="default" className="text-xs bg-green-100 text-green-800 flex items-center space-x-1">
                             <Check className="w-3 h-3" />

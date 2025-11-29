@@ -17,7 +17,8 @@ export function setupTransferRoutes(app: Express) {
         recipientCountry,
         bankName,
         swiftCode,
-        transferPin
+        transferPin,
+        purpose
       } = req.body;
 
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
@@ -27,14 +28,21 @@ export function setupTransferRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Validate PIN against real user data from Supabase
-      if (transferPin !== user.transferPin) {
-        return res.status(400).json({ message: "Invalid transfer PIN. Please check your PIN and try again." });
+      // Validate PIN - convert both to strings for comparison
+      const pinToVerify = String(transferPin).trim();
+      const userPin = String(user.transferPin || "").trim();
+      
+      if (!pinToVerify || pinToVerify.length < 4) {
+        return res.status(400).json({ message: "Invalid PIN provided" });
+      }
+      
+      if (pinToVerify !== userPin) {
+        return res.status(400).json({ message: "Incorrect transfer PIN" });
       }
 
       // Validate required fields
       if (!amount || !recipientName || !recipientAccount) {
-        return res.status(400).json({ message: "Missing required transfer details" });
+        return res.status(400).json({ message: "Missing required transfer details: amount, recipient name, and account number" });
       }
 
       const transactionId = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;

@@ -128,12 +128,9 @@ export default function TransferFunds() {
           transferType: transferType,
           recipientName: formData.recipientName,
           recipientCountry: formData.recipientCountry,
-          recipientAddress: formData.recipientAddress,
-          recipientCity: formData.recipientCity,
+          recipientAccount: formData.accountNumber,
           bankName: formData.bankName,
-          bankAddress: formData.bankAddress,
           swiftCode: formData.swiftCode,
-          accountNumber: formData.accountNumber,
           routingNumber: formData.routingNumber,
           purpose: formData.purpose,
           reference: formData.reference,
@@ -264,7 +261,7 @@ export default function TransferFunds() {
         {/* Transfer Form */}
         <Card>
           <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-            <CardTitle>Enter Complete Transfer Details</CardTitle>
+            <CardTitle>Transfer Details</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
