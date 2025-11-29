@@ -120,9 +120,9 @@ export default function BankingServices() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold wb-dark mb-4">Banking Services</h1>
+          <h1 className="text-4xl font-bold wb-dark mb-4">{t('banking_services')}</h1>
           <p className="text-xl text-wb-text max-w-3xl mx-auto">
-            Comprehensive financial solutions designed for individuals and businesses operating globally
+            {t('comprehensive_solutions') || 'Comprehensive financial solutions designed for individuals and businesses operating globally'}
           </p>
           <div className="flex justify-center mt-6">
             <Badge variant="outline" className="mr-2">
@@ -142,7 +142,7 @@ export default function BankingServices() {
 
         {/* Personal Banking */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold wb-dark mb-6">Personal Banking</h2>
+          <h2 className="text-2xl font-bold wb-dark mb-6">{t('personal_banking')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {personalServices.map((service, index) => (
               <Card key={index} className="hover:shadow-lg transition-shadow">
@@ -169,7 +169,7 @@ export default function BankingServices() {
 
         {/* Business Banking */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold wb-dark mb-6">Business Banking</h2>
+          <h2 className="text-2xl font-bold wb-dark mb-6">{t('business_banking')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {businessServices.map((service, index) => (
               <Card key={index} className="hover:shadow-lg transition-shadow">
@@ -196,7 +196,7 @@ export default function BankingServices() {
 
         {/* Specialty Services */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold wb-dark mb-6">Specialty Services</h2>
+          <h2 className="text-2xl font-bold wb-dark mb-6">{t('specialty_services')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {specialtyServices.map((service, index) => (
               <Card key={index} className="hover:shadow-lg transition-shadow">
@@ -225,7 +225,7 @@ export default function BankingServices() {
           <CardHeader>
             <CardTitle className="text-2xl flex items-center">
               <Globe className="w-6 h-6 mr-2" />
-              Global Infrastructure
+              {t('global_infrastructure') || 'Global Infrastructure'}
             </CardTitle>
           </CardHeader>
           <CardContent>
