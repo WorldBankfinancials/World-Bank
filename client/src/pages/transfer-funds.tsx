@@ -139,18 +139,10 @@ export default function TransferFunds() {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        if (result.status === 'pending') {
-          toast({
-            title: '✓ Transfer Submitted',
-            description: `Transfer verified with PIN. Status: PENDING. Transaction ID: ${result.transactionId}. Admin will review within 24 hours.`,
-          });
-        } else {
-          toast({
-            title: 'Transfer Submitted',
-            description: result.message || 'Transfer submitted successfully',
-          });
-        }
+        toast({
+          title: '✓ Transfer Submitted',
+          description: 'Your transfer has been submitted successfully.',
+        });
         form.reset();
         setShowPinModal(false);
         setTransferPin("");
@@ -159,7 +151,7 @@ export default function TransferFunds() {
         const errorData = await response.json().catch(() => ({}));
         toast({
           title: 'Transfer Failed',
-          description: errorData.message || 'Failed to process transfer. Please check PIN and try again.',
+          description: errorData.message || 'Failed to process transfer. Please check your details and try again.',
           variant: 'destructive'
         });
       }
