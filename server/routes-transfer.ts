@@ -22,7 +22,7 @@ export function setupTransferRoutes(app: Express) {
       } = req.body;
 
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -39,7 +39,7 @@ export function setupTransferRoutes(app: Express) {
       }
 
       // Get fresh user data to verify PIN
-      const userForPin = await (storage as any).getUserByEmail(req.user!.email);
+      const userForPin = await storage.getUserByEmail(req.user!.email);
       if (!userForPin || !userForPin.transferPin) {
         return res.status(401).json({ message: "PIN not set on account" });
       }
@@ -101,7 +101,7 @@ export function setupTransferRoutes(app: Express) {
       } = req.body;
 
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -113,7 +113,7 @@ export function setupTransferRoutes(app: Express) {
       }
 
       // Get fresh user data to verify PIN
-      const userForPin = await (storage as any).getUserByEmail(req.user!.email);
+      const userForPin = await storage.getUserByEmail(req.user!.email);
       if (!userForPin || !userForPin.transferPin) {
         return res.status(401).json({ message: "PIN not set on account" });
       }
@@ -134,22 +134,18 @@ export function setupTransferRoutes(app: Express) {
 
       // Create transaction with pending status
       try {
-        const now = new Date();
-        const transactionData = {
-          transaction_id: transactionId,
-          from_user_id: user.id,
+        const transactionData: any = {
+          fromUserId: user.id,
           amount: String(amount),
           currency: 'USD',
           type: 'international_transfer',
           status: 'pending',
           description: `International transfer to ${recipientName} in ${recipientCountry}`,
-          recipient_name: recipientName,
-          recipient_country: recipientCountry,
-          transfer_purpose: transferPurpose || 'international_transfer',
-          created_at: now,
-          updated_at: now
+          recipientName: recipientName,
+          recipientCountry: recipientCountry,
+          transferPurpose: transferPurpose || 'international_transfer'
         };
-        const transaction = await (storage as any).createTransaction(transactionData as any);
+        const transaction = await storage.createTransaction(transactionData);
 
         res.json({ 
           message: "International transfer submitted successfully", 
@@ -170,7 +166,7 @@ export function setupTransferRoutes(app: Express) {
   app.post('/api/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -204,7 +200,6 @@ export function setupTransferRoutes(app: Express) {
 
       // Create transaction record for admin approval (all transfers require approval)
       const transaction = await storage.createTransaction({
-        createdAt: new Date(),
         fromAccountId: fromAccount.id,
         type: transferType || "international_transfer",
         amount: amount.toString(),
@@ -232,7 +227,7 @@ export function setupTransferRoutes(app: Express) {
       const { notes } = req.body;
       
       // SECURITY: Get admin user from authenticated JWT
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 1;
 
       const transaction = await storage.updateTransactionStatus(transactionId, 'approved', adminId, notes);
@@ -261,7 +256,7 @@ export function setupTransferRoutes(app: Express) {
       const { notes } = req.body;
       
       // SECURITY: Get admin user from authenticated JWT
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 1;
 
       const transaction = await storage.updateTransactionStatus(transactionId, 'rejected', adminId, notes);
