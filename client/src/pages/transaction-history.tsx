@@ -180,8 +180,8 @@ export default function TransactionHistory() {
                 {filteredTransactions.length === 0 ? (
                   <p className="text-center text-gray-500 py-8">No transactions found</p>
                 ) : (
-                  filteredTransactions.map(tx => (
-                    <div key={tx.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                  filteredTransactions.map((tx, idx) => (
+                    <div key={`${tx.id}-${idx}-${tx.date}`} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                       <div className="flex items-center space-x-3 flex-1">
                         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                           {tx.type === 'credit' ? (

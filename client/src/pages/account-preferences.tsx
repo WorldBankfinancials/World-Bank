@@ -60,7 +60,7 @@ export default function AccountPreferences() {
       if (response.ok) {
         toast({
           title: 'Preferences Saved',
-          description: t('preferences_saved') || 'Preferences saved successfully.',
+          description: t('preferences_saved'),
         });
       } else {
         toast({
@@ -117,10 +117,10 @@ export default function AccountPreferences() {
         <div className="max-w-4xl mx-auto">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {t('account_preferences') || 'Account Preferences'}
+              {t('account_preferences')}
             </h1>
             <p className="text-gray-600">
-              {t('manage_account_settings') || 'Manage your account settings and preferences'}
+              {t('manage_account_settings')}
             </p>
           </div>
 
@@ -130,7 +130,7 @@ export default function AccountPreferences() {
               <div className="flex items-center space-x-3 mb-4">
                 <Bell className="w-5 h-5 text-blue-600" />
                 <h2 className="text-lg font-semibold text-gray-900">
-                  {t('notification_preferences') || 'Notification Preferences'}
+                  {t('notification_preferences')}
                 </h2>
               </div>
               
@@ -139,7 +139,7 @@ export default function AccountPreferences() {
                   <div className="flex items-center space-x-3">
                     <Mail className="w-4 h-4 text-gray-400" />
                     <span className="text-sm text-gray-700">
-                      {t('email_notifications') || 'Email Notifications'}
+                      {t('email_notifications')}
                     </span>
                   </div>
                   <button
@@ -158,7 +158,7 @@ export default function AccountPreferences() {
                   <div className="flex items-center space-x-3">
                     <MessageSquare className="w-4 h-4 text-gray-400" />
                     <span className="text-sm text-gray-700">
-                      {t('sms_notifications') || 'SMS Notifications'}
+                      {t('sms_notifications')}
                     </span>
                   </div>
                   <button
@@ -177,7 +177,7 @@ export default function AccountPreferences() {
                   <div className="flex items-center space-x-3">
                     <Smartphone className="w-4 h-4 text-gray-400" />
                     <span className="text-sm text-gray-700">
-                      {t('push_notifications') || 'Push Notifications'}
+                      {t('push_notifications')}
                     </span>
                   </div>
                   <button
@@ -199,7 +199,7 @@ export default function AccountPreferences() {
               <div className="flex items-center space-x-3 mb-4">
                 <Shield className="w-5 h-5 text-blue-600" />
                 <h2 className="text-lg font-semibold text-gray-900">
-                  {t('privacy_settings') || 'Privacy Settings'}
+                  {t('privacy_settings')}
                 </h2>
               </div>
               
@@ -212,7 +212,7 @@ export default function AccountPreferences() {
                       <EyeOff className="w-4 h-4 text-gray-400" />
                     )}
                     <span className="text-sm text-gray-700">
-                      {t('show_balance') || 'Show Account Balance'}
+                      {t('show_balance')}
                     </span>
                   </div>
                   <button
@@ -231,7 +231,7 @@ export default function AccountPreferences() {
                   <div className="flex items-center space-x-3">
                     <Shield className="w-4 h-4 text-gray-400" />
                     <span className="text-sm text-gray-700">
-                      {t('two_factor_auth') || 'Two-Factor Authentication'}
+                      {t('two_factor_auth')}
                     </span>
                   </div>
                   <button
@@ -253,14 +253,14 @@ export default function AccountPreferences() {
               <div className="flex items-center space-x-3 mb-4">
                 <Settings className="w-5 h-5 text-blue-600" />
                 <h2 className="text-lg font-semibold text-gray-900">
-                  {t('display_preferences') || 'Display Preferences'}
+                  {t('display_preferences')}
                 </h2>
               </div>
               
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('preferred_currency') || 'Preferred Currency'}
+                    {t('preferred_currency')}
                   </label>
                   <select 
                     value={preferences.display.currency}
@@ -280,7 +280,7 @@ export default function AccountPreferences() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('language') || 'Language'}
+                    {t('language')}
                   </label>
                   <select 
                     value={preferences.display.language}
@@ -304,14 +304,14 @@ export default function AccountPreferences() {
               <div className="flex items-center space-x-3 mb-4">
                 <Shield className="w-5 h-5 text-blue-600" />
                 <h2 className="text-lg font-semibold text-gray-900">
-                  {t('security_settings') || 'Security Settings'}
+                  {t('security_settings')}
                 </h2>
               </div>
               
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {t('session_timeout') || 'Session Timeout (minutes)'}
+                    {t('session_timeout')}
                   </label>
                   <select 
                     value={preferences.security.sessionTimeout}
@@ -332,7 +332,7 @@ export default function AccountPreferences() {
                   <div className="flex items-center space-x-3">
                     <Smartphone className="w-4 h-4 text-gray-400" />
                     <span className="text-sm text-gray-700">
-                      {t('biometric_auth') || 'Biometric Authentication'}
+                      {t('biometric_auth')}
                     </span>
                   </div>
                   <button
@@ -357,7 +357,7 @@ export default function AccountPreferences() {
               className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Save className="w-4 h-4" />
-              <span>{t('save_preferences') || 'Save Preferences'}</span>
+              <span>{t('save_preferences')}</span>
             </button>
           </div>
         </div>

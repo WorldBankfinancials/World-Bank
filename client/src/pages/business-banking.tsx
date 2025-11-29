@@ -156,7 +156,7 @@ export default function BusinessBanking() {
                     ))}
                   </div>
                   <Button variant="outline" className="w-full">
-                    {t('learn_more') || 'Learn More'}
+                    {t('learn_more')}
                   </Button>
                 </CardContent>
               </Card>
