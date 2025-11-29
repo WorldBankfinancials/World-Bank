@@ -398,6 +398,12 @@ const translations = {
     'retail_desc': 'E-commerce and traditional retail',
     'account_active': 'Active',
     'account_inactive': 'Inactive',
+    'status_pending': 'Pending',
+    'status_approved': 'Approved',
+    'status_rejected': 'Rejected',
+    'status_processing': 'Processing',
+    'status_completed': 'Completed',
+    'status_failed': 'Failed',
 
     // Support & Help
     'help_center': 'Help Center',
@@ -823,6 +829,12 @@ const translations = {
     'retail_desc': '电子商务和传统零售',
     'account_active': '活跃',
     'account_inactive': '不活跃',
+    'status_pending': '待处理',
+    'status_approved': '已批准',
+    'status_rejected': '已拒绝',
+    'status_processing': '处理中',
+    'status_completed': '已完成',
+    'status_failed': '失败',
 
     // Support & Help
     'help_center': '帮助中心',

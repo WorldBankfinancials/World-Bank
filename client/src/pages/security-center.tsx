@@ -144,7 +144,7 @@ export default function SecurityCenter() {
                     </div>
                     <div className="flex items-center space-x-3">
                       <Badge variant={feature.enabled ? "default" : "secondary"}>
-                        {feature.enabled ? "Active" : "Inactive"}
+                        {feature.enabled ? t('account_active') : t('account_inactive')}
                       </Badge>
                       <Switch checked={feature.enabled} />
                     </div>

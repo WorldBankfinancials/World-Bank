@@ -188,7 +188,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
                   <span className={`text-xs px-2 py-1 rounded ${
                     account.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}>
-                    {account.isActive ? 'Active' : 'Inactive'}
+                    {account.isActive ? t('account_active') : t('account_inactive')}
                   </span>
                 </div>
                 <div className="flex gap-2">
@@ -296,7 +296,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
               </div>
 
               <div>
-                <Label>Active</Label>
+                <Label>{t('account_active')}</Label>
                 <Select value={editingAccount.isActive ? "true" : "false"} onValueChange={(value) =>
                   setEditingAccount({ ...editingAccount, isActive: value === "true" })
                 }>
@@ -304,8 +304,8 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="true">Active</SelectItem>
-                    <SelectItem value="false">Inactive</SelectItem>
+                    <SelectItem value="true">{t('account_active')}</SelectItem>
+                    <SelectItem value="false">{t('account_inactive')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -280,7 +280,7 @@ export default function EnhancedAdmin() {
                             <div>
                               <p className="text-sm text-gray-600">Status</p>
                               <Badge variant={account.isActive ? "default" : "secondary"}>
-                                {account.isActive ? "Active" : "Inactive"}
+                                {account.isActive ? t('account_active') : t('account_inactive')}
                               </Badge>
                             </div>
                           </div>
