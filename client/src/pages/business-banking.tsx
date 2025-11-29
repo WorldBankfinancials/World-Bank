@@ -43,31 +43,31 @@ export default function BusinessBanking() {
   const businessServices = [
     {
       icon: Building2,
-      title: "Business Accounts",
-      description: "Tailored accounts for businesses of all sizes",
-      features: ["Multi-currency support", "Bulk payments", "API integration", "Dedicated relationship manager"],
-      pricing: "Starting from $25/month"
+      title: t('business_accounts'),
+      description: t('tailored_accounts'),
+      features: [t('multi_currency_accounts'), t('bulk_payments'), t('api_integration'), t('dedicated_manager')],
+      pricing: t('starting_25_month')
     },
     {
       icon: CreditCard,
-      title: "Corporate Cards",
-      description: "Expense management and corporate credit solutions",
-      features: ["Employee cards", "Expense tracking", "Spending controls", "Rewards program"],
-      pricing: "No annual fee"
+      title: t('corporate_cards'),
+      description: t('expense_management'),
+      features: [t('employee_cards'), t('expense_tracking'), t('spending_controls'), t('rewards_program')],
+      pricing: t('no_annual_fee')
     },
     {
       icon: ArrowRightLeft,
-      title: "Trade Finance",
-      description: "International trade financing solutions",
-      features: ["Letters of credit", "Documentary collections", "Trade guarantees", "Supply chain finance"],
-      pricing: "Competitive rates"
+      title: t('trade_finance_title'),
+      description: t('international_trade_financing'),
+      features: [t('letters_of_credit'), t('documentary_collections'), t('trade_guarantees'), t('supply_chain')],
+      pricing: t('competitive_rates')
     },
     {
       icon: Calculator,
-      title: "Treasury Services",
-      description: "Cash management and liquidity solutions",
-      features: ["Cash pooling", "Sweep accounts", "FX services", "Investment management"],
-      pricing: "Custom pricing"
+      title: t('treasury_services_title'),
+      description: t('cash_management_desc'),
+      features: [t('cash_pooling'), t('sweep_accounts'), t('fx_services'), t('investment_management')],
+      pricing: t('custom_pricing')
     }
   ];
 
@@ -94,18 +94,18 @@ export default function BusinessBanking() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Business Banking Solutions</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">{t('business_banking_title')}</h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-6">
-            {t('comprehensive_solutions') || 'Comprehensive financial solutions designed to help your business grow globally'}
+            {t('comprehensive_solutions')}
           </p>
           <div className="flex justify-center space-x-3">
             <Button className="bg-blue-600 text-white hover:bg-blue-700">
               <Briefcase className="w-4 h-4 mr-2" />
-              Get Started
+              {t('get_started')}
             </Button>
             <Button variant="outline">
               <Users className="w-4 h-4 mr-2" />
-              Contact Specialist
+              {t('contact_specialist')}
             </Button>
           </div>
         </div>
@@ -113,7 +113,7 @@ export default function BusinessBanking() {
         {/* Global Capabilities */}
         <Card className="mb-12">
           <CardHeader>
-            <CardTitle className="text-center text-2xl">Global Business Banking Capabilities</CardTitle>
+            <CardTitle className="text-center text-2xl">{t('global_capabilities')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">

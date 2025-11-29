@@ -210,14 +210,14 @@ export default function TransferFunds() {
       <div className="max-w-3xl mx-auto px-4 py-6">
         {/* Page Title */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">International Money Transfer</h1>
-          <p className="text-gray-600 mt-2 text-lg">Send money worldwide with complete security</p>
+          <h1 className="text-4xl font-bold text-gray-900">{t('international_transfer_title')}</h1>
+          <p className="text-gray-600 mt-2 text-lg">{t('send_money_worldwide')}</p>
         </div>
 
         {/* Transfer Type Tabs */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Select Transfer Method</CardTitle>
+            <CardTitle>{t('select_transfer_method')}</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs value={transferType} onValueChange={setTransferType} className="w-full">
@@ -265,7 +265,7 @@ export default function TransferFunds() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Amount Section */}
               <div className="bg-blue-50 p-5 rounded-lg border-2 border-blue-200">
-                <Label htmlFor="amount" className="text-lg font-bold text-blue-900">{t('transfer_amount') || 'Transfer Amount (USD)'} *</Label>
+                <Label htmlFor="amount" className="text-lg font-bold text-blue-900">{t('transfer_amount')} *</Label>
                 <Input 
                   id="amount"
                   type="number"
@@ -282,7 +282,7 @@ export default function TransferFunds() {
 
               {/* Recipient Information */}
               <div className="border-t pt-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">{t('recipient_information') || 'Recipient Information'}</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">{t('recipient_information')}</h3>
                 
                 <div className="space-y-4">
                   <div>
