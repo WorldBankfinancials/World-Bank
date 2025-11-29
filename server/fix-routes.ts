@@ -1,6 +1,5 @@
 import { Express, Request, Response, NextFunction } from 'express';
 import { Server, createServer } from 'http';
-import { WebSocketServer, WebSocket } from 'ws';
 import { storage } from './storage-factory';
 import { setupTransferRoutes } from './routes-transfer';
 import { config, logConfiguration } from './config';
@@ -2156,89 +2155,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Return a dummy server that will be replaced by the main server
+  // Return server for WebSocket and Vite setup in index.ts
   const httpServer = createServer(app);
-
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  const clients = new Map<string, { ws: WebSocket; userId: string; role: 'admin' | 'customer'; email: string }>();
-
-  wss.on('connection', (ws: WebSocket) => {
-    let isAuthenticated = false;
-    let clientId: string | null = null;
-
-    ws.on('message', async (message: string) => {
-      try {
-        const data = JSON.parse(message);
-
-        if (data.type === 'auth') {
-          // SECURITY: Validate JWT token before registering client
-          const token = data.token;
-
-          if (!token) {
-            ws.send(JSON.stringify({ type: 'error', message: 'Authentication required' }));
-            ws.close();
-            return;
-          }
-
-          // Validate token using Supabase
-          const { supabase } = await import('./supabase-public-storage');
-          const { data: { user: authUser }, error } = await supabase.auth.getUser(token);
-
-          if (error || !authUser) {
-            ws.send(JSON.stringify({ type: 'error', message: 'Invalid authentication token' }));
-            ws.close();
-            return;
-          }
-
-          // SECURITY: Derive role from app_metadata (immutable, server-controlled)
-          const role = authUser.app_metadata?.role || 'customer';
-
-          // Fetch user from database to get userId
-          const userEmail = authUser.email;
-          if (!userEmail) {
-            ws.send(JSON.stringify({ type: 'error', message: 'User email not found' }));
-            ws.close();
-            return;
-          }
-          const dbUser = await (storage).getUserByEmail(userEmail);
-
-          if (!dbUser) {
-            ws.send(JSON.stringify({ type: 'error', message: 'User not found' }));
-            ws.close();
-            return;
-          }
-
-          // Register authenticated client
-          clientId = authUser.id;
-          clients.set(clientId, {
-            ws,
-            userId: dbUser.id.toString(),
-            role: role as 'admin' | 'customer',
-            email: authUser.email || ''
-          });
-
-          isAuthenticated = true;
-          ws.send(JSON.stringify({ type: 'auth_success', role, userId: dbUser.id }));
-        } else if (!isAuthenticated) {
-          // Reject all messages until client authenticates
-          ws.send(JSON.stringify({ type: 'error', message: 'Must authenticate first' }));
-          ws.close();
-        }
-      } catch (error) {
-        ws.send(JSON.stringify({ type: 'error', message: 'Internal server error' }));
-      }
-    });
-
-    ws.on('close', () => {
-      if (clientId) {
-        clients.delete(clientId);
-      }
-    });
-  });
-
-  // NOTE: Error handlers NOT registered here because Vite middleware
-  // needs to handle frontend routes. Error handling is in index.ts
-
+  
   return httpServer;
 }
 
