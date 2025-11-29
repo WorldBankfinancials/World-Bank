@@ -25,7 +25,7 @@ export type TransferInput = z.infer<typeof transferSchema>;
 export type VerifyPinInput = z.infer<typeof verifyPinSchema>;
 
 // ==================== CORE TABLES ====================
-export const users = pgTable('users', {
+export const users = pgTable('bank_users', {
   id: serial('id').primaryKey(),
   email: text('email').notNull().unique(),
   password: text('password').notNull(),
@@ -54,7 +54,7 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-export const accounts = pgTable('accounts', {
+export const accounts = pgTable('bank_accounts', {
   id: serial('id').primaryKey(),
   userId: serial('user_id').notNull(),
   accountNumber: text('account_number').notNull().unique(),
