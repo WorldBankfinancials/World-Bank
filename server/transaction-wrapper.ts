@@ -265,7 +265,7 @@ export async function atomicTransfer(params: {
           description: params.description,
           recipient_name: params.recipientName,
           recipient_country: params.recipientCountry,
-          status: 'completed',
+          status: 'success',
           created_at: new Date().toISOString()
         })
         .select()

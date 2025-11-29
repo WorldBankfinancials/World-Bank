@@ -92,16 +92,8 @@ export default function InternationalTransfer() {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const transferData = {
         amount: parseFloat(transferAmount),
-        fromCurrency: fromCurrency,
-        toCurrency: toCurrency,
-        recipientName: "Recipient",
-        recipientCountry: "International",
-        bankName: "International Bank",
-        swiftCode: "INTBANK",
-        accountNumber: "0000000000",
-        transferPurpose: "International Transfer",
-        transferPin: transferPin,
-        userEmail: user.email
+        recipientCountry: toCurrency,
+        transferPin: transferPin
       };
       
       const response = await authenticatedFetch('/api/international-transfers', {

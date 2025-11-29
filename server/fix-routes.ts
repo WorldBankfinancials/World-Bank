@@ -616,7 +616,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         type: body.type,
         amount: amountNum.toString(),
         description: body.description,
-        status: 'completed',
+        status: 'success',
         createdAt: new Date()
       });
 

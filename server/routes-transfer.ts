@@ -56,31 +56,34 @@ export function setupTransferRoutes(app: Express) {
 
       // Save transaction to database with pending status
       try {
+        const now = new Date();
         const transaction = await (storage as any).createTransaction({
           transactionId: transactionId,
           fromUserId: user.id,
-          amount: amount,
+          amount: String(amount),
           currency: 'USD',
           type: 'transfer',
-          status: 'pending',  // *** PENDING: AWAITING ADMIN REVIEW ***
+          status: 'pending',
+          description: `Transfer to ${recipientName} at ${bankName}`,
           recipientName: recipientName,
           recipientAccount: recipientAccount,
           recipientCountry: recipientCountry,
           bankName: bankName,
           swiftCode: swiftCode,
           transferPurpose: purpose || 'transfer',
-          description: `Transfer to ${recipientName} at ${bankName}`
+          createdAt: now,
+          updatedAt: now
         });
 
-        // Return pending response - transaction submitted, awaiting approval
+        // Return pending response - transaction submitted
         res.json({ 
           message: "Transfer submitted successfully",
           transactionId: transactionId,
           status: "pending",
-          amount: amount,
-          note: "Your transfer is pending admin review. Status will change to success or failed within 24 hours."
+          amount: amount
         });
       } catch (dbError: any) {
+        console.error('Transfer creation error:', dbError);
         return res.status(500).json({ message: "Failed to submit transfer", error: dbError.message });
       }
     } catch (error) {
@@ -136,29 +139,32 @@ export function setupTransferRoutes(app: Express) {
 
       // Create transaction with pending status
       try {
+        const now = new Date();
         const transaction = await (storage as any).createTransaction({
           transactionId: transactionId,
           fromUserId: user.id,
-          amount: amount,
+          amount: String(amount),
           currency: 'USD',
           type: 'international_transfer',
-          status: 'pending',  // *** PENDING: AWAITING ADMIN REVIEW ***
+          status: 'pending',
+          description: `International transfer to ${recipientName} in ${recipientCountry}`,
           recipientName: recipientName,
           recipientCountry: recipientCountry,
           bankName: bankName,
           swiftCode: swiftCode,
           transferPurpose: transferPurpose || 'international_transfer',
-          description: `International transfer to ${recipientName} in ${recipientCountry}`
+          createdAt: now,
+          updatedAt: now
         });
 
         res.json({ 
           message: "International transfer submitted successfully", 
           transactionId: transactionId,
           status: "pending",
-          amount: amount,
-          note: "Your international transfer is pending admin review. Status will change to success or failed within 24 hours."
+          amount: amount
         });
       } catch (dbError: any) {
+        console.error('International transfer creation error:', dbError);
         return res.status(500).json({ message: "Failed to submit international transfer", error: dbError.message });
       }
     } catch (error) {
