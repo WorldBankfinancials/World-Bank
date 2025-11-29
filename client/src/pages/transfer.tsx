@@ -315,53 +315,49 @@ export default function Transfer() {
         steps: [
           { done: true, text: 'Transfer request verified' },
           { done: true, text: 'Security verification complete' },
-          { done: true, text: 'Submitted for compliance review' },
-          { done: false, text: 'Awaiting admin approval' }
+          { done: false, text: 'Processing transfer' }
         ]
       },
       pending: {
         icon: Clock,
         bgColor: 'bg-orange-100',
         iconColor: 'text-orange-600',
-        title: 'Pending Admin Review',
-        message: 'Your transfer is under review by our compliance team...',
-        statusText: 'Pending Review',
+        title: 'Pending',
+        message: 'Your transfer is being reviewed and will be processed shortly...',
+        statusText: 'Pending',
         statusColor: 'text-orange-600',
         steps: [
           { done: true, text: 'Transfer request verified' },
           { done: true, text: 'Security verification complete' },
-          { done: true, text: 'Submitted for compliance review' },
-          { done: true, text: 'Admin review in progress' }
+          { done: true, text: 'In review' }
         ]
       },
       success: {
         icon: CheckCircle,
         bgColor: 'bg-green-100',
         iconColor: 'text-green-600',
-        title: 'Transfer Approved & Processing',
-        message: 'Your transfer has been approved and is now being processed.',
+        title: 'Transfer Approved',
+        message: 'Your transfer has been approved and is being processed to the recipient bank.',
         statusText: 'Approved',
         statusColor: 'text-green-600',
         steps: [
           { done: true, text: 'Transfer request verified' },
           { done: true, text: 'Security verification complete' },
-          { done: true, text: 'Admin approval received' },
-          { done: true, text: 'Processing to recipient bank' }
+          { done: true, text: 'Transfer approved' }
         ]
       },
       failed: {
         icon: AlertCircle,
         bgColor: 'bg-red-100',
         iconColor: 'text-red-600',
-        title: 'Transfer Declined',
-        message: 'Your transfer has been declined by our compliance team.',
-        statusText: 'Declined',
+        title: 'Transfer Failed',
+        message: 'Your transfer could not be processed. Please contact support for assistance.',
+        statusText: 'Failed',
         statusColor: 'text-red-600',
         steps: [
           { done: true, text: 'Transfer request verified' },
           { done: true, text: 'Security verification complete' },
-          { done: true, text: 'Admin review completed' },
-          { done: false, text: 'Transfer declined - contact support' }
+          { done: false, text: 'Transfer failed' }
         ]
       }
     };
