@@ -158,28 +158,31 @@ export class CompleteSupabaseStorage implements IStorage {
   }
 
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
+    const insertData: any = {
+      from_account_id: transaction.fromAccountId,
+      to_account_id: transaction.toAccountId,
+      amount: transaction.amount,
+      currency: transaction.currency || 'USD',
+      type: transaction.type || 'transfer',
+      status: transaction.status || 'pending',
+    };
+    
+    if (transaction.fromUserId) insertData.from_user_id = transaction.fromUserId;
+    if (transaction.toUserId) insertData.to_user_id = transaction.toUserId;
+    if (transaction.description) insertData.description = transaction.description;
+    if (transaction.recipientName) insertData.recipient_name = transaction.recipientName;
+    if (transaction.recipientAccount) insertData.recipient_account = transaction.recipientAccount;
+    if (transaction.recipientAddress) insertData.recipient_address = transaction.recipientAddress;
+    if (transaction.recipientCountry) insertData.recipient_country = transaction.recipientCountry;
+    if (transaction.referenceNumber) insertData.reference_number = transaction.referenceNumber;
+    if (transaction.fee) insertData.fee = transaction.fee;
+    if (transaction.exchangeRate) insertData.exchange_rate = transaction.exchangeRate;
+    if (transaction.countryCode) insertData.country_code = transaction.countryCode;
+    if (transaction.transferPurpose) insertData.transfer_purpose = transaction.transferPurpose;
+
     const { data, error } = await supabase
       .from('transactions')
-      .insert([{
-        from_user_id: transaction.fromUserId,
-        to_user_id: transaction.toUserId,
-        from_account_id: transaction.fromAccountId,
-        to_account_id: transaction.toAccountId,
-        amount: transaction.amount,
-        currency: transaction.currency || 'USD',
-        type: transaction.type || 'transfer',
-        status: transaction.status || 'pending',
-        description: transaction.description,
-        recipient_name: transaction.recipientName,
-        recipient_account: transaction.recipientAccount,
-        recipient_address: transaction.recipientAddress,
-        recipient_country: transaction.recipientCountry,
-        reference_number: transaction.referenceNumber,
-        fee: transaction.fee || '0.00',
-        exchange_rate: transaction.exchangeRate,
-        country_code: transaction.countryCode,
-        transfer_purpose: transaction.transferPurpose
-      }])
+      .insert([insertData])
       .select()
       .single();
     if (error) throw error;

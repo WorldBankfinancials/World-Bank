@@ -877,7 +877,6 @@ const translations = {
     'security_validation_complete': '安全验证完成',
     'processing_transaction': '处理交易中...',
     'transfer_processing_secure': '您的转账正在安全处理中。这可能需要几分钟。',
-    'signing_in': '登录中...',
     'access_admin_panel': '访问管理员面板',
     'creating_account': '创建账户中...',
     'submitting': '提交中...',
