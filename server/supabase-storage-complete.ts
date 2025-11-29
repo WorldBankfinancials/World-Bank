@@ -178,8 +178,6 @@ export class CompleteSupabaseStorage implements IStorage {
         fee: transaction.fee || '0.00',
         exchange_rate: transaction.exchangeRate,
         country_code: transaction.countryCode,
-        bank_name: transaction.bankName,
-        swift_code: transaction.swiftCode,
         transfer_purpose: transaction.transferPurpose
       }])
       .select()

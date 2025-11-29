@@ -145,8 +145,9 @@ export default function Transfer() {
   };
 
   const verifyPinAndTransfer = async () => {
-    // Validation: Check user and userProfile are loaded
-    if (!user?.email && !userProfile?.email) {
+    // Validation: Check user and userProfile are loaded - use either
+    const emailToUse = user?.email || userProfile?.email;
+    if (!emailToUse) {
       setPinError("User profile not loaded. Please refresh the page.");
       return;
     }

@@ -73,8 +73,9 @@ export default function InternationalTransfer() {
   };
 
   const handlePinSubmit = async () => {
-    // VALIDATION: Check user is loaded
-    if (!user || !userProfile?.email) {
+    // VALIDATION: Check user email is available from either source
+    const emailToUse = user?.email || userProfile?.email;
+    if (!emailToUse) {
       setPinError("User profile not loaded. Please wait and try again.");
       return;
     }
