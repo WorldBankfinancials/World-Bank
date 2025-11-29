@@ -134,7 +134,7 @@ export default function CustomerSupport() {
                 disabled={isSubmitting}
               >
                 <Send className="w-4 h-4 mr-2" />
-                {isSubmitting ? 'Submitting...' : 'Submit Request'}
+                {isSubmitting ? t('submitting') : 'Submit Request'}
               </Button>
             </CardContent>
           </Card>

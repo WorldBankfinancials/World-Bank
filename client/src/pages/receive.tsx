@@ -166,7 +166,7 @@ export default function Receive() {
               </Button>
               <Button onClick={handleCopyLink} variant="outline">
                 {copied ? <CheckCircle className="w-4 h-4 mr-1" /> : <Link className="w-4 h-4 mr-1" />}
-                {copied ? "Copied!" : "Copy Link"}
+                {copied ? "Copied!" : t('copy_link')}
               </Button>
             </div>
           </CardContent>

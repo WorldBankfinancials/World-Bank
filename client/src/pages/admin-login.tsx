@@ -89,7 +89,7 @@ export default function AdminLogin() {
               className="w-full" 
               disabled={isLoading}
             >
-              {isLoading ? "Signing In..." : "Access Admin Panel"}
+              {isLoading ? t('signing_in') : t('access_admin_panel')}
             </Button>
           </form>
 
