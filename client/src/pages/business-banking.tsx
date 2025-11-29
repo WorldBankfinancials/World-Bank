@@ -96,7 +96,7 @@ export default function BusinessBanking() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Business Banking Solutions</h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-6">
-            Comprehensive financial solutions designed to help your business grow globally
+            {t('comprehensive_solutions') || 'Comprehensive financial solutions designed to help your business grow globally'}
           </p>
           <div className="flex justify-center space-x-3">
             <Button className="bg-blue-600 text-white hover:bg-blue-700">
