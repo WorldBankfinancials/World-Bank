@@ -27,6 +27,7 @@ import {
   Trash2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useRealtimeAlerts } from "@/hooks/useRealtimeAlerts";
 
 interface Alert {
   id: number;
@@ -44,8 +45,8 @@ export default function Alerts() {
     queryKey: ['/api/user'],
   });
 
-  // Real-time alerts disabled - using polling instead (WebSocket unavailable in Replit)
-  // useRealtimeAlerts will be re-enabled when deploying to production with WebSocket support
+  // Real-time alerts via Supabase Realtime
+  useRealtimeAlerts(user?.id, !!user);
 
   // Fetch real alerts from database
   const { data: alerts = [], isLoading: alertsLoading } = useQuery<Alert[]>({

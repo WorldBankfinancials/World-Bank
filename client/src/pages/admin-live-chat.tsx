@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Send, MessageCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useRealtimeChat } from '@/hooks/useRealtimeChat';
 
 interface ChatSession {
   id: string;
@@ -30,6 +31,15 @@ export default function AdminLiveChat() {
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
   const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
+
+  // Realtime chat with message handling
+  const { sendMessage: sendRealtimeMessage, isConnected: rtConnected } = useRealtimeChat(
+    'admin_1',
+    (message) => {
+      setMessages((prev) => [...prev, message]);
+      toast({ title: 'New Message', description: `From ${message.senderName}` });
+    }
+  );
   
   // Fetch messages from API when session is selected
   const { data: queryMessages = [] } = useQuery<Message[]>({

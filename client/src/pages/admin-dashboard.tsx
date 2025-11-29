@@ -31,6 +31,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Transaction, User } from "@shared/schema";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useRealtimeTransactions } from "@/hooks/useRealtimeTransactions";
 import { CustomerData } from "@/types";
 
 
@@ -65,7 +66,8 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Real-time updates use polling instead (WebSocket unavailable in Replit development)
+  // Real-time updates via Supabase Realtime
+  useRealtimeTransactions(undefined, true);
 
   // Fetch real customer data from API
   const { data: customers = [], isLoading: customersLoading } = useQuery<CustomerData[]>({
