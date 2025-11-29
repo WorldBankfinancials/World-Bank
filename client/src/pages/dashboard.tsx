@@ -62,7 +62,12 @@ import {
   Users,
   Smartphone,
   Banknote,
-
+  Briefcase,
+  PieChart,
+  BarChart3,
+  Headphones,
+  MapPin,
+  Lock,
   Filter,
   Trash2
 } from "lucide-react";
