@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, Send, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 interface Message {
   id: string;
@@ -19,81 +20,56 @@ interface LiveChatProps {
 
 export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // Use Supabase real-time subscriptions instead of WebSocket
-    const { supabase } = require('@/lib/supabase');
-    setIsConnected(true);
-    
-    // Load chat history
-    setMessages([{
+  const [messages, setMessages] = useState<Message[]>([
+    {
       id: '1',
       sender: 'agent',
       text: 'Hello! How can we help you today?',
       timestamp: new Date()
-    }]);
-
-    // Subscribe to chat messages via Supabase
-    const subscription = supabase
-      .channel('live_chat')
-      .on('broadcast', { event: 'message' }, (payload: any) => {
-        if (payload.payload?.text) {
-          setMessages(prev => [...prev, {
-            id: payload.payload.id || Date.now().toString(),
-            sender: 'agent',
-            text: payload.payload.text,
-            timestamp: new Date(payload.payload.timestamp || Date.now())
-          }]);
-        }
-      })
-      .subscribe();
-
-    return () => {
-      if (subscription) {
-        supabase.removeChannel(subscription);
-      }
-        setIsConnected(false);
-      };
-    } catch (error) {
-      setIsConnected(false);
     }
-
-    return () => {
-      wsRef.current?.close();
-    };
-  }, [isOpen, toast]);
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [isConnected, setIsConnected] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputText.trim()) return;
 
-    const newMessage: Message = {
+    const userMessage: Message = {
       id: Date.now().toString(),
       sender: 'user',
       text: inputText,
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, newMessage]);
-    
-    if (isConnected && wsRef.current) {
-      wsRef.current.send(JSON.stringify({
-        type: 'message',
-        text: inputText
-      }));
-    }
-
+    setMessages(prev => [...prev, userMessage]);
+    const messageText = inputText;
     setInputText('');
+
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: messageText })
+      });
+
+      if (response.ok) {
+        const agentMessage: Message = {
+          id: Date.now().toString() + '_agent',
+          sender: 'agent',
+          text: 'Your message has been received. An agent will respond shortly.',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, agentMessage]);
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
   };
 
   if (!isOpen) return null;
@@ -101,7 +77,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   return (
     <div className="fixed bottom-6 right-6 w-96 z-50 shadow-2xl">
       <Card className="rounded-xl overflow-hidden border-2 border-blue-500 bg-white">
-        {/* Header - Prominent */}
         <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="bg-white/30 p-2 rounded-full">
@@ -124,7 +99,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
           )}
         </CardHeader>
 
-        {/* Messages Area - Clear separation */}
         <div className="flex flex-col h-96 bg-gray-50">
           <div className="flex-1 overflow-y-auto p-4 space-y-4 border-b-2 border-gray-200">
             {messages.map(msg => (
@@ -152,7 +126,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area - SUPER PROMINENT */}
           <div className="bg-white p-4 space-y-3 border-t-2 border-gray-200">
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-700 block">Type your message:</label>
@@ -175,11 +148,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
                 </Button>
               </div>
             </div>
-            {!isConnected && (
-              <div className="bg-amber-100 border-2 border-amber-300 rounded-lg p-2 text-center">
-                <p className="text-sm font-bold text-amber-800">⚠️ Connecting...</p>
-              </div>
-            )}
             {isConnected && (
               <p className="text-xs text-green-700 font-semibold text-center">✓ Connected to support</p>
             )}

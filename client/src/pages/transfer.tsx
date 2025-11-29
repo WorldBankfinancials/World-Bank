@@ -123,6 +123,9 @@ export default function Transfer() {
         });
         return;
       }
+
+      // Show PIN verification modal - silently process without showing approval message
+      setShowPinVerification(true);
       
       if (!recipientDetails.accountNumber) {
         toast({
