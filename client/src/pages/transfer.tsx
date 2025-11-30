@@ -274,7 +274,6 @@ export default function Transfer() {
               }
             }
           } catch (error) {
-            console.error('Failed to fetch transfer status:', error);
           }
         }, 3000); // Poll every 3 seconds
         

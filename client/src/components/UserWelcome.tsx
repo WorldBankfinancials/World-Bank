@@ -9,10 +9,18 @@ interface UserWelcomeProps {
   user: User;
 }
 
+interface FreshUserData {
+  fullName?: string;
+  profession?: string;
+  email?: string;
+  accountNumber?: string;
+  accountId?: string;
+}
+
 export default function UserWelcome({ user }: UserWelcomeProps) {
   const { userProfile } = useAuth();
   const { t } = useLanguage();
-  const [freshUserData, setFreshUserData] = useState<any>(null);
+  const [freshUserData, setFreshUserData] = useState<FreshUserData | null>(null);
 
   // Fetch fresh user data once only
   useEffect(() => {
@@ -89,7 +97,7 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-gray-500">{t('account_id')}:</span>
-              <span className="font-semibold text-gray-900">{freshUserData?.accountId || (userProfile as any)?.accountId || 'Loading...'}</span>
+              <span className="font-semibold text-gray-900">{freshUserData?.accountId || userProfile?.accountId || 'Loading...'}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-blue-600 font-medium">{displayProfession}</span>
@@ -145,7 +153,7 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
           )}
 
           <div className="flex items-center space-x-4">
-            {(user as any)?.isOnline && (
+            {user?.isOnline && (
               <div className="flex items-center space-x-2 px-3 py-2 rounded-full" style={{
                 background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)',
                 border: '1px solid rgba(59, 130, 246, 0.2)',

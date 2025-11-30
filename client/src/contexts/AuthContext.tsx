@@ -40,8 +40,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Initialize auth session on mount
   useEffect(() => {
-    console.log('🔍 AuthContext: Checking for existing session...');
-    
     // Check for existing session from localStorage (set by login)
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
@@ -50,11 +48,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const parsedUser = JSON.parse(storedUser);
         if (parsedUser?.id && parsedUser?.email) {
-          console.log('✅ AuthContext: Restoring session from localStorage', { email: parsedUser.email });
           setUser(parsedUser);
         }
       } catch (e) {
-        console.error('❌ AuthContext: Failed to parse stored user');
         localStorage.clear();
       }
     }
@@ -64,33 +60,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = useCallback(async (authUser: User) => {
     if (!authUser?.id) {
-      console.warn('⚠️ AuthContext: No user ID provided to fetchUserData');
       return;
     }
     try {
-      console.log('📥 AuthContext: Fetching user profile...');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/users/${authUser.id}`);
       
       if (!response.ok) {
-        console.warn(`⚠️ AuthContext: Failed to fetch user profile (${response.status})`);
         return;
       }
 
       const profile = await response.json();
       if (profile && typeof profile === 'object') {
-        console.log('✅ AuthContext: User profile loaded');
         setUserProfile(profile);
       }
     } catch (error) {
-      console.error('❌ AuthContext: Failed to fetch user profile:', error);
     }
   }, []);
 
   const signIn = async (email: string, password: string): Promise<{ error?: string }> => {
     try {
       setLoading(true);
-      console.log('🔐 AuthContext: Signing in user:', email);
 
       // Login endpoint - intentionally unauthenticated to create initial session
       const response = await fetch('/api/auth/login', {
@@ -101,7 +91,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Login failed' }));
-        console.error('❌ AuthContext: Login failed:', errorData);
         setLoading(false);
         return { error: errorData.error || `Login failed (${response.status})` };
       }
@@ -109,20 +98,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (!data || data.error) {
-        console.error('❌ AuthContext: Invalid login response:', data);
         setLoading(false);
         return { error: data?.error || 'Login failed' };
       }
 
       // CRITICAL: Validate token is Supabase JWT (3 parts: header.payload.signature)
       if (!data.token || !data.token.includes('.')) {
-        console.error('❌ AuthContext: Invalid token format - not a JWT');
         setLoading(false);
         return { error: 'Invalid authentication token format' };
       }
 
       if (data.token && data.user) {
-        console.log('✅ AuthContext: Login successful, storing Supabase JWT');
         // Store Supabase JWT token for API calls
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
@@ -145,7 +131,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return { error: 'Authentication failed - invalid response' };
     } catch (error: any) {
-      console.error('❌ AuthContext: Login exception:', error);
       setLoading(false);
       return { error: error?.message || 'Network error' };
     }
@@ -153,7 +138,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, metadata?: any): Promise<{ error?: string }> => {
     try {
-      console.log('📝 AuthContext: Registering new user:', email);
       // Register endpoint - intentionally unauthenticated to create account
       const response = await fetch('/api/auth/register-complete', {
         method: 'POST',
@@ -180,36 +164,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Signup failed' }));
-        console.error('❌ AuthContext: Signup failed:', errorData);
         return { error: errorData?.error || `Signup failed (${response.status})` };
       }
 
       const data = await response.json();
       if (data?.error) {
-        console.error('❌ AuthContext: Signup error:', data.error);
         return { error: data.error };
       }
 
-      console.log('✅ AuthContext: Signup successful');
       return {};
     } catch (error: any) {
-      console.error('❌ AuthContext: Signup exception:', error);
       return { error: error?.message || 'Signup failed' };
     }
   };
 
   const signOut = async () => {
     try {
-      console.log('🚪 AuthContext: Signing out user');
       removeStorageItem('jwt_token');
       removeStorageItem('token');
       removeStorageItem('user');
       removeStorageItem('refresh_token');
       setUser(null);
       setUserProfile(null);
-      console.log('✅ AuthContext: Signed out successfully');
     } catch (error) {
-      console.error('❌ AuthContext: Signout error:', error);
     }
   };
 

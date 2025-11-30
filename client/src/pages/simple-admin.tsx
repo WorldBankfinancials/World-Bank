@@ -223,10 +223,13 @@ export default function SimpleAdmin() {
       
       const data = await response.json().catch(() => {
         toast({ title: 'Parse Error', description: 'Failed to parse login response', variant: 'destructive' });
-        return null;
+        throw new Error('Parse error');
       });
       
-      if (!data) return;
+      if (!data) {
+        toast({ title: 'Login Failed', description: 'No response data', variant: 'destructive' });
+        return;
+      }
       
       // Store JWT token in localStorage for API calls
       setStorageItem('jwt_token', data.token);

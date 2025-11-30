@@ -105,7 +105,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
         toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' });
       }
     } catch (error) {
-      console.error('Failed to send message:', error);
       toast({ title: 'Error', description: 'Connection failed', variant: 'destructive' });
     }
   };

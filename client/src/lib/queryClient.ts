@@ -14,7 +14,6 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   // Simple: just get the token from localStorage
   const token = localStorage.getItem('token');
   if (!token) {
-    console.warn('⚠️ No authentication token found');
     throw new Error('Not authenticated');
   }
   return { 'Authorization': `Bearer ${token}` };
@@ -53,7 +52,6 @@ export async function authenticatedFetch(
     
     return response;
   } catch (error: any) {
-    console.error('❌ authenticatedFetch failed:', error?.message);
     throw error;
   }
 }

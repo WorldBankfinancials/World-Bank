@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Avatar } from './Avatar';
 
 interface HeaderProps {
-  user?: UserType | any;
+  user?: UserType;
 }
 
 export default function Header({}: HeaderProps) {
@@ -125,7 +125,7 @@ export default function Header({}: HeaderProps) {
                     <div className="flex items-center space-x-3">
                       <Avatar size={64} />
                       <div className="flex-1">
-                        <div className="font-semibold text-gray-900">{freshUserData?.firstName && freshUserData?.lastName ? `${freshUserData.firstName} ${freshUserData.lastName}` : userProfile && 'firstName' in userProfile ? `${(userProfile as any).firstName || ''} ${(userProfile as any).lastName || ''}` : 'Banking Customer'}</div>
+                        <div className="font-semibold text-gray-900">{freshUserData?.firstName && freshUserData?.lastName ? `${freshUserData.firstName} ${freshUserData.lastName}` : userProfile?.fullName || 'Banking Customer'}</div>
                       <div className="text-sm text-gray-600">{freshUserData?.profession || userProfile?.profession || 'Account Holder'}</div>
                       <div className="text-sm text-gray-600">{freshUserData?.email || userProfile?.email || ''}</div>
                         <div className="flex items-center space-x-2 mt-1">

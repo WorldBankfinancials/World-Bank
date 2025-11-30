@@ -204,7 +204,6 @@ export default function Dashboard() {
           }
         }
       } catch (error) {
-        console.error('Failed to fetch accounts:', error);
       }
     };
 
