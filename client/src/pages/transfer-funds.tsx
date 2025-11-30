@@ -21,6 +21,7 @@ import {
   Clock,
   Shield,
   AlertCircle,
+  CheckCircle,
   ChevronRight,
   Bell,
   Check
@@ -53,6 +54,10 @@ export default function TransferFunds() {
   const [showPinModal, setShowPinModal] = useState(false);
   const [transferPin, setTransferPin] = useState("");
   const [formData, setFormData] = useState<TransferForm | null>(null);
+  const [showStatusScreen, setShowStatusScreen] = useState(false);
+  const [transferStatus, setTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
+  const [transferId, setTransferId] = useState("");
+  const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
   
   const form = useForm<TransferForm>({
     resolver: zodResolver(transferFormSchema),
@@ -133,15 +138,38 @@ export default function TransferFunds() {
 
       if (response.ok) {
         const result = await response.json();
-        toast({
-          title: '✓ Transfer Submitted',
-          description: `Your transfer ${result.transactionId} has been submitted successfully and is pending approval.`,
-        });
-        form.reset();
+        const txnId = result.id || result.transactionId || `TXN-${Date.now()}`;
+        setTransferId(txnId);
+        setTransferStatus("processing");
+        setShowStatusScreen(true);
         setShowPinModal(false);
+        form.reset();
         setTransferPin("");
         setFormData(null);
-        setTimeout(() => window.location.href = '/dashboard', 2000);
+        
+        // Poll for transfer status updates
+        const interval = setInterval(async () => {
+          try {
+            const { authenticatedFetch } = await import('@/lib/queryClient');
+            const statusResponse = await authenticatedFetch(`/api/transfers/${txnId}/status`);
+            if (statusResponse.ok) {
+              const statusData = await statusResponse.json();
+              if (statusData.status === 'approved') {
+                setTransferStatus('success');
+                clearInterval(interval);
+              } else if (statusData.status === 'rejected') {
+                setTransferStatus('failed');
+                clearInterval(interval);
+              } else if (statusData.status === 'pending_approval') {
+                setTransferStatus('pending');
+              }
+            }
+          } catch (error) {
+            console.error('Failed to fetch transfer status:', error);
+          }
+        }, 3000);
+        
+        setPollInterval(interval);
       } else {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
         console.error('Transfer error:', errorData);
@@ -200,6 +228,107 @@ export default function TransferFunds() {
       limit: "$25,000"
     }
   ];
+
+  // Show transfer status screen
+  if (showStatusScreen) {
+    const statusConfig = {
+      processing: {
+        icon: Clock,
+        bgColor: 'bg-blue-100',
+        iconColor: 'text-blue-600',
+        title: 'Processing',
+        message: 'Your transfer is being securely processed...',
+        statusText: 'Processing',
+        statusColor: 'text-blue-600'
+      },
+      pending: {
+        icon: Clock,
+        bgColor: 'bg-orange-100',
+        iconColor: 'text-orange-600',
+        title: 'Pending',
+        message: 'Your transfer is being reviewed and will be processed shortly...',
+        statusText: 'Pending',
+        statusColor: 'text-orange-600'
+      },
+      success: {
+        icon: CheckCircle,
+        bgColor: 'bg-green-100',
+        iconColor: 'text-green-600',
+        title: 'Success',
+        message: 'Your transfer has been approved and is being processed to the recipient bank.',
+        statusText: 'Success',
+        statusColor: 'text-green-600'
+      },
+      failed: {
+        icon: AlertCircle,
+        bgColor: 'bg-red-100',
+        iconColor: 'text-red-600',
+        title: 'Transfer Failed',
+        message: 'Your transfer could not be processed. Please contact support for assistance.',
+        statusText: 'Failed',
+        statusColor: 'text-red-600'
+      }
+    };
+
+    const config = statusConfig[transferStatus];
+    const Icon = config.icon;
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header user={userProfile as any} />
+        
+        <div className="px-4 py-6 pb-20">
+          <div className="max-w-md mx-auto">
+            <Card className="text-center">
+              <CardContent className="pt-6">
+                <div className="mb-6">
+                  <div className={`w-20 h-20 ${config.bgColor} rounded-full flex items-center justify-center mx-auto mb-4`}>
+                    <Icon className={`w-10 h-10 ${config.iconColor} ${transferStatus === 'processing' || transferStatus === 'pending' ? 'animate-spin' : ''}`} />
+                  </div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">{config.title}</h2>
+                  <p className="text-gray-600 mb-4">{config.message}</p>
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">Reference Number</span>
+                    <span className="font-mono text-sm font-medium">{transferId}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Status</span>
+                    <span className={`text-sm font-medium ${config.statusColor}`}>{config.statusText}</span>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-3">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => {
+                      setShowStatusScreen(false);
+                      if (pollInterval) clearInterval(pollInterval);
+                    }}
+                  >
+                    Back
+                  </Button>
+                  {transferStatus === 'success' && (
+                    <Button 
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => window.location.href = '/dashboard'}
+                    >
+                      Go to Dashboard
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        
+        <BottomNavigation />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">

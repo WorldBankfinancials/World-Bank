@@ -2155,6 +2155,87 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== TRANSFER WORKFLOW ENDPOINTS ====================
+  
+  // Create a transfer
+  app.post('/api/transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { amount, recipientName, recipientCountry, recipientAccount, purpose, transferPin } = req.body;
+      
+      if (!amount || !recipientName || !recipientAccount || !transferPin) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      const transfer = await storage.createTransaction({
+        fromAccountId: 1,
+        type: 'transfer',
+        amount: amount.toString(),
+        description: `Transfer to ${recipientName} in ${recipientCountry}`,
+        status: 'pending_approval',
+        currency: 'USD',
+        referenceNumber: `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+      });
+
+      res.json({
+        id: transfer.id,
+        transactionId: transfer.referenceNumber,
+        status: 'pending_approval'
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to create transfer' });
+    }
+  });
+
+  // Get transfer status
+  app.get('/api/transfers/:id/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = req.params.id;
+      const allTransactions = await storage.getAllTransactions();
+      const transfer = allTransactions.find((t: any) => t.id === id || t.referenceNumber === id);
+      
+      if (!transfer) {
+        return res.status(404).json({ error: 'Transfer not found' });
+      }
+
+      res.json({
+        id: transfer.id,
+        status: transfer.status,
+        referenceNumber: transfer.referenceNumber
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to fetch transfer status' });
+    }
+  });
+
+  // Create international transfer
+  app.post('/api/international-transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { amount, recipientCountry, transferPin } = req.body;
+      
+      if (!amount || !recipientCountry || !transferPin) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      const transfer = await storage.createTransaction({
+        fromAccountId: 1,
+        type: 'international_transfer',
+        amount: amount.toString(),
+        description: `International transfer to ${recipientCountry}`,
+        status: 'pending_approval',
+        currency: 'USD',
+        referenceNumber: `INT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+      });
+
+      res.json({
+        id: transfer.id,
+        transactionId: transfer.referenceNumber,
+        status: 'pending_approval'
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to create international transfer' });
+    }
+  });
+
   // Return server for WebSocket and Vite setup in index.ts
   const httpServer = createServer(app);
   
@@ -2194,3 +2275,4 @@ export async function registerLiveChatRoutes(app: Express) {
     }
   });
 }
+
