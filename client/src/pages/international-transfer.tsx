@@ -34,10 +34,6 @@ export default function InternationalTransfer() {
     const fetchUser = async () => {
       try {
         setIsLoading(true);
-        if (!userProfile?.email) {
-          setDataError('User profile not available');
-          return;
-        }
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const response = await authenticatedFetch(`/api/user`);
         if (response.ok) {
@@ -54,7 +50,7 @@ export default function InternationalTransfer() {
       }
     };
     fetchUser();
-  }, [userProfile?.email]);
+  }, []);
 
   const [transferAmount, setTransferAmount] = useState("");
   const [recipientFullName, setRecipientFullName] = useState("");
