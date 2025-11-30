@@ -1,3 +1,4 @@
+import { setStorageItem, getStorageItem } from '@/lib/storage-utils';
 import { useState, useEffect } from "react";
 import * as React from "react";
 import { useQuery } from '@tanstack/react-query';
@@ -228,9 +229,9 @@ export default function SimpleAdmin() {
       if (!data) return;
       
       // Store JWT token in localStorage for API calls
-      localStorage.setItem('jwt_token', data.token);
-      localStorage.setItem('adminToken', data.token);
-      localStorage.setItem('adminUser', JSON.stringify(data.user));
+      setStorageItem('jwt_token', data.token);
+      setStorageItem('adminToken', data.token);
+      setStorageItem('adminUser', JSON.stringify(data.user));
       setIsAuthenticated(true);
     } catch (error) {
       toast({
@@ -284,7 +285,7 @@ export default function SimpleAdmin() {
         return;
       }
 
-      const token = localStorage.getItem('jwt_token');
+      const token = getStorageItem('jwt_token');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/admin/approve-registration/${registrationId}`, {
         method: 'POST',
@@ -332,7 +333,7 @@ export default function SimpleAdmin() {
         return;
       }
 
-      const token = localStorage.getItem('jwt_token');
+      const token = getStorageItem('jwt_token');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/admin/reject-registration/${registrationId}`, {
         method: 'POST',
@@ -455,7 +456,7 @@ export default function SimpleAdmin() {
   const handleEditCustomer = async (customer: Customer) => {
     // Fetch complete user data from API to populate edit form
     try {
-      const token = localStorage.getItem('jwt_token');
+      const token = getStorageItem('jwt_token');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/user', {
         headers: {
@@ -506,7 +507,7 @@ export default function SimpleAdmin() {
     if (!editingCustomer) return;
     
     try {
-      const token = localStorage.getItem('jwt_token');
+      const token = getStorageItem('jwt_token');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/admin/customers/${editingCustomer.id}`, {
         method: 'PATCH',
@@ -649,7 +650,7 @@ export default function SimpleAdmin() {
       
       const uploadCompressedImage = async (base64Image: string) => {
         try {
-          const token = localStorage.getItem('jwt_token');
+          const token = getStorageItem('jwt_token');
           const { authenticatedFetch } = await import('@/lib/queryClient');
           
           const response = await authenticatedFetch(`/api/admin/customers/${editingCustomer.id}`, {
@@ -711,7 +712,7 @@ export default function SimpleAdmin() {
 
   const handleTopUpBalance = async (customerId: number, amount: number) => {
     try {
-      const token = localStorage.getItem('jwt_token');
+      const token = getStorageItem('jwt_token');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/admin/customers/${customerId}/balance`, {
         method: 'POST',
@@ -767,7 +768,7 @@ export default function SimpleAdmin() {
     }
 
     try {
-      const token = localStorage.getItem('jwt_token');
+      const token = getStorageItem('jwt_token');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/admin/create-transaction', {
         method: 'POST',
@@ -786,7 +787,7 @@ export default function SimpleAdmin() {
       });
 
       if (response.ok) {
-        const token = localStorage.getItem('jwt_token');
+        const token = getStorageItem('jwt_token');
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const balanceResponse = await authenticatedFetch(`/api/admin/customers/${selectedCustomerForTransaction}/balance`, {
           method: 'POST',
@@ -858,7 +859,7 @@ export default function SimpleAdmin() {
     const accountId = accountIdMap[selectedAccountType as keyof typeof accountIdMap];
 
     try {
-      const token = localStorage.getItem('jwt_token');
+      const token = getStorageItem('jwt_token');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/admin/accounts/${accountId}/balance`, {
         method: 'POST',

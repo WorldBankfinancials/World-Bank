@@ -320,7 +320,7 @@ export class CompleteSupabaseStorage implements IStorage {
     return error ? undefined : data;
   }
 
-  async createCard(card: Record<string, any>): Promise<any> {
+  async createCard(card: Partial<BankCard>): Promise<any> {
     const { data, error } = await supabase
       .from('cards')
       .insert([{...card, created_at: new Date().toISOString()}])
@@ -330,7 +330,7 @@ export class CompleteSupabaseStorage implements IStorage {
     return data;
   }
 
-  async updateCard(id: number, updates: Record<string, any>): Promise<any | undefined> {
+  async updateCard(id: number, updates: Partial<BankCard>): Promise<any | undefined> {
     const { data, error } = await supabase
       .from('cards')
       .update({...updates, updated_at: new Date().toISOString()})
@@ -362,7 +362,7 @@ export class CompleteSupabaseStorage implements IStorage {
     return error ? undefined : data;
   }
 
-  async createInvestment(investment: Record<string, any>): Promise<any> {
+  async createInvestment(investment: Partial<Investment>): Promise<any> {
     const { data, error } = await supabase
       .from('investments')
       .insert([{...investment, created_at: new Date().toISOString()}])
@@ -372,7 +372,7 @@ export class CompleteSupabaseStorage implements IStorage {
     return data;
   }
 
-  async updateInvestment(id: number, updates: Record<string, any>): Promise<any | undefined> {
+  async updateInvestment(id: number, updates: Partial<Investment>): Promise<any | undefined> {
     const { data, error } = await supabase
       .from('investments')
       .update({...updates, updated_at: new Date().toISOString()})
@@ -399,7 +399,7 @@ export class CompleteSupabaseStorage implements IStorage {
     return error ? [] : (data || []);
   }
 
-  async createMessage(message: Record<string, any>): Promise<any> {
+  async createMessage(message: Partial<ChatMessage>): Promise<any> {
     const { data, error } = await supabase
       .from('messages')
       .insert([{...message, created_at: new Date().toISOString()}])
@@ -439,7 +439,7 @@ export class CompleteSupabaseStorage implements IStorage {
     return error ? [] : (data || []);
   }
 
-  async createAlert(alert: Record<string, any>): Promise<any> {
+  async createAlert(alert: Partial<BankAlert>): Promise<any> {
     const { data, error } = await supabase
       .from('alerts')
       .insert([{...alert, created_at: new Date().toISOString()}])

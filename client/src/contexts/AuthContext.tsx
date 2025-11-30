@@ -1,3 +1,4 @@
+import { setStorageItem, getStorageItem, removeStorageItem } from '@/lib/storage-utils';
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
 interface UserProfile {
@@ -43,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('🔍 AuthContext: Checking for existing session...');
     
     // Check for existing session from localStorage (set by login)
-    const storedToken = localStorage.getItem('token');
+    const storedToken = getStorageItem('token');
     const storedUser = localStorage.getItem('user');
 
     if (storedToken && storedUser) {
@@ -53,13 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('✅ AuthContext: Restoring session from localStorage', { email: parsedUser.email });
           setUser(parsedUser);
           // Store JWT token for API calls
-          localStorage.setItem('jwt_token', storedToken);
+          setStorageItem('jwt_token', storedToken);
         }
       } catch (e) {
         console.error('❌ AuthContext: Failed to parse stored user');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('jwt_token');
+        removeStorageItem('token');
+        removeStorageItem('user');
+        removeStorageItem('jwt_token');
       }
     }
 
@@ -128,10 +129,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.token && data.user) {
         console.log('✅ AuthContext: Login successful, storing Supabase JWT');
         // Store Supabase JWT token for API calls
-        localStorage.setItem('jwt_token', data.token);
+        setStorageItem('jwt_token', data.token);
         // Keep backwards compatibility
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        setStorageItem('token', data.token);
+        setStorageItem('user', JSON.stringify(data.user));
         localStorage.setItem('refresh_token', data.refreshToken || '');
         
         const userObj: User = { 
@@ -207,10 +208,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       console.log('🚪 AuthContext: Signing out user');
-      localStorage.removeItem('jwt_token');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('refresh_token');
+      removeStorageItem('jwt_token');
+      removeStorageItem('token');
+      removeStorageItem('user');
+      removeStorageItem('refresh_token');
       setUser(null);
       setUserProfile(null);
       console.log('✅ AuthContext: Signed out successfully');
