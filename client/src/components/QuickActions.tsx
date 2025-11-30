@@ -232,13 +232,11 @@ export default function QuickActions() {
 
     setChatMessages(prev => [...prev, message]);
 
-    // Send to WebSocket
+    // Send to WebSocket in format backend expects
     wsRef.current.send(JSON.stringify({
       type: 'chat_message',
-      senderId: 'user-' + Math.random().toString(36).substr(2, 9),
-      senderName: 'Customer',
-      senderRole: 'customer',
-      message: currentMessage
+      content: currentMessage,
+      recipientId: 'admin'
     }));
 
     setCurrentMessage("");

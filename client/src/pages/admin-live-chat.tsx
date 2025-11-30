@@ -92,10 +92,17 @@ export default function AdminLiveChat() {
     wsRef.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'message') {
-          setMessages((prev: Message[]) => [...prev, data.message]);
+        if (data.type === 'chat_message') {
+          const msg = {
+            id: data.data?.id || Date.now().toString(),
+            sender: data.data?.senderRole === 'admin' ? 'admin' : 'customer',
+            text: data.data?.content || data.data?.message || '',
+            timestamp: data.data?.createdAt || new Date().toISOString()
+          };
+          setMessages((prev: Message[]) => [...prev, msg]);
         }
       } catch (error) {
+        console.error('Error parsing chat message:', error);
       }
     };
 
@@ -124,10 +131,12 @@ export default function AdminLiveChat() {
     };
 
     setMessages((prev: Message[]) => [...prev, message]);
+    
+    // Send message in format backend expects
     wsRef.current?.send(JSON.stringify({
-      type: 'message',
-      sessionId: selectedSession.id,
-      message
+      type: 'chat_message',
+      content: messageText,
+      recipientId: selectedSession.customerId
     }));
 
     setMessageText('');
