@@ -118,7 +118,7 @@ export default function BusinessBanking() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
               {globalCapabilities.map((item, index) => (
-                <div key={index} className="flex flex-col items-center">
+                <div key={`item-${index}`} className="flex flex-col items-center">
                   <item.icon className="w-8 h-8 text-blue-600 mb-2" />
                   <div className="text-3xl font-bold text-gray-900">{item.metric}</div>
                   <div className="text-gray-600">{item.label}</div>
@@ -133,7 +133,7 @@ export default function BusinessBanking() {
           <h2 className="text-3xl font-bold text-gray-900 text-center mb-8">Our Business Services</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {businessServices.map((service, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow">
+              <Card key={`item-${index}`} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex items-center space-x-3 mb-4">
                     <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -169,7 +169,7 @@ export default function BusinessBanking() {
           <h2 className="text-3xl font-bold text-gray-900 text-center mb-8">Industry Expertise</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
             {industryExpertise.map((industry, index) => (
-              <Card key={index} className="text-center hover:shadow-md transition-shadow cursor-pointer">
+              <Card key={`item-${index}`} className="text-center hover:shadow-md transition-shadow cursor-pointer">
                 <CardContent className="p-6">
                   <div className="text-4xl mb-3">{industry.icon}</div>
                   <div className="font-semibold text-gray-900 mb-2">{industry.name}</div>

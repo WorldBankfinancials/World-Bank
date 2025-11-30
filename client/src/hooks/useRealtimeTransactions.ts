@@ -1,23 +1,22 @@
 /**
- * REAL-TIME TRANSACTIONS & ALERTS HOOK
- * Listens for live transaction updates, admin approvals, and alerts
+ * REAL-TIME TRANSACTIONS HOOK
+ * Listens for live transaction updates using Supabase Realtime
  */
 
 import { useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
-// Export useRealtimeAlerts for backward compatibility
-export { useRealtimeAlerts } from '@/hooks/useRealtimeAlerts';
-
-export function useRealtimeTransactions(userId?: string, enabled?: boolean) {
+export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (transaction: any) => void) {
   const handleTransactionUpdate = useCallback((transaction: any) => {
-    // Dispatch to global state or trigger refetch
-    window.dispatchEvent(new CustomEvent('transaction-updated', { detail: transaction }));
-  }, []);
+    if (onTransactionUpdate) {
+      onTransactionUpdate(transaction);
+    }
+  }, [onTransactionUpdate]);
 
   useEffect(() => {
-    if (!userId || !enabled) return;
+    if (!userId) return;
 
+    // Subscribe to transactions channel
     const channel = supabase.channel(`transactions:${userId}`);
 
     channel
@@ -26,11 +25,13 @@ export function useRealtimeTransactions(userId?: string, enabled?: boolean) {
         {
           event: '*',
           schema: 'public',
-          table: 'transactions',
-          filter: `userId=eq.${userId}`
+          table: 'bank_transactions',
+          filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          handleTransactionUpdate(payload.new);
+          if (payload.new) {
+            handleTransactionUpdate(payload.new);
+          }
         }
       )
       .subscribe();
@@ -38,43 +39,7 @@ export function useRealtimeTransactions(userId?: string, enabled?: boolean) {
     return () => {
       channel.unsubscribe();
     };
-  }, [userId, enabled, handleTransactionUpdate]);
-
-  return null;
-}
-
-/**
- * SUPPORT TICKETS REAL-TIME
- */
-export function useRealtimeSupportTickets(userId?: string, enabled?: boolean) {
-  const handleTicketUpdate = useCallback((ticket: any) => {
-    window.dispatchEvent(new CustomEvent('ticket-updated', { detail: ticket }));
-  }, []);
-
-  useEffect(() => {
-    if (!userId || !enabled) return;
-
-    const channel = supabase.channel(`tickets:${userId}`);
-
-    channel
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'support_tickets',
-          filter: `userId=eq.${userId}`
-        },
-        (payload) => {
-          handleTicketUpdate(payload.new);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [userId, enabled, handleTicketUpdate]);
+  }, [userId, handleTransactionUpdate]);
 
   return null;
 }

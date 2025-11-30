@@ -97,7 +97,7 @@ export default function SupportCenter() {
           <CardContent>
             <div className="space-y-4">
               {faqItems.map((faq, index) => (
-                <div key={index} className="flex justify-between items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <div key={`item-${index}`} className="flex justify-between items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                   <div>
                     <p className="font-medium wb-dark">{faq.question}</p>
                     <p className="text-sm text-wb-text">{faq.category}</p>

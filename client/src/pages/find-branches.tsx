@@ -270,7 +270,7 @@ export default function FindBranches() {
               <CardContent>
                 <div className="space-y-4">
                   {globalPresence.regions.map((region, index) => (
-                    <div key={index} className="p-3 border rounded-lg">
+                    <div key={`item-${index}`} className="p-3 border rounded-lg">
                       <div className="flex justify-between items-center mb-2">
                         <div className="font-medium">{region.name}</div>
                         <Badge variant="secondary">{region.branches.toLocaleString()}</Badge>

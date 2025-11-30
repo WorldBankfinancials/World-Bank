@@ -128,7 +128,7 @@ export default function SecurityCenter() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {securityFeatures.map((feature, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={`item-${index}`} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-4">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                         feature.enabled ? 'bg-green-100' : 'bg-gray-100'
@@ -164,7 +164,7 @@ export default function SecurityCenter() {
               <CardContent>
                 <div className="space-y-4">
                   {recentActivity.map((activity, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={`item-${index}`} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center space-x-4">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                           activity.status === 'success' ? 'bg-green-100' : 
@@ -277,7 +277,7 @@ export default function SecurityCenter() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {trustedDevices.map((device, index) => (
-                  <div key={index} className="p-3 border rounded-lg">
+                  <div key={`item-${index}`} className="p-3 border rounded-lg">
                     <div className="flex justify-between items-start mb-1">
                       <div className="font-medium">{device.name}</div>
                       <Badge variant="secondary" className="text-xs">{device.type}</Badge>

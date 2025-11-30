@@ -145,7 +145,7 @@ export default function BankingServices() {
           <h2 className="text-2xl font-bold wb-dark mb-6">{t('personal_banking')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {personalServices.map((service, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow">
+              <Card key={`item-${index}`} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <service.icon className="w-8 h-8 wb-blue mb-2" />
                   <CardTitle className="text-lg">{service.title}</CardTitle>
@@ -172,7 +172,7 @@ export default function BankingServices() {
           <h2 className="text-2xl font-bold wb-dark mb-6">{t('business_banking')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {businessServices.map((service, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow">
+              <Card key={`item-${index}`} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <service.icon className="w-8 h-8 wb-green mb-2" />
                   <CardTitle className="text-lg">{service.title}</CardTitle>
@@ -199,7 +199,7 @@ export default function BankingServices() {
           <h2 className="text-2xl font-bold wb-dark mb-6">{t('specialty_services')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {specialtyServices.map((service, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow">
+              <Card key={`item-${index}`} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <service.icon className="w-8 h-8 text-purple-600 mb-2" />
                   <CardTitle className="text-lg">{service.title}</CardTitle>

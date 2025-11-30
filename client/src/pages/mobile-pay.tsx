@@ -106,7 +106,7 @@ export default function MobilePay() {
               <h2 className="text-2xl font-bold wb-dark mb-6">Payment Methods</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {paymentMethods.map((method, index) => (
-                  <Card key={index} className="hover:shadow-lg transition-shadow">
+                  <Card key={`item-${index}`} className="hover:shadow-lg transition-shadow">
                     <CardHeader className="text-center">
                       <method.icon className="w-12 h-12 wb-blue mx-auto mb-3" />
                       <CardTitle className="text-lg">{method.title}</CardTitle>
@@ -138,7 +138,7 @@ export default function MobilePay() {
               <CardContent>
                 <div className="space-y-4">
                   {recentPayments && Array.isArray(recentPayments) && recentPayments.length > 0 ? recentPayments.map((payment: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                    <div key={`item-${index}`} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                       <div className="flex items-center space-x-4">
                         <div className="w-12 h-12 bg-wb-blue-light rounded-full flex items-center justify-center">
                           <Store className="w-6 h-6 wb-blue" />
@@ -250,7 +250,7 @@ export default function MobilePay() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {nearbyMerchants.map((merchant, index) => (
-                  <div key={index} className="p-3 border rounded-lg">
+                  <div key={`item-${index}`} className="p-3 border rounded-lg">
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <div className="font-medium">{merchant.name}</div>

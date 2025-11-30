@@ -129,7 +129,7 @@ export default function DigitalWallet() {
             <div className="grid grid-cols-4 gap-3">
               {quickActions.map((action, index) => (
                 <Button
-                  key={index}
+                  key={`item-${index}`}
                   variant="outline"
                   onClick={action.action}
                   className="h-16 flex flex-col items-center space-y-2"
@@ -150,7 +150,7 @@ export default function DigitalWallet() {
           <CardContent>
             <div className="space-y-4">
               {(recentTransactions as any[])?.map((transaction: any, index: number) => (
-                <div key={index} className="flex items-center justify-between">
+                <div key={`item-${index}`} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                       transaction.type === 'received' ? 'bg-green-100' : 'bg-red-100'

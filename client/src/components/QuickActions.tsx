@@ -271,7 +271,7 @@ export default function QuickActions() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
           {quickActions.map((action, index) => (
             <div
-              key={index}
+              key={`item-${index}`}
               onClick={action.onClick}
               className="flex flex-col items-center p-4 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer border border-transparent hover:border-blue-200"
             >

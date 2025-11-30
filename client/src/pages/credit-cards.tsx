@@ -136,7 +136,7 @@ export default function CreditCards() {
             <div className="grid grid-cols-4 gap-3">
               {quickActions.map((action, index) => (
                 <Button 
-                  key={index}
+                  key={`item-${index}`}
                   variant="outline" 
                   onClick={action.action}
                   className="h-16 flex flex-col items-center space-y-2"
@@ -157,7 +157,7 @@ export default function CreditCards() {
           <CardContent>
             <div className="space-y-4">
               {recentTransactions && Array.isArray(recentTransactions) && recentTransactions.length > 0 ? recentTransactions.map((transaction: any, index: number) => (
-                <div key={index} className="flex items-center justify-between">
+                <div key={`item-${index}`} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                       <CreditCard className="w-5 h-5 text-gray-600" />

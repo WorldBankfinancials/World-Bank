@@ -244,7 +244,7 @@ export default function VerificationCenter() {
                           <p className="text-sm font-medium text-gray-700 mb-2">{t('submitted_documents')}:</p>
                           <div className="flex flex-wrap gap-2">
                             {item.documents.map((doc, index) => (
-                              <span key={index} className="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                              <span key={`item-${index}`} className="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
                                 <FileText className="w-3 h-3" />
                                 <span>{doc}</span>
                               </span>

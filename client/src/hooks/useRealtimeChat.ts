@@ -1,9 +1,9 @@
 /**
  * REAL-TIME CHAT HOOK
- * Live chat messaging with WebSocket and Supabase Realtime
+ * Live chat messaging with Supabase Realtime
  */
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface ChatMessage {
@@ -19,51 +19,44 @@ interface ChatMessage {
 
 export function useRealtimeChat(
   userId: string | undefined,
-  onMessageReceived?: (message: ChatMessage) => void,
-  onTyping?: (userId: string) => void,
-  onPresence?: (activeUsers: number) => void
+  onMessageReceived?: (message: ChatMessage) => void
 ) {
-  // WebSocket disabled - using API polling instead for stability
   useEffect(() => {
-    // Placeholder for future real-time integration
-  }, [userId, onMessageReceived, onTyping, onPresence]);
+    if (!userId) return;
 
-  const sendMessage = useCallback((message: ChatMessage) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: 'chat_message',
-          ...message
-        })
-      );
-    }
-  }, []);
+    // Subscribe to chat messages for this user
+    const channel = supabase.channel(`chat:${userId}`);
 
-  const sendTypingIndicator = useCallback((recipientId: string) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: 'typing',
-          recipientId
-        })
-      );
-    }
-  }, []);
+    channel
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `recipient_id=eq.${userId}`
+        },
+        (payload) => {
+          if (onMessageReceived && payload.new) {
+            onMessageReceived({
+              id: payload.new.id,
+              senderId: payload.new.sender_id,
+              senderName: payload.new.sender_name,
+              senderRole: payload.new.sender_role,
+              recipientId: payload.new.recipient_id,
+              content: payload.new.content,
+              isRead: payload.new.is_read,
+              timestamp: payload.new.created_at
+            });
+          }
+        }
+      )
+      .subscribe();
 
-  const markAsRead = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: 'mark_read'
-        })
-      );
-    }
-  }, []);
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [userId, onMessageReceived]);
 
-  return {
-    sendMessage,
-    sendTypingIndicator,
-    markAsRead,
-    isConnected: wsRef.current?.readyState === WebSocket.OPEN
-  };
+  return null;
 }

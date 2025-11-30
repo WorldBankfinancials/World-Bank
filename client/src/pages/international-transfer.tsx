@@ -442,7 +442,7 @@ export default function InternationalTransfer() {
                   <Label className="text-base font-medium">Recent Recipients</Label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
                     {recentRecipients.map((recipient, index) => (
-                      <div key={index} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <div key={`item-${index}`} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
                         <div className="font-medium">{recipient.name}</div>
                         <div className="text-sm text-gray-600">{recipient.country} • {recipient.account}</div>
                         <div className="text-xs text-gray-500">{recipient.lastTransfer}</div>
@@ -691,7 +691,7 @@ export default function InternationalTransfer() {
               <CardContent>
                 <div className="space-y-3">
                   {exchangeRates.map((rate, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+                    <div key={`item-${index}`} className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 transition-colors">
                       <div className="flex items-center space-x-3">
                         <span className="text-xl">{rate.flag}</span>
                         <div>
@@ -734,7 +734,7 @@ export default function InternationalTransfer() {
               <CardContent>
                 <div className="space-y-3">
                   {popularDestinations.map((dest, index) => (
-                    <div key={index} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <div key={`item-${index}`} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <span className="text-lg">{dest.flag}</span>
