@@ -624,13 +624,13 @@ export default function Dashboard() {
           const accountsData = await response.json();
 
           if (Array.isArray(accountsData) && accountsData.length > 0) {
-            const formattedAccounts = accountsData.map((account: any, idx: number) => ({
+            const formattedAccounts = accountsData.map((account: any) => ({
               type: account.accountType ? account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1) : 'Account',
               number: account.accountNumber ? `****${account.accountNumber.slice(-4)}` : '****0000',
               balance: account.balance ? parseFloat(account.balance.toString()) : 0,
               icon: account.accountType === 'checking' ? Wallet : 
                     account.accountType === 'savings' ? Building2 : TrendingUp,
-              id: account.id || idx
+              id: account.id
             }));
             setAccounts(formattedAccounts);
           }
