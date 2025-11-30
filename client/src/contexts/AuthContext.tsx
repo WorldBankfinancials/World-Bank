@@ -189,19 +189,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }).catch(() => {}); // Don't fail if endpoint unavailable
       } catch (e) {}
       
-      // Clear all stored credentials AFTER backend call
-      localStorage.removeItem('jwt_token');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('supabase_session');
+      // Clear ALL stored credentials IMMEDIATELY
+      localStorage.clear();
+      sessionStorage.clear();
       
+      // Clear state
       setUser(null);
       setUserProfile(null);
       
-      // Force navigation to login
-      window.location.href = '/login';
+      // Clear query cache
+      try {
+        const { queryClient } = await import('@/lib/queryClient');
+        queryClient.clear();
+      } catch (e) {}
+      
+      // Force navigation to login with hard refresh
+      window.location.replace('/login');
     } catch (error) {
+      // Even on error, clear everything and logout
+      localStorage.clear();
+      sessionStorage.clear();
+      setUser(null);
+      setUserProfile(null);
+      window.location.replace('/login');
     }
   };
 

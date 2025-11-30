@@ -130,10 +130,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!userProfile?.id) {
-        return;
-      }
-      
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const response = await authenticatedFetch(`/api/user`, {
@@ -152,10 +148,10 @@ export default function Dashboard() {
 
     fetchUserData();
     
-    // Refresh every 5 seconds for real-time updates
-    const interval = setInterval(fetchUserData, 5000);
+    // Refresh every 3 seconds for real-time updates
+    const interval = setInterval(fetchUserData, 3000);
     return () => clearInterval(interval);
-  }, [userProfile]);
+  }, []);
 
   useEffect(() => {
     const handleToggleChat = () => setIsChatOpen(!isChatOpen);
@@ -205,16 +201,16 @@ export default function Dashboard() {
 
     fetchAccounts();
     
-    // Refresh accounts every 5 seconds for realtime
-    const interval = setInterval(fetchAccounts, 5000);
+    // Refresh accounts every 2 seconds for realtime
+    const interval = setInterval(fetchAccounts, 2000);
     return () => clearInterval(interval);
   }, []);
 
-  // Refresh transactions every 30 seconds
+  // Refresh transactions every 2 seconds for realtime
   useEffect(() => {
     const interval = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ['/api/transactions/recent'] });
-    }, 30000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [queryClient]);
 
