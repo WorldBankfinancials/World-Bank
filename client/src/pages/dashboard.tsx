@@ -344,9 +344,9 @@ function AddMoneySection() {
           </div>
 
           <div className="grid grid-cols-5 gap-2">
-            {quickAmounts.map((amount, idx) => (
+            {quickAmounts.map((amount) => (
               <Button
-                key={`quick-amount-${amount}-${idx}`}
+                key={`qa-${amount}`}
                 variant="outline"
                 size="sm"
                 onClick={() => setAddAmount(amount)}
@@ -458,9 +458,9 @@ function AlertsSection() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
-            {alerts.slice(0, 3).map((alert: any, idx: number) => (
+            {alerts.slice(0, 3).map((alert: any) => (
               <div
-                key={`alert-${alert.id || idx}`}
+                key={`alert-${alert.id}-${alert.title}`}
                 className={`p-3 border rounded-lg ${!alert.read ? 'bg-blue-50 border-blue-200' : 'bg-white'}`}
               >
                 <div className="flex items-start justify-between">
@@ -871,8 +871,8 @@ export default function Dashboard() {
       <div className="px-4 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('my_accounts')}</h3>
         <div className="space-y-3">
-          {accounts.map((account) => (
-            <Card key={account.id} className="wb-card">
+          {accounts.map((account, idx) => (
+            <Card key={`acct-${account.id}-${account.number}-${idx}`} className="wb-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
