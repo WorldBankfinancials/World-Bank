@@ -900,8 +900,8 @@ export default function Dashboard() {
       {/* Quick Actions */}
       <div className="px-4 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <Link href="/transfer" className="no-underline">
+        <div className="grid grid-cols-2 gap-4" role="grid">
+          <Link key="qa-1-transfer" href="/transfer" className="no-underline">
             <div className="p-6 bg-gradient-to-br from-white to-blue-50 rounded-2xl border-2 border-blue-100 hover:border-blue-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 h-full">
               <div className="flex items-center space-x-4">
                 <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
@@ -915,7 +915,7 @@ export default function Dashboard() {
             </div>
           </Link>
 
-          <Link href="/receive" className="no-underline">
+          <Link key="qa-2-receive" href="/receive" className="no-underline">
             <div className="p-6 bg-gradient-to-br from-white to-green-50 rounded-2xl border-2 border-green-100 hover:border-green-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 h-full">
               <div className="flex items-center space-x-4">
                 <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
@@ -929,7 +929,7 @@ export default function Dashboard() {
             </div>
           </Link>
 
-          <Link href="/add-money" className="no-underline">
+          <Link key="qa-3-addmoney" href="/add-money" className="no-underline">
             <div className="p-6 bg-gradient-to-br from-white to-purple-50 rounded-2xl border-2 border-purple-100 hover:border-purple-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 h-full">
               <div className="flex items-center space-x-4">
                 <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
@@ -944,6 +944,7 @@ export default function Dashboard() {
           </Link>
 
           <div 
+            key="qa-4-chat"
             onClick={() => setIsChatOpen(true)}
             className="p-4 bg-white rounded-lg border hover:border-green-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
@@ -959,7 +960,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <Link href="/alerts" className="no-underline">
+          <Link key="qa-5-alerts" href="/alerts" className="no-underline">
             <div className="p-4 bg-white rounded-lg border hover:border-orange-500 hover:shadow-md transition-all cursor-pointer h-full">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center relative flex-shrink-0">
@@ -977,6 +978,7 @@ export default function Dashboard() {
           </Link>
 
           <div 
+            key="qa-6-statements"
             onClick={() => toast({ title: 'Account Statement', description: 'Generating account statement...' })}
             className="p-4 bg-white rounded-lg border hover:border-indigo-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
@@ -992,6 +994,7 @@ export default function Dashboard() {
           </div>
 
           <div 
+            key="qa-7-exchange"
             onClick={() => toast({ title: 'Currency Exchange', description: 'USD 1.00 = CNY 7.24, EUR 1.00 = CNY 7.85' })}
             className="p-4 bg-white rounded-lg border hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
@@ -1007,6 +1010,7 @@ export default function Dashboard() {
           </div>
 
           <div 
+            key="qa-8-investment"
             onClick={() => setLocation('/investment')}
             className="p-4 bg-white rounded-lg border hover:border-amber-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
