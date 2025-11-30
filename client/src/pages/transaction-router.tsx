@@ -57,17 +57,35 @@ export default function TransactionRouter() {
   });
 
   const [isCreating, setIsCreating] = useState(false);
+  const { toast } = useToast();
   
   const handleDeleteRoute = (routeId: string) => {
     // Delete route via API
     const deleteRoute = async () => {
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
-        await authenticatedFetch(`/api/admin/transaction-routes/${routeId}`, {
+        const response = await authenticatedFetch(`/api/admin/transaction-routes/${routeId}`, {
           method: 'DELETE'
         });
+        if (response.ok) {
+          toast({
+            title: 'Route Deleted',
+            description: 'Transaction route deleted successfully'
+          });
+          routes.filter(r => r.id !== routeId);
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Failed to delete transaction route',
+            variant: 'destructive'
+          });
+        }
       } catch (error) {
-        console.error('Failed to delete route:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to delete route. Please try again.',
+          variant: 'destructive'
+        });
       }
     };
     deleteRoute();
@@ -110,13 +128,29 @@ export default function TransactionRouter() {
     const createRoute = async () => {
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
-        await authenticatedFetch('/api/admin/transaction-routes', {
+        const response = await authenticatedFetch('/api/admin/transaction-routes', {
           method: 'POST',
           body: JSON.stringify(route),
           headers: { 'Content-Type': 'application/json' }
         });
+        if (response.ok) {
+          toast({
+            title: 'Route Created',
+            description: 'Transaction route created successfully'
+          });
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Failed to create transaction route',
+            variant: 'destructive'
+          });
+        }
       } catch (error) {
-        console.error('Failed to create route:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to create route. Please try again.',
+          variant: 'destructive'
+        });
       }
     };
     createRoute();
