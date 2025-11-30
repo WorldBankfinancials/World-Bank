@@ -608,16 +608,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchAccounts = async () => {
-      if (!userProfile?.id) {
+      if (!user?.id) {
         return;
       }
       
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
-        const userResponse = await authenticatedFetch(`/api/users/supabase/${userProfile.id}`);
-        if (!userResponse.ok) return;
-        
-        const user = await userResponse.json();
         const response = await authenticatedFetch(`/api/accounts?userId=${user.id}&t=${Date.now()}`, {
           headers: {
             'Cache-Control': 'no-cache'
@@ -628,18 +624,19 @@ export default function Dashboard() {
           const accountsData = await response.json();
 
           if (Array.isArray(accountsData) && accountsData.length > 0) {
-            const formattedAccounts = accountsData.map((account: any) => ({
+            const formattedAccounts = accountsData.map((account: any, idx: number) => ({
               type: account.accountType ? account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1) : 'Account',
               number: account.accountNumber ? `****${account.accountNumber.slice(-4)}` : '****0000',
               balance: account.balance ? parseFloat(account.balance.toString()) : 0,
               icon: account.accountType === 'checking' ? Wallet : 
                     account.accountType === 'savings' ? Building2 : TrendingUp,
-              id: account.id || 0
+              id: account.id || idx
             }));
             setAccounts(formattedAccounts);
           }
         }
       } catch (error) {
+        console.error('Failed to fetch accounts:', error);
       }
     };
 
@@ -648,7 +645,7 @@ export default function Dashboard() {
     // Refresh accounts every 15 seconds
     const interval = setInterval(fetchAccounts, 15000);
     return () => clearInterval(interval);
-  }, [userProfile]);
+  }, [user?.id]);
 
   // Refresh transactions every 30 seconds
   useEffect(() => {

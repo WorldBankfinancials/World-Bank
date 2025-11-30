@@ -37,6 +37,8 @@ export default function InternationalTransfer() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
   const { toast } = useToast();
+  
+  // ALL HOOKS MUST BE AT TOP LEVEL - BEFORE ANY CONDITIONAL RENDERING
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [transferAmount, setTransferAmount] = useState('1000');
   const [fromCurrency, setFromCurrency] = useState('USD');
@@ -50,8 +52,8 @@ export default function InternationalTransfer() {
   const [intlTransferStatus, setIntlTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
   const [intlPollInterval, setIntlPollInterval] = useState<NodeJS.Timeout | null>(null);
   
-  // CRITICAL: Fetch user data FIRST before using it
-  const { data: user, isLoading } = useQuery<User>({
+  // Fetch user data - called at top level
+  const { data: user } = useQuery<User>({
     queryKey: ['/api/user', userProfile?.email],
     queryFn: async () => {
       if (!userProfile?.email) return null;
@@ -61,6 +63,24 @@ export default function InternationalTransfer() {
       return response.json();
     },
     enabled: !!userProfile?.email
+  });
+
+  // Fetch exchange rates - top level
+  const { data: exchangeRates = [] } = useQuery<any[]>({
+    queryKey: ['/api/exchange-rates'],
+    staleTime: 60000
+  });
+
+  // Fetch popular destinations - top level
+  const { data: popularDestinations = [] } = useQuery<any[]>({
+    queryKey: ['/api/transfer/destinations'],
+    staleTime: 300000
+  });
+
+  // Fetch recent recipients - top level
+  const { data: recentRecipients = [] } = useQuery<any[]>({
+    queryKey: ['/api/transfer/recipients'],
+    staleTime: 60000
   });
 
   const handleInternationalTransfer = () => {
@@ -300,24 +320,6 @@ export default function InternationalTransfer() {
       </div>
     );
   }
-
-  // Fetch exchange rates from API
-  const { data: exchangeRates = [] } = useQuery<any[]>({
-    queryKey: ['/api/exchange-rates'],
-    staleTime: 60000
-  });
-
-  // Fetch popular destinations from API
-  const { data: popularDestinations = [] } = useQuery<any[]>({
-    queryKey: ['/api/transfer/destinations'],
-    staleTime: 300000
-  });
-
-  // Fetch recent recipients from API
-  const { data: recentRecipients = [] } = useQuery<any[]>({
-    queryKey: ['/api/transfer/recipients'],
-    staleTime: 60000
-  });
 
   return (
     <div className="min-h-screen bg-gray-50">
