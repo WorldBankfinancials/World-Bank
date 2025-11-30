@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { useQuery } from "@tanstack/react-query";
 import { COUNTRIES } from "@/data/countries";
-import BottomNavigation from "@/components/BottomNavigation";
 import type { User } from "@shared/schema";
 import { 
   Globe, 
@@ -108,7 +108,7 @@ export default function InternationalTransfer() {
   }
 
   // Show error if user data failed to load
-  if (!user) {
+  if (!user && !isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -224,6 +224,22 @@ export default function InternationalTransfer() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">{t('loading')}</div>
+      </div>
+    );
+  }
+  
+  // Guard: ensure user is loaded
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-red-600">Failed to load user profile. Please refresh.</div>
+      </div>
+    );
+  }
 
   // Processing page with status states
   if (showProcessingPage) {
