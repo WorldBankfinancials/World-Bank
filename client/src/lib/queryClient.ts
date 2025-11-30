@@ -11,11 +11,10 @@ async function throwIfResNotOk(res: Response) {
  * Get authorization headers from Supabase JWT token
  */
 export async function getAuthHeaders(): Promise<Record<string, string>> {
-  // CRITICAL: Must use raw localStorage since storage-utils adds "wb_" prefix
-  // Token is stored as "wb_jwt_token" by storage-utils
-  const token = localStorage.getItem('wb_jwt_token') || localStorage.getItem('wb_token') || localStorage.getItem('jwt_token') || localStorage.getItem('token');
+  // Simple: just get the token from localStorage
+  const token = localStorage.getItem('token');
   if (!token) {
-    console.warn('⚠️ queryClient: No authentication token found');
+    console.warn('⚠️ No authentication token found');
     throw new Error('Not authenticated');
   }
   return { 'Authorization': `Bearer ${token}` };
@@ -48,11 +47,7 @@ export async function authenticatedFetch(
     
     // Handle authentication errors
     if (response.status === 401) {
-      localStorage.removeItem('wb_jwt_token');
-      localStorage.removeItem('wb_token');
-      localStorage.removeItem('wb_user');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.clear();
       window.location.href = '/login';
     }
     

@@ -1,4 +1,3 @@
-import { setStorageItem, getStorageItem, removeStorageItem } from '@/lib/storage-utils';
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
 interface UserProfile {
@@ -44,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('🔍 AuthContext: Checking for existing session...');
     
     // Check for existing session from localStorage (set by login)
-    const storedToken = getStorageItem('token');
+    const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
 
     if (storedToken && storedUser) {
@@ -53,14 +52,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (parsedUser?.id && parsedUser?.email) {
           console.log('✅ AuthContext: Restoring session from localStorage', { email: parsedUser.email });
           setUser(parsedUser);
-          // Store JWT token for API calls
-          setStorageItem('jwt_token', storedToken);
         }
       } catch (e) {
         console.error('❌ AuthContext: Failed to parse stored user');
-        removeStorageItem('token');
-        removeStorageItem('user');
-        removeStorageItem('jwt_token');
+        localStorage.clear();
       }
     }
 
@@ -129,10 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.token && data.user) {
         console.log('✅ AuthContext: Login successful, storing Supabase JWT');
         // Store Supabase JWT token for API calls
-        setStorageItem('jwt_token', data.token);
-        // Keep backwards compatibility
-        setStorageItem('token', data.token);
-        setStorageItem('user', JSON.stringify(data.user));
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('refresh_token', data.refreshToken || '');
         
         const userObj: User = { 
