@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useLocation } from "wouter";
 import { 
   Wallet, 
   Smartphone, 
@@ -32,6 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function DigitalWallet() {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -64,10 +66,10 @@ export default function DigitalWallet() {
 
   // Quick actions - navigation only (no API needed)
   const quickActions = [
-    { icon: Send, label: "Send Money", action: () => window.location.href = "/transfer" },
-    { icon: QrCode, label: "QR Pay", action: () => window.location.href = "/mobile-pay" },
-    { icon: Plus, label: "Add Funds", action: () => window.location.href = "/add-money" },
-    { icon: History, label: "History", action: () => window.location.href = "/history" }
+    { icon: Send, label: "Send Money", action: () => navigate("/transfer") },
+    { icon: QrCode, label: "QR Pay", action: () => navigate("/mobile-pay") },
+    { icon: Plus, label: "Add Funds", action: () => navigate("/add-money") },
+    { icon: History, label: "History", action: () => navigate("/history") }
   ];
 
   return (

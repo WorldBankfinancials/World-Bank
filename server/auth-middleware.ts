@@ -94,7 +94,7 @@ export async function requireAuth(
             balance: '0',
             isActive: true,
             isVerified: true,
-            transferPin: supabaseUser.user.user_metadata?.transfer_pin || '0192',
+            transferPin: supabaseUser.user.user_metadata?.transfer_pin || '',
             role: supabaseUser.user.app_metadata?.role || 'customer'
           });
         }

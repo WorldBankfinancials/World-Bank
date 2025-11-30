@@ -1,3 +1,4 @@
+import { useLocation } from 'wouter';
 import { useState } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -314,7 +315,11 @@ export default function TransferFunds() {
                   {transferStatus === 'success' && (
                     <Button 
                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                      onClick={() => window.location.href = '/dashboard'}
+                      onClick={() => {
+                        setShowStatusScreen(false);
+                        setTransferType('domestic');
+                        window.history.pushState({}, '', '/dashboard');
+                      }}
                     >
                       Go to Dashboard
                     </Button>
