@@ -18,6 +18,13 @@ interface Transaction {
 }
 
 /**
+ * Check if authenticated (token exists in localStorage)
+ */
+function isAuthenticated(): boolean {
+  return !!localStorage.getItem('token');
+}
+
+/**
  * Supabase Realtime + Polling for accounts
  * Primary: Supabase Realtime instant updates
  * Fallback: Smart polling if realtime fails
@@ -30,17 +37,25 @@ export function useSupabaseRealtimeAccounts(
 
   const fetchAccountsData = useCallback(async () => {
     try {
+      if (!isAuthenticated()) {
+        console.log('⚠️ Not authenticated, skipping accounts fetch');
+        return;
+      }
+
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/accounts?t=${Date.now()}`);
 
-      if (response.ok) {
-        const accountsData = await response.json();
-        if (Array.isArray(accountsData)) {
-          onAccountsChange(accountsData);
-        }
+      if (!response.ok) {
+        console.error('❌ Accounts fetch failed:', response.status, response.statusText);
+        return;
       }
-    } catch (error) {
-      // Silent fail - polling will retry
+
+      const accountsData = await response.json();
+      if (Array.isArray(accountsData)) {
+        onAccountsChange(accountsData);
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching accounts:', error?.message || error);
     }
   }, [onAccountsChange]);
 
@@ -70,7 +85,8 @@ export function useSupabaseRealtimeAccounts(
         originalUnsub?.();
         clearInterval(pollInterval);
       };
-    } catch (error) {
+    } catch (error: any) {
+      console.warn('⚠️ Realtime subscription failed, using polling:', error?.message);
       // If realtime fails, use polling
       const pollInterval = setInterval(fetchAccountsData, 5000);
       unsubscribeRef.current = () => clearInterval(pollInterval);
@@ -97,25 +113,33 @@ export function useSupabaseRealtimeTransactions(
 
   const fetchTransactionsData = useCallback(async () => {
     try {
+      if (!isAuthenticated()) {
+        console.log('⚠️ Not authenticated, skipping transactions fetch');
+        return;
+      }
+
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/transactions');
 
-      if (response.ok) {
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          const txns = data.slice(0, 10).map((txn: any) => ({
-            id: txn.id,
-            amount: txn.amount,
-            status: txn.status || 'pending',
-            description: txn.description || txn.recipientName || 'Transfer',
-            createdAt: txn.createdAt || new Date().toISOString(),
-            date: txn.createdAt || new Date().toISOString()
-          }));
-          onTransactionsChange(txns);
-        }
+      if (!response.ok) {
+        console.error('❌ Transactions fetch failed:', response.status, response.statusText);
+        return;
       }
-    } catch (error) {
-      // Silent fail - polling will retry
+
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        const txns = data.slice(0, 10).map((txn: any) => ({
+          id: txn.id,
+          amount: txn.amount,
+          status: txn.status || 'pending',
+          description: txn.description || txn.recipientName || 'Transfer',
+          createdAt: txn.createdAt || new Date().toISOString(),
+          date: txn.createdAt || new Date().toISOString()
+        }));
+        onTransactionsChange(txns);
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching transactions:', error?.message || error);
     }
   }, [onTransactionsChange]);
 
@@ -145,7 +169,8 @@ export function useSupabaseRealtimeTransactions(
         originalUnsub?.();
         clearInterval(pollInterval);
       };
-    } catch (error) {
+    } catch (error: any) {
+      console.warn('⚠️ Realtime subscription failed, using polling:', error?.message);
       // If realtime fails, use polling
       const pollInterval = setInterval(fetchTransactionsData, 3000);
       unsubscribeRef.current = () => clearInterval(pollInterval);
@@ -172,15 +197,23 @@ export function useSupabaseRealtimeUserBalance(
 
   const fetchUserData = useCallback(async () => {
     try {
+      if (!isAuthenticated()) {
+        console.log('⚠️ Not authenticated, skipping user data fetch');
+        return;
+      }
+
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/user`);
 
-      if (response.ok) {
-        const data = await response.json();
-        onUserChange(data);
+      if (!response.ok) {
+        console.error('❌ User data fetch failed:', response.status, response.statusText);
+        return;
       }
-    } catch (error) {
-      // Silent fail - polling will retry
+
+      const data = await response.json();
+      onUserChange(data);
+    } catch (error: any) {
+      console.error('❌ Error fetching user data:', error?.message || error);
     }
   }, [onUserChange]);
 
@@ -210,7 +243,8 @@ export function useSupabaseRealtimeUserBalance(
         originalUnsub?.();
         clearInterval(pollInterval);
       };
-    } catch (error) {
+    } catch (error: any) {
+      console.warn('⚠️ Realtime subscription failed, using polling:', error?.message);
       // If realtime fails, use polling
       const pollInterval = setInterval(fetchUserData, 4000);
       unsubscribeRef.current = () => clearInterval(pollInterval);
