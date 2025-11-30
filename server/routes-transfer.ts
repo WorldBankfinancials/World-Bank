@@ -324,8 +324,8 @@ export function setupTransferRoutes(app: Express) {
         return res.status(404).json({ message: "Transfer not found or already processed" });
       }
 
-      // Transition: processing → rejected
-      const transaction = await storage.updateTransactionStatus(transactionId, 'rejected', adminId, notes);
+      // Transition: processing → failed
+      const transaction = await storage.updateTransactionStatus(transactionId, 'failed', adminId, notes);
       
       // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
       // If reverseToAccount = true, credit back to user's account
@@ -352,12 +352,12 @@ export function setupTransferRoutes(app: Express) {
           }
         });
 
-        // Create automatic support ticket for rejected transfer
+        // Create automatic support ticket for failed transfer
         if (targetTxn.fromUserId) {
           await storage.createSupportTicket({
             userId: targetTxn.fromUserId,
             subject: `Transfer Rejection - Transaction #${transaction.id}`,
-            description: `Your transfer has been rejected.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Recipient: ${transaction.recipientName}\n- Reason for rejection: ${notes}\n- Funds Reversed: ${reverseToAccount ? 'Yes' : 'No'}\n\nPlease contact support for assistance.`,
+            description: `Your transfer has failed.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Recipient: ${transaction.recipientName}\n- Reason for rejection: ${notes}\n- Funds Reversed: ${reverseToAccount ? 'Yes' : 'No'}\n\nPlease contact support for assistance.`,
             priority: 'high',
             status: 'open'
           });
@@ -366,8 +366,8 @@ export function setupTransferRoutes(app: Express) {
 
       res.json({ 
         message: reverseToAccount 
-          ? "Transfer rejected and funds reversed to customer account" 
-          : "Transfer rejected - funds retained in pending state", 
+          ? "Transfer failed and funds reversed to customer account" 
+          : "Transfer failed - funds retained in pending state", 
         transaction,
         reversed: reverseToAccount || false
       });
@@ -448,8 +448,8 @@ export function setupTransferRoutes(app: Express) {
         return res.status(404).json({ message: "International transfer not found or already processed" });
       }
 
-      // Transition: processing → rejected
-      const transaction = await storage.updateTransactionStatus(transactionId, 'rejected', adminId, notes);
+      // Transition: processing → failed
+      const transaction = await storage.updateTransactionStatus(transactionId, 'failed', adminId, notes);
       
       // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
       // If reverseToAccount = true, credit back to user's account
@@ -481,7 +481,7 @@ export function setupTransferRoutes(app: Express) {
           await storage.createSupportTicket({
             userId: targetTxn.fromUserId,
             subject: `International Transfer Rejection - Transaction #${transaction.id}`,
-            description: `Your international transfer has been rejected.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Recipient Country: ${transaction.recipientCountry}\n- Reason for rejection: ${notes}\n- Funds Reversed: ${reverseToAccount ? 'Yes' : 'No'}\n\nPlease contact support for assistance.`,
+            description: `Your international transfer has failed.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Recipient Country: ${transaction.recipientCountry}\n- Reason for rejection: ${notes}\n- Funds Reversed: ${reverseToAccount ? 'Yes' : 'No'}\n\nPlease contact support for assistance.`,
             priority: 'high',
             status: 'open'
           });
@@ -490,8 +490,8 @@ export function setupTransferRoutes(app: Express) {
 
       res.json({ 
         message: reverseToAccount 
-          ? "International transfer rejected and funds reversed to customer account" 
-          : "International transfer rejected - funds retained in pending state", 
+          ? "International transfer failed and funds reversed to customer account" 
+          : "International transfer failed - funds retained in pending state", 
         transaction,
         reversed: reverseToAccount || false
       });

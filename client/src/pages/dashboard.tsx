@@ -136,7 +136,7 @@ export default function Dashboard() {
       
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch(`/api/users/supabase/${userProfile.id}`, {
+        const response = await authenticatedFetch(`/api/user`, {
           headers: {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'
@@ -152,8 +152,8 @@ export default function Dashboard() {
 
     fetchUserData();
     
-    // Refresh every 10 seconds for real-time updates
-    const interval = setInterval(fetchUserData, 10000);
+    // Refresh every 5 seconds for real-time updates
+    const interval = setInterval(fetchUserData, 5000);
     return () => clearInterval(interval);
   }, [userProfile]);
 
@@ -176,13 +176,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchAccounts = async () => {
-      if (!userProfile?.id) {
-        return;
-      }
-      
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch(`/api/accounts?userId=${userProfile.id}&t=${Date.now()}`, {
+        const response = await authenticatedFetch(`/api/accounts?t=${Date.now()}`, {
           headers: {
             'Cache-Control': 'no-cache'
           }
@@ -209,10 +205,10 @@ export default function Dashboard() {
 
     fetchAccounts();
     
-    // Refresh accounts every 15 seconds
-    const interval = setInterval(fetchAccounts, 15000);
+    // Refresh accounts every 5 seconds for realtime
+    const interval = setInterval(fetchAccounts, 5000);
     return () => clearInterval(interval);
-  }, [userProfile?.id]);
+  }, []);
 
   // Refresh transactions every 30 seconds
   useEffect(() => {
