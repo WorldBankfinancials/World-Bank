@@ -2162,9 +2162,15 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const { amount, recipientName, recipientCountry, recipientAccount, purpose, transferPin } = req.body;
       
+      console.log('📤 POST /api/transfers', { amount, recipientName, recipientCountry, recipientAccount });
+      
       if (!amount || !recipientName || !recipientAccount || !transferPin) {
-        return res.status(400).json({ error: 'Missing required fields' });
+        console.error('❌ Missing required fields:', { amount, recipientName, recipientAccount, transferPin });
+        return res.status(400).json({ error: 'Missing required fields', fields: { amount: !!amount, recipientName: !!recipientName, recipientAccount: !!recipientAccount, transferPin: !!transferPin } });
       }
+
+      const referenceNumber = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      console.log('🔄 Creating transaction with reference:', referenceNumber);
 
       const transfer = await storage.createTransaction({
         fromAccountId: 1,
@@ -2173,8 +2179,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         description: `Transfer to ${recipientName} in ${recipientCountry}`,
         status: 'pending_approval',
         currency: 'USD',
-        referenceNumber: `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+        referenceNumber: referenceNumber
       });
+
+      console.log('✅ Transfer created:', { id: transfer.id, referenceNumber: transfer.referenceNumber, status: transfer.status });
 
       res.json({
         id: transfer.id,
@@ -2182,7 +2190,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         status: 'pending_approval'
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message || 'Failed to create transfer' });
+      console.error('❌ Transfer creation error:', error.message, error);
+      res.status(500).json({ error: error.message || 'Failed to create transfer', details: error.toString() });
     }
   });
 
@@ -2190,12 +2199,23 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/transfers/:id/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = req.params.id;
+      console.log('📥 GET /api/transfers/:id/status', { id });
+      
       const allTransactions = await storage.getAllTransactions();
-      const transfer = allTransactions.find((t: any) => t.id === id || t.referenceNumber === id);
+      console.log(`🔍 Found ${allTransactions.length} total transactions`);
+      
+      const transfer = allTransactions.find((t: any) => {
+        const idMatch = t.id?.toString() === id?.toString();
+        const refMatch = t.referenceNumber === id;
+        return idMatch || refMatch;
+      });
       
       if (!transfer) {
-        return res.status(404).json({ error: 'Transfer not found' });
+        console.warn('⚠️ Transfer not found:', { id, totalTransactions: allTransactions.length });
+        return res.status(404).json({ error: 'Transfer not found', searchedId: id });
       }
+
+      console.log('✅ Transfer found:', { id: transfer.id, status: transfer.status });
 
       res.json({
         id: transfer.id,
@@ -2203,7 +2223,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         referenceNumber: transfer.referenceNumber
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message || 'Failed to fetch transfer status' });
+      console.error('❌ Transfer status error:', error.message, error);
+      res.status(500).json({ error: error.message || 'Failed to fetch transfer status', details: error.toString() });
     }
   });
 
@@ -2212,9 +2233,15 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const { amount, recipientCountry, transferPin } = req.body;
       
+      console.log('📤 POST /api/international-transfers', { amount, recipientCountry });
+      
       if (!amount || !recipientCountry || !transferPin) {
+        console.error('❌ Missing required fields:', { amount, recipientCountry, transferPin });
         return res.status(400).json({ error: 'Missing required fields' });
       }
+
+      const referenceNumber = `INT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      console.log('🔄 Creating international transaction:', referenceNumber);
 
       const transfer = await storage.createTransaction({
         fromAccountId: 1,
@@ -2223,8 +2250,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         description: `International transfer to ${recipientCountry}`,
         status: 'pending_approval',
         currency: 'USD',
-        referenceNumber: `INT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+        referenceNumber: referenceNumber
       });
+
+      console.log('✅ International transfer created:', { id: transfer.id, referenceNumber: transfer.referenceNumber });
 
       res.json({
         id: transfer.id,
@@ -2232,7 +2261,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         status: 'pending_approval'
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message || 'Failed to create international transfer' });
+      console.error('❌ International transfer error:', error.message, error);
+      res.status(500).json({ error: error.message || 'Failed to create international transfer', details: error.toString() });
     }
   });
 
