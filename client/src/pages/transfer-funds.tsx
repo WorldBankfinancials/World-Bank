@@ -576,7 +576,7 @@ export default function TransferFunds() {
                 type="submit" 
                 className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 text-lg rounded-lg mt-8"
               >
-                Continue Transfer
+                Transfer
               </Button>
             </form>
           </CardContent>
