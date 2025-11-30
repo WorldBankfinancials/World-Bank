@@ -150,12 +150,7 @@ export const queryClient = new QueryClient({
         const response = await authenticatedFetch(url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.json();
-      }
-    }
-  },
-  defaultOptions: {
-    queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
+      },
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
