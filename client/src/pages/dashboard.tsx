@@ -174,15 +174,15 @@ function TransferSection() {
             className="w-full bg-blue-600 text-white"
           >
             {isProcessing ? (
-              <>
-                <Clock className="w-4 h-4 mr-2 animate-spin" />
-                {t('processing_transfer')}
-              </>
+              <span className="flex items-center gap-2">
+                <Clock className="w-4 h-4 animate-spin" />
+                <span>{t('processing_transfer')}</span>
+              </span>
             ) : (
-              <>
-                <Send className="w-4 h-4 mr-2" />
-                {t('send_amount')} ${transferAmount || "0.00"}
-              </>
+              <span className="flex items-center gap-2">
+                <Send className="w-4 h-4" />
+                <span>{t('send_amount')} ${transferAmount || "0.00"}</span>
+              </span>
             )}
           </Button>
         </CardContent>
@@ -391,15 +391,15 @@ function AddMoneySection() {
             className="w-full bg-purple-600 text-white"
           >
             {loading ? (
-              <>
-                <Clock className="w-4 h-4 mr-2 animate-spin" />
-                Processing...
-              </>
+              <span className="flex items-center gap-2">
+                <Clock className="w-4 h-4 animate-spin" />
+                <span>Processing...</span>
+              </span>
             ) : (
-              <>
-                <Plus className="w-4 h-4 mr-2" />
-                Add ${addAmount || "0.00"}
-              </>
+              <span className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                <span>Add ${addAmount || "0.00"}</span>
+              </span>
             )}
           </Button>
         </CardContent>
