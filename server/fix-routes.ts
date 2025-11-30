@@ -27,13 +27,13 @@ import { registerLiveChatRoutes } from './supabase-live-chat';
 
 // Fixed route handlers with proper typing
 export async function registerFixedRoutes(app: Express): Promise<Server> {
-  console.log('\n🚀 =====================================================');
-  console.log('🚀 STARTING EXPRESS SERVER WITH BANKING API');
-  console.log('🚀 =====================================================\n');
+  console.error('\n🚀 =====================================================');
+  console.error('🚀 STARTING EXPRESS SERVER WITH BANKING API');
+  console.error('🚀 =====================================================\n');
   
   logConfiguration();
   
-  console.log('📊 Storage layer:', {
+  console.error('📊 Storage layer:', {
     type: 'CompleteSupabaseStorage',
     supabaseUrl: process.env.VITE_SUPABASE_URL?.slice(0, 30) + '...',
     storageReady: !!storage
@@ -839,7 +839,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return dateB - dateA;
       });
 
-      console.log('✅ Fetched', allTransactions.length, 'transactions for user:', req.user!.email);
+      console.error('✅ Fetched', allTransactions.length, 'transactions for user:', req.user!.email);
       res.json(allTransactions);
     } catch (error: any) {
       console.error('❌ Failed to fetch transactions:', error);
@@ -860,7 +860,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const accounts = await storage.getUserAccounts(user.id);
-      console.log('✅ Fetched', accounts.length, 'accounts for user:', req.user!.email);
+      console.error('✅ Fetched', accounts.length, 'accounts for user:', req.user!.email);
       res.json(accounts);
     } catch (error: any) {
       console.error('❌ Failed to get accounts:', error);
@@ -1965,7 +1965,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!dbUser) {
         // User authenticated but not in bank_users - create them NOW
         try {
-          console.log('🔄 Creating new user in bank_users:', email);
+          console.error('🔄 Creating new user in bank_users:', email);
           dbUser = await storage.createUser({
             username: email.split('@')[0],
             email: email,
@@ -1982,10 +1982,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             transferPin: supabaseUser.user_metadata?.transfer_pin || '0192',
             role: supabaseUser.app_metadata?.role || 'customer'
           });
-          console.log('✅ User created:', { id: dbUser.id, email });
+          console.error('✅ User created:', { id: dbUser.id, email });
           
           // Also create initial account for user
-          console.log('🔄 Creating initial account for user...');
+          console.error('🔄 Creating initial account for user...');
           await storage.createAccount({
             userId: dbUser.id,
             accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
@@ -1994,7 +1994,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             currency: 'USD',
             status: 'active'
           });
-          console.log('✅ Initial account created');
+          console.error('✅ Initial account created');
         } catch (dbError: any) {
           console.error('❌ Failed to create user in bank_users:', dbError);
           // User authenticated - still return token even if DB create fails
@@ -2003,7 +2003,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         // User exists - verify they have at least one account
         const userAccounts = await storage.getUserAccounts(dbUser.id);
         if (userAccounts.length === 0) {
-          console.log('🔄 User has no accounts, creating one...');
+          console.error('🔄 User has no accounts, creating one...');
           await storage.createAccount({
             userId: dbUser.id,
             accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
@@ -2012,7 +2012,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             currency: 'USD',
             status: 'active'
           });
-          console.log('✅ Account created for existing user');
+          console.error('✅ Account created for existing user');
         }
       }
 
@@ -2037,7 +2037,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to generate authentication token' });
       }
 
-      console.log('✅ LOGIN SUCCESS:', { email, userId: supabaseUser.id, tokenType: 'Supabase JWT' });
+      console.error('✅ LOGIN SUCCESS:', { email, userId: supabaseUser.id, tokenType: 'Supabase JWT' });
 
       res.json({ 
         token: accessToken,
@@ -2121,7 +2121,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to generate authentication token' });
       }
 
-      console.log('✅ ADMIN LOGIN SUCCESS:', { email, userId: data.user.id, tokenType: 'Supabase JWT' });
+      console.error('✅ ADMIN LOGIN SUCCESS:', { email, userId: data.user.id, tokenType: 'Supabase JWT' });
 
       res.json({ 
         token: accessToken,
@@ -2238,7 +2238,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const { amount, recipientName, recipientCountry, recipientAccount, purpose, transferPin } = req.body;
       
-      console.log('\n📤 POST /api/transfers', { 
+      console.error('\n📤 POST /api/transfers', { 
         amount, 
         recipientName, 
         recipientCountry, 
@@ -2252,9 +2252,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const referenceNumber = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      console.log('🔄 Creating transaction with reference:', referenceNumber);
+      console.error('🔄 Creating transaction with reference:', referenceNumber);
 
-      console.log('💾 Calling storage.createTransaction()...');
+      console.error('💾 Calling storage.createTransaction()...');
       const transfer = await storage.createTransaction({
         fromAccountId: 1,
         type: 'transfer',
@@ -2265,7 +2265,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         referenceNumber: referenceNumber
       });
 
-      console.log('✅ Transfer created successfully:', { 
+      console.error('✅ Transfer created successfully:', { 
         id: transfer.id, 
         referenceNumber: transfer.referenceNumber, 
         status: transfer.status,
@@ -2293,10 +2293,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/transfers/:id/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = req.params.id;
-      console.log('📥 GET /api/transfers/:id/status', { id, user: req.user?.email });
+      console.error('📥 GET /api/transfers/:id/status', { id, user: req.user?.email });
       
       const allTransactions = await storage.getAllTransactions();
-      console.log(`🔍 Found ${allTransactions.length} total transactions`);
+      console.error(`🔍 Found ${allTransactions.length} total transactions`);
       
       const transfer = allTransactions.find((t: any) => {
         const idMatch = t.id?.toString() === id?.toString();
@@ -2309,7 +2309,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Transfer not found', searchedId: id });
       }
 
-      console.log('✅ Transfer found:', { id: transfer.id, status: transfer.status, referenceNumber: transfer.referenceNumber });
+      console.error('✅ Transfer found:', { id: transfer.id, status: transfer.status, referenceNumber: transfer.referenceNumber });
 
       res.json({
         id: transfer.id,
@@ -2335,7 +2335,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const { amount, recipientCountry, transferPin } = req.body;
       
-      console.log('📤 POST /api/international-transfers', { amount, recipientCountry });
+      console.error('📤 POST /api/international-transfers', { amount, recipientCountry });
       
       if (!amount || !recipientCountry || !transferPin) {
         console.error('❌ Missing required fields:', { amount, recipientCountry, transferPin });
@@ -2343,7 +2343,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const referenceNumber = `INT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      console.log('🔄 Creating international transaction:', referenceNumber);
+      console.error('🔄 Creating international transaction:', referenceNumber);
 
       const transfer = await storage.createTransaction({
         fromAccountId: 1,
@@ -2355,7 +2355,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         referenceNumber: referenceNumber
       });
 
-      console.log('✅ International transfer created:', { id: transfer.id, referenceNumber: transfer.referenceNumber });
+      console.error('✅ International transfer created:', { id: transfer.id, referenceNumber: transfer.referenceNumber });
 
       res.json({
         id: transfer.id,

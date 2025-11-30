@@ -108,7 +108,8 @@ export default function Registration() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/register-complete', {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/auth/register-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -129,9 +130,9 @@ export default function Registration() {
           idNumber: formData.idNumber,
           transferPin: formData.transferPin,
         })
-      });
+      }).catch(() => ({ ok: false }));
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
 
       if (!response.ok || data.error) {
         toast({
