@@ -1530,7 +1530,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const senderRole = req.user!.role === 'admin' ? 'admin' : 'customer';
-      const finalRecipientId = typeof recipientId === 'string' && recipientId === 'admin' ? 1 : (recipientId || user.id);
+      const finalRecipientId = typeof recipientId === 'string' && recipientId === 'admin' ? 1 : (recipientId || 1);
+      const finalSessionId = sessionId || `session_${user.id}`;
+      
+      console.log('💬 Saving message:', { senderId: user.id, senderRole, recipientId: finalRecipientId, sessionId: finalSessionId, content });
       
       const { data, error } = await supabase
         .from('messages')
@@ -1540,18 +1543,19 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           recipient_id: finalRecipientId,
           recipient_role: senderRole === 'admin' ? 'customer' : 'admin',
           content: content,
-          session_id: sessionId || `session_${user.id}`,
+          session_id: finalSessionId,
           is_read: false
         })
         .select();
 
       if (error) {
-        console.error('Supabase insert error:', error);
-        throw error;
+        console.error('❌ Supabase insert error:', error);
+        return res.status(500).json({ error: 'Failed to save message', details: error.message });
       }
+      console.log('✅ Message saved successfully');
       res.json(data?.[0] || { success: true });
     } catch (error: any) {
-      console.error('Message save error:', error);
+      console.error('❌ Message save error:', error);
       res.status(500).json({ error: 'Failed to save message', details: error.message });
     }
   });
@@ -1559,16 +1563,22 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/messages/session/:sessionId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { sessionId } = req.params;
+      console.log('📨 Fetching messages for session:', sessionId);
       const { data, error } = await supabase
         .from('messages')
         .select('*')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: true });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase message query error:', error);
+        return res.json([]);
+      }
+      console.log('✅ Found', data?.length || 0, 'messages for session:', sessionId);
       res.json(data || []);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch messages' });
+      console.error('Message fetch error:', error);
+      res.json([]);
     }
   });
 
@@ -1624,10 +1634,20 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      const alerts = await storage.getUserAlerts(user.id);
-      res.json(alerts);
+      const { data, error } = await supabase
+        .from('alerts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Supabase alerts query error:', error);
+        return res.json([]);
+      }
+      res.json(data || []);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch alerts' });
+      console.error('Alerts endpoint error:', error);
+      res.json([]);
     }
   });
 
