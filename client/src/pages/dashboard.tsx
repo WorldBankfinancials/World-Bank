@@ -901,13 +901,13 @@ export default function Dashboard() {
       <div className="px-4 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 gap-4">
-          <Link key="qa-transfer" href="/transfer">
-            <div className="p-6 bg-gradient-to-br from-white to-blue-50 rounded-2xl border-2 border-blue-100 hover:border-blue-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105">
+          <Link href="/transfer" className="no-underline">
+            <div className="p-6 bg-gradient-to-br from-white to-blue-50 rounded-2xl border-2 border-blue-100 hover:border-blue-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 h-full">
               <div className="flex items-center space-x-4">
-                <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
                   <Globe className="w-7 h-7 text-white" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h4 className="font-semibold text-gray-900 text-lg">International Transfer</h4>
                   <p className="text-sm text-gray-600">Send money worldwide</p>
                 </div>
@@ -915,13 +915,13 @@ export default function Dashboard() {
             </div>
           </Link>
 
-          <Link key="qa-receive" href="/receive">
-            <div className="p-6 bg-gradient-to-br from-white to-green-50 rounded-2xl border-2 border-green-100 hover:border-green-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105">
+          <Link href="/receive" className="no-underline">
+            <div className="p-6 bg-gradient-to-br from-white to-green-50 rounded-2xl border-2 border-green-100 hover:border-green-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 h-full">
               <div className="flex items-center space-x-4">
-                <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
                   <ArrowDownRight className="w-7 h-7 text-white" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h4 className="font-semibold text-gray-900 text-lg">Receive</h4>
                   <p className="text-sm text-gray-600">Request money</p>
                 </div>
@@ -929,13 +929,13 @@ export default function Dashboard() {
             </div>
           </Link>
 
-          <Link key="qa-addmoney" href="/add-money">
-            <div className="p-6 bg-gradient-to-br from-white to-purple-50 rounded-2xl border-2 border-purple-100 hover:border-purple-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105">
+          <Link href="/add-money" className="no-underline">
+            <div className="p-6 bg-gradient-to-br from-white to-purple-50 rounded-2xl border-2 border-purple-100 hover:border-purple-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 h-full">
               <div className="flex items-center space-x-4">
-                <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
                   <Plus className="w-7 h-7 text-white" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h4 className="font-semibold text-gray-900 text-lg">Add Money</h4>
                   <p className="text-sm text-gray-600">Fund account</p>
                 </div>
@@ -943,35 +943,32 @@ export default function Dashboard() {
             </div>
           </Link>
 
-          {/* Live Chat Button */}
           <div 
-            key="qa-chat"
             onClick={() => setIsChatOpen(true)}
-            className="p-4 bg-white rounded-lg border hover:border-green-500 hover:shadow-md transition-all cursor-pointer"
+            className="p-4 bg-white rounded-lg border hover:border-green-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center relative">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center relative flex-shrink-0">
                 <Send className="w-6 h-6 text-green-600" />
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
-              <div>
+              <div className="flex-1">
                 <h4 className="font-medium text-gray-900">Live Chat</h4>
                 <p className="text-sm text-gray-600">Customer support</p>
               </div>
             </div>
           </div>
 
-          {/* Banking Alerts - With Alerts Page Navigation */}
-          <Link key="qa-alerts" href="/alerts">
-            <div className="p-4 bg-white rounded-lg border hover:border-orange-500 hover:shadow-md transition-all cursor-pointer">
+          <Link href="/alerts" className="no-underline">
+            <div className="p-4 bg-white rounded-lg border hover:border-orange-500 hover:shadow-md transition-all cursor-pointer h-full">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center relative">
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center relative flex-shrink-0">
                   <Bell className="w-6 h-6 text-orange-600" />
                   <div className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
                     <span className="text-xs text-white font-bold">3</span>
                   </div>
                 </div>
-                <div>
+                <div className="flex-1">
                   <h4 className="font-medium text-gray-900">Banking Alerts</h4>
                   <p className="text-sm text-gray-600">3 new notifications</p>
                 </div>
@@ -979,51 +976,45 @@ export default function Dashboard() {
             </div>
           </Link>
 
-          {/* Account Statement */}
           <div 
-            key="qa-statement"
             onClick={() => toast({ title: 'Account Statement', description: 'Generating account statement...' })}
-            className="p-4 bg-white rounded-lg border hover:border-indigo-500 hover:shadow-md transition-all cursor-pointer"
+            className="p-4 bg-white rounded-lg border hover:border-indigo-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <Download className="w-6 h-6 text-indigo-600" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h4 className="font-medium text-gray-900">Statements</h4>
                 <p className="text-sm text-gray-600">Download reports</p>
               </div>
             </div>
           </div>
 
-          {/* Currency Exchange */}
           <div 
-            key="qa-exchange"
             onClick={() => toast({ title: 'Currency Exchange', description: 'USD 1.00 = CNY 7.24, EUR 1.00 = CNY 7.85' })}
-            className="p-4 bg-white rounded-lg border hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer"
+            className="p-4 bg-white rounded-lg border hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <RotateCcw className="w-6 h-6 text-emerald-600" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h4 className="font-medium text-gray-900">Exchange</h4>
                 <p className="text-sm text-gray-600">Currency rates</p>
               </div>
             </div>
           </div>
 
-          {/* Investment Portfolio */}
           <div 
-            key="qa-investment"
             onClick={() => setLocation('/investment')}
-            className="p-4 bg-white rounded-lg border hover:border-amber-500 hover:shadow-md transition-all cursor-pointer"
+            className="p-4 bg-white rounded-lg border hover:border-amber-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <TrendingUp className="w-6 h-6 text-amber-600" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h4 className="font-medium text-gray-900">Investments</h4>
                 <p className="text-sm text-gray-600">Portfolio view</p>
               </div>
