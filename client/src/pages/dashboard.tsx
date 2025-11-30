@@ -469,7 +469,7 @@ export default function Dashboard() {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 gap-4" key="dashboard-quick-actions-grid-wrapper">
           <div key="quick-action-qa-1-transfer">
-            <Link href="/transfer" className="no-underline">
+            <Link href="/international-transfer" className="no-underline">
               <div className="p-6 bg-gradient-to-br from-white to-blue-50 rounded-2xl border-2 border-blue-100 hover:border-blue-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 h-full">
                 <div className="flex items-center space-x-4">
                   <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
