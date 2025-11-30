@@ -1026,7 +1026,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-
+      {/* Sections with unique keys */}
+      <div className="space-y-4 px-4">
+        <TransferSection key="transfer-section" />
+        <ReceiveSection key="receive-section" />
+        <AddMoneySection key="addmoney-section" />
+        <AlertsSection key="alerts-section" />
       </div>
 
       {/* Recent Transactions - REAL DATA FROM DATABASE */}
