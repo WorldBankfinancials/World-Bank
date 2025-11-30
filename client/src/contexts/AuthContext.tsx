@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 interface UserProfile {
   id: string;
@@ -33,59 +34,81 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Initialize Supabase client
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL || '',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+);
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  // Initialize auth session on mount
   useEffect(() => {
-    // Check localStorage on mount with proper error handling
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    if (savedToken && savedUser) {
+    console.log('🔍 AuthContext: Checking for existing session...');
+    
+    // Check for existing session from localStorage (set by login)
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+
+    if (storedToken && storedUser) {
       try {
-        const parsedUser = JSON.parse(savedUser);
+        const parsedUser = JSON.parse(storedUser);
         if (parsedUser?.id && parsedUser?.email) {
+          console.log('✅ AuthContext: Restoring session from localStorage', { email: parsedUser.email });
           setUser(parsedUser);
-        } else {
-          throw new Error('Invalid user format');
+          // Store JWT token for API calls
+          localStorage.setItem('jwt_token', storedToken);
         }
       } catch (e) {
+        console.error('❌ AuthContext: Failed to parse stored user');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('jwt_token');
       }
     }
+
+    setLoading(false);
   }, []);
 
-  const fetchUserData = useCallback(async (user: User) => {
-    if (!user?.id) {
+  const fetchUserData = useCallback(async (authUser: User) => {
+    if (!authUser?.id) {
+      console.warn('⚠️ AuthContext: No user ID provided to fetchUserData');
       return;
     }
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('jwt_token') || localStorage.getItem('token');
       if (!token) {
-        throw new Error('No authentication token');
+        console.warn('⚠️ AuthContext: No token available for API call');
+        return;
       }
 
-      const response = await fetch(`/api/users/${user.id}`, {
+      console.log('📥 AuthContext: Fetching user profile...');
+      const response = await fetch(`/api/users/${authUser.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        console.warn(`⚠️ AuthContext: Failed to fetch user profile (${response.status})`);
+        return;
       }
 
       const profile = await response.json();
       if (profile && typeof profile === 'object') {
+        console.log('✅ AuthContext: User profile loaded');
         setUserProfile(profile);
       }
     } catch (error) {
+      console.error('❌ AuthContext: Failed to fetch user profile:', error);
     }
   }, []);
 
   const signIn = async (email: string, password: string): Promise<{ error?: string }> => {
     try {
       setLoading(true);
+      console.log('🔐 AuthContext: Signing in user:', email);
 
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -94,22 +117,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!response.ok) {
-        setLoading(false);
         const errorData = await response.json().catch(() => ({ error: 'Login failed' }));
+        console.error('❌ AuthContext: Login failed:', errorData);
+        setLoading(false);
         return { error: errorData.error || `Login failed (${response.status})` };
       }
 
       const data = await response.json();
 
       if (!data || data.error) {
+        console.error('❌ AuthContext: Invalid login response:', data);
         setLoading(false);
         return { error: data?.error || 'Login failed' };
       }
 
+      // CRITICAL: Validate token is Supabase JWT (3 parts: header.payload.signature)
+      if (!data.token || !data.token.includes('.')) {
+        console.error('❌ AuthContext: Invalid token format - not a JWT');
+        setLoading(false);
+        return { error: 'Invalid authentication token format' };
+      }
+
       if (data.token && data.user) {
+        console.log('✅ AuthContext: Login successful, storing Supabase JWT');
+        // Store Supabase JWT token for API calls
+        localStorage.setItem('jwt_token', data.token);
+        // Keep backwards compatibility
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        setUser({ id: data.user.id, email: data.user.email } as User);
+        localStorage.setItem('refresh_token', data.refreshToken || '');
+        
+        const userObj: User = { 
+          id: data.user.id, 
+          email: data.user.email,
+          role: data.user.role 
+        };
+        setUser(userObj);
+        
+        // Fetch full user profile
+        await fetchUserData(userObj);
+        
         setLoading(false);
         return {};
       }
@@ -117,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return { error: 'Authentication failed - invalid response' };
     } catch (error: any) {
+      console.error('❌ AuthContext: Login exception:', error);
       setLoading(false);
       return { error: error?.message || 'Network error' };
     }
@@ -124,6 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, metadata?: any): Promise<{ error?: string }> => {
     try {
+      console.log('📝 AuthContext: Registering new user:', email);
       const response = await fetch('/api/auth/register-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -143,33 +192,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           annualIncome: metadata?.annualIncome || '',
           idType: metadata?.idType || '',
           idNumber: metadata?.idNumber || '',
-          transferPin: metadata?.transferPin || ''
+          transferPin: metadata?.transferPin || '0192'
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Signup failed' }));
+        console.error('❌ AuthContext: Signup failed:', errorData);
         return { error: errorData?.error || `Signup failed (${response.status})` };
       }
 
       const data = await response.json();
       if (data?.error) {
+        console.error('❌ AuthContext: Signup error:', data.error);
         return { error: data.error };
       }
 
+      console.log('✅ AuthContext: Signup successful');
       return {};
     } catch (error: any) {
+      console.error('❌ AuthContext: Signup exception:', error);
       return { error: error?.message || 'Signup failed' };
     }
   };
 
   const signOut = async () => {
     try {
+      console.log('🚪 AuthContext: Signing out user');
+      localStorage.removeItem('jwt_token');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('refresh_token');
       setUser(null);
       setUserProfile(null);
+      console.log('✅ AuthContext: Signed out successfully');
     } catch (error) {
+      console.error('❌ AuthContext: Signout error:', error);
     }
   };
 

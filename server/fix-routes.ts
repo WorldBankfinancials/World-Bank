@@ -1974,15 +1974,19 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         lastLogin: Date.now()
       });
 
-      // STEP 4: Generate token and return
-      const userId = supabaseUser.id;
-      const tokenData = `${email}:${Date.now()}:${userId}`;
-      const token = Buffer.from(tokenData).toString('base64');
+      // STEP 4: Return REAL Supabase JWT (NOT base64 token)
+      const accessToken = data.session?.access_token;
+      if (!accessToken) {
+        return res.status(500).json({ error: 'Failed to generate authentication token' });
+      }
+
+      console.log('✅ LOGIN SUCCESS:', { email, userId: supabaseUser.id, tokenType: 'Supabase JWT' });
 
       res.json({ 
-        token,
+        token: accessToken,
+        refreshToken: data.session?.refresh_token,
         user: dbUser || {
-          id: userId,
+          id: supabaseUser.id,
           email: supabaseUser.email,
           role: supabaseUser.app_metadata?.role || 'customer'
         }
@@ -2054,12 +2058,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Admin access required. Contact system administrator.' });
       }
 
-      // Generate custom JWT token (same as customer login for consistency)
-      const tokenData = `${email}:${Date.now()}:${data.user.id}`;
-      const token = Buffer.from(tokenData).toString('base64');
+      // Return REAL Supabase JWT (NOT base64 token)
+      const accessToken = data.session?.access_token;
+      if (!accessToken) {
+        return res.status(500).json({ error: 'Failed to generate authentication token' });
+      }
+
+      console.log('✅ ADMIN LOGIN SUCCESS:', { email, userId: data.user.id, tokenType: 'Supabase JWT' });
 
       res.json({ 
-        token,
+        token: accessToken,
+        refreshToken: data.session?.refresh_token,
         user: {
           id: data.user.id,
           email: data.user.email,

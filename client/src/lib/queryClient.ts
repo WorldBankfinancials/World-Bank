@@ -8,11 +8,13 @@ async function throwIfResNotOk(res: Response) {
 }
 
 /**
- * Get authorization headers from localStorage token
+ * Get authorization headers from Supabase JWT token
  */
 export async function getAuthHeaders(): Promise<Record<string, string>> {
-  const token = localStorage.getItem('token');
+  // Try jwt_token first (the real Supabase JWT), fall back to token
+  const token = localStorage.getItem('jwt_token') || localStorage.getItem('token');
   if (!token) {
+    console.warn('⚠️ queryClient: No authentication token found');
     throw new Error('Not authenticated');
   }
   return { 'Authorization': `Bearer ${token}` };
@@ -52,9 +54,7 @@ export async function authenticatedFetch(
     
     return response;
   } catch (error: any) {
-    // Only log meaningful errors
-    if (error?.message && !error.message.includes('abort')) {
-    }
+    console.error('❌ authenticatedFetch failed:', error?.message);
     throw error;
   }
 }
