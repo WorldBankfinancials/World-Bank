@@ -45,6 +45,18 @@ export default function Investment() {
     refetchInterval: 60000 // Auto refresh every minute
   });
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600">{t('loading')}</p>
+        </div>
+      </div>
+    );
+  }
+
   const investmentAccounts = investmentData?.accounts || [];
   const totalInvestmentValue = investmentAccounts.reduce((total: number, account: AccountData) => {
     const balance = typeof account.balance === 'string' ? parseFloat(account.balance) : account.balance;

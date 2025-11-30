@@ -619,7 +619,11 @@ export default function Registration() {
         );
 
       default:
-        return null;
+        return (
+          <div className="text-center py-12">
+            <p className="text-red-600 font-semibold">Invalid registration step. Please refresh the page.</p>
+          </div>
+        );
     }
   };
 

@@ -218,7 +218,16 @@ export default function MultiStepRegisterPage() {
           />
         );
       default:
-        return null;
+        return (
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+            <div className="text-center">
+              <p className="text-red-600 font-semibold mb-4">Invalid registration step. Please refresh the page.</p>
+              <button onClick={() => setCurrentStep(1)} className="px-4 py-2 bg-blue-600 text-white rounded">
+                Start Over
+              </button>
+            </div>
+          </div>
+        );
     }
   };
 

@@ -56,7 +56,7 @@ export default function InternationalTransfer() {
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user', userProfile?.email],
     queryFn: async () => {
-      if (!userProfile?.email) return null;
+      if (!userProfile?.email) throw new Error('Email not available');
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/user?email=${encodeURIComponent(userProfile.email)}`);
       if (!response.ok) throw new Error('Failed to fetch user');
@@ -82,6 +82,37 @@ export default function InternationalTransfer() {
     queryKey: ['/api/transfer/recipients'],
     staleTime: 60000
   });
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600">Loading your account...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if user data failed to load
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="flex items-center justify-center p-4 mt-20">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-6">
+              <div className="text-center text-red-600">
+                <p>Unable to load your account. Please refresh or login again.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <BottomNavigation />
+      </div>
+    );
+  }
 
   const handleInternationalTransfer = () => {
     if (!user?.email) {
