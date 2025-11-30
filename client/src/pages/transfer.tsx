@@ -722,22 +722,11 @@ export default function Transfer() {
                   <span>Transfer Amount:</span>
                   <span className="font-medium">${amount || "0.00"} USD</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Transfer Fee:</span>
-                  <span className="font-medium">$15.00 USD</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Exchange Rate:</span>
-                  <span className="font-medium">1.0000</span>
-                </div>
                 <div className="flex justify-between border-t pt-2 font-semibold">
-                  <span>Total Debit:</span>
-                  <span>${amount ? (parseFloat(amount) + 15).toFixed(2) : "15.00"} USD</span>
-                </div>
-                <div className="flex justify-between font-semibold text-green-600">
-                  <span>Recipient Receives:</span>
+                  <span>Amount to Send:</span>
                   <span>${amount || "0.00"} USD</span>
                 </div>
+                <p className="text-xs text-gray-500 mt-2">Fees and exchange rates will be shown at confirmation</p>
               </div>
             </div>
 
@@ -749,12 +738,12 @@ export default function Transfer() {
               {isProcessing ? (
                 <>
                   <Clock className="w-4 h-4 mr-2 animate-spin" />
-                  Processing Transfer...
+                  Processing...
                 </>
               ) : (
                 <>
                   <Globe className="w-4 h-4 mr-2" />
-                  Send ${amount || "0.00"} Internationally
+                  Transfer
                 </>
               )}
             </Button>

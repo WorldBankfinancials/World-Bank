@@ -453,25 +453,11 @@ export default function InternationalTransfer() {
           </CardHeader>
           <CardContent>
             <div className="border-2 border-blue-500 bg-blue-50 p-4 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Globe className="w-6 h-6 text-blue-600" />
-                  <div>
-                    <p className="font-semibold text-gray-900">International Wire</p>
-                    <p className="text-sm text-gray-600">SWIFT transfers worldwide</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Fee</p>
-                  <p className="font-semibold">$25 - $50</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Time</p>
-                  <p className="font-semibold">1-5 business days</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Limit</p>
-                  <p className="font-semibold">$500,000</p>
+              <div className="flex items-center gap-3">
+                <Globe className="w-6 h-6 text-blue-600" />
+                <div>
+                  <p className="font-semibold text-gray-900">International Wire</p>
+                  <p className="text-sm text-gray-600">SWIFT transfers worldwide</p>
                 </div>
               </div>
             </div>
@@ -495,7 +481,7 @@ export default function InternationalTransfer() {
                 onChange={(e) => setTransferAmount(e.target.value)}
                 className="text-xl font-bold mt-1"
               />
-              <p className="text-xs text-gray-600 mt-2">Estimated fee: ${(parseFloat(transferAmount) * 0.02 || 0).toFixed(2)}</p>
+              <p className="text-xs text-gray-600 mt-2">Please review fee details during confirmation</p>
             </div>
 
             {/* Recipient Information */}
