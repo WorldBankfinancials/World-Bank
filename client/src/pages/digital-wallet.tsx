@@ -34,20 +34,12 @@ export default function DigitalWallet() {
   const { t } = useLanguage();
   const { toast } = useToast();
   const [, navigate] = useLocation();
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user'],
-  });
-  
   const [showBalance, setShowBalance] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">{t('loading')}</div>
-      </div>
-    );
-  }
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ['/api/user'],
+  });
 
   // Fetch real wallet data from Supabase
   const { data: walletData } = useQuery<{ balance: number }>({
@@ -61,6 +53,14 @@ export default function DigitalWallet() {
     enabled: !!user,
     staleTime: 30000
   });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">{t('loading')}</div>
+      </div>
+    );
+  }
 
   const walletBalance = walletData?.balance || (user && 'balance' in user ? user.balance : 0) || 0;
 

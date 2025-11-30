@@ -475,6 +475,7 @@ const translations = {
     'mobile_money_desc': 'Send to mobile numbers',
     'digital_wallet': 'Digital Wallet',
     'digital_wallet_desc': 'Secure digital payments',
+    'add_money': 'Add Money',
   },
   zh: {
     // Login & Auth
