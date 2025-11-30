@@ -496,12 +496,12 @@ function AlertsSection() {
           <div className="border-t pt-4">
             <h4 className="font-medium text-sm mb-3">Notification Settings</h4>
             <div className="space-y-3">
-              {Object.entries(notifications).map(([key, enabled]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <span className="text-sm capitalize">{key.replace('_', ' ')}</span>
+              {Object.entries(notifications).map(([notifKey, enabled]) => (
+                <div key={`notif-${notifKey}`} className="flex items-center justify-between">
+                  <span className="text-sm capitalize">{notifKey.replace('_', ' ')}</span>
                   <Switch
                     checked={enabled}
-                    onCheckedChange={() => handleNotificationToggle(key as keyof typeof notifications)}
+                    onCheckedChange={() => handleNotificationToggle(notifKey as keyof typeof notifications)}
                   />
                 </div>
               ))}
@@ -760,13 +760,13 @@ export default function Dashboard() {
 
                   {/* Scrollable Menu Items */}
                   <div className="max-h-64 overflow-y-auto">
-                    {profileMenuItems.map((section, sectionIndex) => (
-                      <div key={sectionIndex} className="mb-4">
+                    {profileMenuItems.map((section) => (
+                      <div key={`menu-${section.category}`} className="mb-4">
                         <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                           {section.category}
                         </div>
-                        {section.items.map((item, itemIndex) => (
-                          <Link key={itemIndex} href={item.href}>
+                        {section.items.map((item) => (
+                          <Link key={`menu-item-${item.href}`} href={item.href}>
                             <div 
                               onClick={() => setShowProfileMenu(false)}
                               className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors cursor-pointer"
@@ -871,8 +871,8 @@ export default function Dashboard() {
       <div className="px-4 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('my_accounts')}</h3>
         <div className="space-y-3">
-          {accounts.map((account, idx) => (
-            <Card key={`acct-${account.id}-${account.number}-${idx}`} className="wb-card">
+          {accounts.map((account) => (
+            <Card key={`acct-${account.id}-${account.number}`} className="wb-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
