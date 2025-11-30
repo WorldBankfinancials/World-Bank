@@ -24,8 +24,12 @@ import { errorHandler, notFoundHandler, asyncHandler, createApiError } from './e
 import { runStartupChecks } from './startup-checks';
 import * as bcrypt from 'bcryptjs';
 
-// Import LiveChat setup
-import { registerLiveChatRoutes } from './supabase-live-chat';
+// Type definitions for transactions
+interface Transaction {
+  id: string | number;
+  createdAt: string | Date;
+  [key: string]: any;
+}
 
 // Fixed route handlers with proper typing
 export async function registerFixedRoutes(app: Express): Promise<Server> {
@@ -43,9 +47,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   
   // CRITICAL: Run startup sanity checks to verify database functions
   await runStartupChecks();
-  
-  // Setup live chat routes - REALTIME SUPPORT
-  await registerLiveChatRoutes(app);
   
   // Runtime config endpoint - serves Supabase credentials to frontend
   app.get('/api/config', (req: Request, res: Response) => {
@@ -98,7 +99,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const testUser = await storage.createUser({
         username: 'testuser',
-        email: req.body.email || email,
+        email: req.body.email || 'test@example.com',
         firstName: 'Test',
         lastName: 'User',
         phone: '1234567890',
