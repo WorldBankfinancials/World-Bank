@@ -514,7 +514,7 @@ export default function Dashboard() {
           </Link>
 
           <div 
-            key="qa-4-chat"
+            key="qa-4-live-chat"
             onClick={() => setIsChatOpen(true)}
             className="p-4 bg-white rounded-lg border hover:border-green-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
@@ -530,7 +530,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <Link key="qa-5-alerts" href="/alerts" className="no-underline">
+          <Link key="qa-5-banking-alerts" href="/alerts" className="no-underline">
             <div className="p-4 bg-white rounded-lg border hover:border-orange-500 hover:shadow-md transition-all cursor-pointer h-full">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center relative flex-shrink-0">
@@ -564,7 +564,7 @@ export default function Dashboard() {
           </div>
 
           <div 
-            key="qa-7-exchange"
+            key="qa-7-currency-exchange"
             onClick={() => toast({ title: 'Currency Exchange', description: 'USD 1.00 = CNY 7.24, EUR 1.00 = CNY 7.85' })}
             className="p-4 bg-white rounded-lg border hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
@@ -580,7 +580,7 @@ export default function Dashboard() {
           </div>
 
           <div 
-            key="qa-8-investment"
+            key="qa-8-portfolio-investments"
             onClick={() => setLocation('/investment')}
             className="p-4 bg-white rounded-lg border hover:border-amber-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
