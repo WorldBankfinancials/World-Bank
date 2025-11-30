@@ -2236,22 +2236,40 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   // ==================== TRANSFER WORKFLOW ENDPOINTS ====================
   
-  // Create a transfer
+  // Idempotency cache for transfers (prevent duplicates within 5 minutes)
+  const transferIdempotencyCache = new Map<string, { response: any; timestamp: number }>();
+  
+  // Create a transfer with IDEMPOTENCY protection
   app.post('/api/transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { amount, recipientName, recipientCountry, recipientAccount, purpose, transferPin } = req.body;
+      const { amount, recipientName, recipientCountry, recipientAccount, purpose, transferPin, idempotencyKey } = req.body;
       
       console.error('\n📤 POST /api/transfers', { 
         amount, 
         recipientName, 
         recipientCountry, 
         recipientAccount,
-        authenticatedUser: req.user?.email
+        authenticatedUser: req.user?.email,
+        hasIdempotencyKey: !!idempotencyKey
       });
+      
+      // IDEMPOTENCY: Check for duplicate request
+      if (idempotencyKey) {
+        const cached = transferIdempotencyCache.get(idempotencyKey);
+        if (cached && Date.now() - cached.timestamp < 300000) { // 5 minute window
+          console.info('✅ IDEMPOTENT: Returning cached transfer response');
+          return res.json(cached.response);
+        }
+      }
       
       if (!amount || !recipientName || !recipientAccount || !transferPin) {
         console.info('❌ Missing required fields:', { amount: !!amount, recipientName: !!recipientName, recipientAccount: !!recipientAccount, transferPin: !!transferPin });
         return res.status(400).json({ error: 'Missing required fields', fields: { amount: !!amount, recipientName: !!recipientName, recipientAccount: !!recipientAccount, transferPin: !!transferPin } });
+      }
+
+      // Validate amount is positive number
+      if (isNaN(Number(amount)) || Number(amount) <= 0) {
+        return res.status(400).json({ error: 'Invalid amount - must be positive number' });
       }
 
       const referenceNumber = generateReferenceNumber('WB');
@@ -2275,11 +2293,18 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString()
       });
 
-      res.json({
+      const response = {
         id: transfer.id,
         transactionId: transfer.referenceNumber,
         status: 'pending_approval'
-      });
+      };
+
+      // Cache the response for idempotency
+      if (idempotencyKey) {
+        transferIdempotencyCache.set(idempotencyKey, { response, timestamp: Date.now() });
+      }
+
+      res.json(response);
     } catch (error: any) {
       console.info('❌ Transfer creation FAILED:', {
         message: error.message,
@@ -2333,16 +2358,33 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create international transfer
+  // Idempotency cache for international transfers
+  const intlTransferIdempotencyCache = new Map<string, { response: any; timestamp: number }>();
+  
+  // Create international transfer with IDEMPOTENCY protection
   app.post('/api/international-transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { amount, recipientCountry, transferPin } = req.body;
+      const { amount, recipientCountry, transferPin, idempotencyKey } = req.body;
       
-      console.error('📤 POST /api/international-transfers', { amount, recipientCountry });
+      console.error('📤 POST /api/international-transfers', { amount, recipientCountry, hasIdempotencyKey: !!idempotencyKey });
+      
+      // IDEMPOTENCY: Check for duplicate request
+      if (idempotencyKey) {
+        const cached = intlTransferIdempotencyCache.get(idempotencyKey);
+        if (cached && Date.now() - cached.timestamp < 300000) { // 5 minute window
+          console.info('✅ IDEMPOTENT: Returning cached international transfer response');
+          return res.json(cached.response);
+        }
+      }
       
       if (!amount || !recipientCountry || !transferPin) {
         console.info('❌ Missing required fields:', { amount, recipientCountry, transferPin });
         return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      // Validate amount is positive number
+      if (isNaN(Number(amount)) || Number(amount) <= 0) {
+        return res.status(400).json({ error: 'Invalid amount - must be positive number' });
       }
 
       const referenceNumber = generateReferenceNumber('INT');
@@ -2360,11 +2402,18 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       console.info('✅ International transfer created:', { id: transfer.id, referenceNumber: transfer.referenceNumber });
 
-      res.json({
+      const response = {
         id: transfer.id,
         transactionId: transfer.referenceNumber,
         status: 'pending_approval'
-      });
+      };
+
+      // Cache the response for idempotency
+      if (idempotencyKey) {
+        intlTransferIdempotencyCache.set(idempotencyKey, { response, timestamp: Date.now() });
+      }
+
+      res.json(response);
     } catch (error: any) {
       console.info('❌ International transfer error:', error.message, error);
       res.status(500).json({ error: error.message || 'Failed to create international transfer', details: error.toString() });

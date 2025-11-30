@@ -59,6 +59,8 @@ export default function TransferFunds() {
   const [transferStatus, setTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
   const [transferId, setTransferId] = useState("");
   const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
+  const [idempotencyKey] = useState(() => `transfer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   
   const form = useForm<TransferForm>({
     resolver: zodResolver(transferFormSchema),
@@ -146,6 +148,7 @@ export default function TransferFunds() {
         setShowPinModal(false);
         setTransferPin("");
         setFormData(null);
+        setHasSubmitted(true);
         form.reset();
         
         // Poll for transfer status updates
@@ -178,6 +181,7 @@ export default function TransferFunds() {
           description: errorData.message || 'Failed to process transfer. Please check your details and try again.',
           variant: 'destructive'
         });
+        setHasSubmitted(false);
       }
     } catch (error: any) {
       toast({
