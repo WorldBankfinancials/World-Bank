@@ -9,8 +9,8 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-// DUAL-SOURCE AUTH MIDDLEWARE: Validates against BOTH Postgres AND Supabase
-// Token format: base64(email:timestamp:id) 
+// AUTHENTICATION MIDDLEWARE: Validates Supabase JWT tokens
+// Token format: Supabase JWT (sub = user_id, email = email)
 export async function requireAuth(
   req: AuthenticatedRequest,
   res: Response,
@@ -20,25 +20,39 @@ export async function requireAuth(
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('❌ Auth: No Bearer token provided');
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     const token = authHeader.replace('Bearer ', '');
     
-    // Parse token: format is base64(email:timestamp:id)
+    // Parse token: Try Supabase JWT first, then base64 format for backward compatibility
     let email: string;
     let userId: string | number;
     
     try {
-      const decoded = Buffer.from(token, 'base64').toString('utf-8');
-      const parts = decoded.split(':');
-      email = parts[0];
-      userId = parts[2] || parts[1];
+      // Try parsing as Supabase JWT
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        // JWT format - decode payload (second part)
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+        email = payload.email;
+        userId = payload.sub || payload.id;
+        console.log('✅ Auth: Supabase JWT parsed', { email, userId });
+      } else {
+        // Try base64 format for backward compatibility
+        const decoded = Buffer.from(token, 'base64').toString('utf-8');
+        const tokenParts = decoded.split(':');
+        email = tokenParts[0];
+        userId = tokenParts[2] || tokenParts[1];
+        console.log('✅ Auth: Base64 token parsed', { email, userId });
+      }
       
       if (!email) {
-        throw new Error('Invalid token format');
+        throw new Error('Invalid token format - no email found');
       }
     } catch (parseError) {
+      console.error('❌ Auth: Token parse error:', parseError);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 

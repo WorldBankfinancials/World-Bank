@@ -27,7 +27,17 @@ import { registerLiveChatRoutes } from './supabase-live-chat';
 
 // Fixed route handlers with proper typing
 export async function registerFixedRoutes(app: Express): Promise<Server> {
+  console.log('\n🚀 =====================================================');
+  console.log('🚀 STARTING EXPRESS SERVER WITH BANKING API');
+  console.log('🚀 =====================================================\n');
+  
   logConfiguration();
+  
+  console.log('📊 Storage layer:', {
+    type: 'CompleteSupabaseStorage',
+    supabaseUrl: process.env.VITE_SUPABASE_URL?.slice(0, 30) + '...',
+    storageReady: !!storage
+  });
   
   // CRITICAL: Run startup sanity checks to verify database functions
   await runStartupChecks();
@@ -2162,16 +2172,23 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const { amount, recipientName, recipientCountry, recipientAccount, purpose, transferPin } = req.body;
       
-      console.log('📤 POST /api/transfers', { amount, recipientName, recipientCountry, recipientAccount });
+      console.log('\n📤 POST /api/transfers', { 
+        amount, 
+        recipientName, 
+        recipientCountry, 
+        recipientAccount,
+        authenticatedUser: req.user?.email
+      });
       
       if (!amount || !recipientName || !recipientAccount || !transferPin) {
-        console.error('❌ Missing required fields:', { amount, recipientName, recipientAccount, transferPin });
+        console.error('❌ Missing required fields:', { amount: !!amount, recipientName: !!recipientName, recipientAccount: !!recipientAccount, transferPin: !!transferPin });
         return res.status(400).json({ error: 'Missing required fields', fields: { amount: !!amount, recipientName: !!recipientName, recipientAccount: !!recipientAccount, transferPin: !!transferPin } });
       }
 
       const referenceNumber = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
       console.log('🔄 Creating transaction with reference:', referenceNumber);
 
+      console.log('💾 Calling storage.createTransaction()...');
       const transfer = await storage.createTransaction({
         fromAccountId: 1,
         type: 'transfer',
@@ -2182,7 +2199,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         referenceNumber: referenceNumber
       });
 
-      console.log('✅ Transfer created:', { id: transfer.id, referenceNumber: transfer.referenceNumber, status: transfer.status });
+      console.log('✅ Transfer created successfully:', { 
+        id: transfer.id, 
+        referenceNumber: transfer.referenceNumber, 
+        status: transfer.status,
+        timestamp: new Date().toISOString()
+      });
 
       res.json({
         id: transfer.id,
@@ -2190,7 +2212,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         status: 'pending_approval'
       });
     } catch (error: any) {
-      console.error('❌ Transfer creation error:', error.message, error);
+      console.error('❌ Transfer creation FAILED:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        timestamp: new Date().toISOString()
+      });
       res.status(500).json({ error: error.message || 'Failed to create transfer', details: error.toString() });
     }
   });

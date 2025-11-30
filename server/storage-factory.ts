@@ -8,8 +8,16 @@ export function createStorage(): IStorage {
     throw new Error('❌ CRITICAL: Supabase credentials required! Set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
   }
   
-  return new CompleteSupabaseStorage();
+  console.log('🔧 Storage Factory: Creating CompleteSupabaseStorage instance...');
+  console.log('📍 Supabase URL:', process.env.VITE_SUPABASE_URL);
+  
+  const instance = new CompleteSupabaseStorage();
+  
+  console.log('✅ Storage Factory: CompleteSupabaseStorage instance created successfully');
+  return instance;
 }
 
 // Export singleton storage instance
+console.log('🚀 Initializing storage factory...');
 export const storage = createStorage();
+console.log('✅ Storage factory initialized - ready for database operations');
