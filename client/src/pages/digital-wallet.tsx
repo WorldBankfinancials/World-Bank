@@ -66,10 +66,10 @@ export default function DigitalWallet() {
 
   // Quick actions - navigation only (no API needed)
   const quickActions = [
-    { icon: Send, label: "Send Money", action: () => navigate("/transfer") },
-    { icon: QrCode, label: "QR Pay", action: () => navigate("/mobile-pay") },
-    { icon: Plus, label: "Add Funds", action: () => navigate("/add-money") },
-    { icon: History, label: "History", action: () => navigate("/history") }
+    { icon: Send, label: t('send_money'), action: () => { navigate("/transfer"); } },
+    { icon: QrCode, label: "QR Pay", action: () => { navigate("/mobile-pay"); } },
+    { icon: Plus, label: t('add_money'), action: () => { navigate("/add-money"); } },
+    { icon: History, label: t('history'), action: () => { navigate("/history"); } }
   ];
 
   return (
@@ -123,20 +123,25 @@ export default function DigitalWallet() {
         {/* Quick Actions */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle>{t('quick_actions')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-4 gap-3">
               {quickActions.map((action, index) => (
-                <Button
-                  key={`item-${index}`}
-                  variant="outline"
-                  onClick={action.action}
-                  className="h-16 flex flex-col items-center space-y-2"
+                <button
+                  key={`quick-action-${index}`}
+                  onClick={() => {
+                    try {
+                      action.action();
+                    } catch (e) {
+                      toast({ title: 'Error', description: 'Navigation failed', variant: 'destructive' });
+                    }
+                  }}
+                  className="h-16 flex flex-col items-center justify-center space-y-2 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all"
                 >
-                  <action.icon className="w-5 h-5" />
-                  <span className="text-xs">{action.label}</span>
-                </Button>
+                  <action.icon className="w-5 h-5 text-gray-600" />
+                  <span className="text-xs text-gray-700 font-medium text-center line-clamp-2">{action.label}</span>
+                </button>
               ))}
             </div>
           </CardContent>

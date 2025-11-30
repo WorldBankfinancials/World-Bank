@@ -25,6 +25,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   const [inputText, setInputText] = useState('');
   const [isConnected, setIsConnected] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const subscriptionRef = useRef<any>(null);
 
   // Fetch messages from database on mount and when user opens chat
@@ -214,16 +215,25 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
               <label className="text-xs font-bold text-gray-700 block">Type your message:</label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Write here and press Enter..."
+                  ref={inputRef}
+                  placeholder="Type your message..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  disabled={!isConnected}
-                  className="text-base p-3 border-2 border-gray-300 rounded-lg font-medium flex-1"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  autoFocus
+                  type="text"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  className="text-base p-3 border-2 border-blue-400 rounded-lg font-medium flex-1 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
                 />
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!inputText.trim() || !isConnected}
+                  disabled={!inputText.trim()}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-12 font-bold rounded-lg flex-shrink-0"
                   size="sm"
                 >
@@ -232,7 +242,10 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
               </div>
             </div>
             {isConnected && (
-              <p className="text-xs text-green-700 font-semibold text-center">✓ Connected to support (Realtime)</p>
+              <p className="text-xs text-green-700 font-semibold text-center">✓ Connected to support</p>
+            )}
+            {!isConnected && (
+              <p className="text-xs text-gray-600 font-semibold text-center">Connecting...</p>
             )}
           </div>
         </div>
