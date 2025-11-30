@@ -344,9 +344,9 @@ function AddMoneySection() {
           </div>
 
           <div className="grid grid-cols-5 gap-2">
-            {quickAmounts.map((amount, idx) => (
+            {quickAmounts.map((amount) => (
               <Button
-                key={`quick-amount-${amount}-${idx}`}
+                key={`quick-amount-${amount}`}
                 variant="outline"
                 size="sm"
                 onClick={() => setAddAmount(amount)}
@@ -903,7 +903,7 @@ export default function Dashboard() {
       {/* Quick Actions */}
       <div className="px-4 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 gap-4" key="quick-actions-grid">
+        <div className="grid grid-cols-2 gap-4">
           <Link key="action-transfer" href="/transfer">
             <div className="p-6 bg-gradient-to-br from-white to-blue-50 rounded-2xl border-2 border-blue-100 hover:border-blue-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105">
               <div className="flex items-center space-x-4">
