@@ -38,15 +38,14 @@ export default function CustomerSupport() {
     setIsSubmitting(true);
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/support/tickets', {
+      const response = await authenticatedFetch('/api/support-tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           subject,
           category,
           priority,
-          description,
-          userEmail: user?.email
+          description
         })
       });
 
