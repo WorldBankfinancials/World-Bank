@@ -1,4 +1,3 @@
-import type { User } from "@shared/schema";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -10,16 +9,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
-import { COUNTRIES } from "@/data/countries";
 import { 
   Globe, 
   ArrowRightLeft, 
+  DollarSign, 
   Clock, 
   Shield, 
   CheckCircle,
   Calculator,
+  AlertCircle,
+  CreditCard,
+  Building2,
   Users,
+  Flag,
   User as UserIcon,
+  MapPin,
   Phone,
   Mail,
   Eye,
@@ -28,17 +32,9 @@ import {
   Star
 } from "lucide-react";
 import { useState } from "react";
-import { useLanguage } from "@/contexts/LanguageContext";
-
+import type { User } from "@shared/schema";
 
 export default function InternationalTransfer() {
-  const { t } = useLanguage();
-  
-  // CRITICAL FIX: Load user data FIRST before any other logic
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user'],
-  });
-  
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [transferAmount, setTransferAmount] = useState('1000');
   const [fromCurrency, setFromCurrency] = useState('USD');
@@ -49,95 +45,61 @@ export default function InternationalTransfer() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showProcessingPage, setShowProcessingPage] = useState(false);
   const [transferId, setTransferId] = useState('');
-  
-  // Recipient banking details state
-  const [recipientFirstName, setRecipientFirstName] = useState('');
-  const [recipientLastName, setRecipientLastName] = useState('');
-  const [recipientPhone, setRecipientPhone] = useState('');
-  const [recipientEmail, setRecipientEmail] = useState('');
-  const [recipientCountry, setRecipientCountry] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [swiftCode, setSwiftCode] = useState('');
-  const [purpose, setPurpose] = useState('');
 
   const handleInternationalTransfer = () => {
     setShowPinModal(true);
   };
 
   const handlePinSubmit = async () => {
-    // PIN verification process
-    
-    // Validate PIN first
     if (!transferPin || transferPin.length !== 4) {
       setPinError("Please enter a 4-digit PIN");
-      return;
-    }
-    
-    // Ensure user is loaded before submission
-    if (!user || !user.email) {
-      setPinError("Unable to verify user. Please refresh and try again.");
       return;
     }
 
     setPinError("");
     setIsProcessing(true);
     
-    // Validate required fields before submission
-    const recipientFullName = `${recipientFirstName} ${recipientLastName}`.trim();
-    if (!recipientFullName || !recipientCountry || !bankName || !accountNumber || !swiftCode) {
-      setPinError("Please fill in all required recipient banking details");
-      setIsProcessing(false);
-      return;
-    }
-
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const transferData = {
-        amount: parseFloat(transferAmount),
-        fromCurrency: fromCurrency,
-        toCurrency: toCurrency,
-        recipientName: recipientFullName,
-        recipientCountry: recipientCountry,
-        bankName: bankName,
-        swiftCode: swiftCode,
-        recipientAccount: accountNumber, // Use real account number from form
-        transferPurpose: purpose || "International Transfer",
-        transferPin: transferPin,
-        userEmail: user.email
-      };
-      
-      const response = await authenticatedFetch('/api/international-transfers', {
+      const response = await fetch('/api/international-transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transferData)
+        body: JSON.stringify({
+          amount: parseFloat(transferAmount),
+          recipientName: "John Smith",
+          recipientCountry: "China",
+          bankName: "Bank of China",
+          swiftCode: "BKCHCNBJ",
+          accountNumber: "1234567890",
+          transferPurpose: "Family Support",
+          transferPin: transferPin
+        })
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        setPinError(errorData.message || "Transfer failed. Please try again.");
-        setIsProcessing(false);
-        return;
-      }
 
       const result = await response.json();
       
-      setShowPinModal(false);
-      setTransferPin('');
-      setTransferId(result.id || `INT-${Date.now()}`);
-      setShowProcessingPage(true);
-      
+      if (response.ok) {
+        setShowPinModal(false);
+        setTransferPin('');
+        setTransferId(result.id || 'INT-' + Date.now());
+        setShowProcessingPage(true);
+      } else {
+        setPinError(result.message || "Transfer failed");
+      }
     } catch (error) {
-      setPinError("Network error. Please check your connection and try again.");
+      setPinError("An error occurred. Please try again.");
     } finally {
       setIsProcessing(false);
     }
   };
 
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ['/api/user'],
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">{t('loading')}</div>
+        <div className="text-gray-600">Loading...</div>
       </div>
     );
   }
@@ -158,7 +120,7 @@ export default function InternationalTransfer() {
                   </div>
                   <h2 className="text-xl font-semibold text-gray-900 mb-2">International Transfer Processing</h2>
                   <p className="text-gray-600 mb-4">
-                    Your international transfer is being processed securely through our banking network.
+                    Your international transfer is being processed and submitted for admin approval.
                   </p>
                 </div>
                 
@@ -169,7 +131,7 @@ export default function InternationalTransfer() {
                   </div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-600">Status</span>
-                    <span className="text-sm font-medium text-orange-600">Processing</span>
+                    <span className="text-sm font-medium text-orange-600">Pending Admin Approval</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Amount</span>
@@ -184,11 +146,11 @@ export default function InternationalTransfer() {
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-orange-500 rounded-full mr-3 animate-pulse"></div>
-                    <span className="text-sm text-gray-700">Processing to recipient bank</span>
+                    <span className="text-sm text-gray-700">Awaiting admin approval</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
-                    <span className="text-sm text-gray-500">Awaiting bank confirmation</span>
+                    <span className="text-sm text-gray-500">Processing to recipient bank</span>
                   </div>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
@@ -384,23 +346,11 @@ export default function InternationalTransfer() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label>First Name *</Label>
-                        <Input 
-                          placeholder="Recipient's first name" 
-                          className="mt-1"
-                          value={recipientFirstName}
-                          onChange={(e) => setRecipientFirstName(e.target.value)}
-                          data-testid="input-recipient-firstname"
-                        />
+                        <Input placeholder="Recipient's first name" className="mt-1" />
                       </div>
                       <div>
                         <Label>Last Name *</Label>
-                        <Input 
-                          placeholder="Recipient's last name" 
-                          className="mt-1"
-                          value={recipientLastName}
-                          onChange={(e) => setRecipientLastName(e.target.value)}
-                          data-testid="input-recipient-lastname"
-                        />
+                        <Input placeholder="Recipient's last name" className="mt-1" />
                       </div>
                     </div>
 
@@ -418,24 +368,11 @@ export default function InternationalTransfer() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label>Phone Number *</Label>
-                        <Input 
-                          placeholder="Recipient's phone number" 
-                          className="mt-1"
-                          value={recipientPhone}
-                          onChange={(e) => setRecipientPhone(e.target.value)}
-                          data-testid="input-recipient-phone"
-                        />
+                        <Input placeholder="Recipient's phone number" className="mt-1" />
                       </div>
                       <div>
                         <Label>Email Address</Label>
-                        <Input 
-                          type="email" 
-                          placeholder="recipient@email.com" 
-                          className="mt-1"
-                          value={recipientEmail}
-                          onChange={(e) => setRecipientEmail(e.target.value)}
-                          data-testid="input-recipient-email"
-                        />
+                        <Input type="email" placeholder="recipient@email.com" className="mt-1" />
                       </div>
                     </div>
 
@@ -465,14 +402,19 @@ export default function InternationalTransfer() {
 
                         <div>
                           <Label>Country *</Label>
-                          <Select value={recipientCountry} onValueChange={setRecipientCountry}>
-                            <SelectTrigger className="mt-1" data-testid="select-recipient-country">
+                          <Select>
+                            <SelectTrigger className="mt-1">
                               <SelectValue placeholder="Select recipient's country" />
                             </SelectTrigger>
                             <SelectContent>
-                              {COUNTRIES.map(country => (
-                                <SelectItem key={country} value={country}>{country}</SelectItem>
-                              ))}
+                              <SelectItem value="cn">🇨🇳 China</SelectItem>
+                              <SelectItem value="uk">🇬🇧 United Kingdom</SelectItem>
+                              <SelectItem value="jp">🇯🇵 Japan</SelectItem>
+                              <SelectItem value="sg">🇸🇬 Singapore</SelectItem>
+                              <SelectItem value="au">🇦🇺 Australia</SelectItem>
+                              <SelectItem value="de">🇩🇪 Germany</SelectItem>
+                              <SelectItem value="fr">🇫🇷 France</SelectItem>
+                              <SelectItem value="ca">🇨🇦 Canada</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -485,13 +427,7 @@ export default function InternationalTransfer() {
                       <div className="space-y-4">
                         <div>
                           <Label>Bank Name *</Label>
-                          <Input 
-                            placeholder="Recipient's bank name" 
-                            className="mt-1"
-                            value={bankName}
-                            onChange={(e) => setBankName(e.target.value)}
-                            data-testid="input-bank-name"
-                          />
+                          <Input placeholder="Recipient's bank name" className="mt-1" />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -501,10 +437,7 @@ export default function InternationalTransfer() {
                               <Input 
                                 type={showAccountDetails ? "text" : "password"}
                                 placeholder="Account number or IBAN" 
-                                className="mt-1 pr-10"
-                                value={accountNumber}
-                                onChange={(e) => setAccountNumber(e.target.value)}
-                                data-testid="input-account-number"
+                                className="mt-1 pr-10" 
                               />
                               <button
                                 type="button"
@@ -517,13 +450,7 @@ export default function InternationalTransfer() {
                           </div>
                           <div>
                             <Label>SWIFT/BIC Code *</Label>
-                            <Input 
-                              placeholder="Bank's SWIFT code" 
-                              className="mt-1"
-                              value={swiftCode}
-                              onChange={(e) => setSwiftCode(e.target.value)}
-                              data-testid="input-swift-code"
-                            />
+                            <Input placeholder="Bank's SWIFT code" className="mt-1" />
                           </div>
                         </div>
 
