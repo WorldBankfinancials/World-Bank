@@ -95,20 +95,20 @@ export default function CreditCards() {
                   </div>
                   <div className="text-right">
                     <p className="text-blue-100 text-xs">Available Credit</p>
-                    <p className="text-lg font-semibold">${parseFloat(card.availableCredit).toLocaleString()}</p>
+                    <p className="text-lg font-semibold">${((parseFloat(card.availableCredit) || 0) >= 0 ? parseFloat(card.availableCredit) || 0 : 0).toLocaleString()}</p>
                   </div>
                 </div>
 
                 {/* Credit utilization bar */}
                 <div className="mt-4">
                   <div className="flex justify-between text-xs text-blue-100 mb-1">
-                    <span>Used: ${parseFloat(card.balance).toLocaleString()}</span>
-                    <span>Limit: ${parseFloat(card.limit).toLocaleString()}</span>
+                    <span>Used: ${((parseFloat(card.balance) || 0) >= 0 ? parseFloat(card.balance) || 0 : 0).toLocaleString()}</span>
+                    <span>Limit: ${((parseFloat(card.limit) || 0) >= 0 ? parseFloat(card.limit) || 0 : 0).toLocaleString()}</span>
                   </div>
                   <div className="w-full bg-blue-800 rounded-full h-2">
                     <div 
                       className="bg-white rounded-full h-2" 
-                      style={{width: `${(parseFloat(card.balance) / parseFloat(card.limit)) * 100}%`}}
+                      style={{width: `${((parseFloat(card.balance) || 0) / (parseFloat(card.limit) || 1)) * 100}%`}}
                     ></div>
                   </div>
                 </div>

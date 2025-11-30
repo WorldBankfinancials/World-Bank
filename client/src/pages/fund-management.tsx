@@ -41,13 +41,23 @@ export default function FundManagement() {
       return;
     }
 
+    const parsedAmount = parseFloat(adjustAmount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount greater than zero.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/admin/customers/${selectedCustomer.id}/balance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: parseFloat(adjustAmount),
+          amount: parsedAmount,
           type: type === 'add' ? 'deposit' : 'withdrawal'
         })
       });

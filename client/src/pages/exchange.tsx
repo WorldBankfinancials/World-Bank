@@ -35,10 +35,15 @@ export default function Exchange() {
   // Calculate converted amount
   useEffect(() => {
     if (exchangeRates && amount) {
+      const parsedAmount = parseFloat(amount) || 0;
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        setConvertedAmount(0);
+        return;
+      }
       const fromRate = exchangeRates[fromCurrency] || 1;
       const toRate = exchangeRates[toCurrency] || 1;
-      const converted = (parseFloat(amount) / fromRate) * toRate;
-      setConvertedAmount(converted);
+      const converted = (parsedAmount / fromRate) * toRate;
+      setConvertedAmount(isNaN(converted) ? 0 : converted);
     }
   }, [exchangeRates, fromCurrency, toCurrency, amount]);
 
@@ -53,13 +58,32 @@ export default function Exchange() {
   };
 
   const handleExchange = async () => {
+    const parsedAmount = parseFloat(amount) || 0;
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast({
+        title: 'Invalid Amount',
+        description: 'Please enter a valid exchange amount.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    if (convertedAmount <= 0) {
+      toast({
+        title: 'Invalid Exchange',
+        description: 'Unable to calculate exchange rate. Please try again.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     try {
       const response = await apiRequest('POST', '/api/currency-exchange', {
         userId: userProfile?.id,
         fromCurrency,
         toCurrency,
-        amount: parseFloat(amount),
-        exchangeRate: convertedAmount / parseFloat(amount)
+        amount: parsedAmount,
+        exchangeRate: convertedAmount / parsedAmount
       });
 
       if (response.ok) {

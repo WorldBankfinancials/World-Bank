@@ -197,7 +197,7 @@ export default function TransactionHistory() {
                       </div>
                       <div className="text-right space-y-1">
                         <div className={`font-medium ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-                          {tx.type === 'credit' ? '+' : '-'}${parseFloat(tx.amount).toFixed(2)}
+                          {tx.type === 'credit' ? '+' : '-'}${((parseFloat(tx.amount) || 0) >= 0 ? parseFloat(tx.amount) || 0 : 0).toFixed(2)}
                         </div>
                         <Badge className={getStatusColor(tx.status)}>{tx.status}</Badge>
                       </div>
