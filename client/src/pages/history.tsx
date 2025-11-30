@@ -133,6 +133,7 @@ export default function History() {
   };
 
   const getCategoryColor = (category: string) => {
+    if (!category) return 'bg-gray-100 text-gray-800';
     switch (category.toLowerCase()) {
       case 'transfer': return 'bg-blue-100 text-blue-800';
       case 'admin': return 'bg-purple-100 text-purple-800';
@@ -142,7 +143,7 @@ export default function History() {
     }
   };
 
-  const categories = ['all', ...Array.from(new Set(transactions.map(t => t.category)))];
+  const categories = ['all', ...Array.from(new Set(transactions.map(t => t.category).filter(cat => cat)))];
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">

@@ -44,10 +44,7 @@ export default function Transfer() {
     const fetchUser = async () => {
       try {
         setIsLoading(true);
-        if (!userProfile?.email) {
-          setDataError('User profile not available');
-          return;
-        }
+        setDataError(null);
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const response = await authenticatedFetch(`/api/user`);
         if (response.ok) {
@@ -55,15 +52,17 @@ export default function Transfer() {
           setUser(userData);
           setDataError(null);
         } else {
-          setDataError('Failed to load user data');
+          setDataError('Failed to load user data. Please refresh.');
         }
       } catch (error: any) {
-        setDataError(error?.message || 'Failed to load user data');
+        setDataError('Unable to load user profile. Please try again.');
       } finally {
         setIsLoading(false);
       }
     };
-    fetchUser();
+    if (userProfile?.email) {
+      fetchUser();
+    }
   }, [userProfile?.email]);
   
   const [amount, setAmount] = useState("");

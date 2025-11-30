@@ -184,11 +184,11 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
         </CardHeader>
 
         <div className="flex flex-col flex-1 bg-gray-50 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 border-b-2 border-gray-200">
+          <div className="flex-1 overflow-y-auto p-4 pr-6 space-y-4 border-b-2 border-gray-200">
             {messages.map(msg => (
               <div
                 key={msg.id}
-                className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${msg.sender === 'user' ? 'justify-end pr-2' : 'justify-start'}`}
               >
                 <div
                   className={`max-w-xs px-4 py-3 rounded-lg text-sm break-words ${
