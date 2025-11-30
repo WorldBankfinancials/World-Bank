@@ -1026,17 +1026,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-      {/* Sections with unique keys */}
-      <div className="space-y-4 px-4">
+      {/* Dashboard Sections - All 6 Components */}
+      <div className="space-y-4 px-4 pb-8">
         <TransferSection key="transfer-section" />
         <ReceiveSection key="receive-section" />
         <AddMoneySection key="addmoney-section" />
         <AlertsSection key="alerts-section" />
       </div>
 
-      {/* Recent Transactions - REAL DATA FROM DATABASE */}
-      <div className="px-4">
-        <Card>
+      {/* Recent Transactions Card */}
+      <div className="px-4 pb-8">
+        <Card className="w-full">
           <CardHeader>
             <CardTitle className="text-lg">Recent Transactions</CardTitle>
           </CardHeader>
@@ -1071,15 +1071,14 @@ export default function Dashboard() {
         </Card>
       </div>
 
-
-
       <BottomNavigation />
 
-      {/* Live Chat Component */}
-      <LiveChat 
-        isOpen={isChatOpen} 
-        onClose={() => setIsChatOpen(false)} 
-      />
+      {isChatOpen && (
+        <LiveChat 
+          isOpen={isChatOpen} 
+          onClose={() => setIsChatOpen(false)} 
+        />
+      )}
     </div>
   );
 }
