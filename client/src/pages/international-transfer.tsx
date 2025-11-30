@@ -55,8 +55,13 @@ export default function InternationalTransfer() {
   // Fetch user data - called at top level
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
-    staleTime: 60000,
-    retry: 1
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/user');
+      if (!response.ok) throw new Error('Failed to fetch user');
+      return response.json();
+    },
+    staleTime: 60000
   });
 
   // Fetch exchange rates - top level
@@ -89,8 +94,8 @@ export default function InternationalTransfer() {
     );
   }
 
-  // Show error if user data failed to load (check both !user and userError)
-  if ((!user && !isLoading) || (userError && !isLoading)) {
+  // Show error if user data failed to load
+  if (!user && !isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -100,13 +105,13 @@ export default function InternationalTransfer() {
               <div className="text-center text-red-600">
                 <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-500" />
                 <p className="font-semibold mb-2">{t('failed_to_load')}</p>
-                <p className="text-sm mb-4">{userError?.message || t('failed_to_fetch')}</p>
+                <p className="text-sm mb-4">{t('failed_to_fetch')}</p>
                 <Button 
                   variant="outline" 
                   onClick={() => window.location.reload()}
                   className="w-full"
                 >
-                  {t('refresh')}
+                  Refresh
                 </Button>
               </div>
             </CardContent>
