@@ -44,6 +44,27 @@ export default function AdminTransactionCreator() {
       return;
     }
 
+    const accountId = parseInt(selectedAccountId, 10);
+    const parsedAmount = parseFloat(amount);
+    
+    if (isNaN(accountId) || accountId <= 0) {
+      toast({
+        title: "Invalid Account",
+        description: "Please select a valid account.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -51,8 +72,8 @@ export default function AdminTransactionCreator() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          accountId: parseInt(selectedAccountId),
-          amount: parseFloat(amount),
+          accountId: accountId,
+          amount: parsedAmount,
           description,
           type: transactionType
         })

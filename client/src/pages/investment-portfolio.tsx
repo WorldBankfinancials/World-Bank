@@ -38,8 +38,14 @@ export default function InvestmentPortfolio() {
   };
 
   // Calculate real portfolio metrics
-  const totalValue = investments.reduce((sum, inv) => sum + parseFloat(inv.total_value || inv.totalValue || 0), 0);
-  const totalGainLoss = investments.reduce((sum, inv) => sum + parseFloat(inv.gain_loss || inv.gainLoss || 0), 0);
+  const totalValue = investments.reduce((sum, inv) => {
+    const val = parseFloat(inv.total_value || inv.totalValue || 0);
+    return sum + (isNaN(val) ? 0 : val);
+  }, 0);
+  const totalGainLoss = investments.reduce((sum, inv) => {
+    const val = parseFloat(inv.gain_loss || inv.gainLoss || 0);
+    return sum + (isNaN(val) ? 0 : val);
+  }, 0);
   // Guard against division by zero: use cost basis (totalValue - totalGainLoss)
   const costBasis = totalValue - totalGainLoss;
   const gainLossPercent = costBasis > 0 ? (totalGainLoss / costBasis) * 100 : 0;
@@ -133,11 +139,11 @@ export default function InvestmentPortfolio() {
                 investments.map((investment: any) => {
                   const symbol = investment.symbol || 'N/A';
                   const name = investment.name || 'Unknown';
-                  const quantity = parseFloat(investment.quantity || 0);
-                  const currentPrice = parseFloat(investment.current_price || investment.currentPrice || 0);
-                  const totalValue = parseFloat(investment.total_value || investment.totalValue || 0);
-                  const gainLoss = parseFloat(investment.gain_loss || investment.gainLoss || 0);
-                  const gainLossPercent = parseFloat(investment.gain_loss_percent || investment.gainLossPercent || 0);
+                  const quantity = parseFloat(investment.quantity || 0) || 0;
+                  const currentPrice = parseFloat(investment.current_price || investment.currentPrice || 0) || 0;
+                  const totalValue = parseFloat(investment.total_value || investment.totalValue || 0) || 0;
+                  const gainLoss = parseFloat(investment.gain_loss || investment.gainLoss || 0) || 0;
+                  const gainLossPercent = parseFloat(investment.gain_loss_percent || investment.gainLossPercent || 0) || 0;
 
                   return (
                     <div key={investment.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">

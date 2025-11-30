@@ -117,7 +117,8 @@ export default function History() {
   };
 
   const formatAmount = (amount: string, type: 'credit' | 'debit') => {
-    const numAmount = parseFloat(amount);
+    const numAmount = parseFloat(amount) || 0;
+    if (isNaN(numAmount)) return `$0.00`;
     const sign = type === 'credit' ? '+' : '-';
     return `${sign}$${numAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };

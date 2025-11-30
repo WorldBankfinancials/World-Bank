@@ -77,13 +77,23 @@ export default function AddMoney() {
       return;
     }
 
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast({
+        title: t('invalid_amount'),
+        description: t('enter_valid_amount'),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/add-funds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ method: selectedMethod, amount: parseFloat(amount) })
+        body: JSON.stringify({ method: selectedMethod, amount: parsedAmount })
       });
 
       if (!response.ok) throw new Error('Failed to add money');

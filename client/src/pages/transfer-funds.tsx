@@ -144,9 +144,9 @@ export default function TransferFunds() {
         setTransferStatus("processing");
         setShowStatusScreen(true);
         setShowPinModal(false);
-        form.reset();
         setTransferPin("");
         setFormData(null);
+        form.reset();
         
         // Poll for transfer status updates
         const interval = setInterval(async () => {

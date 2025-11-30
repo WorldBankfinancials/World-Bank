@@ -46,7 +46,7 @@ export default function Alerts() {
   });
 
   // Real-time alerts via Supabase Realtime
-  useRealtimeAlerts(user?.id ? (typeof user.id === 'number' ? user.id : parseInt(user.id)) : undefined, !!user);
+  useRealtimeAlerts(user?.id ? (typeof user.id === 'number' ? user.id : (parseInt(user.id, 10) || undefined)) : undefined, !!user);
 
   // Fetch real alerts from database
   const { data: alerts = [], isLoading: alertsLoading } = useQuery<Alert[]>({
