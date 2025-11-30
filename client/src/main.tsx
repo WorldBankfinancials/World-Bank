@@ -15,17 +15,7 @@ const isViteWarning = (reason: any) => {
          stack.includes('@vite/client') ||
          msg.includes('WebSocket') ||
          msg.includes('fetch') && msg.includes('abort') ||
-         msg.includes('AuthRetryableFetchError') ||
-         msg.includes('Encountered two children with the same key');
-};
-
-const originalError = console.error;
-console.error = function(...args: any[]) {
-  const msg = args[0]?.toString() || '';
-  if (msg.includes('Encountered two children with the same key')) {
-    return;
-  }
-  originalError.apply(console, args);
+         msg.includes('AuthRetryableFetchError');
 };
 
 window.addEventListener('unhandledrejection', (event) => {

@@ -401,8 +401,8 @@ export default function Dashboard() {
       )}
 
       {/* Account Balance Card */}
-      <div className="p-4" key="dashboard-balance-section">
-        <Card key="balance-card" className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 text-white shadow-2xl border-0">
+      <div className="p-4" key="dashboard-balance-section-wrapper">
+        <Card key="dashboard-balance-card-unique" className="bg-gradient-to-br from-blue-600 via-blue-700 to-purple-800 text-white shadow-2xl border-0">
           <CardContent className="p-8">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -440,9 +440,9 @@ export default function Dashboard() {
       {/* Account Types Section - IN DASHBOARD */}
       <div className="px-4 mb-6" key="dashboard-accounts-section">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('my_accounts')}</h3>
-        <div className="space-y-3" key="accounts-list">
+        <div className="space-y-3" key="dashboard-accounts-list-wrapper">
           {accounts.map((account, idx) => (
-            <Card key={`dashboard-account-${idx}-${account.id}`} className="wb-card">
+            <Card key={`dashboard-acct-card-${account.id}-${idx}`} className="wb-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -468,9 +468,9 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="px-4 mb-6" key="quick-actions-section">
+      <div className="px-4 mb-6" key="dashboard-quick-actions-section-unique">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4" key="dashboard-quick-actions-grid-wrapper">
           <div key="quick-action-qa-1-transfer">
             <Link href="/transfer" className="no-underline">
               <div className="p-6 bg-gradient-to-br from-white to-blue-50 rounded-2xl border-2 border-blue-100 hover:border-blue-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 h-full">
@@ -606,8 +606,8 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Transactions Card */}
-      <div className="px-4 pb-8" key="dashboard-transactions-section">
-        <Card key="transactions-card" className="w-full">
+      <div className="px-4 pb-8" key="dashboard-recent-txn-section-wrapper">
+        <Card key="dashboard-transactions-card-unique" className="w-full">
           <CardHeader>
             <CardTitle className="text-lg">Recent Transactions</CardTitle>
           </CardHeader>
