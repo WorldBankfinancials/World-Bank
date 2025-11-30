@@ -523,8 +523,8 @@ export default function InternationalTransfer() {
                       <SelectValue placeholder="Select country" />
                     </SelectTrigger>
                     <SelectContent>
-                      {COUNTRIES.map(country => (
-                        <SelectItem key={country} value={country}>{country}</SelectItem>
+                      {COUNTRIES.map((country, idx) => (
+                        <SelectItem key={`country-${idx}`} value={country}>{country}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
