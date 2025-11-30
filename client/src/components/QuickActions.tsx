@@ -234,15 +234,18 @@ export default function QuickActions() {
 
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      await authenticatedFetch('/api/messages', {
+      const response = await authenticatedFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: currentMessage,
-          recipientId: 'admin',
+          recipientId: 1,
           sessionId: 'session_customer'
         })
       });
+      if (!response.ok) {
+        console.error('Message save failed:', response.statusText);
+      }
     } catch (error) {
       console.error('Failed to save message:', error);
     }

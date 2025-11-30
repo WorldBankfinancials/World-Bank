@@ -90,6 +90,7 @@ export default function Dashboard() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [userData, setUserData] = useState<CustomerData | null>(null);
   const queryClient = useQueryClient();
 
@@ -128,6 +129,31 @@ export default function Dashboard() {
   //   userProfile?.id ? (typeof userProfile.id === 'number' ? userProfile.id : parseInt(userProfile.id)) : undefined,
   //   userProfile?.fullName || userProfile?.email
   // );
+
+  // Fetch alerts
+  const { data: fetchedAlerts = [] } = useQuery<any[]>({
+    queryKey: ['/api/alerts'],
+    queryFn: async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/alerts');
+        if (!response.ok) return [];
+        return response.json();
+      } catch {
+        return [];
+      }
+    }
+  });
+
+  useEffect(() => {
+    if (fetchedAlerts && fetchedAlerts.length > 0) {
+      setNotifications(fetchedAlerts.map(alert => ({
+        title: alert.title,
+        message: alert.message,
+        type: alert.type || 'info'
+      })));
+    }
+  }, [fetchedAlerts]);
 
   // Subscribe to realtime user balance updates
   useSupabaseRealtimeUserBalance((data) => setUserData(data), true);
@@ -580,32 +606,32 @@ export default function Dashboard() {
             <div className="space-y-4" key="transactions-list">
               {recentTransactions.length > 0 ? (
                 recentTransactions.map((tx, idx) => (
-                  <div key={`dashboard-tx-${idx}-${tx.id}`} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-10 h-10 ${tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center`}>
+                  <div key={`dashboard-tx-${idx}-${tx.id}`} className="flex items-start justify-between">
+                    <div className="flex items-start space-x-3 flex-1">
+                      <div className={`w-10 h-10 ${tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center flex-shrink-0 mt-1`}>
                         {tx.type === 'credit' ? (
                           <ArrowDownRight className="w-5 h-5 text-green-600" />
                         ) : (
                           <ArrowUpRight className="w-5 h-5 text-red-600" />
                         )}
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium">{tx.description}</p>
-                        <div className="flex items-center space-x-2">
-                          <p className="text-sm text-gray-500">{new Date(tx.date || tx.created_at || new Date()).toLocaleDateString()}</p>
-                          <Badge variant="outline" className={`text-xs ${
-                            tx.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' :
-                            tx.status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
-                            'bg-yellow-50 text-yellow-700 border-yellow-200'
-                          }`}>
-                            {tx.status || 'pending'}
-                          </Badge>
-                        </div>
+                        <p className="text-sm text-gray-500">{new Date(tx.date || tx.created_at || new Date()).toLocaleDateString()}</p>
                       </div>
                     </div>
-                    <span className={`font-medium ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-                      {tx.type === 'credit' ? '+' : '-'}${parseFloat(String(tx.amount)).toFixed(2)}
-                    </span>
+                    <div className="flex flex-col items-end space-y-1">
+                      <span className={`font-medium ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                        {tx.type === 'credit' ? '+' : '-'}${parseFloat(String(tx.amount)).toFixed(2)}
+                      </span>
+                      <Badge variant="outline" className={`text-xs ${
+                        tx.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' :
+                        tx.status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
+                        'bg-yellow-50 text-yellow-700 border-yellow-200'
+                      }`}>
+                        {tx.status || 'pending'}
+                      </Badge>
+                    </div>
                   </div>
                 ))
               ) : (

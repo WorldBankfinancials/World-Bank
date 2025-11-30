@@ -1525,29 +1525,34 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const { content, recipientId, sessionId } = req.body;
-      if (!content || !recipientId) {
-        return res.status(400).json({ error: 'content and recipientId required' });
+      if (!content) {
+        return res.status(400).json({ error: 'content required' });
       }
 
       const senderRole = req.user!.role === 'admin' ? 'admin' : 'customer';
+      const finalRecipientId = typeof recipientId === 'string' && recipientId === 'admin' ? 1 : (recipientId || user.id);
       
       const { data, error } = await supabase
         .from('messages')
         .insert({
           sender_id: user.id,
           sender_role: senderRole,
-          recipient_id: recipientId,
+          recipient_id: finalRecipientId,
           recipient_role: senderRole === 'admin' ? 'customer' : 'admin',
           content: content,
-          session_id: sessionId,
+          session_id: sessionId || `session_${user.id}`,
           is_read: false
         })
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
       res.json(data?.[0] || { success: true });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to save message' });
+    } catch (error: any) {
+      console.error('Message save error:', error);
+      res.status(500).json({ error: 'Failed to save message', details: error.message });
     }
   });
 
