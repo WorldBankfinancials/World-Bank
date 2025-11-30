@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
@@ -36,25 +35,36 @@ export default function Transfer() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
   const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   
-  // Fetch user data with proper email parameter
-  const { data: user = {}, isLoading, error: fetchError } = useQuery<User>({
-    queryKey: ['/api/user', userProfile?.email],
-    queryFn: async () => {
+  // Fetch user data using useEffect
+  useEffect(() => {
+    const fetchUser = async () => {
       try {
-        if (!userProfile?.email) throw new Error('User email not available');
+        setIsLoading(true);
+        if (!userProfile?.email) {
+          setDataError('User profile not available');
+          return;
+        }
         const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch(`/api/user?email=${encodeURIComponent(userProfile.email)}`);
-        if (!response.ok) throw new Error('Failed to fetch user data');
-        return response.json();
+        const response = await authenticatedFetch(`/api/user`);
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+          setDataError(null);
+        } else {
+          setDataError('Failed to load user data');
+        }
       } catch (error: any) {
         setDataError(error?.message || 'Failed to load user data');
-        return { email: userProfile?.email };
+      } finally {
+        setIsLoading(false);
       }
-    },
-    enabled: !!userProfile?.email
-  });
+    };
+    fetchUser();
+  }, [userProfile?.email]);
   
   const [amount, setAmount] = useState("");
   const [transferType, setTransferType] = useState("international");
@@ -103,7 +113,16 @@ export default function Transfer() {
           <Card className="w-full max-w-md">
             <CardContent className="pt-6">
               <div className="text-center text-red-600">
-                <p>Unable to load user data. Please refresh or login again.</p>
+                <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-500" />
+                <p className="font-semibold mb-2">Unable to Load</p>
+                <p className="text-sm">{dataError || 'Please refresh or login again'}</p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.location.reload()}
+                  className="w-full mt-4"
+                >
+                  Refresh Page
+                </Button>
               </div>
             </CardContent>
           </Card>
