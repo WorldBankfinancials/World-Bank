@@ -77,7 +77,7 @@ export default function InternationalTransfer() {
     fetchData();
   }, []);
 
-  // Fetch exchange rates
+  // Fetch exchange rates - only this endpoint exists
   useEffect(() => {
     const fetchRates = async () => {
       try {
@@ -89,43 +89,10 @@ export default function InternationalTransfer() {
         }
       } catch (error) {
         console.error('Error fetching rates:', error);
+        setExchangeRates([]);
       }
     };
     fetchRates();
-  }, []);
-
-  // Fetch destinations
-  useEffect(() => {
-    const fetchDest = async () => {
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch('/api/transfer/destinations');
-        if (response.ok) {
-          const dests = await response.json();
-          setPopularDestinations(Array.isArray(dests) ? dests : []);
-        }
-      } catch (error) {
-        console.error('Error fetching destinations:', error);
-      }
-    };
-    fetchDest();
-  }, []);
-
-  // Fetch recent recipients
-  useEffect(() => {
-    const fetchRecips = async () => {
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch('/api/transfer/recipients');
-        if (response.ok) {
-          const recips = await response.json();
-          setRecentRecipients(Array.isArray(recips) ? recips : []);
-        }
-      } catch (error) {
-        console.error('Error fetching recipients:', error);
-      }
-    };
-    fetchRecips();
   }, []);
 
   // Show loading state
