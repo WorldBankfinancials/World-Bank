@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Plus, Eye, EyeOff, MoreVertical, Zap, Shield, Smartphone, Lock, Unlock, CreditCard as CreditCardIcon, Settings, DollarSign } from 'lucide-react';
+import { CreditCard, Plus, Eye, EyeOff, MoreVertical, Zap, Shield, Smartphone, Lock, Unlock, CreditCard as CreditCardIcon, Settings, DollarSign, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +42,21 @@ export default function Cards() {
       const response = await authenticatedFetch('/api/cards');
       if (!response.ok) throw new Error('Failed to load cards');
       return response.json();
+    }
+  });
+
+  // Fetch transaction history
+  const { data: transactions = [] } = useQuery<any[]>({
+    queryKey: ['/api/transactions'],
+    queryFn: async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/transactions?limit=5');
+        if (!response.ok) return [];
+        return response.json();
+      } catch {
+        return [];
+      }
     }
   });
 
@@ -368,6 +383,46 @@ export default function Cards() {
             </span>
           </Button>
         </div>
+
+        {/* Transaction History */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Transaction History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {transactions && transactions.length > 0 ? (
+              <div className="space-y-3">
+                {transactions.map((transaction: any, idx: number) => (
+                  <div key={`txn-${transaction.id || idx}`} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 rounded-full ${transaction.type === 'debit' ? 'bg-red-100' : 'bg-green-100'}`}>
+                        {transaction.type === 'debit' ? (
+                          <ArrowUpRight className={`w-5 h-5 ${transaction.type === 'debit' ? 'text-red-600' : 'text-green-600'}`} />
+                        ) : (
+                          <ArrowDownLeft className="w-5 h-5 text-green-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{transaction.description || 'Transaction'}</p>
+                        <p className="text-xs text-gray-500">{new Date(transaction.date || transaction.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-semibold ${transaction.type === 'debit' ? 'text-red-600' : 'text-green-600'}`}>
+                        {transaction.type === 'debit' ? '-' : '+'}${Math.abs(transaction.amount || 0).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-gray-500">{transaction.status || 'Completed'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>No recent transactions available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Quick Actions */}
         <QuickActions />

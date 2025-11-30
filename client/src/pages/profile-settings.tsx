@@ -8,6 +8,7 @@ import { User, Shield, MapPin, Check, Eye, Lock, KeyRound } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
+import LiveChat from "@/components/LiveChat";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CustomerData } from "@/types";
@@ -15,6 +16,7 @@ import { CustomerData } from "@/types";
 export default function ProfileSettings() {
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
+  const [showLiveChat, setShowLiveChat] = useState(false);
   const { data: user, isLoading } = useQuery<CustomerData>({
     queryKey: ['/api/user'],
   });
@@ -264,7 +266,11 @@ export default function ProfileSettings() {
                 <p className="text-sm text-gray-500 mb-2">
                   Need to update your profile information? Contact our customer support team for assistance.
                 </p>
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setShowLiveChat(true)}
+                >
                   Contact Support
                 </Button>
               </div>
@@ -272,6 +278,11 @@ export default function ProfileSettings() {
           </CardContent>
         </Card>
       </div>
+
+      <LiveChat 
+        isOpen={showLiveChat} 
+        onClose={() => setShowLiveChat(false)} 
+      />
 
       <BottomNavigation />
     </div>
