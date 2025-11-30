@@ -27,7 +27,7 @@ import {
   History,
   Star
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -38,7 +38,7 @@ export default function InternationalTransfer() {
   const { userProfile } = useAuth();
   const { toast } = useToast();
   
-  // ALL HOOKS MUST BE AT TOP LEVEL - BEFORE ANY CONDITIONAL RENDERING
+  // ALL STATE HOOKS AT TOP LEVEL
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [transferAmount, setTransferAmount] = useState('1000');
   const [fromCurrency, setFromCurrency] = useState('USD');
@@ -51,53 +51,82 @@ export default function InternationalTransfer() {
   const [transferId, setTransferId] = useState('');
   const [intlTransferStatus, setIntlTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
   const [intlPollInterval, setIntlPollInterval] = useState<NodeJS.Timeout | null>(null);
-  
-  // Fetch user data - called at top level
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user'],
-    queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/user');
-      if (!response.ok) throw new Error('Failed to fetch user');
-      return response.json();
-    }
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [exchangeRates, setExchangeRates] = useState<any[]>([]);
+  const [popularDestinations, setPopularDestinations] = useState<any[]>([]);
+  const [recentRecipients, setRecentRecipients] = useState<any[]>([]);
 
-  // Fetch exchange rates - top level
-  const { data: exchangeRates = [] } = useQuery<any[]>({
-    queryKey: ['/api/exchange-rates'],
-    queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/exchange-rates');
-      if (!response.ok) return [];
-      return response.json();
-    },
-    staleTime: 60000
-  });
+  // Fetch user data using useEffect - same pattern as dashboard
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/user');
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
-  // Fetch popular destinations - top level
-  const { data: popularDestinations = [] } = useQuery<any[]>({
-    queryKey: ['/api/transfer/destinations'],
-    queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/transfer/destinations');
-      if (!response.ok) return [];
-      return response.json();
-    },
-    staleTime: 300000
-  });
+  // Fetch exchange rates
+  useEffect(() => {
+    const fetchRates = async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/exchange-rates');
+        if (response.ok) {
+          const rates = await response.json();
+          setExchangeRates(Array.isArray(rates) ? rates : []);
+        }
+      } catch (error) {
+        console.error('Error fetching rates:', error);
+      }
+    };
+    fetchRates();
+  }, []);
 
-  // Fetch recent recipients - top level
-  const { data: recentRecipients = [] } = useQuery<any[]>({
-    queryKey: ['/api/transfer/recipients'],
-    queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/transfer/recipients');
-      if (!response.ok) return [];
-      return response.json();
-    },
-    staleTime: 60000
-  });
+  // Fetch destinations
+  useEffect(() => {
+    const fetchDest = async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/transfer/destinations');
+        if (response.ok) {
+          const dests = await response.json();
+          setPopularDestinations(Array.isArray(dests) ? dests : []);
+        }
+      } catch (error) {
+        console.error('Error fetching destinations:', error);
+      }
+    };
+    fetchDest();
+  }, []);
+
+  // Fetch recent recipients
+  useEffect(() => {
+    const fetchRecips = async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/transfer/recipients');
+        if (response.ok) {
+          const recips = await response.json();
+          setRecentRecipients(Array.isArray(recips) ? recips : []);
+        }
+      } catch (error) {
+        console.error('Error fetching recipients:', error);
+      }
+    };
+    fetchRecips();
+  }, []);
 
   // Show loading state
   if (isLoading) {
