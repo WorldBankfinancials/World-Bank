@@ -100,7 +100,6 @@ export default function Dashboard() {
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const response = await authenticatedFetch('/api/transactions');
         if (!response.ok) {
-          console.error('Failed to fetch transactions:', response.status);
           return [];
         }
         const data = await response.json();
@@ -117,7 +116,6 @@ export default function Dashboard() {
           created_at: txn.createdAt || new Date().toISOString()
         })) : [];
       } catch (error: any) {
-        console.error('Transaction fetch error:', error);
         return [];
       }
     }
