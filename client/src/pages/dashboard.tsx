@@ -630,7 +630,8 @@ export default function Dashboard() {
               balance: account.balance ? parseFloat(account.balance.toString()) : 0,
               icon: account.accountType === 'checking' ? Wallet : 
                     account.accountType === 'savings' ? Building2 : TrendingUp,
-              id: account.id || idx
+              id: account.id || `${account.accountNumber}-${account.accountType}`,
+              fullNumber: account.accountNumber
             }));
             setAccounts(formattedAccounts);
           }
@@ -871,8 +872,8 @@ export default function Dashboard() {
       <div className="px-4 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('my_accounts')}</h3>
         <div className="space-y-3">
-          {accounts.map((account) => (
-            <Card key={account.id} className="wb-card">
+          {accounts.map((account, idx) => (
+            <Card key={`${account.fullNumber}-${account.type}-${idx}`} className="wb-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
