@@ -1,121 +1,136 @@
+import type { User } from "@shared/schema";
+
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import BottomNavigation from "@/components/BottomNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
+import { COUNTRIES } from "@/data/countries";
+import { 
+  Globe, 
+  ArrowRightLeft, 
+  Clock, 
+  Shield, 
+  CheckCircle,
+  Calculator,
+  Users,
+  User as UserIcon,
+  Phone,
+  Mail,
+  Eye,
+  EyeOff,
+  History,
+  Star
+} from "lucide-react";
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import type { User } from "@shared/schema";
-import { Globe, Shield, Clock, Star, AlertCircle, CheckCircle, Phone, Mail, MapPin, Eye, EyeOff, History } from "lucide-react";
-import { COUNTRIES } from "@/data/countries";
+
 
 export default function InternationalTransfer() {
   const { t } = useLanguage();
-  const { userProfile } = useAuth();
-  const { toast } = useToast();
   
-  // Form state
+  // CRITICAL FIX: Load user data FIRST before any other logic
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ['/api/user'],
+  });
+  
+  const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [transferAmount, setTransferAmount] = useState('1000');
   const [fromCurrency, setFromCurrency] = useState('USD');
   const [toCurrency, setToCurrency] = useState('CNY');
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [transferPin, setTransferPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showProcessingPage, setShowProcessingPage] = useState(false);
+  const [transferId, setTransferId] = useState('');
+  
+  // Recipient banking details state
   const [recipientFirstName, setRecipientFirstName] = useState('');
   const [recipientLastName, setRecipientLastName] = useState('');
-  const [recipientMiddleName, setRecipientMiddleName] = useState('');
-  const [recipientDOB, setRecipientDOB] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
-  const [recipientStreet, setRecipientStreet] = useState('');
-  const [recipientCity, setRecipientCity] = useState('');
-  const [recipientState, setRecipientState] = useState('');
-  const [recipientPostal, setRecipientPostal] = useState('');
   const [recipientCountry, setRecipientCountry] = useState('');
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [swiftCode, setSwiftCode] = useState('');
-  const [bankBranch, setBankBranch] = useState('');
-  const [routingNumber, setRoutingNumber] = useState('');
-  const [bankAddress, setBankAddress] = useState('');
-  const [transferPurpose, setTransferPurpose] = useState('');
-  const [transferNote, setTransferNote] = useState('');
-  const [relationship, setRelationship] = useState('');
-  
-  // Modal state
-  const [showPinModal, setShowPinModal] = useState(false);
-  const [transferPin, setTransferPin] = useState('');
-  const [pinError, setPinError] = useState('');
-  const [showProcessingPage, setShowProcessingPage] = useState(false);
-  const [transferId, setTransferId] = useState('');
-  const [intlTransferStatus, setIntlTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
+  const [purpose, setPurpose] = useState('');
 
-  // Fetch user data
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user'],
-    queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/user');
-      if (!response.ok) throw new Error('Failed to fetch user');
-      return response.json();
-    }
-  });
-
-  const handleSendMoney = () => {
-    if (!recipientFirstName || !recipientLastName || !bankName || !accountNumber || !swiftCode) {
-      toast({ title: 'Incomplete Form', description: 'Please fill in all required fields', variant: 'destructive' });
-      return;
-    }
+  const handleInternationalTransfer = () => {
     setShowPinModal(true);
   };
 
   const handlePinSubmit = async () => {
+    // PIN verification process
+    
+    // Validate PIN first
     if (!transferPin || transferPin.length !== 4) {
       setPinError("Please enter a 4-digit PIN");
       return;
     }
+    
+    // Ensure user is loaded before submission
+    if (!user || !user.email) {
+      setPinError("Unable to verify user. Please refresh and try again.");
+      return;
+    }
 
     setPinError("");
+    setIsProcessing(true);
     
+    // Validate required fields before submission
+    const recipientFullName = `${recipientFirstName} ${recipientLastName}`.trim();
+    if (!recipientFullName || !recipientCountry || !bankName || !accountNumber || !swiftCode) {
+      setPinError("Please fill in all required recipient banking details");
+      setIsProcessing(false);
+      return;
+    }
+
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
+      const transferData = {
+        amount: parseFloat(transferAmount),
+        fromCurrency: fromCurrency,
+        toCurrency: toCurrency,
+        recipientName: recipientFullName,
+        recipientCountry: recipientCountry,
+        bankName: bankName,
+        swiftCode: swiftCode,
+        recipientAccount: accountNumber, // Use real account number from form
+        transferPurpose: purpose || "International Transfer",
+        transferPin: transferPin,
+        userEmail: user.email
+      };
+      
       const response = await authenticatedFetch('/api/international-transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: parseFloat(transferAmount),
-          fromCurrency,
-          toCurrency,
-          recipientName: `${recipientFirstName} ${recipientLastName}`,
-          recipientCountry,
-          bankName,
-          accountNumber,
-          swiftCode,
-          transferPurpose,
-          transferPin
-        })
+        body: JSON.stringify(transferData)
       });
       
       if (!response.ok) {
         const errorData = await response.json();
-        setPinError(errorData.message || "Transfer failed");
+        setPinError(errorData.message || "Transfer failed. Please try again.");
+        setIsProcessing(false);
         return;
       }
 
       const result = await response.json();
+      
       setShowPinModal(false);
       setTransferPin('');
       setTransferId(result.id || `INT-${Date.now()}`);
-      setIntlTransferStatus("processing");
       setShowProcessingPage(true);
       
     } catch (error) {
-      setPinError("Network error. Please try again.");
+      setPinError("Network error. Please check your connection and try again.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -126,111 +141,214 @@ export default function InternationalTransfer() {
       </div>
     );
   }
-  
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-red-600">Failed to load user profile. Please refresh.</div>
-      </div>
-    );
-  }
 
+  // Processing page
   if (showProcessingPage) {
-    const statusConfig = {
-      processing: { icon: Clock, color: 'text-blue-600', bgColor: 'bg-blue-100', title: 'Processing', msg: 'Your international transfer is being securely processed...' },
-      pending: { icon: Clock, color: 'text-orange-600', bgColor: 'bg-orange-100', title: 'Pending Approval', msg: 'Your transfer is being reviewed...' },
-      success: { icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100', title: 'Success', msg: 'Transfer approved and processing!' },
-      failed: { icon: AlertCircle, color: 'text-red-600', bgColor: 'bg-red-100', title: 'Failed', msg: 'Transfer could not be processed' }
-    };
-    
-    const config = statusConfig[intlTransferStatus];
-    const Icon = config.icon;
-
     return (
       <div className="min-h-screen bg-gray-50">
         <Header user={user} />
-        <div className="px-4 py-12 pb-20 flex items-center justify-center">
-          <Card className="w-full max-w-md text-center">
-            <CardContent className="pt-6">
-              <div className={`w-20 h-20 ${config.bgColor} rounded-full flex items-center justify-center mx-auto mb-4`}>
-                <Icon className={`w-10 h-10 ${config.color} ${intlTransferStatus === 'processing' ? 'animate-spin' : ''}`} />
-              </div>
-              <h2 className="text-2xl font-semibold mb-2">{config.title}</h2>
-              <p className="text-gray-600 mb-6">{config.msg}</p>
-              <div className="bg-gray-100 p-4 rounded-lg mb-4">
-                <p className="text-xs text-gray-600">Reference Number</p>
-                <p className="font-mono font-bold text-sm">{transferId}</p>
-              </div>
-              <Button 
-                onClick={() => { setShowProcessingPage(false); setTransferPin(''); setPinError(''); }}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                New Transfer
-              </Button>
-            </CardContent>
-          </Card>
+        
+        <div className="px-4 py-6 pb-20">
+          <div className="max-w-md mx-auto">
+            <Card className="text-center">
+              <CardContent className="pt-6">
+                <div className="mb-6">
+                  <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="w-10 h-10 text-blue-600 animate-spin" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">International Transfer Processing</h2>
+                  <p className="text-gray-600 mb-4">
+                    Your international transfer is being processed securely through our banking network.
+                  </p>
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">Reference Number</span>
+                    <span className="font-mono text-sm font-medium">{transferId}</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">Status</span>
+                    <span className="text-sm font-medium text-orange-600">Processing</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Amount</span>
+                    <span className="text-sm font-medium">${transferAmount} USD</span>
+                  </div>
+                </div>
+                
+                <div className="text-left space-y-3 mb-6">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-700">Transfer request submitted</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full mr-3 animate-pulse"></div>
+                    <span className="text-sm text-gray-700">Processing to recipient bank</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-500">Awaiting bank confirmation</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-500">Transfer completed</span>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-3">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => setShowProcessingPage(false)}
+                  >
+                    New Transfer
+                  </Button>
+                  <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+                    Track Transfer
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
+        
         <Footer />
       </div>
     );
   }
 
-  const exchangeRate = 7.23;
-  const fee = 8.00;
-  const recipientAmount = (parseFloat(transferAmount) * exchangeRate) - fee;
+  const exchangeRates = [
+    { from: "USD", to: "CNY", rate: "7.23", trend: "up", flag: "🇨🇳", change: "+0.05", changePercent: "+0.69%" },
+    { from: "USD", to: "EUR", rate: "0.92", trend: "down", flag: "🇪🇺", change: "-0.02", changePercent: "-2.13%" },
+    { from: "USD", to: "GBP", rate: "0.79", trend: "up", flag: "🇬🇧", change: "+0.01", changePercent: "+1.28%" },
+    { from: "USD", to: "JPY", rate: "149.50", trend: "stable", flag: "🇯🇵", change: "0.00", changePercent: "0.00%" },
+    { from: "USD", to: "SGD", rate: "1.35", trend: "up", flag: "🇸🇬", change: "+0.03", changePercent: "+2.27%" },
+    { from: "USD", to: "AUD", rate: "1.52", trend: "down", flag: "🇦🇺", change: "-0.04", changePercent: "-2.56%" },
+    { from: "USD", to: "CAD", rate: "1.36", trend: "up", flag: "🇨🇦", change: "+0.02", changePercent: "+1.49%" },
+    { from: "USD", to: "CHF", rate: "0.91", trend: "stable", flag: "🇨🇭", change: "0.00", changePercent: "0.00%" },
+    { from: "USD", to: "KRW", rate: "1340.25", trend: "down", flag: "🇰🇷", change: "-15.50", changePercent: "-1.14%" },
+    { from: "USD", to: "INR", rate: "83.12", trend: "up", flag: "🇮🇳", change: "+0.45", changePercent: "+0.54%" }
+  ];
+
+  const popularDestinations = [
+    { country: "China", flag: "🇨🇳", currency: "CNY", fee: "$8.00", time: "Same day" },
+    { country: "United Kingdom", flag: "🇬🇧", currency: "GBP", fee: "$12.00", time: "1-2 hours" },
+    { country: "Japan", flag: "🇯🇵", currency: "JPY", fee: "$15.00", time: "Same day" },
+    { country: "Singapore", flag: "🇸🇬", currency: "SGD", fee: "$10.00", time: "1 hour" },
+    { country: "Australia", flag: "🇦🇺", currency: "AUD", fee: "$14.00", time: "2-4 hours" },
+    { country: "Germany", flag: "🇩🇪", currency: "EUR", fee: "$11.00", time: "1-3 hours" }
+  ];
+
+  const recentRecipients = [
+    { name: "Zhang Wei", country: "China", account: "****8901", lastTransfer: "2 days ago" },
+    { name: "Emily Johnson", country: "UK", account: "****5643", lastTransfer: "1 week ago" },
+    { name: "Hiroshi Tanaka", country: "Japan", account: "****2187", lastTransfer: "2 weeks ago" }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header user={user} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+        {/* Enhanced Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">{t('international_money_transfer')}</h1>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-6">{t('send_money_description')}</p>
-          <div className="flex justify-center flex-wrap gap-3 mb-6">
-            <Badge className="flex items-center gap-1"><Globe className="w-4 h-4" />190+ Countries</Badge>
-            <Badge className="flex items-center gap-1"><Shield className="w-4 h-4" />Bank-Grade Security</Badge>
-            <Badge className="flex items-center gap-1"><Clock className="w-4 h-4" />Real-time Transfer</Badge>
-            <Badge className="flex items-center gap-1"><Star className="w-4 h-4" />Best Rates Guaranteed</Badge>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">International Money Transfer</h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-6">
+            Send money to over 190 countries with competitive exchange rates and ultra-fast delivery
+          </p>
+          <div className="flex justify-center flex-wrap gap-3">
+            <Badge variant="outline" className="flex items-center">
+              <Globe className="w-4 h-4 mr-1" />
+              190+ Countries
+            </Badge>
+            <Badge variant="outline" className="flex items-center">
+              <Shield className="w-4 h-4 mr-1" />
+              Bank-Grade Security
+            </Badge>
+            <Badge variant="outline" className="flex items-center">
+              <Clock className="w-4 h-4 mr-1" />
+              Real-time Transfer
+            </Badge>
+            <Badge variant="outline" className="flex items-center">
+              <Star className="w-4 h-4 mr-1" />
+              Best Rates Guaranteed
+            </Badge>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
+          {/* Main Transfer Form */}
           <div className="lg:col-span-2 space-y-6">
             {/* Quick Transfer Calculator */}
             <Card className="border-2 border-blue-200 bg-blue-50">
               <CardHeader>
-                <CardTitle className="text-blue-900">Quick Transfer Calculator</CardTitle>
+                <CardTitle className="flex items-center space-x-2">
+                  <Calculator className="w-5 h-5 text-blue-600" />
+                  <span>Quick Transfer Calculator</span>
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                   <div>
-                    <Label className="text-sm">You Send</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input type="number" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="Amount" className="flex-1" />
+                    <Label>You Send</Label>
+                    <div className="flex mt-1">
                       <Select value={fromCurrency} onValueChange={setFromCurrency}>
-                        <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
-                        <SelectContent><SelectItem value="USD">USD</SelectItem></SelectContent>
+                        <SelectTrigger className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="USD">🇺🇸 USD</SelectItem>
+                          <SelectItem value="EUR">🇪🇺 EUR</SelectItem>
+                          <SelectItem value="GBP">🇬🇧 GBP</SelectItem>
+                          <SelectItem value="CNY">🇨🇳 CNY</SelectItem>
+                        </SelectContent>
                       </Select>
+                      <Input 
+                        className="flex-1 ml-2" 
+                        placeholder="0.00"
+                        value={transferAmount}
+                        onChange={(e) => setTransferAmount(e.target.value)}
+                      />
                     </div>
                   </div>
+                  
+                  <div className="flex justify-center">
+                    <ArrowRightLeft className="w-6 h-6 text-blue-600" />
+                  </div>
+                  
                   <div>
-                    <Label className="text-sm">Recipient Gets</Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input value={`¥${recipientAmount.toFixed(2)}`} readOnly className="flex-1" />
+                    <Label>Recipient Gets</Label>
+                    <div className="flex mt-1">
                       <Select value={toCurrency} onValueChange={setToCurrency}>
-                        <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
-                        <SelectContent><SelectItem value="CNY">CNY</SelectItem></SelectContent>
+                        <SelectTrigger className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CNY">🇨🇳 CNY</SelectItem>
+                          <SelectItem value="EUR">🇪🇺 EUR</SelectItem>
+                          <SelectItem value="GBP">🇬🇧 GBP</SelectItem>
+                          <SelectItem value="JPY">🇯🇵 JPY</SelectItem>
+                        </SelectContent>
                       </Select>
+                      <Input className="flex-1 ml-2" placeholder="0.00" readOnly />
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3 p-3 bg-white rounded border">
-                  <div><p className="text-xs text-gray-600">Exchange Rate</p><p className="font-semibold text-sm">1 USD = {exchangeRate} {toCurrency}</p></div>
-                  <div><p className="text-xs text-gray-600">Transfer Fee</p><p className="font-semibold text-sm">${fee.toFixed(2)}</p></div>
-                  <div><p className="text-xs text-gray-600">Delivery Time</p><p className="font-semibold text-sm">Within 1 hour</p></div>
+                
+                <div className="mt-4 p-3 bg-white rounded-lg">
+                  <div className="flex justify-between text-sm">
+                    <span>Exchange Rate:</span>
+                    <span className="font-medium">1 {fromCurrency} = 7.23 {toCurrency}</span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-1">
+                    <span>Transfer Fee:</span>
+                    <span className="font-medium">$8.00</span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-1">
+                    <span>Delivery Time:</span>
+                    <span className="font-medium text-green-600">Within 1 hour</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -238,150 +356,245 @@ export default function InternationalTransfer() {
             {/* Recipient Information */}
             <Card>
               <CardHeader>
-                <CardTitle>Recipient Information</CardTitle>
+                <CardTitle className="flex items-center space-x-2">
+                  <UserIcon className="w-5 h-5" />
+                  <span>Recipient Information</span>
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>First Name *</Label>
-                    <Input value={recipientFirstName} onChange={(e) => setRecipientFirstName(e.target.value)} placeholder="First Name" />
-                  </div>
-                  <div>
-                    <Label>Last Name *</Label>
-                    <Input value={recipientLastName} onChange={(e) => setRecipientLastName(e.target.value)} placeholder="Last Name" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Middle Name</Label>
-                    <Input value={recipientMiddleName} onChange={(e) => setRecipientMiddleName(e.target.value)} placeholder="Middle Name" />
-                  </div>
-                  <div>
-                    <Label>Date of Birth</Label>
-                    <Input type="date" value={recipientDOB} onChange={(e) => setRecipientDOB(e.target.value)} />
+              <CardContent className="space-y-6">
+                {/* Recent Recipients Quick Select */}
+                <div>
+                  <Label className="text-base font-medium">Recent Recipients</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+                    {recentRecipients.map((recipient, index) => (
+                      <div key={index} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                        <div className="font-medium">{recipient.name}</div>
+                        <div className="text-sm text-gray-600">{recipient.country} • {recipient.account}</div>
+                        <div className="text-xs text-gray-500">{recipient.lastTransfer}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Phone Number *</Label>
-                    <Input value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)} placeholder="Phone Number" />
-                  </div>
-                  <div>
-                    <Label>Email Address</Label>
-                    <Input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} placeholder="Email" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Recipient Address */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recipient Address</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Street Address *</Label>
-                  <Input value={recipientStreet} onChange={(e) => setRecipientStreet(e.target.value)} placeholder="Street Address" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>City *</Label>
-                    <Input value={recipientCity} onChange={(e) => setRecipientCity(e.target.value)} placeholder="City" />
-                  </div>
-                  <div>
-                    <Label>State/Province</Label>
-                    <Input value={recipientState} onChange={(e) => setRecipientState(e.target.value)} placeholder="State" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Postal Code</Label>
-                    <Input value={recipientPostal} onChange={(e) => setRecipientPostal(e.target.value)} placeholder="Postal Code" />
-                  </div>
-                  <div>
-                    <Label>Country *</Label>
-                    <Select value={recipientCountry} onValueChange={setRecipientCountry}>
-                      <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
-                      <SelectContent>
-                        {COUNTRIES.map(c => <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                <div className="border-t pt-6">
+                  <Label className="text-base font-medium">Add New Recipient</Label>
+                  
+                  {/* Personal Information */}
+                  <div className="mt-4 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>First Name *</Label>
+                        <Input 
+                          placeholder="Recipient's first name" 
+                          className="mt-1"
+                          value={recipientFirstName}
+                          onChange={(e) => setRecipientFirstName(e.target.value)}
+                          data-testid="input-recipient-firstname"
+                        />
+                      </div>
+                      <div>
+                        <Label>Last Name *</Label>
+                        <Input 
+                          placeholder="Recipient's last name" 
+                          className="mt-1"
+                          value={recipientLastName}
+                          onChange={(e) => setRecipientLastName(e.target.value)}
+                          data-testid="input-recipient-lastname"
+                        />
+                      </div>
+                    </div>
 
-            {/* Banking Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Banking Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Bank Name *</Label>
-                  <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Bank Name" />
-                </div>
-                <div>
-                  <Label>Account Number/IBAN *</Label>
-                  <Input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="Account Number" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>SWIFT/BIC Code *</Label>
-                    <Input value={swiftCode} onChange={(e) => setSwiftCode(e.target.value)} placeholder="SWIFT Code" />
-                  </div>
-                  <div>
-                    <Label>Bank Branch</Label>
-                    <Input value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} placeholder="Branch" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Routing Number</Label>
-                    <Input value={routingNumber} onChange={(e) => setRoutingNumber(e.target.value)} placeholder="Routing Number" />
-                  </div>
-                  <div>
-                    <Label>Bank Address</Label>
-                    <Input value={bankAddress} onChange={(e) => setBankAddress(e.target.value)} placeholder="Bank Address" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Middle Name</Label>
+                        <Input placeholder="Middle name (if any)" className="mt-1" />
+                      </div>
+                      <div>
+                        <Label>Date of Birth</Label>
+                        <Input type="date" className="mt-1" />
+                      </div>
+                    </div>
 
-            {/* Transfer Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Transfer Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Transfer Purpose *</Label>
-                  <Select value={transferPurpose} onValueChange={setTransferPurpose}>
-                    <SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="family">Family Support</SelectItem>
-                      <SelectItem value="business">Business Payment</SelectItem>
-                      <SelectItem value="education">Education</SelectItem>
-                      <SelectItem value="medical">Medical</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Transfer Note</Label>
-                  <Textarea value={transferNote} onChange={(e) => setTransferNote(e.target.value)} placeholder="Add a note (optional)" rows={3} />
-                </div>
-                <div>
-                  <Label>Relationship to Recipient</Label>
-                  <Select value={relationship} onValueChange={setRelationship}>
-                    <SelectTrigger><SelectValue placeholder="Select relationship" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="family">Family Member</SelectItem>
-                      <SelectItem value="friend">Friend</SelectItem>
-                      <SelectItem value="business">Business Associate</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Phone Number *</Label>
+                        <Input 
+                          placeholder="Recipient's phone number" 
+                          className="mt-1"
+                          value={recipientPhone}
+                          onChange={(e) => setRecipientPhone(e.target.value)}
+                          data-testid="input-recipient-phone"
+                        />
+                      </div>
+                      <div>
+                        <Label>Email Address</Label>
+                        <Input 
+                          type="email" 
+                          placeholder="recipient@email.com" 
+                          className="mt-1"
+                          value={recipientEmail}
+                          onChange={(e) => setRecipientEmail(e.target.value)}
+                          data-testid="input-recipient-email"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Address Information */}
+                    <div className="pt-4 border-t">
+                      <h3 className="font-medium mb-3">Recipient Address</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Street Address *</Label>
+                          <Input placeholder="Full street address" className="mt-1" />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <Label>City *</Label>
+                            <Input placeholder="City" className="mt-1" />
+                          </div>
+                          <div>
+                            <Label>State/Province</Label>
+                            <Input placeholder="State or Province" className="mt-1" />
+                          </div>
+                          <div>
+                            <Label>Postal Code</Label>
+                            <Input placeholder="ZIP/Postal code" className="mt-1" />
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label>Country *</Label>
+                          <Select value={recipientCountry} onValueChange={setRecipientCountry}>
+                            <SelectTrigger className="mt-1" data-testid="select-recipient-country">
+                              <SelectValue placeholder="Select recipient's country" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COUNTRIES.map(country => (
+                                <SelectItem key={country} value={country}>{country}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Banking Information */}
+                    <div className="pt-4 border-t">
+                      <h3 className="font-medium mb-3">Banking Information</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Bank Name *</Label>
+                          <Input 
+                            placeholder="Recipient's bank name" 
+                            className="mt-1"
+                            value={bankName}
+                            onChange={(e) => setBankName(e.target.value)}
+                            data-testid="input-bank-name"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label>Account Number/IBAN *</Label>
+                            <div className="relative">
+                              <Input 
+                                type={showAccountDetails ? "text" : "password"}
+                                placeholder="Account number or IBAN" 
+                                className="mt-1 pr-10"
+                                value={accountNumber}
+                                onChange={(e) => setAccountNumber(e.target.value)}
+                                data-testid="input-account-number"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowAccountDetails(!showAccountDetails)}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                              >
+                                {showAccountDetails ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </div>
+                          </div>
+                          <div>
+                            <Label>SWIFT/BIC Code *</Label>
+                            <Input 
+                              placeholder="Bank's SWIFT code" 
+                              className="mt-1"
+                              value={swiftCode}
+                              onChange={(e) => setSwiftCode(e.target.value)}
+                              data-testid="input-swift-code"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label>Bank Branch</Label>
+                            <Input placeholder="Branch name or code" className="mt-1" />
+                          </div>
+                          <div>
+                            <Label>Routing Number</Label>
+                            <Input placeholder="Routing/Sort code" className="mt-1" />
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label>Bank Address</Label>
+                          <Textarea placeholder="Complete bank address" className="mt-1" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Transfer Details */}
+                    <div className="pt-4 border-t">
+                      <h3 className="font-medium mb-3">Transfer Details</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Transfer Purpose *</Label>
+                          <Select>
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="Select transfer purpose" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="family">Family Support</SelectItem>
+                              <SelectItem value="business">Business Payment</SelectItem>
+                              <SelectItem value="education">Education Expenses</SelectItem>
+                              <SelectItem value="investment">Investment</SelectItem>
+                              <SelectItem value="property">Property Purchase</SelectItem>
+                              <SelectItem value="medical">Medical Expenses</SelectItem>
+                              <SelectItem value="travel">Travel Expenses</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label>Transfer Note</Label>
+                          <Textarea 
+                            placeholder="Optional message to recipient (will appear on their statement)" 
+                            className="mt-1" 
+                          />
+                        </div>
+
+                        <div>
+                          <Label>Relationship to Recipient</Label>
+                          <Select>
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="Select relationship" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="family">Family Member</SelectItem>
+                              <SelectItem value="friend">Friend</SelectItem>
+                              <SelectItem value="business">Business Partner</SelectItem>
+                              <SelectItem value="employee">Employee</SelectItem>
+                              <SelectItem value="vendor">Vendor/Supplier</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -389,89 +602,236 @@ export default function InternationalTransfer() {
             {/* Transfer Summary */}
             <Card className="border-2 border-green-200 bg-green-50">
               <CardHeader>
-                <CardTitle>Transfer Summary</CardTitle>
+                <CardTitle className="flex items-center space-x-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <span>Transfer Summary</span>
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between"><span>Transfer Amount:</span><span className="font-semibold">${transferAmount} USD</span></div>
-                <div className="flex justify-between"><span>Exchange Rate:</span><span className="font-semibold">1 USD = {exchangeRate} {toCurrency}</span></div>
-                <div className="flex justify-between"><span>Transfer Fee:</span><span className="font-semibold">${fee.toFixed(2)}</span></div>
-                <div className="border-t pt-2 flex justify-between font-bold"><span>Recipient Gets:</span><span>¥{recipientAmount.toFixed(2)} {toCurrency}</span></div>
-                <div className="border-t pt-2 flex justify-between font-bold"><span>Total Debit:</span><span>${(parseFloat(transferAmount) + fee).toFixed(2)} USD</span></div>
-                <Button onClick={handleSendMoney} className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white">Send Money Now</Button>
-                <Button variant="outline" className="w-full">Save as Template</Button>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span>Transfer Amount:</span>
+                    <span className="font-medium">$1,000.00 USD</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Exchange Rate:</span>
+                    <span className="font-medium">1 USD = 7.23 CNY</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Transfer Fee:</span>
+                    <span className="font-medium">$8.00</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Recipient Gets:</span>
+                    <span className="font-medium text-green-600">¥7,230.00 CNY</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="font-medium">Total Debit:</span>
+                    <span className="font-bold">$1,008.00 USD</span>
+                  </div>
+                </div>
+                
+                <div className="mt-6 space-y-3">
+                  <Button 
+                    className="w-full bg-blue-600 text-white hover:bg-blue-700"
+                    onClick={handleInternationalTransfer}
+                  >
+                    Send Money Now
+                  </Button>
+                  <Button variant="outline" className="w-full">
+                    Save as Template
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Why Choose */}
+            {/* Exchange Rates */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Live Exchange Rates</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {exchangeRates.map((rate, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-xl">{rate.flag}</span>
+                        <div>
+                          <div className="font-medium">{rate.from}/{rate.to}</div>
+                          <div className="text-xs text-gray-500">Live Rate</div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-lg">{rate.rate}</div>
+                        <div className={`text-xs flex items-center space-x-1 ${
+                          rate.trend === 'up' ? 'text-green-600' : 
+                          rate.trend === 'down' ? 'text-red-600' : 'text-gray-600'
+                        }`}>
+                          <span>{rate.trend === 'up' ? '↗' : rate.trend === 'down' ? '↘' : '→'}</span>
+                          <span>{rate.change}</span>
+                          <span>({rate.changePercent})</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center space-x-2 text-blue-800 text-sm">
+                    <Clock className="w-4 h-4" />
+                    <span>Rates updated every 30 seconds</span>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" className="w-full mt-3">
+                  <History className="w-4 h-4 mr-2" />
+                  Rate History
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Popular Destinations */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Popular Destinations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {popularDestinations.map((dest, index) => (
+                    <div key={index} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-lg">{dest.flag}</span>
+                          <div>
+                            <div className="font-medium text-sm">{dest.country}</div>
+                            <div className="text-xs text-gray-600">{dest.currency}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium">{dest.fee}</div>
+                          <div className="text-xs text-gray-600">{dest.time}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Transfer Features */}
             <Card>
               <CardHeader>
                 <CardTitle>Why Choose World Bank?</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Globe className="w-5 h-5 text-blue-600 flex-shrink-0 mt-1" />
-                    <div><p className="font-semibold text-sm">Best Exchange Rates</p><p className="text-xs text-gray-600">Guaranteed competitive rates</p></div>
+              <CardContent className="space-y-3">
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                  <div>
+                    <div className="font-medium">Best Exchange Rates</div>
+                    <div className="text-sm text-gray-500">Guaranteed competitive rates</div>
                   </div>
-                  <div className="flex gap-2">
-                    <Shield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-1" />
-                    <div><p className="font-semibold text-sm">Bank-Grade Security</p><p className="text-xs text-gray-600">256-bit encryption & fraud protection</p></div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <div className="font-medium">Bank-Grade Security</div>
+                    <div className="text-sm text-gray-500">256-bit encryption & fraud protection</div>
                   </div>
-                  <div className="flex gap-2">
-                    <Clock className="w-5 h-5 text-blue-600 flex-shrink-0 mt-1" />
-                    <div><p className="font-semibold text-sm">Ultra-Fast Delivery</p><p className="text-xs text-gray-600">Real-time to same-day delivery</p></div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <Clock className="w-5 h-5 text-orange-600 mt-0.5" />
+                  <div>
+                    <div className="font-medium">Ultra-Fast Delivery</div>
+                    <div className="text-sm text-gray-500">Real-time to same-day delivery</div>
                   </div>
-                  <div className="flex gap-2">
-                    <Star className="w-5 h-5 text-blue-600 flex-shrink-0 mt-1" />
-                    <div><p className="font-semibold text-sm">24/7 Support</p><p className="text-xs text-gray-600">Multilingual customer service</p></div>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <Users className="w-5 h-5 text-purple-600 mt-0.5" />
+                  <div>
+                    <div className="font-medium">24/7 Support</div>
+                    <div className="text-sm text-gray-500">Multilingual customer service</div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Live Rates */}
+            {/* Support */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Live Exchange Rates</CardTitle>
+                <CardTitle>Need Help?</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <div className="flex justify-between items-center p-2 border rounded hover:bg-gray-50">
-                  <span>1 USD = <strong>{exchangeRate}</strong> CNY</span>
-                  <span className="text-green-600 text-xs">↗ +0.2%</span>
-                </div>
-                <p className="text-xs text-gray-500 text-center">Rates updated every 30 seconds</p>
-                <Button variant="outline" size="sm" className="w-full text-xs"><History className="w-3 h-3 mr-1" />Rate History</Button>
+              <CardContent className="space-y-3">
+                <Button variant="outline" className="w-full justify-start">
+                  <Phone className="w-4 h-4 mr-2" />
+                  Call Support
+                </Button>
+                <Button variant="outline" className="w-full justify-start">
+                  <Mail className="w-4 h-4 mr-2" />
+                  Email Support
+                </Button>
+                <Button variant="outline" className="w-full justify-start">
+                  <Users className="w-4 h-4 mr-2" />
+                  Live Chat
+                </Button>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
-
-      {/* PIN Modal */}
+      
+      {/* PIN Verification Modal */}
       {showPinModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-sm">
-            <CardHeader>
-              <CardTitle>Enter PIN to Confirm</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-gray-600">Enter your 4-digit PIN to complete the transfer</p>
-              <Input type="password" placeholder="Enter PIN" value={transferPin} onChange={(e) => setTransferPin(e.target.value.slice(0, 4))} maxLength={4} className="text-center text-2xl tracking-widest" />
-              {pinError && <p className="text-red-600 text-sm text-center">{pinError}</p>}
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => { setShowPinModal(false); setTransferPin(''); setPinError(''); }} className="flex-1">Cancel</Button>
-                <Button onClick={handlePinSubmit} className="flex-1 bg-blue-600 hover:bg-blue-700">Confirm</Button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-80 mx-4">
+            <h3 className="text-lg font-semibold mb-4">Enter Transfer PIN</h3>
+            <p className="text-gray-600 text-sm mb-4">
+              Please enter your 4-digit transfer PIN to authorize this international transfer.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <input
+                  type="password"
+                  placeholder="Enter PIN"
+                  value={transferPin}
+                  onChange={(e) => setTransferPin(e.target.value)}
+                  maxLength={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg tracking-widest"
+                />
               </div>
-            </CardContent>
-          </Card>
+              
+              {pinError && (
+                <p className="text-red-600 text-sm">{pinError}</p>
+              )}
+              
+              <div className="flex space-x-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowPinModal(false);
+                    setTransferPin('');
+                    setPinError('');
+                  }}
+                  disabled={isProcessing}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handlePinSubmit}
+                  disabled={isProcessing || transferPin.length !== 4}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isProcessing ? 'Processing...' : 'Confirm'}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
-
+      
       <Footer />
-      <BottomNavigation />
     </div>
   );
 }
