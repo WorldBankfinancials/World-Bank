@@ -509,13 +509,59 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // User endpoints - PROTECTED with JWT authentication
   app.get('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user!.email);
+      const email = req.user!.email;
+      const userId = req.user!.userId;
+      
+      console.log(`🔍 /api/user endpoint called for email: ${email}, userId: ${userId}`);
+      
+      // Try 1: Get by email
+      let user = await storage.getUserByEmail(email);
+      
+      // Try 2: If not found by email, try by Supabase ID
+      if (!user && userId && typeof storage.getUserBySupabaseId === 'function') {
+        console.log(`⚠️ User not found by email, trying Supabase ID: ${userId}`);
+        user = await storage.getUserBySupabaseId(userId);
+      }
+      
+      // Try 3: Get all users and find manually (fallback)
       if (!user) {
+        console.log(`⚠️ User not found by email or ID, attempting manual search...`);
+        try {
+          const allUsers = await storage.getAllUsers();
+          user = allUsers.find(u => u.email === email);
+          if (!user) {
+            console.log(`❌ User not found in any search: ${email}`);
+            // Create user profile if it doesn't exist
+            console.log(`🆕 Creating new user profile for: ${email}`);
+            user = await storage.createUser({
+              username: email.split('@')[0],
+              email: email,
+              firstName: 'Customer',
+              lastName: 'Account',
+              phone: '0000000000',
+              password: 'supabase_auth',
+              profession: 'Banking Customer',
+              accountNumber: generateAccountNumber(),
+              accountId: Math.floor(Math.random() * 1000000),
+              balance: '0'
+            });
+            console.log(`✅ Created new user: ${user?.id}`);
+          }
+        } catch (searchError: any) {
+          console.error(`🔴 Error during manual user search/creation:`, searchError);
+        }
+      }
+      
+      if (!user) {
+        console.log(`❌ Final: User still not found after all attempts`);
         return res.status(404).json({ message: 'User not found' });
       }
+      
+      console.log(`✅ User retrieved successfully: ${user.id}`);
       res.json(user);
     } catch (error: any) {
-      res.status(500).json({ error: 'Failed to get user' });
+      console.error(`❌ /api/user error:`, error);
+      res.status(500).json({ error: 'Failed to get user', details: error?.message });
     }
   });
   
