@@ -32,17 +32,30 @@ export async function requireAuth(
     
     try {
       // Parse JWT token - ONLY accept Supabase JWT format (3 parts: header.payload.signature)
-      const parts = token.split('.');
+      const trimmedToken = token.trim();
+      const parts = trimmedToken.split('.');
+      
       if (parts.length !== 3) {
-        throw new Error('Invalid token format - expected JWT');
+        console.error('❌ Auth: Token has', parts.length, 'parts, expected 3');
+        throw new Error(`Invalid token format - expected 3 parts, got ${parts.length}`);
       }
       
-      // Decode JWT payload (second part)
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+      // Decode JWT payload (second part) - add padding if needed
+      let payloadBase64 = parts[1];
+      // Add padding if needed
+      const paddingNeeded = 4 - (payloadBase64.length % 4);
+      if (paddingNeeded !== 4) {
+        payloadBase64 += '='.repeat(paddingNeeded);
+      }
+      
+      const decodedPayload = Buffer.from(payloadBase64, 'base64').toString('utf-8');
+      const payload = JSON.parse(decodedPayload);
+      
       email = payload.email;
       userId = payload.sub || payload.id;
       
       if (!email) {
+        console.error('❌ Auth: JWT has no email field');
         throw new Error('Invalid token - no email in JWT');
       }
       
