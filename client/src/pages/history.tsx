@@ -267,8 +267,8 @@ export default function History() {
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredTransactions.map((transaction) => (
-                  <div key={transaction.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                {filteredTransactions.map((transaction, index) => (
+                  <div key={`${transaction.id}-${transaction.createdAt}-${index}`} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
@@ -282,13 +282,13 @@ export default function History() {
                         </div>
                         
                         <div className="text-sm text-gray-600 space-y-1">
-                          <p>{t('account')}: {getAccountName(transaction.accountId)}</p>
-                          <p>{t('date')}: {transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'}</p>
+                          <p>Account: {getAccountName(transaction.accountId)}</p>
+                          <p>Date: {transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'}</p>
                           {transaction.recipientName && (
-                            <p>{t('recipient')}: {transaction.recipientName}</p>
+                            <p>Recipient: {transaction.recipientName}</p>
                           )}
                           {transaction.bankName && (
-                            <p>{t('bank')}: {transaction.bankName}</p>
+                            <p>Bank: {transaction.bankName}</p>
                           )}
                         </div>
                       </div>

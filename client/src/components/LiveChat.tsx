@@ -191,14 +191,14 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
                 className={`flex ${msg.sender === 'user' ? 'justify-end pr-2' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-xs px-4 py-3 rounded-lg text-sm break-words ${
+                  className={`max-w-md px-5 py-3 rounded-lg text-base break-words ${
                     msg.sender === 'user'
                       ? 'bg-blue-600 text-white rounded-br-none shadow'
                       : 'bg-white text-gray-900 border border-gray-300 rounded-bl-none shadow'
                   }`}
                 >
-                  <p className="mb-1 leading-relaxed">{msg.text}</p>
-                  <p className={`text-xs ${msg.sender === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
+                  <p className="mb-2 leading-relaxed font-medium text-lg">{msg.text}</p>
+                  <p className={`text-sm font-semibold ${msg.sender === 'user' ? 'text-blue-100' : 'text-gray-600'}`}>
                     {msg.timestamp.toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit'

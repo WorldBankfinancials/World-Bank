@@ -103,12 +103,15 @@ export default function Transfer() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">{t('loading')}</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading transfer page...</p>
+        </div>
       </div>
     );
   }
 
-  if (!user || !userProfile) {
+  if (dataError) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -118,7 +121,7 @@ export default function Transfer() {
               <div className="text-center text-red-600">
                 <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-500" />
                 <p className="font-semibold mb-2">Unable to Load</p>
-                <p className="text-sm">{dataError || 'Please refresh or login again'}</p>
+                <p className="text-sm">{dataError}</p>
                 <Button 
                   variant="outline" 
                   onClick={() => window.location.reload()}
