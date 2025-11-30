@@ -53,29 +53,10 @@ export default function InternationalTransfer() {
   const [intlPollInterval, setIntlPollInterval] = useState<NodeJS.Timeout | null>(null);
   
   // Fetch user data - called at top level
-  const { data: user, isLoading, error: userError } = useQuery<User>({
+  const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
-    queryFn: async () => {
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch('/api/user');
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `HTTP ${response.status}`);
-        }
-        
-        const jsonData = await response.json();
-        console.log('✅ /api/user response parsed:', jsonData);
-        return jsonData;
-      } catch (err: any) {
-        console.error('❌ /api/user error:', err);
-        throw err;
-      }
-    },
     staleTime: 60000,
-    retry: 3,
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000)
+    retry: 1
   });
 
   // Fetch exchange rates - top level
