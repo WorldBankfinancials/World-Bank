@@ -180,12 +180,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      removeStorageItem('jwt_token');
-      removeStorageItem('token');
-      removeStorageItem('user');
-      removeStorageItem('refresh_token');
+      // ✅ CRITICAL: Notify backend to terminate session
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        await authenticatedFetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        }).catch(() => {}); // Don't fail if endpoint unavailable
+      } catch (e) {}
+      
+      // Clear all stored credentials AFTER backend call
+      localStorage.removeItem('jwt_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('supabase_session');
+      
       setUser(null);
       setUserProfile(null);
+      
+      // Force navigation to login
+      window.location.href = '/login';
     } catch (error) {
     }
   };

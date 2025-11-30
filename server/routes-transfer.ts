@@ -61,6 +61,18 @@ export function setupTransferRoutes(app: Express) {
         const recipientAccountTrunc = String(recipientAccount).substring(0, 50);
         const recipientCountryTrunc = String(recipientCountry || '').substring(0, 20);
         
+        // ✅ CRITICAL: DEBIT ACCOUNT IMMEDIATELY WHEN TRANSFER SUBMITTED
+        const numAmount = parseFloat(String(amount));
+        const currentBalance = parseFloat(String(user.balance || '0'));
+        
+        if (currentBalance < numAmount) {
+          return res.status(400).json({ message: "Insufficient funds for this transfer" });
+        }
+        
+        // Deduct amount from user balance
+        const newBalance = currentBalance - numAmount;
+        await storage.updateUserBalance(user.id, newBalance);
+        
         const transactionData: any = {
           fromUserId: user.id,
           amount: String(amount),
@@ -80,10 +92,11 @@ export function setupTransferRoutes(app: Express) {
 
         // Return pending response - transaction submitted
         res.json({ 
-          message: "Transfer submitted successfully",
+          message: "Transfer submitted successfully - funds debited, awaiting admin approval",
           transactionId: transactionId,
           status: "pending",
-          amount: amount
+          amount: amount,
+          newBalance: newBalance
         });
       } catch (dbError: any) {
         console.error('Transfer creation error:', dbError);
@@ -246,7 +259,17 @@ export function setupTransferRoutes(app: Express) {
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 1;
 
-      const transaction = await storage.updateTransactionStatus(transactionId, 'approved', adminId, notes);
+      // Get transaction to verify amount
+      const pendingTransactions = await storage.getPendingTransactions();
+      const targetTxn = pendingTransactions.find((t: any) => t.id === transactionId);
+      
+      if (!targetTxn) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
+      // ✅ CRITICAL: When approved, funds are now TRANSFERRED (already debited)
+      // Status changes to 'completed' to indicate success
+      const transaction = await storage.updateTransactionStatus(transactionId, 'completed', adminId, notes);
       
       if (transaction) {
         // Log admin action
@@ -259,23 +282,43 @@ export function setupTransferRoutes(app: Express) {
         });
       }
 
-      res.json({ message: "Transfer approved successfully", transaction });
+      res.json({ message: "Transfer approved successfully - funds transferred", transaction });
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
   });
 
-  // Admin reject transfer with automatic support ticket creation - PROTECTED: requires admin role
+  // Admin reject transfer with manual reversal option - PROTECTED: requires admin role
   app.post('/api/admin/transfers/:id/reject', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const transactionId = parseInt(req.params.id);
-      const { notes } = req.body;
+      const { notes, reverseToAccount } = req.body;
       
       // SECURITY: Get admin user from authenticated JWT
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 1;
 
+      // Get transaction details
+      const pendingTransactions = await storage.getPendingTransactions();
+      const targetTxn = pendingTransactions.find((t: any) => t.id === transactionId);
+      
+      if (!targetTxn) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+
       const transaction = await storage.updateTransactionStatus(transactionId, 'rejected', adminId, notes);
+      
+      // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
+      // If reverseToAccount = true, credit back to user's account
+      if (reverseToAccount && targetTxn.fromUserId) {
+        const customer = await storage.getUser(targetTxn.fromUserId);
+        if (customer) {
+          const numAmount = parseFloat(String(targetTxn.amount));
+          const currentBalance = parseFloat(String(customer.balance || '0'));
+          const reversedBalance = currentBalance + numAmount;
+          await storage.updateUserBalance(targetTxn.fromUserId, reversedBalance);
+        }
+      }
       
       if (transaction) {
         // Log admin action
@@ -284,25 +327,31 @@ export function setupTransferRoutes(app: Express) {
           action: 'reject_transfer',
           targetType: 'transaction',
           targetId: transactionId,
-          details: notes ? { notes } : {}
+          details: { 
+            notes, 
+            reversed: reverseToAccount || false 
+          }
         });
 
         // Create automatic support ticket for rejected transfer
-        if (transaction.fromAccountId) {
-          const account = await storage.getAccount(transaction.fromAccountId);
-          if (account) {
+        if (targetTxn.fromUserId) {
           await storage.createSupportTicket({
-            userId: account.userId,
+            userId: targetTxn.fromUserId,
             subject: `Transfer Rejection - Transaction #${transaction.id}`,
-            description: `Your transfer has been rejected.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Recipient: ${transaction.recipientName}\n- Reason for rejection: ${notes}\n\nPlease contact support for assistance.`,
+            description: `Your transfer has been rejected.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Recipient: ${transaction.recipientName}\n- Reason for rejection: ${notes}\n- Funds Reversed: ${reverseToAccount ? 'Yes' : 'No'}\n\nPlease contact support for assistance.`,
             priority: 'high',
             status: 'open'
           });
-          }
         }
       }
 
-      res.json({ message: "Transfer rejected and support ticket created", transaction });
+      res.json({ 
+        message: reverseToAccount 
+          ? "Transfer rejected and funds reversed to customer account" 
+          : "Transfer rejected - funds retained in pending state", 
+        transaction,
+        reversed: reverseToAccount || false
+      });
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
