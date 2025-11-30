@@ -50,7 +50,7 @@ export default function InternationalTransfer() {
   const [intlTransferStatus, setIntlTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
   const [intlPollInterval, setIntlPollInterval] = useState<NodeJS.Timeout | null>(null);
   
-  // CRITICAL: Fetch user data FIRST before using it
+  // CRITICAL: ALL HOOKS MUST BE CALLED AT TOP LEVEL, BEFORE ANY EARLY RETURNS
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
     queryFn: async () => {
@@ -59,6 +59,24 @@ export default function InternationalTransfer() {
       if (!response.ok) throw new Error('Failed to fetch user');
       return response.json();
     }
+  });
+
+  // Fetch exchange rates - MUST BE BEFORE ANY EARLY RETURNS
+  const { data: exchangeRates = [] } = useQuery<any[]>({
+    queryKey: ['/api/exchange-rates'],
+    staleTime: 60000
+  });
+
+  // Fetch popular destinations - MUST BE BEFORE ANY EARLY RETURNS
+  const { data: popularDestinations = [] } = useQuery<any[]>({
+    queryKey: ['/api/transfer/destinations'],
+    staleTime: 300000
+  });
+
+  // Fetch recent recipients - MUST BE BEFORE ANY EARLY RETURNS
+  const { data: recentRecipients = [] } = useQuery<any[]>({
+    queryKey: ['/api/transfer/recipients'],
+    staleTime: 60000
   });
 
   const handleInternationalTransfer = () => {
@@ -150,23 +168,6 @@ export default function InternationalTransfer() {
       setIsProcessing(false);
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">{t('loading')}</div>
-      </div>
-    );
-  }
-  
-  // Guard: ensure user is loaded
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-red-600">Failed to load user profile. Please refresh.</div>
-      </div>
-    );
-  }
 
   // Processing page with status states
   if (showProcessingPage) {
@@ -299,23 +300,23 @@ export default function InternationalTransfer() {
     );
   }
 
-  // Fetch exchange rates from API
-  const { data: exchangeRates = [] } = useQuery<any[]>({
-    queryKey: ['/api/exchange-rates'],
-    staleTime: 60000
-  });
-
-  // Fetch popular destinations from API
-  const { data: popularDestinations = [] } = useQuery<any[]>({
-    queryKey: ['/api/transfer/destinations'],
-    staleTime: 300000
-  });
-
-  // Fetch recent recipients from API
-  const { data: recentRecipients = [] } = useQuery<any[]>({
-    queryKey: ['/api/transfer/recipients'],
-    staleTime: 60000
-  });
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">{t('loading')}</div>
+      </div>
+    );
+  }
+  
+  // Guard: ensure user is loaded
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-red-600">Failed to load user profile. Please refresh.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
