@@ -608,13 +608,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchAccounts = async () => {
-      if (!user?.id) {
+      if (!userProfile?.id) {
         return;
       }
       
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch(`/api/accounts?userId=${user.id}&t=${Date.now()}`, {
+        const response = await authenticatedFetch(`/api/accounts?userId=${userProfile.id}&t=${Date.now()}`, {
           headers: {
             'Cache-Control': 'no-cache'
           }
@@ -645,7 +645,7 @@ export default function Dashboard() {
     // Refresh accounts every 15 seconds
     const interval = setInterval(fetchAccounts, 15000);
     return () => clearInterval(interval);
-  }, [user?.id]);
+  }, [userProfile?.id]);
 
   // Refresh transactions every 30 seconds
   useEffect(() => {
