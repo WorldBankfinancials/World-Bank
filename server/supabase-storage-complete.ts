@@ -158,7 +158,7 @@ export class CompleteSupabaseStorage implements IStorage {
   }
 
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
-    const insertData: any = {};
+    const insertData: Record<string, any> = {};
     
     // Set required fields with defaults
     insertData.amount = transaction.amount || '0.00';

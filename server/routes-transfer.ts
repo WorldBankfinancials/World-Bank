@@ -3,7 +3,7 @@ import { storage } from './storage-factory';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
 
 function generateReferenceNumber(): string {
-  return `WB-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+  return `WB-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 }
 
 export function setupTransferRoutes(app: Express) {
@@ -52,7 +52,7 @@ export function setupTransferRoutes(app: Express) {
       }
 
       // Create transaction with PENDING status - awaiting admin review
-      const transactionId = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const transactionId = `WB-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
       // Save transaction to database with pending status
       try {
@@ -133,7 +133,7 @@ export function setupTransferRoutes(app: Express) {
         return res.status(400).json({ message: "Missing required international transfer details" });
       }
 
-      const transactionId = `INT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const transactionId = `INT-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
       // Create transaction with pending status
       try {

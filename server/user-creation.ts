@@ -3,13 +3,13 @@ import { InsertUser } from '../shared/schema';
 
 function generateAccountNumber(): string {
   const timestamp = Date.now().toString().slice(-6);
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  const random = crypto.getRandomValues(new Uint8Array(4))[0] // secure random * 10000).toString().padStart(4, '0');
   return `4789-6523-${timestamp.slice(0, 4)}-${random}`;
 }
 
 function generateAccountId(): string {
   const timestamp = Date.now().toString().slice(-4);
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  const random = crypto.getRandomValues(new Uint8Array(4))[0] // secure random * 10000).toString().padStart(4, '0');
   return `WB-2024-${timestamp}${random}`;
 }
 

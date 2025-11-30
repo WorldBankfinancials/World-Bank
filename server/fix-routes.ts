@@ -826,14 +826,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // Fetch transactions for all user accounts
-      const allTransactions: any[] = [];
+      const allTransactions: Transaction[] = [];
       for (const account of accounts) {
         const txns = await storage.getAccountTransactions(account.id);
         allTransactions.push(...txns);
       }
 
       // Sort by date descending
-      allTransactions.sort((a: any, b: any) => {
+      allTransactions.sort((a: Transaction, b: Transaction) => {
         const dateA = new Date(a.createdAt || 0).getTime();
         const dateB = new Date(b.createdAt || 0).getTime();
         return dateB - dateA;
@@ -1195,7 +1195,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied' });
       }
 
-      const updates: any = {};
+      const updates: Record<string, any> = {};
       if (dailyLimit !== undefined) updates.dailyLimit = dailyLimit;
       if (contactlessEnabled !== undefined) updates.contactlessEnabled = contactlessEnabled;
 
@@ -1251,7 +1251,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const marketRates = await (storage).getMarketRates();
 
       // Transform database format to frontend expected format
-      const transformedData: any = {};
+      const transformedData: Record<string, any> = {};
 
       marketRates.forEach((rate: any) => {
         const assetType = rate.asset_type || rate.assetType;
