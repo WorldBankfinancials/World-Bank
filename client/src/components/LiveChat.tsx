@@ -159,8 +159,8 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-24 right-4 w-96 max-h-80 z-50 shadow-2xl flex flex-col hover:right-2 transition-all duration-300">
-      <Card className="rounded-xl overflow-hidden border-2 border-blue-500 bg-white h-full flex flex-col cursor-default">
+    <div className="fixed bottom-24 right-4 w-96 max-h-screen z-50 shadow-2xl flex flex-col hover:right-2 transition-all duration-300">
+      <Card className="rounded-xl overflow-hidden border-2 border-blue-500 bg-white h-screen flex flex-col cursor-default">
         <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="bg-white/30 p-2 rounded-full">
@@ -191,14 +191,14 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
                 className={`flex ${msg.sender === 'user' ? 'justify-end pr-2' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-md px-5 py-3 rounded-lg text-base break-words ${
+                  className={`max-w-xs px-4 py-2 rounded-lg text-sm break-words ${
                     msg.sender === 'user'
                       ? 'bg-blue-600 text-white rounded-br-none shadow'
                       : 'bg-white text-gray-900 border border-gray-300 rounded-bl-none shadow'
                   }`}
                 >
-                  <p className="mb-2 leading-relaxed font-medium text-lg">{msg.text}</p>
-                  <p className={`text-sm font-semibold ${msg.sender === 'user' ? 'text-blue-100' : 'text-gray-600'}`}>
+                  <p className="mb-1 leading-relaxed">{msg.text}</p>
+                  <p className={`text-xs ${msg.sender === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
                     {msg.timestamp.toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit'

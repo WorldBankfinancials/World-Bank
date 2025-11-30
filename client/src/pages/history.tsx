@@ -152,17 +152,17 @@ export default function History() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{t('transaction_history')}</h1>
-            <p className="text-gray-600 mt-1">{t('view_all_transactions')}</p>
+            <h1 className="text-3xl font-bold text-gray-900">Transaction History</h1>
+            <p className="text-gray-600 mt-1">View all your transactions</p>
           </div>
           <div className="flex gap-2">
             <Button onClick={handleRefresh} variant="outline" size="sm">
               <RefreshCw className="w-4 h-4 mr-2" />
-              {t('refresh')}
+              Refresh
             </Button>
             <Button variant="outline" size="sm">
               <Download className="w-4 h-4 mr-2" />
-              {t('export')}
+              Export
             </Button>
           </div>
         </div>
@@ -209,7 +209,7 @@ export default function History() {
 
               <Button variant="outline" className="w-full">
                 <Calendar className="w-4 h-4 mr-2" />
-                {t('date_range')}
+                Date Range
               </Button>
             </div>
           </CardContent>
@@ -219,13 +219,13 @@ export default function History() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardContent className="p-4">
-              <div className="text-sm text-gray-600">{t('total_transactions')}</div>
+              <div className="text-sm text-gray-600">Total Transactions</div>
               <div className="text-2xl font-bold">{filteredTransactions.length}</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-sm text-gray-600">{t('total_credits')}</div>
+              <div className="text-sm text-gray-600">Total Credits</div>
               <div className="text-2xl font-bold text-green-600">
                 ${filteredTransactions
                   .filter(t => t.type === 'credit')
@@ -236,7 +236,7 @@ export default function History() {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-sm text-gray-600">{t('total_debits')}</div>
+              <div className="text-sm text-gray-600">Total Debits</div>
               <div className="text-2xl font-bold text-red-600">
                 ${filteredTransactions
                   .filter(t => t.type === 'debit')
@@ -251,8 +251,8 @@ export default function History() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>{t('recent_transactions')}</span>
-              <Badge variant="outline">{filteredTransactions.length} {t('transactions')}</Badge>
+              <span>Recent Transactions</span>
+              <Badge variant="outline">{filteredTransactions.length} transactions</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
