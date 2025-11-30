@@ -217,7 +217,7 @@ export default function QuickActions() {
     },
   ];
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!currentMessage.trim() || !wsRef.current) return;
 
     const message: ChatMessage = {
@@ -232,12 +232,20 @@ export default function QuickActions() {
 
     setChatMessages(prev => [...prev, message]);
 
-    // Send to WebSocket in format backend expects
-    wsRef.current.send(JSON.stringify({
-      type: 'chat_message',
-      content: currentMessage,
-      recipientId: 'admin'
-    }));
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      await authenticatedFetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: currentMessage,
+          recipientId: 'admin',
+          sessionId: 'session_customer'
+        })
+      });
+    } catch (error) {
+      console.error('Failed to save message:', error);
+    }
 
     setCurrentMessage("");
   };

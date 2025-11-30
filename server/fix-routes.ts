@@ -1519,43 +1519,72 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.post('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // SECURITY: Derive sender from authenticated user, not client input
       const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      const { recipientId, conversationId, message: messageText } = req.body;
-
-      // SECURITY: Verify conversation ownership/participation
-      // In a banking system, conversationId typically represents the customer's thread
-      // Customers can only post to their own conversations (conversationId matches their ID)
-      // Admins can post to any conversation (for customer support)
-
-      // Enforce that non-admin users can only create messages in their own conversation
-      const isAdmin = req.user!.role === 'admin';
-
-      if (!isAdmin && conversationId && conversationId !== user.id.toString()) {
-        return res.status(403).json({ error: 'Access denied: Cannot post to other users\' conversations' });
+      const { content, recipientId, sessionId } = req.body;
+      if (!content || !recipientId) {
+        return res.status(400).json({ error: 'content and recipientId required' });
       }
 
-      // SECURITY: Derive senderRole and senderName from authenticated user (server-side only)
-      // Never trust client-supplied role/name to prevent impersonation
       const senderRole = req.user!.role === 'admin' ? 'admin' : 'customer';
-      const senderName = `${user.firstName} ${user.lastName}` || user.email;
+      
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: user.id,
+          sender_role: senderRole,
+          recipient_id: recipientId,
+          recipient_role: senderRole === 'admin' ? 'customer' : 'admin',
+          content: content,
+          session_id: sessionId,
+          is_read: false
+        })
+        .select();
 
-      // Create message with correct schema properties
-      const messageData = {
-        fromUserId: user.id,
-        toUserId: recipientId,
-        content: messageText,
-        isRead: false,
-      };
-
-      const createdMessage = await storage.createMessage(messageData);
-      res.json(createdMessage);
+      if (error) throw error;
+      res.json(data?.[0] || { success: true });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to create message' });
+      res.status(500).json({ error: 'Failed to save message' });
+    }
+  });
+
+  app.get('/api/messages/session/:sessionId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      res.json(data || []);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  });
+
+  app.get('/api/admin/chat-sessions', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('bank_users')
+        .select('id, email, full_name')
+        .eq('role', 'customer')
+        .limit(20);
+      
+      if (error) throw error;
+      const sessions = (data || []).map((user: any) => ({
+        id: `session_${user.id}`,
+        customerId: user.id,
+        customerName: user.full_name || user.email,
+        status: 'active'
+      }));
+      res.json(sessions);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch chat sessions' });
     }
   });
 

@@ -158,8 +158,12 @@ export const investments = pgTable('investments', {
 export const messages = pgTable('messages', {
   id: serial('id').primaryKey(),
   senderId: serial('sender_id'),
+  senderRole: text('sender_role').default('customer'),
+  recipientId: serial('recipient_id'),
+  recipientRole: text('recipient_role').default('admin'),
   content: text('content').notNull(),
   isRead: boolean('is_read').default(false),
+  sessionId: text('session_id'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

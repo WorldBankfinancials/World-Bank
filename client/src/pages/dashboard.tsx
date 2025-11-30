@@ -591,7 +591,16 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <p className="font-medium">{tx.description}</p>
-                        <p className="text-sm text-gray-500">{new Date(tx.date || tx.created_at || new Date()).toLocaleDateString()}</p>
+                        <div className="flex items-center space-x-2">
+                          <p className="text-sm text-gray-500">{new Date(tx.date || tx.created_at || new Date()).toLocaleDateString()}</p>
+                          <Badge variant="outline" className={`text-xs ${
+                            tx.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' :
+                            tx.status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
+                            'bg-yellow-50 text-yellow-700 border-yellow-200'
+                          }`}>
+                            {tx.status || 'pending'}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                     <span className={`font-medium ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
@@ -633,12 +642,12 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="max-h-96 overflow-y-auto">
               <div className="space-y-3">
-                {[
+                {(notifications.length > 0 ? notifications : [
                   { title: "Account Security", message: "New login detected on your account - November 30, 2:15 PM from Replit", type: "warning" },
                   { title: "Transaction Completed", message: "Transfer of $5,000 to John Smith completed successfully", type: "success" },
                   { title: "Low Balance Alert", message: "Your checking account balance is below $1,000", type: "warning" },
                   { title: "Payment Received", message: "You received $2,500 from ABC Corporation", type: "success" }
-                ].map((notif, idx) => (
+                ]).map((notif, idx) => (
                   <div
                     key={`notif-${idx}`}
                     className={`p-4 rounded-lg border ${

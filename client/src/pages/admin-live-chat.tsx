@@ -120,7 +120,7 @@ export default function AdminLiveChat() {
     };
   }, [toast]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedSession) return;
 
     const message = {
@@ -132,12 +132,20 @@ export default function AdminLiveChat() {
 
     setMessages((prev: Message[]) => [...prev, message]);
     
-    // Send message in format backend expects
-    wsRef.current?.send(JSON.stringify({
-      type: 'chat_message',
-      content: messageText,
-      recipientId: selectedSession.customerId
-    }));
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      await authenticatedFetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: messageText,
+          recipientId: selectedSession.customerId,
+          sessionId: selectedSession.id
+        })
+      });
+    } catch (error) {
+      console.error('Failed to save message:', error);
+    }
 
     setMessageText('');
   };
