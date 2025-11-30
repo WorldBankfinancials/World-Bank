@@ -204,9 +204,9 @@ export default function InternationalTransfer() {
         icon: CheckCircle,
         bgColor: 'bg-green-100',
         iconColor: 'text-green-600',
-        title: 'Transfer Approved',
+        title: 'Success',
         message: 'Your international transfer has been approved and is being processed to the recipient bank.',
-        statusText: 'Approved',
+        statusText: 'Success',
         statusColor: 'text-green-600',
         steps: [
           { done: true, text: 'Transfer request verified' },
