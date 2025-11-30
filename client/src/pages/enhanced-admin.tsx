@@ -374,7 +374,8 @@ export default function EnhancedAdmin() {
                                 <Button
                                   size="sm"
                                   onClick={() => {
-                                    const notes = ((document as any).getElementById(`notes-${document.id}`) as HTMLTextAreaElement)?.value || '';
+                                    const textarea = document.getElementById(`notes-${document.id}`) as HTMLTextAreaElement;
+                                    const notes = textarea?.value || '';
                                     verifyDocument(document.id, 'approved', notes);
                                   }}
                                   className="flex items-center gap-2"
@@ -386,7 +387,8 @@ export default function EnhancedAdmin() {
                                   size="sm"
                                   variant="destructive"
                                   onClick={() => {
-                                    const notes = ((document as any).getElementById(`notes-${document.id}`) as HTMLTextAreaElement)?.value || '';
+                                    const textarea = document.getElementById(`notes-${document.id}`) as HTMLTextAreaElement;
+                                    const notes = textarea?.value || '';
                                     verifyDocument(document.id, 'rejected', notes);
                                   }}
                                   className="flex items-center gap-2"
