@@ -84,10 +84,10 @@ export default function InternationalTransfer() {
     );
   }
 
-  if (!user || !userProfile) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header />
+        <Header user={userProfile} />
         <div className="flex items-center justify-center p-4 mt-20">
           <Card className="w-full max-w-md">
             <CardContent className="pt-6">
