@@ -743,7 +743,7 @@ export default function Transfer() {
               ) : (
                 <>
                   <Globe className="w-4 h-4 mr-2" />
-                  Transfer
+                  Send ${amount || "0.00"} Internationally
                 </>
               )}
             </Button>

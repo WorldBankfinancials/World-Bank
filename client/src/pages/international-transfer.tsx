@@ -611,7 +611,7 @@ export default function InternationalTransfer() {
 
             {/* Continue Button */}
             <Button onClick={handleContinueTransfer} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg font-semibold">
-              Continue Transfer
+              Transfer
             </Button>
           </CardContent>
         </Card>
