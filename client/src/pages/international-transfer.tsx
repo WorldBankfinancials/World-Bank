@@ -53,15 +53,29 @@ export default function InternationalTransfer() {
   const [intlPollInterval, setIntlPollInterval] = useState<NodeJS.Timeout | null>(null);
   
   // Fetch user data - called at top level
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading, error: userError } = useQuery<User>({
     queryKey: ['/api/user'],
     queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/user');
-      if (!response.ok) throw new Error('Failed to fetch user');
-      return response.json();
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/user');
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `HTTP ${response.status}`);
+        }
+        
+        const jsonData = await response.json();
+        console.log('✅ /api/user response parsed:', jsonData);
+        return jsonData;
+      } catch (err: any) {
+        console.error('❌ /api/user error:', err);
+        throw err;
+      }
     },
-    staleTime: 60000
+    staleTime: 60000,
+    retry: 3,
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000)
   });
 
   // Fetch exchange rates - top level
@@ -94,8 +108,8 @@ export default function InternationalTransfer() {
     );
   }
 
-  // Show error if user data failed to load
-  if (!user && !isLoading) {
+  // Show error if user data failed to load (check both !user and userError)
+  if ((!user && !isLoading) || (userError && !isLoading)) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -105,7 +119,14 @@ export default function InternationalTransfer() {
               <div className="text-center text-red-600">
                 <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-500" />
                 <p className="font-semibold mb-2">{t('failed_to_load')}</p>
-                <p className="text-sm">{t('failed_to_fetch')}</p>
+                <p className="text-sm mb-4">{userError?.message || t('failed_to_fetch')}</p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.location.reload()}
+                  className="w-full"
+                >
+                  {t('refresh')}
+                </Button>
               </div>
             </CardContent>
           </Card>
