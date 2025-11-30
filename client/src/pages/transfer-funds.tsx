@@ -166,6 +166,7 @@ export default function TransferFunds() {
               }
             }
           } catch (error) {
+            // Silent error - continue polling
           }
         }, 3000);
         

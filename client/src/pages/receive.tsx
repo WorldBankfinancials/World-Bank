@@ -43,9 +43,13 @@ export default function Receive() {
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const response = await authenticatedFetch('/api/payment-requests');
-        if (!response.ok) return [];
+        if (!response.ok) {
+          toast({ title: 'Failed to load requests', description: 'Unable to fetch payment requests', variant: 'destructive' });
+          return [];
+        }
         return response.json();
-      } catch {
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to load payment requests', variant: 'destructive' });
         return [];
       }
     }
@@ -72,8 +76,7 @@ export default function Receive() {
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareLink);
     setCopied(true);
-    const timeout = setTimeout(() => setCopied(false), 2000);
-    return () => clearTimeout(timeout);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleCopyDetails = (text: string) => {

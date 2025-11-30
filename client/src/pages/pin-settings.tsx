@@ -109,10 +109,9 @@ export default function PinSettings() {
         setCurrentPin('');
         setNewPin('');
         setConfirmPin('');
-        const timeout = setTimeout(() => {
+        setTimeout(() => {
           navigate('/profile-settings');
         }, 2000);
-        return () => clearTimeout(timeout);
       } else {
         setError(data.message || t('pin_change_failed'));
         toast({
