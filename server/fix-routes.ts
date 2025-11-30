@@ -812,6 +812,41 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all transactions for authenticated user (across all accounts)
+  app.get('/api/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await (storage).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const accounts = await storage.getUserAccounts(user.id);
+      if (accounts.length === 0) {
+        return res.json([]); // No accounts, return empty transactions
+      }
+
+      // Fetch transactions for all user accounts
+      const allTransactions: any[] = [];
+      for (const account of accounts) {
+        const txns = await storage.getAccountTransactions(account.id);
+        allTransactions.push(...txns);
+      }
+
+      // Sort by date descending
+      allTransactions.sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+
+      console.log('✅ Fetched', allTransactions.length, 'transactions for user:', req.user!.email);
+      res.json(allTransactions);
+    } catch (error: any) {
+      console.error('❌ Failed to fetch transactions:', error);
+      res.status(500).json({ error: 'Failed to fetch transactions' });
+    }
+  });
+
   // Account endpoints - PROTECTED with JWT authentication
   app.get('/api/accounts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -825,8 +860,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const accounts = await storage.getUserAccounts(user.id);
+      console.log('✅ Fetched', accounts.length, 'accounts for user:', req.user!.email);
       res.json(accounts);
     } catch (error: any) {
+      console.error('❌ Failed to get accounts:', error);
       res.status(500).json({ error: 'Failed to get accounts' });
     }
   });
@@ -1928,6 +1965,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!dbUser) {
         // User authenticated but not in bank_users - create them NOW
         try {
+          console.log('🔄 Creating new user in bank_users:', email);
           dbUser = await storage.createUser({
             username: email.split('@')[0],
             email: email,
@@ -1944,7 +1982,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             transferPin: supabaseUser.user_metadata?.transfer_pin || '0192',
             role: supabaseUser.app_metadata?.role || 'customer'
           });
+          console.log('✅ User created:', { id: dbUser.id, email });
+          
           // Also create initial account for user
+          console.log('🔄 Creating initial account for user...');
           await storage.createAccount({
             userId: dbUser.id,
             accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
@@ -1953,9 +1994,25 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             currency: 'USD',
             status: 'active'
           });
+          console.log('✅ Initial account created');
         } catch (dbError: any) {
-          console.error('Failed to create user in bank_users:', dbError);
+          console.error('❌ Failed to create user in bank_users:', dbError);
           // User authenticated - still return token even if DB create fails
+        }
+      } else {
+        // User exists - verify they have at least one account
+        const userAccounts = await storage.getUserAccounts(dbUser.id);
+        if (userAccounts.length === 0) {
+          console.log('🔄 User has no accounts, creating one...');
+          await storage.createAccount({
+            userId: dbUser.id,
+            accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
+            accountType: 'checking',
+            balance: '0.00',
+            currency: 'USD',
+            status: 'active'
+          });
+          console.log('✅ Account created for existing user');
         }
       }
 
@@ -2236,7 +2293,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/transfers/:id/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = req.params.id;
-      console.log('📥 GET /api/transfers/:id/status', { id });
+      console.log('📥 GET /api/transfers/:id/status', { id, user: req.user?.email });
       
       const allTransactions = await storage.getAllTransactions();
       console.log(`🔍 Found ${allTransactions.length} total transactions`);
@@ -2252,12 +2309,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Transfer not found', searchedId: id });
       }
 
-      console.log('✅ Transfer found:', { id: transfer.id, status: transfer.status });
+      console.log('✅ Transfer found:', { id: transfer.id, status: transfer.status, referenceNumber: transfer.referenceNumber });
 
       res.json({
         id: transfer.id,
         status: transfer.status,
-        referenceNumber: transfer.referenceNumber
+        referenceNumber: transfer.referenceNumber,
+        amount: transfer.amount,
+        createdAt: transfer.createdAt
       });
     } catch (error: any) {
       console.error('❌ Transfer status error:', error.message, error);
