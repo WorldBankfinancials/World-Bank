@@ -9,7 +9,7 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-// AUTHENTICATION MIDDLEWARE: Validates Supabase JWT tokens
+// AUTHENTICATION MIDDLEWARE: Validates ONLY Supabase JWT tokens
 // Token format: Supabase JWT (sub = user_id, email = email)
 export async function requireAuth(
   req: AuthenticatedRequest,
@@ -26,34 +26,30 @@ export async function requireAuth(
 
     const token = authHeader.replace('Bearer ', '');
     
-    // Parse token: Try Supabase JWT first, then base64 format for backward compatibility
+    // Parse Supabase JWT ONLY
     let email: string;
     let userId: string | number;
     
     try {
-      // Try parsing as Supabase JWT
+      // Parse JWT token - ONLY accept Supabase JWT format (3 parts: header.payload.signature)
       const parts = token.split('.');
-      if (parts.length === 3) {
-        // JWT format - decode payload (second part)
-        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
-        email = payload.email;
-        userId = payload.sub || payload.id;
-        console.log('✅ Auth: Supabase JWT parsed', { email, userId });
-      } else {
-        // Try base64 format for backward compatibility
-        const decoded = Buffer.from(token, 'base64').toString('utf-8');
-        const tokenParts = decoded.split(':');
-        email = tokenParts[0];
-        userId = tokenParts[2] || tokenParts[1];
-        console.log('✅ Auth: Base64 token parsed', { email, userId });
+      if (parts.length !== 3) {
+        throw new Error('Invalid token format - expected JWT');
       }
       
+      // Decode JWT payload (second part)
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+      email = payload.email;
+      userId = payload.sub || payload.id;
+      
       if (!email) {
-        throw new Error('Invalid token format - no email found');
+        throw new Error('Invalid token - no email in JWT');
       }
+      
+      console.log('✅ Auth: Supabase JWT validated', { email, userId });
     } catch (parseError) {
-      console.error('❌ Auth: Token parse error:', parseError);
-      return res.status(401).json({ error: 'Invalid or expired token' });
+      console.error('❌ Auth: Invalid JWT token:', parseError);
+      return res.status(401).json({ error: 'Invalid authentication token' });
     }
 
     // DUAL SOURCE 1: Verify account exists in Postgres database
