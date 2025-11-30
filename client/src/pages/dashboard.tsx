@@ -222,6 +222,12 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [queryClient]);
 
+  const { signOut } = useAuth();
+  
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   const profileMenuItems = [
     { 
       category: "ACCOUNT MANAGEMENT",
@@ -265,8 +271,7 @@ export default function Dashboard() {
         { icon: HelpCircle, label: "Support Center", href: "/support-center" },        
         { icon: Headphones, label: "Customer Support", href: "/customer-support" },
         { icon: Lock, label: "Security Center", href: "/security-center" },
-        { icon: MapPin, label: "Find Branches", href: "/find-branches" },
-        { icon: LogOut, label: "Sign Out", href: "/login" }
+        { icon: MapPin, label: "Find Branches", href: "/find-branches" }
       ]
     }
   ];
@@ -333,18 +338,34 @@ export default function Dashboard() {
                           {section.category}
                         </div>
                         {section.items.map((item) => (
-                          <Link key={`menu-item-${item.href}`} href={item.href}>
-                            <div 
-                              onClick={() => setShowProfileMenu(false)}
-                              className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors cursor-pointer"
-                            >
-                              <item.icon className="w-5 h-5 text-gray-500" />
-                              <span className="text-sm text-gray-700">{item.label}</span>
-                            </div>
-                          </Link>
+                          <div key={`menu-item-${item.href}`}>
+                            <Link href={item.href}>
+                              <div 
+                                onClick={() => setShowProfileMenu(false)}
+                                className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors cursor-pointer"
+                              >
+                                <item.icon className="w-5 h-5 text-gray-500" />
+                                <span className="text-sm text-gray-700">{item.label}</span>
+                              </div>
+                            </Link>
+                          </div>
                         ))}
                       </div>
                     ))}
+                  </div>
+
+                  {/* Sign Out Button */}
+                  <div className="p-4 border-t border-gray-100">
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        handleSignOut();
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-3 text-left text-red-600 hover:bg-red-50 rounded transition-colors"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      <span className="text-sm font-medium">Sign Out</span>
+                    </button>
                   </div>
 
                   {/* Account Info Footer */}
