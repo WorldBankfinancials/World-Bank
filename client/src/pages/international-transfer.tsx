@@ -64,18 +64,42 @@ export default function InternationalTransfer() {
   // Fetch exchange rates - MUST BE BEFORE ANY EARLY RETURNS
   const { data: exchangeRates = [] } = useQuery<any[]>({
     queryKey: ['/api/exchange-rates'],
+    queryFn: async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/exchange-rates');
+        if (!response.ok) return [];
+        return response.json();
+      } catch { return []; }
+    },
     staleTime: 60000
   });
 
   // Fetch popular destinations - MUST BE BEFORE ANY EARLY RETURNS
   const { data: popularDestinations = [] } = useQuery<any[]>({
     queryKey: ['/api/transfer/destinations'],
+    queryFn: async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/transfer/destinations');
+        if (!response.ok) return [];
+        return response.json();
+      } catch { return []; }
+    },
     staleTime: 300000
   });
 
   // Fetch recent recipients - MUST BE BEFORE ANY EARLY RETURNS
   const { data: recentRecipients = [] } = useQuery<any[]>({
     queryKey: ['/api/transfer/recipients'],
+    queryFn: async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/transfer/recipients');
+        if (!response.ok) return [];
+        return response.json();
+      } catch { return []; }
+    },
     staleTime: 60000
   });
 
