@@ -22,6 +22,8 @@ export default function StatementsReports() {
     enabled: !!user,
   });
 
+  const statementsList = statements || [];
+
   // Now check loading state AFTER all hooks
   if (isLoading || statementsLoading) {
     return (
@@ -30,8 +32,6 @@ export default function StatementsReports() {
       </div>
     );
   }
-
-  const statementsList = statements || [];
 
   return (
     <div className="min-h-screen bg-gray-100">

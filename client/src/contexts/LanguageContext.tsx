@@ -260,7 +260,6 @@ const translations = {
     // Transfer Details
     'transfer_details': 'Transfer Details',
     'transfer_amount': 'Transfer Amount (USD)',
-    'recipient_information': 'Recipient Information',
     'recipient_name': 'Recipient Name',
     'street_address': 'Street Address',
     'bank_details': 'Bank Details',
