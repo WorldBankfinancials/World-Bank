@@ -21,8 +21,8 @@ export default function CustomerSupport() {
   });
   
   const [subject, setSubject] = useState('');
-  const [category, setCategory] = useState('');
-  const [priority, setPriority] = useState('');
+  const [category, setCategory] = useState('technical');
+  const [priority, setPriority] = useState('medium');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,13 +50,14 @@ export default function CustomerSupport() {
       });
 
       if (response.ok) {
+        const data = await response.json();
         toast({
-          title: 'Ticket Submitted',
-          description: 'Support ticket submitted successfully!',
+          title: 'Success!',
+          description: `Support ticket #${data.id} submitted successfully! Our team will respond within 24 hours.`,
         });
         setSubject('');
-        setCategory('');
-        setPriority('');
+        setCategory('technical');
+        setPriority('medium');
         setDescription('');
       } else {
         toast({
@@ -155,12 +156,14 @@ export default function CustomerSupport() {
               </div>
 
               <Button 
-                className="bg-wb-blue text-white w-full"
+                type="button"
+                className="bg-wb-blue text-white w-full font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
                 onClick={handleSubmitTicket}
                 disabled={isSubmitting}
+                data-testid="button-submit-support"
               >
                 <Send className="w-4 h-4 mr-2" />
-                {isSubmitting ? t('submitting') : 'Submit Request'}
+                {isSubmitting ? (t('submitting') || 'Submitting...') : 'Submit Request'}
               </Button>
             </CardContent>
           </Card>
