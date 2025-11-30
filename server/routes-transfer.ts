@@ -56,6 +56,11 @@ export function setupTransferRoutes(app: Express) {
 
       // Save transaction to database with pending status
       try {
+        // Truncate all fields to match database constraints
+        const recipientNameTrunc = String(recipientName).substring(0, 20);
+        const recipientAccountTrunc = String(recipientAccount).substring(0, 50);
+        const recipientCountryTrunc = String(recipientCountry || '').substring(0, 20);
+        
         const transactionData: any = {
           fromUserId: user.id,
           amount: String(amount),
@@ -63,13 +68,13 @@ export function setupTransferRoutes(app: Express) {
           type: 'transfer',
           transactionType: 'transfer',
           status: 'pending',
-          description: `Transfer to ${recipientName}`,
-          recipientName: recipientName,
-          recipientAccount: recipientAccount,
-          recipientCountry: recipientCountry,
-          bankName: bankName,
-          swiftCode: swiftCode,
-          transferPurpose: purpose || 'transfer'
+          description: `Transfer to ${recipientNameTrunc}`.substring(0, 255),
+          recipientName: recipientNameTrunc,
+          recipientAccount: recipientAccountTrunc,
+          recipientCountry: recipientCountryTrunc,
+          bankName: bankName ? String(bankName).substring(0, 20) : undefined,
+          swiftCode: swiftCode ? String(swiftCode).substring(0, 20) : undefined,
+          transferPurpose: (purpose || 'transfer').substring(0, 20)
         };
         const transaction = await storage.createTransaction(transactionData);
 
@@ -137,15 +142,19 @@ export function setupTransferRoutes(app: Express) {
 
       // Create transaction with pending status
       try {
+        // Truncate all fields to match database constraints
+        const recipientNameTrunc = String(recipientName).substring(0, 20);
+        const recipientCountryTrunc = String(recipientCountry).substring(0, 20);
+        
         const transactionData: any = {
           fromUserId: user.id,
           amount: String(amount),
           currency: 'USD',
           type: 'international_transfer',
           status: 'pending',
-          description: `International transfer to ${recipientName} in ${recipientCountry}`,
-          recipientName: String(recipientName).substring(0, 20),
-          recipientCountry: String(recipientCountry).substring(0, 20),
+          description: `Intl transfer to ${recipientNameTrunc}`.substring(0, 255),
+          recipientName: recipientNameTrunc,
+          recipientCountry: recipientCountryTrunc,
           bankName: bankName ? String(bankName).substring(0, 20) : undefined,
           swiftCode: swiftCode ? String(swiftCode).substring(0, 20) : undefined,
           accountNumber: accountNumber ? String(accountNumber).substring(0, 50) : undefined,
