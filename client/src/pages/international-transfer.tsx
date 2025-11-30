@@ -54,24 +54,48 @@ export default function InternationalTransfer() {
   
   // Fetch user data - called at top level
   const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user']
+    queryKey: ['/api/user'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/user');
+      if (!response.ok) throw new Error('Failed to fetch user');
+      return response.json();
+    }
   });
 
   // Fetch exchange rates - top level
   const { data: exchangeRates = [] } = useQuery<any[]>({
     queryKey: ['/api/exchange-rates'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/exchange-rates');
+      if (!response.ok) return [];
+      return response.json();
+    },
     staleTime: 60000
   });
 
   // Fetch popular destinations - top level
   const { data: popularDestinations = [] } = useQuery<any[]>({
     queryKey: ['/api/transfer/destinations'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/transfer/destinations');
+      if (!response.ok) return [];
+      return response.json();
+    },
     staleTime: 300000
   });
 
   // Fetch recent recipients - top level
   const { data: recentRecipients = [] } = useQuery<any[]>({
     queryKey: ['/api/transfer/recipients'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/transfer/recipients');
+      if (!response.ok) return [];
+      return response.json();
+    },
     staleTime: 60000
   });
 
