@@ -45,6 +45,12 @@ export default function Transfer() {
       try {
         setIsLoading(true);
         setDataError(null);
+        // Wait for userProfile to be available (with timeout)
+        let attempts = 0;
+        while (!userProfile?.email && attempts < 5) {
+          await new Promise(r => setTimeout(r, 500));
+          attempts++;
+        }
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const response = await authenticatedFetch(`/api/user`);
         if (response.ok) {
@@ -60,10 +66,8 @@ export default function Transfer() {
         setIsLoading(false);
       }
     };
-    if (userProfile?.email) {
-      fetchUser();
-    }
-  }, [userProfile?.email]);
+    fetchUser();
+  }, []);
   
   const [amount, setAmount] = useState("");
   const [transferType, setTransferType] = useState("international");

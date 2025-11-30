@@ -111,7 +111,8 @@ export default function History() {
     return matchesSearch && matchesAccount && matchesCategory;
   });
 
-  const getAccountName = (accountId: number) => {
+  const getAccountName = (accountId: number | undefined) => {
+    if (!accountId) return 'My Account';
     const account = accounts.find(acc => acc.id === accountId);
     return account ? account.accountName : `Account ${accountId}`;
   };
@@ -282,7 +283,7 @@ export default function History() {
                         
                         <div className="text-sm text-gray-600 space-y-1">
                           <p>{t('account')}: {getAccountName(transaction.accountId)}</p>
-                          <p>{t('date')}: {new Date(transaction.date).toLocaleDateString()}</p>
+                          <p>{t('date')}: {transaction.date ? new Date(transaction.date).toLocaleDateString() : 'N/A'}</p>
                           {transaction.recipientName && (
                             <p>{t('recipient')}: {transaction.recipientName}</p>
                           )}
