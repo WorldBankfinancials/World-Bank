@@ -470,14 +470,14 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-4" key="dashboard-quick-actions-grid-wrapper">
           <div key="quick-action-qa-1-transfer">
             <Link href="/international-transfer" className="no-underline">
-              <div className="p-6 bg-gradient-to-br from-white to-blue-50 rounded-2xl border-2 border-blue-100 hover:border-blue-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 h-full">
-                <div className="flex items-center space-x-4">
-                  <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
-                    <Globe className="w-7 h-7 text-white" />
+              <div className="p-4 bg-gradient-to-br from-white to-blue-50 rounded-2xl border-2 border-blue-100 hover:border-blue-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 h-full">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <Globe className="w-6 h-6 text-white" />
                   </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900 text-lg">International Transfer</h4>
-                    <p className="text-sm text-gray-600">Send money worldwide</p>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-gray-900 text-sm leading-tight">International Transfer</h4>
+                    <p className="text-xs text-gray-600 truncate">Send money worldwide</p>
                   </div>
                 </div>
               </div>

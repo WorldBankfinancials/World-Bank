@@ -105,11 +105,11 @@ function App() {
                         <Route path="/mobile-pay" component={MobilePay} />
                         <Route path="/security-center" component={SecurityCenter} />
                         <Route path="/find-branches" component={FindBranches} />
-                        <Route path="/international-transfer" component={InternationalTransfer} />
+                        <Route path="/international-transfer" component={Transfer} />
                         <Route path="/investment-trading" component={InvestmentTrading} />
                         <Route path="/business-banking" component={BusinessBanking} />
                         <Route path="/cards" component={Cards} />
-                        <Route path="/transfer" component={Transfer} />
+                        <Route path="/transfer" component={InternationalTransfer} />
                         <Route path="/receive" component={Receive} />
                         <Route path="/add-money" component={AddMoney} />
                         <Route path="/alerts" component={Alerts} />
