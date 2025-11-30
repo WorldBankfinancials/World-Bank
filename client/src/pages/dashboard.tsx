@@ -409,7 +409,7 @@ export default function Dashboard() {
                 <p className="text-blue-100 text-sm">{t('total_balance')}</p>
                 <div className="flex items-center space-x-2">
                   <h2 className="text-2xl font-bold">
-                    {showBalance ? `$${userProfile?.balance?.toLocaleString() || "0.00"}` : "****"}
+                    {showBalance ? `$${(accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "****"}
                   </h2>
                   <button onClick={toggleBalance}>
                     {showBalance ? (
