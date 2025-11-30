@@ -77,7 +77,7 @@ export default function MultiStepRegisterPage() {
             const { uploadURL } = await uploadResponse.json();
 
             // Upload file to object storage
-            const uploadFileResponse = await fetch(uploadURL, {
+            const uploadFileResponse = await fetch(uploadURL, // External file upload - intentionally unauthenticated {
               method: 'PUT',
               body: idCardFile,
               headers: {

@@ -38,7 +38,7 @@ export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 
-const mapUser = (user: any): User => {
+const mapUser = (user: Record<string, any>): User => {
   const [firstName, lastName] = (user.full_name || '').split(' ');
   return {
     id: user.id,

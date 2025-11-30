@@ -411,7 +411,7 @@ export class SupabaseStorage implements IStorage {
     return undefined;
   }
 
-  private mapSupabaseUser(data: any): User {
+  private mapSupabaseUser(data: Record<string, any>): User {
     return {
       id: data.id,
       username: data.username,
@@ -442,7 +442,7 @@ export class SupabaseStorage implements IStorage {
     };
   }
 
-  private mapSupabaseTransaction(data: any): Transaction {
+  private mapSupabaseTransaction(data: Record<string, any>): Transaction {
     return {
       id: data.id,
       transactionId: data.transaction_id || '',
@@ -481,20 +481,20 @@ export class SupabaseStorage implements IStorage {
   // Additional stub methods to satisfy IStorage interface
   async getUserCards(userId: number): Promise<any[]> { return []; }
   async getCard(id: number): Promise<any | undefined> { return undefined; }
-  async createCard(card: any): Promise<any> { throw new Error('Not implemented'); }
-  async updateCard(id: number, updates: any): Promise<any | undefined> { return undefined; }
+  async createCard(card: Record<string, any>): Promise<any> { throw new Error('Not implemented'); }
+  async updateCard(id: number, updates: Record<string, any>): Promise<any | undefined> { return undefined; }
   async deleteCard(id: number): Promise<void> {}
   async getUserInvestments(userId: number): Promise<any[]> { return []; }
   async getInvestment(id: number): Promise<any | undefined> { return undefined; }
-  async createInvestment(investment: any): Promise<any> { throw new Error('Not implemented'); }
-  async updateInvestment(id: number, updates: any): Promise<any | undefined> { return undefined; }
+  async createInvestment(investment: Record<string, any>): Promise<any> { throw new Error('Not implemented'); }
+  async updateInvestment(id: number, updates: Record<string, any>): Promise<any | undefined> { return undefined; }
   async getMessages(conversationId?: string): Promise<any[]> { return []; }
   async getUserMessages(userId: number): Promise<any[]> { return []; }
-  async createMessage(message: any): Promise<any> { throw new Error('Not implemented'); }
+  async createMessage(message: Record<string, any>): Promise<any> { throw new Error('Not implemented'); }
   async markMessageAsRead(id: number): Promise<any | undefined> { return undefined; }
   async getUserAlerts(userId: number): Promise<any[]> { return []; }
   async getUnreadAlerts(userId: number): Promise<any[]> { return []; }
-  async createAlert(alert: any): Promise<any> { throw new Error('Not implemented'); }
+  async createAlert(alert: Record<string, any>): Promise<any> { throw new Error('Not implemented'); }
   async markAlertAsRead(id: number): Promise<any | undefined> { return undefined; }
   async deleteAlert(id: number): Promise<void> {}
   async getBranches(): Promise<any[]> { return []; }

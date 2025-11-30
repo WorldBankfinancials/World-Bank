@@ -1,3 +1,4 @@
+import { generateAccountNumber, generateTransferPin, generateTransactionId, generateReferenceNumber } from './crypto-utils';
 import { validateId, validateAmount } from './validators';
 import { Express, Request, Response, NextFunction } from 'express';
 import { Server, createServer } from 'http';
@@ -202,7 +203,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           annualIncome: validatedData.annualIncome,
           idType: validatedData.idType,
           idNumber: validatedData.idNumber,
-          accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
+          accountNumber: `${generateAccountNumber()}`,
           accountId: Date.now(),
           password: 'supabase_auth',
           transferPin: hashedPin,
@@ -216,7 +217,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         // Create initial checking account
         await storage.createAccount({
           userId: newUser.id,
-          accountNumber: newUser.accountNumber || `${Math.floor(10000000 + Math.random() * 90000000)}`,
+          accountNumber: newUser.accountNumber || `${generateAccountNumber()}`,
           accountType: 'checking',
           balance: '0.00',
           currency: 'USD',
@@ -433,7 +434,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // SECURITY: Generate secure random PIN for new user (1000-9999)
-      const newUserPin = Math.floor(Math.random() * 9000 + 1000).toString();
+      const newUserPin = generateTransferPin();
       // SECURITY: Hash PIN before storing
       const hashedNewUserPin = await bcrypt.hash(newUserPin, 10);
 
@@ -454,7 +455,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         annualIncome: userData.annualIncome,
         idType: userData.idType,
         idNumber: userData.idNumber,
-        accountNumber: userData.accountNumber || `${Math.floor(10000000 + Math.random() * 90000000)}`,
+        accountNumber: userData.accountNumber || `${generateAccountNumber()}`,
         accountId: Date.now(),
         password: 'supabase_auth',
         transferPin: hashedNewUserPin,
@@ -465,7 +466,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
       // Create initial checking account
-      const accountNumber = `${Math.floor(10000000 + Math.random() * 90000000)}`;
+      const accountNumber = `${generateAccountNumber()}`;
       await storage.createAccount({
         userId: newUser.id,
         accountNumber: accountNumber,
@@ -1873,10 +1874,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           lastName: lastName,
           email: email,
           phone: '+1-000-000-0000',
-          accountNumber: `ADMIN-${Math.floor(10000000 + Math.random() * 90000000)}`,
+          accountNumber: `ADMIN-${generateAccountNumber()}`,
           accountId: Date.now(),
           password: 'supabase_auth',
-          transferPin: Math.floor(Math.random() * 9000 + 1000).toString(),
+          transferPin: generateTransferPin(),
           role: 'admin',
           isVerified: true,
           isActive: true,
@@ -1975,7 +1976,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             lastName: supabaseUser.user_metadata?.last_name || 'User',
             phone: supabaseUser.user_metadata?.phone || '',
             profession: 'Not provided',
-            accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
+            accountNumber: `${generateAccountNumber()}`,
             accountId: Date.now(),
             balance: '0',
             isActive: true,
@@ -1989,7 +1990,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           console.info('🔄 Creating initial account for user...');
           await storage.createAccount({
             userId: dbUser.id,
-            accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
+            accountNumber: `${generateAccountNumber()}`,
             accountType: 'checking',
             balance: '0.00',
             currency: 'USD',
@@ -2007,7 +2008,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           console.info('🔄 User has no accounts, creating one...');
           await storage.createAccount({
             userId: dbUser.id,
-            accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
+            accountNumber: `${generateAccountNumber()}`,
             accountType: 'checking',
             balance: '0.00',
             currency: 'USD',
@@ -2252,7 +2253,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Missing required fields', fields: { amount: !!amount, recipientName: !!recipientName, recipientAccount: !!recipientAccount, transferPin: !!transferPin } });
       }
 
-      const referenceNumber = `WB-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const referenceNumber = generateReferenceNumber('WB');
       console.info('🔄 Creating transaction with reference:', referenceNumber);
 
       console.error('💾 Calling storage.createTransaction()...');
@@ -2343,7 +2344,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-      const referenceNumber = `INT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const referenceNumber = generateReferenceNumber('INT');
       console.info('🔄 Creating international transaction:', referenceNumber);
 
       const transfer = await storage.createTransaction({

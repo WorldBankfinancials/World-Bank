@@ -203,6 +203,7 @@ export default function SimpleAdmin() {
     e.preventDefault();
     
     try {
+      // Admin login - intentionally unauthenticated bootstrap endpoint
       const response = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

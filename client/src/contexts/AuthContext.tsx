@@ -96,6 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       console.log('🔐 AuthContext: Signing in user:', email);
 
+      // Login endpoint - intentionally unauthenticated to create initial session
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -159,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, metadata?: any): Promise<{ error?: string }> => {
     try {
       console.log('📝 AuthContext: Registering new user:', email);
+      // Register endpoint - intentionally unauthenticated to create account
       const response = await fetch('/api/auth/register-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
