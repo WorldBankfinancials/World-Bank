@@ -198,9 +198,9 @@ export default function History() {
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">{t('all_categories')}</option>
-                {categories.filter(cat => cat !== 'all').map(category => (
+                {categories.filter(cat => cat !== 'all' && cat).map(category => (
                   <option key={category} value={category}>
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
+                    {category && typeof category === 'string' ? (category.charAt(0).toUpperCase() + category.slice(1)) : 'Other'}
                   </option>
                 ))}
               </select>
