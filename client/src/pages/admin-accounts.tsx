@@ -27,7 +27,7 @@ interface AccountManagementProps {
 export default function AdminAccountManagement({ onBack }: AccountManagementProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: accounts = [] } = useQuery<Account[]>({
+  const { data: accounts = [], isLoading: accountsLoading } = useQuery<Account[]>({
     queryKey: ['/api/accounts'],
     queryFn: async () => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -153,6 +153,18 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
       });
     }
   };
+
+  // Show loading state
+  if (accountsLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600">Loading accounts...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">

@@ -166,14 +166,12 @@ export default function TransferFunds() {
               }
             }
           } catch (error) {
-            console.error('Failed to fetch transfer status:', error);
           }
         }, 3000);
         
         setPollInterval(interval);
       } else {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        console.error('Transfer error:', errorData);
         toast({
           title: 'Transfer Failed',
           description: errorData.message || 'Failed to process transfer. Please check your details and try again.',

@@ -133,6 +133,9 @@ export default function AdminLiveChat() {
     setMessageText('');
   };
 
+  // Show loading state
+  const isLoading = !chatSessions || chatSessions.length === 0;
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-6xl mx-auto grid grid-cols-3 gap-6 h-[calc(100vh-2rem)]">
