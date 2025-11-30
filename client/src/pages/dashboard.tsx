@@ -344,9 +344,9 @@ function AddMoneySection() {
           </div>
 
           <div className="grid grid-cols-5 gap-2">
-            {quickAmounts.map((amount) => (
+            {quickAmounts.map((amount, idx) => (
               <Button
-                key={`quick-amount-${amount}`}
+                key={`quick-amount-${amount}-${idx}`}
                 variant="outline"
                 size="sm"
                 onClick={() => setAddAmount(amount)}
@@ -458,7 +458,7 @@ function AlertsSection() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
-            {Array.isArray(alerts) && alerts.length > 0 ? alerts.slice(0, 3).map((alert: any, idx: number) => (
+            {alerts.slice(0, 3).map((alert: any, idx: number) => (
               <div
                 key={`alert-${alert.id || idx}`}
                 className={`p-3 border rounded-lg ${!alert.read ? 'bg-blue-50 border-blue-200' : 'bg-white'}`}
@@ -470,13 +470,13 @@ function AlertsSection() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
-                        <h3 className="font-medium text-sm">{alert.title || 'Alert'}</h3>
+                        <h3 className="font-medium text-sm">{alert.title}</h3>
                         {!alert.read && (
                           <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                         )}
                       </div>
-                      <p className="text-xs text-gray-600 mb-1">{alert.message || 'New notification'}</p>
-                      <p className="text-xs text-gray-500">{alert.time || new Date().toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-600 mb-1">{alert.message}</p>
+                      <p className="text-xs text-gray-500">{alert.time}</p>
                     </div>
                   </div>
                   {!alert.read && (
@@ -490,9 +490,7 @@ function AlertsSection() {
                   )}
                 </div>
               </div>
-            )) : (
-              <div className="text-center py-4 text-gray-500">No alerts</div>
-            )}
+            ))}
           </div>
 
           <div className="border-t pt-4">
@@ -632,8 +630,7 @@ export default function Dashboard() {
               balance: account.balance ? parseFloat(account.balance.toString()) : 0,
               icon: account.accountType === 'checking' ? Wallet : 
                     account.accountType === 'savings' ? Building2 : TrendingUp,
-              id: account.id || `${account.accountNumber}-${account.accountType}`,
-              fullNumber: account.accountNumber
+              id: account.id || idx
             }));
             setAccounts(formattedAccounts);
           }
@@ -764,12 +761,12 @@ export default function Dashboard() {
                   {/* Scrollable Menu Items */}
                   <div className="max-h-64 overflow-y-auto">
                     {profileMenuItems.map((section, sectionIndex) => (
-                      <div key={`section-${section.category.toLowerCase().replace(/\s+/g, '-')}`} className="mb-4">
+                      <div key={sectionIndex} className="mb-4">
                         <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                           {section.category}
                         </div>
                         {section.items.map((item, itemIndex) => (
-                          <Link key={`${section.category}-${item.label}`} href={item.href}>
+                          <Link key={itemIndex} href={item.href}>
                             <div 
                               onClick={() => setShowProfileMenu(false)}
                               className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors cursor-pointer"
@@ -874,8 +871,8 @@ export default function Dashboard() {
       <div className="px-4 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('my_accounts')}</h3>
         <div className="space-y-3">
-          {accounts.map((account, idx) => (
-            <Card key={`${account.fullNumber}-${account.type}-${idx}`} className="wb-card">
+          {accounts.map((account) => (
+            <Card key={account.id} className="wb-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -904,7 +901,7 @@ export default function Dashboard() {
       <div className="px-4 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 gap-4">
-          <Link key="action-transfer" href="/transfer">
+          <Link href="/transfer">
             <div className="p-6 bg-gradient-to-br from-white to-blue-50 rounded-2xl border-2 border-blue-100 hover:border-blue-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105">
               <div className="flex items-center space-x-4">
                 <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -918,7 +915,7 @@ export default function Dashboard() {
             </div>
           </Link>
 
-          <Link key="action-receive" href="/receive">
+          <Link href="/receive">
             <div className="p-6 bg-gradient-to-br from-white to-green-50 rounded-2xl border-2 border-green-100 hover:border-green-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105">
               <div className="flex items-center space-x-4">
                 <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -932,7 +929,7 @@ export default function Dashboard() {
             </div>
           </Link>
 
-          <Link key="action-add-money" href="/add-money">
+          <Link href="/add-money">
             <div className="p-6 bg-gradient-to-br from-white to-purple-50 rounded-2xl border-2 border-purple-100 hover:border-purple-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105">
               <div className="flex items-center space-x-4">
                 <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -946,8 +943,8 @@ export default function Dashboard() {
             </div>
           </Link>
 
+          {/* Live Chat Button */}
           <div 
-            key="action-chat"
             onClick={() => setIsChatOpen(true)}
             className="p-4 bg-white rounded-lg border hover:border-green-500 hover:shadow-md transition-all cursor-pointer"
           >
@@ -963,7 +960,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <Link key="action-alerts" href="/alerts">
+          {/* Banking Alerts - With Alerts Page Navigation */}
+          <Link href="/alerts">
             <div className="p-4 bg-white rounded-lg border hover:border-orange-500 hover:shadow-md transition-all cursor-pointer">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center relative">
@@ -980,8 +978,8 @@ export default function Dashboard() {
             </div>
           </Link>
 
+          {/* Account Statement */}
           <div 
-            key="action-statement"
             onClick={() => toast({ title: 'Account Statement', description: 'Generating account statement...' })}
             className="p-4 bg-white rounded-lg border hover:border-indigo-500 hover:shadow-md transition-all cursor-pointer"
           >
@@ -996,8 +994,8 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* Currency Exchange */}
           <div 
-            key="action-exchange"
             onClick={() => toast({ title: 'Currency Exchange', description: 'USD 1.00 = CNY 7.24, EUR 1.00 = CNY 7.85' })}
             className="p-4 bg-white rounded-lg border hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer"
           >
@@ -1012,8 +1010,8 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* Investment Portfolio */}
           <div 
-            key="action-investment"
             onClick={() => setLocation('/investment')}
             className="p-4 bg-white rounded-lg border hover:border-amber-500 hover:shadow-md transition-all cursor-pointer"
           >
