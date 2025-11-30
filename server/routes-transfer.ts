@@ -79,7 +79,7 @@ export function setupTransferRoutes(app: Express) {
           currency: 'USD',
           type: 'transfer',
           transactionType: 'transfer',
-          status: 'pending',
+          status: 'processing',
           description: `Transfer to ${recipientNameTrunc}`.substring(0, 255),
           recipientName: recipientNameTrunc,
           recipientAccount: recipientAccountTrunc,
@@ -90,11 +90,11 @@ export function setupTransferRoutes(app: Express) {
         };
         const transaction = await storage.createTransaction(transactionData);
 
-        // Return pending response - transaction submitted
+        // Return processing response - transaction submitted and being processed
         res.json({ 
-          message: "Transfer submitted successfully - funds debited, awaiting admin approval",
+          message: "Transfer submitted successfully - funds debited, processing transfer",
           transactionId: transactionId,
-          status: "pending",
+          status: "processing",
           amount: amount,
           newBalance: newBalance
         });
@@ -177,7 +177,7 @@ export function setupTransferRoutes(app: Express) {
           currency: 'USD',
           type: 'transfer',
           transactionType: 'transfer',
-          status: 'pending',
+          status: 'processing',
           description: `Intl transfer to ${recipientNameTrunc}`.substring(0, 255),
           recipientName: recipientNameTrunc,
           recipientCountry: recipientCountryTrunc,
@@ -189,9 +189,9 @@ export function setupTransferRoutes(app: Express) {
         const transaction = await storage.createTransaction(transactionData);
 
         res.json({ 
-          message: "International transfer submitted successfully - funds debited, awaiting admin approval",
+          message: "International transfer submitted successfully - funds debited, processing transfer",
           transactionId: transactionId,
-          status: "pending",
+          status: "processing",
           amount: amount,
           newBalance: newBalance
         });
@@ -272,16 +272,19 @@ export function setupTransferRoutes(app: Express) {
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 1;
 
-      // Get transaction to verify amount
+      // Get transaction to verify amount - look for processing transfers
       const pendingTransactions = await storage.getPendingTransactions();
-      const targetTxn = pendingTransactions.find((t: any) => t.id === transactionId);
+      const processingTransactions = (await storage.getAllTransactions()).filter((t: any) => t.status === 'processing');
+      const allTransfers = [...pendingTransactions, ...processingTransactions];
+      const targetTxn = allTransfers.find((t: any) => t.id === transactionId);
       
       if (!targetTxn) {
-        return res.status(404).json({ message: "Transaction not found" });
+        return res.status(404).json({ message: "Transfer not found or already processed" });
       }
 
       // ✅ CRITICAL: When approved, funds are now TRANSFERRED (already debited)
       // Status changes to 'completed' to indicate success
+      // Transition: processing → completed
       const transaction = await storage.updateTransactionStatus(transactionId, 'completed', adminId, notes);
       
       if (transaction) {
@@ -311,14 +314,17 @@ export function setupTransferRoutes(app: Express) {
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 1;
 
-      // Get transaction details
+      // Get transaction details - look for processing transfers
       const pendingTransactions = await storage.getPendingTransactions();
-      const targetTxn = pendingTransactions.find((t: any) => t.id === transactionId);
+      const processingTransactions = (await storage.getAllTransactions()).filter((t: any) => t.status === 'processing');
+      const allTransfers = [...pendingTransactions, ...processingTransactions];
+      const targetTxn = allTransfers.find((t: any) => t.id === transactionId);
       
       if (!targetTxn) {
-        return res.status(404).json({ message: "Transaction not found" });
+        return res.status(404).json({ message: "Transfer not found or already processed" });
       }
 
+      // Transition: processing → rejected
       const transaction = await storage.updateTransactionStatus(transactionId, 'rejected', adminId, notes);
       
       // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
@@ -390,16 +396,19 @@ export function setupTransferRoutes(app: Express) {
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 1;
 
-      // Get transaction to verify it exists
+      // Get transaction to verify it exists - look for processing transfers
       const pendingTransactions = await storage.getPendingTransactions();
-      const targetTxn = pendingTransactions.find((t: any) => t.id === transactionId);
+      const processingTransactions = (await storage.getAllTransactions()).filter((t: any) => t.status === 'processing');
+      const allTransfers = [...pendingTransactions, ...processingTransactions];
+      const targetTxn = allTransfers.find((t: any) => t.id === transactionId);
       
       if (!targetTxn) {
-        return res.status(404).json({ message: "International transfer not found" });
+        return res.status(404).json({ message: "International transfer not found or already processed" });
       }
 
       // ✅ CRITICAL: When approved, funds are now TRANSFERRED (already debited)
       // Status changes to 'completed' to indicate success
+      // Transition: processing → completed
       const transaction = await storage.updateTransactionStatus(transactionId, 'completed', adminId, notes);
       
       if (transaction) {
@@ -429,14 +438,17 @@ export function setupTransferRoutes(app: Express) {
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 1;
 
-      // Get transaction details
+      // Get transaction details - look for processing transfers
       const pendingTransactions = await storage.getPendingTransactions();
-      const targetTxn = pendingTransactions.find((t: any) => t.id === transactionId);
+      const processingTransactions = (await storage.getAllTransactions()).filter((t: any) => t.status === 'processing');
+      const allTransfers = [...pendingTransactions, ...processingTransactions];
+      const targetTxn = allTransfers.find((t: any) => t.id === transactionId);
       
       if (!targetTxn) {
-        return res.status(404).json({ message: "International transfer not found" });
+        return res.status(404).json({ message: "International transfer not found or already processed" });
       }
 
+      // Transition: processing → rejected
       const transaction = await storage.updateTransactionStatus(transactionId, 'rejected', adminId, notes);
       
       // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
