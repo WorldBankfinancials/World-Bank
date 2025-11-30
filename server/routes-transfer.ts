@@ -307,4 +307,69 @@ export function setupTransferRoutes(app: Express) {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
+  // Get transfer status - PROTECTED: requires authentication
+  app.get('/api/transfers/:id/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.getUserByEmail(req.user!.email);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Get all user transactions and find by reference ID
+      const transactions = await storage.getUserTransactions(user.id);
+      const transaction = transactions.find((t: any) => {
+        // Match by transaction ID or description containing the reference
+        return String(t.id) === id || String(t.transactionId) === id;
+      });
+
+      if (!transaction) {
+        return res.status(404).json({ message: "Transfer not found" });
+      }
+
+      res.json({
+        id: transaction.id,
+        status: transaction.status,
+        amount: transaction.amount,
+        description: transaction.description
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get international transfer status - PROTECTED: requires authentication
+  app.get('/api/international-transfers/:id/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const user = await storage.getUserByEmail(req.user!.email);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Get all user transactions and find by reference ID
+      const transactions = await storage.getUserTransactions(user.id);
+      const transaction = transactions.find((t: any) => {
+        // Match by transaction ID or ID string
+        return String(t.id) === id || String(t.transactionId) === id || t.id === id;
+      });
+
+      if (!transaction) {
+        return res.status(404).json({ message: "International transfer not found" });
+      }
+
+      res.json({
+        id: transaction.id,
+        status: transaction.status,
+        amount: transaction.amount,
+        description: transaction.description,
+        type: transaction.type
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 }
