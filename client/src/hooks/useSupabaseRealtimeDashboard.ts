@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
@@ -22,34 +22,7 @@ export function useSupabaseRealtimeAccounts(
   onAccountsChange: (accounts: Account[]) => void,
   enabled = true
 ) {
-  useEffect(() => {
-    if (!enabled) return;
-
-    try {
-      // Subscribe to bank_accounts table changes
-      const subscription = supabase
-        .channel('public:bank_accounts')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'bank_accounts'
-          },
-          (payload: RealtimePostgresChangesPayload<Record<string, any>>) => {
-            // Fetch fresh accounts data when changes occur
-            fetchAccountsData();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    } catch (error) {
-      console.error('Error subscribing to accounts:', error);
-    }
-  }, [enabled]);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   const fetchAccountsData = useCallback(async () => {
     try {
@@ -69,6 +42,54 @@ export function useSupabaseRealtimeAccounts(
     }
   }, [onAccountsChange]);
 
+  useEffect(() => {
+    if (!enabled) return;
+
+    // First fetch
+    fetchAccountsData();
+
+    // Setup realtime subscription with error handling
+    try {
+      const channel = supabase
+        .channel(`realtime:bank_accounts:${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'bank_accounts'
+          },
+          (payload: any) => {
+            // Refetch on any change
+            fetchAccountsData();
+          }
+        )
+        .on('error', (error: any) => {
+          console.warn('Realtime accounts error, falling back to polling:', error);
+          // Fallback: poll every 5 seconds if realtime fails
+          const pollInterval = setInterval(fetchAccountsData, 5000);
+          unsubscribeRef.current = () => clearInterval(pollInterval);
+        })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Subscribed to account changes');
+          }
+        });
+
+      unsubscribeRef.current = () => channel.unsubscribe();
+      return () => {
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current();
+        }
+      };
+    } catch (error) {
+      console.warn('Realtime subscription failed, using polling:', error);
+      // Fallback to polling every 5 seconds
+      const pollInterval = setInterval(fetchAccountsData, 5000);
+      return () => clearInterval(pollInterval);
+    }
+  }, [enabled, fetchAccountsData]);
+
   return { fetchAccountsData };
 }
 
@@ -76,34 +97,7 @@ export function useSupabaseRealtimeTransactions(
   onTransactionsChange: (transactions: Transaction[]) => void,
   enabled = true
 ) {
-  useEffect(() => {
-    if (!enabled) return;
-
-    try {
-      // Subscribe to bank_transactions table changes
-      const subscription = supabase
-        .channel('public:bank_transactions')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'bank_transactions'
-          },
-          (payload: RealtimePostgresChangesPayload<Record<string, any>>) => {
-            // Fetch fresh transactions data when changes occur
-            fetchTransactionsData();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    } catch (error) {
-      console.error('Error subscribing to transactions:', error);
-    }
-  }, [enabled]);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   const fetchTransactionsData = useCallback(async () => {
     try {
@@ -131,6 +125,54 @@ export function useSupabaseRealtimeTransactions(
     }
   }, [onTransactionsChange]);
 
+  useEffect(() => {
+    if (!enabled) return;
+
+    // First fetch
+    fetchTransactionsData();
+
+    // Setup realtime subscription with error handling
+    try {
+      const channel = supabase
+        .channel(`realtime:bank_transactions:${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'bank_transactions'
+          },
+          (payload: any) => {
+            // Refetch on any change
+            fetchTransactionsData();
+          }
+        )
+        .on('error', (error: any) => {
+          console.warn('Realtime transactions error, falling back to polling:', error);
+          // Fallback: poll every 3 seconds if realtime fails
+          const pollInterval = setInterval(fetchTransactionsData, 3000);
+          unsubscribeRef.current = () => clearInterval(pollInterval);
+        })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Subscribed to transaction changes');
+          }
+        });
+
+      unsubscribeRef.current = () => channel.unsubscribe();
+      return () => {
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current();
+        }
+      };
+    } catch (error) {
+      console.warn('Realtime subscription failed, using polling:', error);
+      // Fallback to polling every 3 seconds
+      const pollInterval = setInterval(fetchTransactionsData, 3000);
+      return () => clearInterval(pollInterval);
+    }
+  }, [enabled, fetchTransactionsData]);
+
   return { fetchTransactionsData };
 }
 
@@ -138,34 +180,7 @@ export function useSupabaseRealtimeUserBalance(
   onUserChange: (userData: any) => void,
   enabled = true
 ) {
-  useEffect(() => {
-    if (!enabled) return;
-
-    try {
-      // Subscribe to bank_users table changes for balance updates
-      const subscription = supabase
-        .channel('public:bank_users')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'bank_users'
-          },
-          (payload: RealtimePostgresChangesPayload<Record<string, any>>) => {
-            // Fetch fresh user data when changes occur
-            fetchUserData();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    } catch (error) {
-      console.error('Error subscribing to user balance:', error);
-    }
-  }, [enabled]);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   const fetchUserData = useCallback(async () => {
     try {
@@ -182,6 +197,54 @@ export function useSupabaseRealtimeUserBalance(
       console.error('Error fetching user data:', error);
     }
   }, [onUserChange]);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    // First fetch
+    fetchUserData();
+
+    // Setup realtime subscription with error handling
+    try {
+      const channel = supabase
+        .channel(`realtime:bank_users:${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'bank_users'
+          },
+          (payload: any) => {
+            // Refetch on any change
+            fetchUserData();
+          }
+        )
+        .on('error', (error: any) => {
+          console.warn('Realtime user error, falling back to polling:', error);
+          // Fallback: poll every 4 seconds if realtime fails
+          const pollInterval = setInterval(fetchUserData, 4000);
+          unsubscribeRef.current = () => clearInterval(pollInterval);
+        })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Subscribed to user balance changes');
+          }
+        });
+
+      unsubscribeRef.current = () => channel.unsubscribe();
+      return () => {
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current();
+        }
+      };
+    } catch (error) {
+      console.warn('Realtime subscription failed, using polling:', error);
+      // Fallback to polling every 4 seconds
+      const pollInterval = setInterval(fetchUserData, 4000);
+      return () => clearInterval(pollInterval);
+    }
+  }, [enabled, fetchUserData]);
 
   return { fetchUserData };
 }
