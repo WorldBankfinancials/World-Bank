@@ -1,3 +1,4 @@
+import { validateId, validateAmount } from './validators';
 import { Express, Request, Response, NextFunction } from 'express';
 import { Server, createServer } from 'http';
 import { storage } from './storage-factory';
@@ -519,7 +520,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Get user by ID - PROTECTED with JWT authentication
   app.get('/api/users/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = parseInt(req.params.id, 10);
+      const userId = validateId(req.params.id);
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
@@ -574,7 +575,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         status: string;
       };
 
-      const customerIdNum = parseInt(body.customerId, 10);
+      const customerIdNum = validateId(body.customerId);
       const accounts = await storage.getUserAccounts(customerIdNum);
 
       if (accounts.length === 0) {
@@ -594,7 +595,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Update account balance if it's a credit/debit
       if (body.type === 'credit' || body.type === 'debit') {
-        const amountNum = parseFloat(body.amount);
+        const amountNum = validateAmount(body.amount);
         const balanceChange = body.type === 'credit' ? amountNum : -amountNum;
         await storage.updateUserBalance(customerIdNum, balanceChange);
       }
@@ -627,7 +628,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const accountId = parseInt(req.params.accountId, 10);
       const body = req.body as { amount: string; description: string; type: 'credit' | 'debit' };
 
-      const amountNum = parseFloat(body.amount);
+      const amountNum = validateAmount(body.amount);
       const balanceChange = body.type === 'credit' ? amountNum : -amountNum;
 
       // Get account and update balance
@@ -678,7 +679,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const customerId = parseInt(req.params.id, 10);
       const body = req.body as { amount: string; description: string };
 
-      const amountNum = parseFloat(body.amount);
+      const amountNum = validateAmount(body.amount);
       const oldUser = await (storage).getUser(customerId);
       const updatedUser = await storage.updateUserBalance(customerId, amountNum);
 
@@ -870,7 +871,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.get('/api/accounts/:id/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const accountId = parseInt(req.params.id, 10);
+      const accountId = validateId(req.params.id);
 
       // SECURITY: Verify account belongs to authenticated user
       const user = await (storage).getUserByEmail(req.user!.email);
@@ -906,7 +907,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Approve registration - REQUIRES ADMIN ROLE
   app.post('/api/admin/approve-registration/:registrationId', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const registrationId = parseInt(req.params.registrationId, 10);
+      const registrationId = validateId(req.params.registrationId);
 
       // SECURITY: Validate approval data
       const validationData = { registrationId, ...req.body };
@@ -998,7 +999,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Reject registration - REQUIRES ADMIN ROLE
   app.post('/api/admin/reject-registration/:registrationId', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const registrationId = parseInt(req.params.registrationId, 10);
+      const registrationId = validateId(req.params.registrationId);
       const { reason } = req.body;
 
       const user = await (storage).getUser(registrationId);

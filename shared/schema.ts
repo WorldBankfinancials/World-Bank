@@ -8,7 +8,7 @@ export const transferPinSchema = z.object({
 });
 
 export const transferSchema = z.object({
-  amount: z.string().min(1, 'Amount is required'),
+  amount: z.number().positive('Amount must be positive').max(1000000, 'Amount exceeds maximum limit'),
   recipientAccount: z.string().min(1, 'Recipient account is required'),
   transferPin: z.string().min(4, 'PIN is required'),
   purpose: z.string().optional(),
