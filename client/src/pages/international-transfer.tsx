@@ -16,6 +16,7 @@ import {
   Clock, 
   Shield, 
   CheckCircle,
+  AlertCircle,
   Calculator,
   Users,
   User as UserIcon,
@@ -26,7 +27,7 @@ import {
   History,
   Star
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
