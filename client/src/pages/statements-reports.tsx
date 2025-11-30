@@ -11,28 +11,22 @@ import { Download, FileText, Calendar, Filter } from "lucide-react";
 
 export default function StatementsReports() {
   const { t } = useLanguage();
+  
+  // ALL HOOKS MUST BE AT TOP - BEFORE ANY RETURNS
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-gray-600">{t('loading')}</div>
-      </div>
-    );
-  }
-
-  // Fetch real statements from database
   const { data: statements, isLoading: statementsLoading } = useQuery<any[]>({
     queryKey: ['/api/statements'],
     enabled: !!user,
   });
 
-  if (statementsLoading) {
+  // Now check loading state AFTER all hooks
+  if (isLoading || statementsLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-gray-600">Loading statements...</div>
+        <div className="text-gray-600">{t('loading') || 'Loading...'}</div>
       </div>
     );
   }
