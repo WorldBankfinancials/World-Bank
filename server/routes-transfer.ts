@@ -144,9 +144,12 @@ export function setupTransferRoutes(app: Express) {
           type: 'international_transfer',
           status: 'pending',
           description: `International transfer to ${recipientName} in ${recipientCountry}`,
-          recipientName: recipientName,
-          recipientCountry: recipientCountry,
-          transferPurpose: transferPurpose || 'international_transfer'
+          recipientName: String(recipientName).substring(0, 20),
+          recipientCountry: String(recipientCountry).substring(0, 20),
+          bankName: bankName ? String(bankName).substring(0, 20) : undefined,
+          swiftCode: swiftCode ? String(swiftCode).substring(0, 20) : undefined,
+          accountNumber: accountNumber ? String(accountNumber).substring(0, 50) : undefined,
+          transferPurpose: (transferPurpose || 'international_transfer').substring(0, 20)
         };
         const transaction = await storage.createTransaction(transactionData);
 
