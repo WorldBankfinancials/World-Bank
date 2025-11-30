@@ -19,7 +19,9 @@ import {
   Smartphone,
   Users,
   Clock,
-  Shield
+  Shield,
+  CheckCircle,
+  AlertCircle
 } from "lucide-react";
 
 interface User {

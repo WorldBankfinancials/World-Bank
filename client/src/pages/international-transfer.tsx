@@ -16,6 +16,7 @@ import {
   Clock, 
   Shield, 
   CheckCircle,
+  AlertCircle,
   Calculator,
   Users,
   User as UserIcon,
