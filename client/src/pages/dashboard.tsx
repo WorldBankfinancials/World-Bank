@@ -88,7 +88,7 @@ export default function Dashboard() {
   const [showBalance, setShowBalance] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [showNotifications] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [userData, setUserData] = useState<CustomerData | null>(null);
   const queryClient = useQueryClient();
 
@@ -536,23 +536,23 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div key="quick-action-qa-5-banking-alerts">
-            <Link href="/alerts" className="no-underline">
-              <div className="p-4 bg-white rounded-lg border hover:border-orange-500 hover:shadow-md transition-all cursor-pointer h-full">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center relative flex-shrink-0">
-                    <Bell className="w-6 h-6 text-orange-600" />
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
-                      <span className="text-xs text-white font-bold">3</span>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">Banking Alerts</h4>
-                    <p className="text-sm text-gray-600">3 new notifications</p>
-                  </div>
+          <div 
+            key="quick-action-qa-5-banking-alerts"
+            onClick={() => setShowNotifications(true)}
+            className="p-4 bg-white rounded-lg border hover:border-orange-500 hover:shadow-md transition-all cursor-pointer h-full"
+          >
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center relative flex-shrink-0">
+                <Bell className="w-6 h-6 text-orange-600" />
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
+                  <span className="text-xs text-white font-bold">4</span>
                 </div>
               </div>
-            </Link>
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-900">Banking Alerts</h4>
+                <p className="text-sm text-gray-600">4 new notifications</p>
+              </div>
+            </div>
           </div>
 
           <div 
@@ -650,6 +650,50 @@ export default function Dashboard() {
           isOpen={isChatOpen} 
           onClose={() => setIsChatOpen(false)} 
         />
+      )}
+
+      {showNotifications && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[80vh] overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>Banking Alerts & Notifications</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowNotifications(false)}
+                className="text-gray-600"
+              >
+                ✕
+              </Button>
+            </CardHeader>
+            <CardContent className="max-h-96 overflow-y-auto">
+              <div className="space-y-3">
+                {[
+                  { title: "Account Security", message: "New login detected on your account - November 30, 2:15 PM from Replit", type: "warning" },
+                  { title: "Transaction Completed", message: "Transfer of $5,000 to John Smith completed successfully", type: "success" },
+                  { title: "Low Balance Alert", message: "Your checking account balance is below $1,000", type: "warning" },
+                  { title: "Payment Received", message: "You received $2,500 from ABC Corporation", type: "success" }
+                ].map((notif, idx) => (
+                  <div
+                    key={`notif-${idx}`}
+                    className={`p-4 rounded-lg border ${
+                      notif.type === 'warning' ? 'border-orange-200 bg-orange-50' :
+                      notif.type === 'success' ? 'border-green-200 bg-green-50' :
+                      'border-blue-200 bg-blue-50'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{notif.title}</h4>
+                        <p className="text-sm text-gray-700 mt-1">{notif.message}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );
