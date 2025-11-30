@@ -53,7 +53,7 @@ export default function InternationalTransfer() {
   const [intlPollInterval, setIntlPollInterval] = useState<NodeJS.Timeout | null>(null);
   
   // Fetch user data - called at top level
-  const { data: user } = useQuery<User>({
+  const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user', userProfile?.email],
     queryFn: async () => {
       if (!userProfile?.email) return null;
