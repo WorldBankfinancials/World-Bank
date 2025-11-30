@@ -35,23 +35,37 @@ export async function authenticatedFetch(
   try {
     const authHeaders = await getAuthHeaders();
     
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...authHeaders,
-        ...options?.headers,
-      },
-      credentials: "include",
-    });
+    // Create abort controller for timeout protection (30 second timeout)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     
-    // Handle authentication errors
-    if (response.status === 401) {
-      localStorage.clear();
-      window.location.href = '/login';
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...authHeaders,
+          ...options?.headers,
+        },
+        credentials: "include",
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      // Handle authentication errors
+      if (response.status === 401) {
+        localStorage.clear();
+        window.location.href = '/login';
+      }
+      
+      return response;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    
-    return response;
   } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout - the operation took too long');
+    }
     throw error;
   }
 }
@@ -63,18 +77,32 @@ export async function apiRequest(
 ): Promise<Response> {
   const authHeaders = await getAuthHeaders();
   
-  const res = await fetch(url, {
-    method,
-    headers: {
-      ...authHeaders,
-      ...(data ? { "Content-Type": "application/json" } : {})
-    },
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  // Create abort controller for timeout protection (30 second timeout)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: {
+        ...authHeaders,
+        ...(data ? { "Content-Type": "application/json" } : {})
+      },
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+      signal: controller.signal,
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    clearTimeout(timeoutId);
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout - the operation took too long');
+    }
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -86,17 +114,32 @@ export const getQueryFn: <T>(options: {
     const url = queryKey[0] as string;
     const authHeaders = await getAuthHeaders();
     
-    const res = await fetch(url, {
-      headers: authHeaders,
-      credentials: "include",
-    });
+    // Create abort controller for timeout protection (30 second timeout)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    try {
+      const res = await fetch(url, {
+        headers: authHeaders,
+        credentials: "include",
+        signal: controller.signal,
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      clearTimeout(timeoutId);
+
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
+
+      await throwIfResNotOk(res);
+      return await res.json();
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - the operation took too long');
+      }
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({
