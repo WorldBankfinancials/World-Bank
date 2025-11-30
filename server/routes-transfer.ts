@@ -150,7 +150,7 @@ export function setupTransferRoutes(app: Express) {
           fromUserId: user.id,
           amount: String(amount),
           currency: 'USD',
-          type: 'international_transfer',
+          type: 'intl_transfer',
           status: 'pending',
           description: `Intl transfer to ${recipientNameTrunc}`.substring(0, 255),
           recipientName: recipientNameTrunc,
@@ -158,7 +158,7 @@ export function setupTransferRoutes(app: Express) {
           bankName: bankName ? String(bankName).substring(0, 20) : undefined,
           swiftCode: swiftCode ? String(swiftCode).substring(0, 20) : undefined,
           accountNumber: accountNumber ? String(accountNumber).substring(0, 50) : undefined,
-          transferPurpose: (transferPurpose || 'international_transfer').substring(0, 20)
+          transferPurpose: (transferPurpose || 'wire_xfer').substring(0, 20)
         };
         const transaction = await storage.createTransaction(transactionData);
 
