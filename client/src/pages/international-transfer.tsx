@@ -54,15 +54,14 @@ export default function InternationalTransfer() {
   
   // Fetch user data - called at top level
   const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user', userProfile?.email],
+    queryKey: ['/api/user'],
     queryFn: async () => {
-      if (!userProfile?.email) throw new Error('Email not available');
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch(`/api/user?email=${encodeURIComponent(userProfile.email)}`);
+      const response = await authenticatedFetch('/api/user');
       if (!response.ok) throw new Error('Failed to fetch user');
       return response.json();
     },
-    enabled: !!userProfile?.email
+    staleTime: 60000
   });
 
   // Fetch exchange rates - top level
@@ -96,7 +95,7 @@ export default function InternationalTransfer() {
   }
 
   // Show error if user data failed to load
-  if (!user && userProfile?.email) {
+  if (!user && !isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -107,27 +106,6 @@ export default function InternationalTransfer() {
                 <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-500" />
                 <p className="font-semibold mb-2">{t('failed_to_load')}</p>
                 <p className="text-sm">{t('failed_to_fetch')}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <BottomNavigation />
-      </div>
-    );
-  }
-
-  // Safety fallback: if both user and userProfile are missing
-  if (!user && !userProfile?.email) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex items-center justify-center p-4 mt-20">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6">
-              <div className="text-center text-amber-600">
-                <AlertCircle className="w-8 h-8 mx-auto mb-3 text-amber-500" />
-                <p className="font-semibold mb-2">Profile Not Loaded</p>
-                <p className="text-sm">Please log in again to continue</p>
               </div>
             </CardContent>
           </Card>
