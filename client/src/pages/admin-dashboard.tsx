@@ -222,21 +222,23 @@ export default function AdminDashboard() {
     updateTicketMutation.mutate({ ticketId, status, resolution });
   };
 
+  const adminUser = {
+    id: 1,
+    username: "admin",
+    firstName: "World",
+    lastName: "Bank",
+    email: "admin@worldbank.com",
+    password: "",
+    accountNumber: "ADMIN-001",
+    accountId: 1,
+    profession: "Banking Administrator",
+    isVerified: true,
+    role: "admin"
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={{
-        id: 1,
-        username: "admin",
-        firstName: "World",
-        lastName: "Bank",
-        email: "admin@worldbank.com",
-        password: "",
-        accountNumber: "ADMIN-001",
-        accountId: 1,
-        profession: "Banking Administrator",
-        isVerified: true,
-        role: "admin"
-      } as any} />
+      <Header user={adminUser} />
       
       <div className="px-4 py-6">
         {/* Admin Header */}
@@ -277,7 +279,7 @@ export default function AdminDashboard() {
                 <Users className="w-5 h-5 text-blue-600" />
                 <div>
                   <p className="text-sm text-gray-600">Customers</p>
-                  <p className="text-xl font-bold">{(adminStats as any)?.totalCustomers || 0}</p>
+                  <p className="text-xl font-bold">{adminStats && 'totalCustomers' in adminStats ? adminStats.totalCustomers : 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -289,7 +291,7 @@ export default function AdminDashboard() {
                 <CreditCard className="w-5 h-5 text-green-600" />
                 <div>
                   <p className="text-sm text-gray-600">Today's Volume</p>
-                  <p className="text-xl font-bold">${(adminStats as any)?.todayVolume || 0}</p>
+                  <p className="text-xl font-bold">${adminStats && 'todayVolume' in adminStats ? adminStats.todayVolume : 0}</p>
                 </div>
               </div>
             </CardContent>

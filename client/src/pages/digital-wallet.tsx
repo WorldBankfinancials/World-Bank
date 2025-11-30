@@ -62,7 +62,7 @@ export default function DigitalWallet() {
     staleTime: 30000
   });
 
-  const walletBalance = walletData?.balance || (user as any)?.balance || 0;
+  const walletBalance = walletData?.balance || (user && 'balance' in user ? user.balance : 0) || 0;
 
   // Quick actions - navigation only (no API needed)
   const quickActions = [
@@ -114,7 +114,7 @@ export default function DigitalWallet() {
               </div>
               <div className="flex items-center space-x-4 text-blue-100">
                 <span>Account: {user?.accountNumber || t('loading')}</span>
-                <Badge className="bg-green-500 text-white">{(user as any)?.isActive ? t('account_active') : t('account_inactive')}</Badge>
+                <Badge className="bg-green-500 text-white">{user && 'isActive' in user && user.isActive ? t('account_active') : t('account_inactive')}</Badge>
               </div>
             </div>
           </CardContent>
@@ -149,7 +149,7 @@ export default function DigitalWallet() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {(recentTransactions as any[])?.map((transaction: any, index: number) => (
+              {recentTransactions && Array.isArray(recentTransactions) && recentTransactions.map((transaction: any, index: number) => (
                 <div key={`item-${index}`} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${

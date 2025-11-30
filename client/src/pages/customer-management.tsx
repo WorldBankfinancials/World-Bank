@@ -141,7 +141,7 @@ export default function CustomerManagement() {
   if (user?.role !== "admin") {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header user={user as any} />
+        <Header user={user || undefined} />
         <div className="container mx-auto px-4 py-8">
           <Card>
             <CardContent className="flex items-center justify-center h-32">
@@ -158,7 +158,7 @@ export default function CustomerManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={user as any} />
+      <Header user={user || undefined} />
       
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">

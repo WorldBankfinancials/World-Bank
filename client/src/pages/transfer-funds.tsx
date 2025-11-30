@@ -276,7 +276,7 @@ export default function TransferFunds() {
 
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header user={userProfile as any} />
+        <Header user={userProfile || undefined} />
         
         <div className="px-4 py-6 pb-20">
           <div className="max-w-md mx-auto">
@@ -337,7 +337,7 @@ export default function TransferFunds() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <Header user={userProfile as any} />
+      <Header user={userProfile || undefined} />
       
       <div className="max-w-3xl mx-auto px-4 py-6">
         {/* Page Title */}

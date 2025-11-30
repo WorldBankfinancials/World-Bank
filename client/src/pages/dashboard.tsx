@@ -356,7 +356,7 @@ export default function Dashboard() {
                       Account ID: {userProfile?.accountId || t('loading')}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Last Login: {(userProfile as any)?.lastLogin ? new Date((userProfile as any).lastLogin).toLocaleDateString() : t('loading')}
+                      Last Login: {userProfile && 'lastLogin' in userProfile && userProfile.lastLogin ? new Date(userProfile.lastLogin).toLocaleDateString() : t('loading')}
                     </div>
                   </div>
                 </div>
@@ -372,7 +372,7 @@ export default function Dashboard() {
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">Welcome, {userProfile?.fullName || 'Valued Customer'}</h1>
                 <p className="text-sm text-gray-600">Account Number: {userProfile?.accountNumber || '••••-••••-••••-••••'}</p>
-                <p className="text-sm text-gray-600">Account ID: {(userProfile as any)?.accountId || 'WB-••••-••••'}</p>
+                <p className="text-sm text-gray-600">Account ID: {userProfile && 'accountId' in userProfile ? userProfile.accountId : 'WB-••••-••••'}</p>
                 <p className="text-sm text-gray-600">{userProfile?.profession || 'Account Holder'}</p>
                 <div className="flex items-center space-x-2 mt-1">
                   <Badge variant="default" className="text-xs bg-green-100 text-green-800 flex items-center space-x-1">
