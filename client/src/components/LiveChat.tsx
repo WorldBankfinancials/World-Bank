@@ -158,9 +158,9 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 w-96 z-50 shadow-2xl">
-      <Card className="rounded-xl overflow-hidden border-2 border-blue-500 bg-white">
-        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 flex items-center justify-between">
+    <div className="fixed bottom-6 right-6 w-96 max-h-96 z-50 shadow-2xl flex flex-col">
+      <Card className="rounded-xl overflow-hidden border-2 border-blue-500 bg-white h-full flex flex-col">
+        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="bg-white/30 p-2 rounded-full">
               <MessageCircle className="w-5 h-5" />
@@ -175,14 +175,14 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
               onClick={onClose}
               variant="ghost"
               size="sm"
-              className="text-white hover:bg-blue-700 h-8 w-8 p-0"
+              className="text-white hover:bg-blue-700 h-8 w-8 p-0 flex-shrink-0"
             >
               <X className="w-5 h-5" />
             </Button>
           )}
         </CardHeader>
 
-        <div className="flex flex-col h-96 bg-gray-50">
+        <div className="flex flex-col flex-1 bg-gray-50 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4 space-y-4 border-b-2 border-gray-200">
             {messages.map(msg => (
               <div
@@ -209,7 +209,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="bg-white p-4 space-y-3 border-t-2 border-gray-200">
+          <div className="bg-white p-4 space-y-3 border-t-2 border-gray-200 flex-shrink-0">
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-700 block">Type your message:</label>
               <div className="flex gap-2">
@@ -219,12 +219,12 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   disabled={!isConnected}
-                  className="text-base p-3 border-2 border-gray-300 rounded-lg font-medium"
+                  className="text-base p-3 border-2 border-gray-300 rounded-lg font-medium flex-1"
                 />
                 <Button
                   onClick={handleSendMessage}
                   disabled={!inputText.trim() || !isConnected}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-12 font-bold rounded-lg"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-12 font-bold rounded-lg flex-shrink-0"
                   size="sm"
                 >
                   <Send className="w-5 h-5" />
