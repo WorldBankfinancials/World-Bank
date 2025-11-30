@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { useQuery } from "@tanstack/react-query";
 import { COUNTRIES } from "@/data/countries";
-import BottomNavigation from "@/components/BottomNavigation";
 import type { User } from "@shared/schema";
 import { 
   Globe, 
@@ -27,7 +27,7 @@ import {
   History,
   Star
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -38,7 +38,7 @@ export default function InternationalTransfer() {
   const { userProfile } = useAuth();
   const { toast } = useToast();
   
-  // ALL STATE HOOKS AT TOP LEVEL
+  // ALL HOOKS MUST BE AT TOP LEVEL - BEFORE ANY CONDITIONAL RENDERING
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [transferAmount, setTransferAmount] = useState('1000');
   const [fromCurrency, setFromCurrency] = useState('USD');
@@ -51,49 +51,36 @@ export default function InternationalTransfer() {
   const [transferId, setTransferId] = useState('');
   const [intlTransferStatus, setIntlTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
   const [intlPollInterval, setIntlPollInterval] = useState<NodeJS.Timeout | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-  const [exchangeRates, setExchangeRates] = useState<any[]>([]);
-  const [popularDestinations, setPopularDestinations] = useState<any[]>([]);
-  const [recentRecipients, setRecentRecipients] = useState<any[]>([]);
+  
+  // Fetch user data - called at top level
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ['/api/user'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/user');
+      if (!response.ok) throw new Error('Failed to fetch user');
+      return response.json();
+    },
+    staleTime: 60000
+  });
 
-  // Fetch user data using useEffect - same pattern as dashboard
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch('/api/user');
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error('Error fetching user:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  // Fetch exchange rates - top level
+  const { data: exchangeRates = [] } = useQuery<any[]>({
+    queryKey: ['/api/exchange-rates'],
+    staleTime: 60000
+  });
 
-  // Fetch exchange rates - only this endpoint exists
-  useEffect(() => {
-    const fetchRates = async () => {
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch('/api/exchange-rates');
-        if (response.ok) {
-          const rates = await response.json();
-          setExchangeRates(Array.isArray(rates) ? rates : []);
-        }
-      } catch (error) {
-        console.error('Error fetching rates:', error);
-        setExchangeRates([]);
-      }
-    };
-    fetchRates();
-  }, []);
+  // Fetch popular destinations - top level
+  const { data: popularDestinations = [] } = useQuery<any[]>({
+    queryKey: ['/api/transfer/destinations'],
+    staleTime: 300000
+  });
+
+  // Fetch recent recipients - top level
+  const { data: recentRecipients = [] } = useQuery<any[]>({
+    queryKey: ['/api/transfer/recipients'],
+    staleTime: 60000
+  });
 
   // Show loading state
   if (isLoading) {
@@ -108,7 +95,7 @@ export default function InternationalTransfer() {
   }
 
   // Show error if user data failed to load
-  if (!user) {
+  if (!user && !isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -224,6 +211,22 @@ export default function InternationalTransfer() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">{t('loading')}</div>
+      </div>
+    );
+  }
+  
+  // Guard: ensure user is loaded
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-red-600">Failed to load user profile. Please refresh.</div>
+      </div>
+    );
+  }
 
   // Processing page with status states
   if (showProcessingPage) {
