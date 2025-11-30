@@ -1,3 +1,5 @@
+import type { User } from "@shared/schema";
+
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -9,14 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
 import { COUNTRIES } from "@/data/countries";
-import type { User } from "@shared/schema";
 import { 
   Globe, 
   ArrowRightLeft, 
   Clock, 
   Shield, 
   CheckCircle,
-  AlertCircle,
   Calculator,
   Users,
   User as UserIcon,
@@ -29,16 +29,10 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 
 
 export default function InternationalTransfer() {
   const { t } = useLanguage();
-  const { userProfile } = useAuth();
-  const { toast } = useToast();
-  
-  // ALL HOOKS MUST BE AT TOP LEVEL - BEFORE ANY CONDITIONAL RENDERING
   const [showAccountDetails, setShowAccountDetails] = useState(false);
   const [transferAmount, setTransferAmount] = useState('1000');
   const [fromCurrency, setFromCurrency] = useState('USD');
@@ -49,130 +43,15 @@ export default function InternationalTransfer() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showProcessingPage, setShowProcessingPage] = useState(false);
   const [transferId, setTransferId] = useState('');
-  const [intlTransferStatus, setIntlTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
-  const [intlPollInterval, setIntlPollInterval] = useState<NodeJS.Timeout | null>(null);
-  
-  // Fetch user data - called at top level
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user'],
-    queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/user');
-      if (!response.ok) throw new Error('Failed to fetch user');
-      return response.json();
-    },
-    staleTime: 60000
-  });
-
-  // Fetch exchange rates - top level
-  const { data: exchangeRates = [] } = useQuery<any[]>({
-    queryKey: ['/api/exchange-rates'],
-    queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      try {
-        const response = await authenticatedFetch('/api/exchange-rates');
-        if (!response.ok) return [];
-        return response.json();
-      } catch {
-        return [];
-      }
-    },
-    staleTime: 60000
-  });
-
-  // Fetch popular destinations - top level
-  const { data: popularDestinations = [] } = useQuery<any[]>({
-    queryKey: ['/api/transfer/destinations'],
-    queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      try {
-        const response = await authenticatedFetch('/api/transfer/destinations');
-        if (!response.ok) return [];
-        return response.json();
-      } catch {
-        return [];
-      }
-    },
-    staleTime: 300000
-  });
-
-  // Fetch recent recipients - top level
-  const { data: recentRecipients = [] } = useQuery<any[]>({
-    queryKey: ['/api/transfer/recipients'],
-    queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      try {
-        const response = await authenticatedFetch('/api/transfer/recipients');
-        if (!response.ok) return [];
-        return response.json();
-      } catch {
-        return [];
-      }
-    },
-    staleTime: 60000
-  });
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">{t('loading')}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error if user data failed to load
-  if (!user && !isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex items-center justify-center p-4 mt-20">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6">
-              <div className="text-center text-red-600">
-                <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-500" />
-                <p className="font-semibold mb-2">{t('failed_to_load')}</p>
-                <p className="text-sm mb-4">{t('failed_to_fetch')}</p>
-                <Button 
-                  variant="outline" 
-                  onClick={() => window.location.reload()}
-                  className="w-full"
-                >
-                  Refresh
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <BottomNavigation />
-      </div>
-    );
-  }
 
   const handleInternationalTransfer = () => {
-    if (!user?.email) {
-      toast({
-        title: 'User data not loaded',
-        description: 'Please wait for your profile to load.',
-        variant: 'destructive'
-      });
-      return;
-    }
     setShowPinModal(true);
   };
 
   const handlePinSubmit = async () => {
-    // VALIDATION: Check user email is available from either source
-    const emailToUse = user?.email || userProfile?.email;
-    if (!emailToUse) {
-      setPinError("User profile not loaded. Please wait and try again.");
-      return;
-    }
-    
     // PIN verification process
+    
+    // Validate PIN first
     if (!transferPin || transferPin.length !== 4) {
       setPinError("Please enter a 4-digit PIN");
       return;
@@ -185,8 +64,16 @@ export default function InternationalTransfer() {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const transferData = {
         amount: parseFloat(transferAmount),
-        recipientCountry: toCurrency,
-        transferPin: transferPin
+        fromCurrency: fromCurrency,
+        toCurrency: toCurrency,
+        recipientName: "Recipient",
+        recipientCountry: "International",
+        bankName: "International Bank",
+        swiftCode: "INTBANK",
+        accountNumber: "0000000000",
+        transferPurpose: "International Transfer",
+        transferPin: transferPin,
+        userEmail: user?.email!
       };
       
       const response = await authenticatedFetch('/api/international-transfers', {
@@ -206,33 +93,8 @@ export default function InternationalTransfer() {
       
       setShowPinModal(false);
       setTransferPin('');
-      const txnId = result.id || `INT-${Date.now()}`;
-      setTransferId(txnId);
-      setIntlTransferStatus("processing");
+      setTransferId(result.id || `INT-${Date.now()}`);
       setShowProcessingPage(true);
-      
-      // Poll for transfer status updates (secret admin approval happens in background)
-      const interval = setInterval(async () => {
-        try {
-          const { authenticatedFetch } = await import('@/lib/queryClient');
-          const statusResponse = await authenticatedFetch(`/api/transfers/${txnId}/status`);
-          if (statusResponse.ok) {
-            const statusData = await statusResponse.json();
-            if (statusData.status === 'approved') {
-              setIntlTransferStatus('success');
-              clearInterval(interval);
-            } else if (statusData.status === 'rejected') {
-              setIntlTransferStatus('failed');
-              clearInterval(interval);
-            } else if (statusData.status === 'pending_approval') {
-              setIntlTransferStatus('pending');
-            }
-          }
-        } catch (error) {
-        }
-      }, 3000); // Poll every 3 seconds
-      
-      setIntlPollInterval(interval);
       
     } catch (error) {
       setPinError("Network error. Please check your connection and try again.");
@@ -241,6 +103,10 @@ export default function InternationalTransfer() {
     }
   };
 
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ['/api/user'],
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -248,80 +114,9 @@ export default function InternationalTransfer() {
       </div>
     );
   }
-  
-  // Guard: ensure user is loaded
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-red-600">Failed to load user profile. Please refresh.</div>
-      </div>
-    );
-  }
 
-  // Processing page with status states
+  // Processing page
   if (showProcessingPage) {
-    const statusConfig = {
-      processing: {
-        icon: Clock,
-        bgColor: 'bg-blue-100',
-        iconColor: 'text-blue-600',
-        title: 'Processing',
-        message: 'Your international transfer is being securely processed...',
-        statusText: 'Processing',
-        statusColor: 'text-blue-600',
-        steps: [
-          { done: true, text: 'Transfer request verified' },
-          { done: true, text: 'Security verification complete' },
-          { done: false, text: 'Processing transfer' }
-        ]
-      },
-      pending: {
-        icon: Clock,
-        bgColor: 'bg-orange-100',
-        iconColor: 'text-orange-600',
-        title: 'Pending',
-        message: 'Your international transfer is being reviewed and will be processed shortly...',
-        statusText: 'Pending',
-        statusColor: 'text-orange-600',
-        steps: [
-          { done: true, text: 'Transfer request verified' },
-          { done: true, text: 'Security verification complete' },
-          { done: true, text: 'In review' }
-        ]
-      },
-      success: {
-        icon: CheckCircle,
-        bgColor: 'bg-green-100',
-        iconColor: 'text-green-600',
-        title: 'Success',
-        message: 'Your international transfer has been approved and is being processed to the recipient bank.',
-        statusText: 'Success',
-        statusColor: 'text-green-600',
-        steps: [
-          { done: true, text: 'Transfer request verified' },
-          { done: true, text: 'Security verification complete' },
-          { done: true, text: 'Transfer approved' }
-        ]
-      },
-      failed: {
-        icon: AlertCircle,
-        bgColor: 'bg-red-100',
-        iconColor: 'text-red-600',
-        title: 'Transfer Failed',
-        message: 'Your international transfer could not be processed. Please contact support for assistance.',
-        statusText: 'Failed',
-        statusColor: 'text-red-600',
-        steps: [
-          { done: true, text: 'Transfer request verified' },
-          { done: true, text: 'Security verification complete' },
-          { done: false, text: 'Transfer failed' }
-        ]
-      }
-    };
-
-    const config = statusConfig[intlTransferStatus];
-    const Icon = config.icon;
-
     return (
       <div className="min-h-screen bg-gray-50">
         <Header user={user} />
@@ -331,11 +126,13 @@ export default function InternationalTransfer() {
             <Card className="text-center">
               <CardContent className="pt-6">
                 <div className="mb-6">
-                  <div className={`w-20 h-20 ${config.bgColor} rounded-full flex items-center justify-center mx-auto mb-4`}>
-                    <Icon className={`w-10 h-10 ${config.iconColor} ${intlTransferStatus === 'processing' || intlTransferStatus === 'pending' ? 'animate-spin' : ''}`} />
+                  <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="w-10 h-10 text-blue-600 animate-spin" />
                   </div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">{config.title}</h2>
-                  <p className="text-gray-600 mb-4">{config.message}</p>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">International Transfer Processing</h2>
+                  <p className="text-gray-600 mb-4">
+                    Your international transfer is being processed securely through our banking network.
+                  </p>
                 </div>
                 
                 <div className="bg-gray-50 rounded-lg p-4 mb-6">
@@ -345,7 +142,7 @@ export default function InternationalTransfer() {
                   </div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-600">Status</span>
-                    <span className={`text-sm font-medium ${config.statusColor}`}>{config.statusText}</span>
+                    <span className="text-sm font-medium text-orange-600">Processing</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Amount</span>
@@ -354,30 +151,35 @@ export default function InternationalTransfer() {
                 </div>
                 
                 <div className="text-left space-y-3 mb-6">
-                  {config.steps.map((step, idx) => (
-                    <div key={idx} className="flex items-center">
-                      <div className={`w-2 h-2 ${step.done ? 'bg-green-500' : 'bg-gray-300'} rounded-full mr-3 ${!step.done && intlTransferStatus !== 'failed' ? 'animate-pulse' : ''}`}></div>
-                      <span className={`text-sm ${step.done ? 'text-gray-700' : 'text-gray-500'}`}>{step.text}</span>
-                    </div>
-                  ))}
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-700">Transfer request submitted</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full mr-3 animate-pulse"></div>
+                    <span className="text-sm text-gray-700">Processing to recipient bank</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-500">Awaiting bank confirmation</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-gray-300 rounded-full mr-3"></div>
+                    <span className="text-sm text-gray-500">Transfer completed</span>
+                  </div>
                 </div>
                 
                 <div className="flex space-x-3">
                   <Button 
                     variant="outline" 
                     className="flex-1"
-                    onClick={() => {
-                      setShowProcessingPage(false);
-                      if (intlPollInterval) clearInterval(intlPollInterval);
-                    }}
+                    onClick={() => setShowProcessingPage(false)}
                   >
                     New Transfer
                   </Button>
-                  {intlTransferStatus === 'failed' && (
-                    <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
-                      Contact Support
-                    </Button>
-                  )}
+                  <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+                    Track Transfer
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -389,6 +191,34 @@ export default function InternationalTransfer() {
     );
   }
 
+  const exchangeRates = [
+    { from: "USD", to: "CNY", rate: "7.23", trend: "up", flag: "🇨🇳", change: "+0.05", changePercent: "+0.69%" },
+    { from: "USD", to: "EUR", rate: "0.92", trend: "down", flag: "🇪🇺", change: "-0.02", changePercent: "-2.13%" },
+    { from: "USD", to: "GBP", rate: "0.79", trend: "up", flag: "🇬🇧", change: "+0.01", changePercent: "+1.28%" },
+    { from: "USD", to: "JPY", rate: "149.50", trend: "stable", flag: "🇯🇵", change: "0.00", changePercent: "0.00%" },
+    { from: "USD", to: "SGD", rate: "1.35", trend: "up", flag: "🇸🇬", change: "+0.03", changePercent: "+2.27%" },
+    { from: "USD", to: "AUD", rate: "1.52", trend: "down", flag: "🇦🇺", change: "-0.04", changePercent: "-2.56%" },
+    { from: "USD", to: "CAD", rate: "1.36", trend: "up", flag: "🇨🇦", change: "+0.02", changePercent: "+1.49%" },
+    { from: "USD", to: "CHF", rate: "0.91", trend: "stable", flag: "🇨🇭", change: "0.00", changePercent: "0.00%" },
+    { from: "USD", to: "KRW", rate: "1340.25", trend: "down", flag: "🇰🇷", change: "-15.50", changePercent: "-1.14%" },
+    { from: "USD", to: "INR", rate: "83.12", trend: "up", flag: "🇮🇳", change: "+0.45", changePercent: "+0.54%" }
+  ];
+
+  const popularDestinations = [
+    { country: "China", flag: "🇨🇳", currency: "CNY", fee: "$8.00", time: "Same day" },
+    { country: "United Kingdom", flag: "🇬🇧", currency: "GBP", fee: "$12.00", time: "1-2 hours" },
+    { country: "Japan", flag: "🇯🇵", currency: "JPY", fee: "$15.00", time: "Same day" },
+    { country: "Singapore", flag: "🇸🇬", currency: "SGD", fee: "$10.00", time: "1 hour" },
+    { country: "Australia", flag: "🇦🇺", currency: "AUD", fee: "$14.00", time: "2-4 hours" },
+    { country: "Germany", flag: "🇩🇪", currency: "EUR", fee: "$11.00", time: "1-3 hours" }
+  ];
+
+  const recentRecipients = [
+    { name: "Zhang Wei", country: "China", account: "****8901", lastTransfer: "2 days ago" },
+    { name: "Emily Johnson", country: "UK", account: "****5643", lastTransfer: "1 week ago" },
+    { name: "Hiroshi Tanaka", country: "Japan", account: "****2187", lastTransfer: "2 weeks ago" }
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header user={user} />
@@ -396,9 +226,9 @@ export default function InternationalTransfer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Enhanced Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">{t('international_money_transfer')}</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">International Money Transfer</h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-6">
-            {t('send_money_description') || 'Send money to over 190 countries with competitive exchange rates and ultra-fast delivery'}
+            Send money to over 190 countries with competitive exchange rates and ultra-fast delivery
           </p>
           <div className="flex justify-center flex-wrap gap-3">
             <Badge variant="outline" className="flex items-center">
@@ -501,7 +331,7 @@ export default function InternationalTransfer() {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <UserIcon className="w-5 h-5" />
-                  <span>{t('recipient_information') || 'Recipient Information'}</span>
+                  <span>Recipient Information</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -510,7 +340,7 @@ export default function InternationalTransfer() {
                   <Label className="text-base font-medium">Recent Recipients</Label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
                     {recentRecipients.map((recipient, index) => (
-                      <div key={`item-${index}`} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <div key={index} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
                         <div className="font-medium">{recipient.name}</div>
                         <div className="text-sm text-gray-600">{recipient.country} • {recipient.account}</div>
                         <div className="text-xs text-gray-500">{recipient.lastTransfer}</div>
@@ -650,7 +480,7 @@ export default function InternationalTransfer() {
 
                     {/* Transfer Details */}
                     <div className="pt-4 border-t">
-                      <h3 className="font-medium mb-3">{t('transfer_details') || 'Transfer Details'}</h3>
+                      <h3 className="font-medium mb-3">Transfer Details</h3>
                       <div className="space-y-4">
                         <div>
                           <Label>Transfer Purpose *</Label>
@@ -759,7 +589,7 @@ export default function InternationalTransfer() {
               <CardContent>
                 <div className="space-y-3">
                   {exchangeRates.map((rate, index) => (
-                    <div key={`item-${index}`} className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 transition-colors">
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 transition-colors">
                       <div className="flex items-center space-x-3">
                         <span className="text-xl">{rate.flag}</span>
                         <div>
@@ -802,7 +632,7 @@ export default function InternationalTransfer() {
               <CardContent>
                 <div className="space-y-3">
                   {popularDestinations.map((dest, index) => (
-                    <div key={`item-${index}`} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <div key={index} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <span className="text-lg">{dest.flag}</span>
