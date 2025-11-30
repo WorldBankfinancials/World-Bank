@@ -1027,14 +1027,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Dashboard Sections - All 6 Components */}
-      <div className="space-y-4 px-4 pb-8">
-        <TransferSection key="transfer-section" />
-        <ReceiveSection key="receive-section" />
-        <AddMoneySection key="addmoney-section" />
-        <AlertsSection key="alerts-section" />
-      </div>
-
       {/* Recent Transactions Card */}
       <div className="px-4 pb-8">
         <Card className="w-full">
