@@ -1025,6 +1025,7 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      </div>
 
       {/* Dashboard Sections - All 6 Components */}
       <div className="space-y-4 px-4 pb-8">
