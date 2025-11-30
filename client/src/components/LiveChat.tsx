@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, Send, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
 
 interface Message {
   id: string;
@@ -20,17 +21,46 @@ interface LiveChatProps {
 
 export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      sender: 'agent',
-      text: 'Hello! How can we help you today?',
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isConnected, setIsConnected] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch messages from database on mount and when user opens chat
+  const { data: chatMessages = [] } = useQuery({
+    queryKey: ['/api/chat/messages'],
+    queryFn: async () => {
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const response = await authenticatedFetch('/api/chat/messages');
+        if (!response.ok) return [];
+        const data = await response.json();
+        return Array.isArray(data) ? data.map((msg: any) => ({
+          id: msg.id || Date.now().toString(),
+          sender: msg.sender || 'agent',
+          text: msg.text || msg.message || '',
+          timestamp: new Date(msg.created_at || msg.timestamp || new Date())
+        })) : [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!isOpen,
+  });
+
+  // Update local messages when query data changes
+  useEffect(() => {
+    if (chatMessages && chatMessages.length > 0) {
+      setMessages(chatMessages);
+    } else if (messages.length === 0) {
+      setMessages([{
+        id: '1',
+        sender: 'agent',
+        text: 'Hello! How can we help you today?',
+        timestamp: new Date()
+      }]);
+    }
+  }, [chatMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -66,9 +96,16 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
           timestamp: new Date()
         };
         setMessages(prev => [...prev, agentMessage]);
+        // Refresh chat messages from server to persist
+        setTimeout(() => {
+          window.dispatchEvent(new Event('refreshChat'));
+        }, 500);
+      } else {
+        toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' });
       }
     } catch (error) {
       console.error('Failed to send message:', error);
+      toast({ title: 'Error', description: 'Connection failed', variant: 'destructive' });
     }
   };
 
