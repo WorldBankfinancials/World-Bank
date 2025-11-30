@@ -151,7 +151,7 @@ export function setupTransferRoutes(app: Express) {
           amount: String(amount),
           currency: 'USD',
           type: 'transfer',
-          transactionType: 'intl',
+          transactionType: 'transfer',
           status: 'pending',
           description: `Intl transfer to ${recipientNameTrunc}`.substring(0, 255),
           recipientName: recipientNameTrunc,
