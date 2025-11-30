@@ -344,9 +344,9 @@ function AddMoneySection() {
           </div>
 
           <div className="grid grid-cols-5 gap-2">
-            {quickAmounts.map((amount) => (
+            {quickAmounts.map((amount, idx) => (
               <Button
-                key={amount}
+                key={`quick-amount-${amount}-${idx}`}
                 variant="outline"
                 size="sm"
                 onClick={() => setAddAmount(amount)}
@@ -875,7 +875,7 @@ export default function Dashboard() {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('my_accounts')}</h3>
         <div className="space-y-3">
           {accounts.map((account, index) => (
-            <Card key={index} className="wb-card">
+            <Card key={account.number || `account-${index}`} className="wb-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
