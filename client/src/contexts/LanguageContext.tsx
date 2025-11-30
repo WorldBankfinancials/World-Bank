@@ -475,7 +475,6 @@ const translations = {
     'mobile_money_desc': 'Send to mobile numbers',
     'digital_wallet': 'Digital Wallet',
     'digital_wallet_desc': 'Secure digital payments',
-    'add_funds_to_account': 'Add funds to your World Bank account',
   },
   zh: {
     // Login & Auth

@@ -5,6 +5,7 @@ import type { User as UserType } from "@shared/schema";
 import NavigationMenu from "./NavigationMenu";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Avatar } from './Avatar';
 
 interface HeaderProps {
@@ -15,6 +16,7 @@ export default function Header({}: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { userProfile } = useAuth();
+  const { t } = useLanguage();
   const [freshUserData, setFreshUserData] = useState<UserType | null>(null);
 
   // Fetch fresh user data once only
