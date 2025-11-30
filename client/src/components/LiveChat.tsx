@@ -28,17 +28,17 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
 
   // Fetch messages from database on mount and when user opens chat
   const { data: chatMessages = [] } = useQuery({
-    queryKey: ['/api/chat/messages'],
+    queryKey: ['/api/chat/history'],
     queryFn: async () => {
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch('/api/chat/messages');
+        const response = await authenticatedFetch('/api/chat/history');
         if (!response.ok) return [];
         const data = await response.json();
         return Array.isArray(data) ? data.map((msg: any) => ({
-          id: msg.id || Date.now().toString(),
-          sender: msg.sender || 'agent',
-          text: msg.text || msg.message || '',
+          id: msg.id || msg.message_id || Date.now().toString(),
+          sender: msg.sender_type === 'user' ? 'user' : 'agent',
+          text: msg.content || msg.message || msg.text || '',
           timestamp: new Date(msg.created_at || msg.timestamp || new Date())
         })) : [];
       } catch {
@@ -46,6 +46,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
       }
     },
     enabled: !!isOpen,
+    staleTime: 30000,
   });
 
   // Update local messages when query data changes
