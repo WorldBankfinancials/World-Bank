@@ -39,18 +39,18 @@ export default function Transfer() {
   const [dataError, setDataError] = useState<string | null>(null);
   
   // Fetch user data with proper email parameter
-  const { data: user, isLoading, error: fetchError } = useQuery<User>({
+  const { data: user = {}, isLoading, error: fetchError } = useQuery<User>({
     queryKey: ['/api/user', userProfile?.email],
     queryFn: async () => {
       try {
-        if (!userProfile?.email) return null;
+        if (!userProfile?.email) throw new Error('User email not available');
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const response = await authenticatedFetch(`/api/user?email=${encodeURIComponent(userProfile.email)}`);
         if (!response.ok) throw new Error('Failed to fetch user data');
         return response.json();
       } catch (error: any) {
         setDataError(error?.message || 'Failed to load user data');
-        throw error;
+        return { email: userProfile?.email };
       }
     },
     enabled: !!userProfile?.email
@@ -91,6 +91,24 @@ export default function Transfer() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">{t('loading')}</div>
+      </div>
+    );
+  }
+
+  if (!user || !userProfile) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="flex items-center justify-center p-4 mt-20">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-6">
+              <div className="text-center text-red-600">
+                <p>Unable to load user data. Please refresh or login again.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <BottomNavigation />
       </div>
     );
   }
