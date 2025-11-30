@@ -80,8 +80,8 @@ export default function DigitalWallet() {
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Digital Wallet</h1>
-            <p className="text-sm text-gray-600">Secure digital payments</p>
+            <h1 className="text-xl font-semibold text-gray-900">{t('digital_wallet')}</h1>
+            <p className="text-sm text-gray-600">{t('digital_wallet_desc')}</p>
           </div>
           <Button onClick={() => toast({ title: 'Add Funds', description: 'Redirecting to add funds page...' })} className="bg-blue-600 text-white">
             <Plus className="w-4 h-4 mr-1" />

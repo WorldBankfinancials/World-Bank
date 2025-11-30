@@ -72,7 +72,7 @@ export default function Header({}: HeaderProps) {
     {
       category: "DIGITAL SERVICES",
       items: [
-        { icon: CreditCard, label: "Digital Wallet", href: "/digital-wallet" },
+        { icon: CreditCard, label: t('digital_wallet'), href: "/digital-wallet" },
         { icon: User, label: "Mobile Pay", href: "/mobile-pay" },
         { icon: ArrowUpRight, label: "International Transfer", href: "/international-transfer" }
       ]

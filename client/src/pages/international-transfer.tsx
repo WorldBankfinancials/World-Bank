@@ -89,14 +89,14 @@ export default function InternationalTransfer() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">Loading your account...</p>
+          <p className="text-gray-600">{t('loading')}</p>
         </div>
       </div>
     );
   }
 
   // Show error if user data failed to load
-  if (!user) {
+  if (!user && userProfile?.email) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -104,7 +104,30 @@ export default function InternationalTransfer() {
           <Card className="w-full max-w-md">
             <CardContent className="pt-6">
               <div className="text-center text-red-600">
-                <p>Unable to load your account. Please refresh or login again.</p>
+                <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-500" />
+                <p className="font-semibold mb-2">{t('failed_to_load')}</p>
+                <p className="text-sm">{t('failed_to_fetch')}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <BottomNavigation />
+      </div>
+    );
+  }
+
+  // Safety fallback: if both user and userProfile are missing
+  if (!user && !userProfile?.email) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="flex items-center justify-center p-4 mt-20">
+          <Card className="w-full max-w-md">
+            <CardContent className="pt-6">
+              <div className="text-center text-amber-600">
+                <AlertCircle className="w-8 h-8 mx-auto mb-3 text-amber-500" />
+                <p className="font-semibold mb-2">Profile Not Loaded</p>
+                <p className="text-sm">Please log in again to continue</p>
               </div>
             </CardContent>
           </Card>

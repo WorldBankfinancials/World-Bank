@@ -158,7 +158,7 @@ export default function AddMoney() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <CreditCard className="w-5 h-5 text-green-600" />
-                <span>Payment Method</span>
+                <span>{t('payment_method')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">

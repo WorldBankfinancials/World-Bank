@@ -192,7 +192,7 @@ export default function QuickActions() {
     },
     { 
       icon: Wallet, 
-      label: "Digital Wallet",
+      label: t('digital_wallet'),
       onClick: () => setLocation("/digital-wallet")
     },
     { 

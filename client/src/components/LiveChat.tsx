@@ -25,6 +25,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   const [inputText, setInputText] = useState('');
   const [isConnected, setIsConnected] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const subscriptionRef = useRef<any>(null);
 
   // Fetch messages from database on mount and when user opens chat
   const { data: chatMessages = [] } = useQuery({
@@ -46,7 +47,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
       }
     },
     enabled: !!isOpen,
-    staleTime: 30000,
+    staleTime: 5000,
   });
 
   // Update local messages when query data changes
@@ -62,6 +63,55 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
       }]);
     }
   }, [chatMessages]);
+
+  // SUPABASE REALTIME: Subscribe to chat messages changes
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const setupRealtimeSubscription = async () => {
+      try {
+        // Subscribe to bank_chat_messages table changes
+        const channel = supabase
+          .channel('chat_messages_realtime')
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'bank_chat_messages'
+            },
+            (payload: any) => {
+              const newMessage: Message = {
+                id: payload.new.id?.toString() || Date.now().toString(),
+                sender: payload.new.sender_type === 'user' ? 'user' : 'agent',
+                text: payload.new.content || payload.new.message || '',
+                timestamp: new Date(payload.new.created_at || new Date())
+              };
+              setMessages(prev => [...prev, newMessage]);
+            }
+          )
+          .subscribe((status) => {
+            setIsConnected(status === 'SUBSCRIBED');
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Connected to Supabase Realtime chat');
+            }
+          });
+
+        subscriptionRef.current = channel;
+      } catch (error) {
+        console.error('❌ Realtime subscription failed:', error);
+        setIsConnected(false);
+      }
+    };
+
+    setupRealtimeSubscription();
+
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+      }
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -97,10 +147,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
           timestamp: new Date()
         };
         setMessages(prev => [...prev, agentMessage]);
-        // Refresh chat messages from server to persist
-        setTimeout(() => {
-          window.dispatchEvent(new Event('refreshChat'));
-        }, 500);
       } else {
         toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' });
       }
@@ -186,7 +232,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
               </div>
             </div>
             {isConnected && (
-              <p className="text-xs text-green-700 font-semibold text-center">✓ Connected to support</p>
+              <p className="text-xs text-green-700 font-semibold text-center">✓ Connected to support (Realtime)</p>
             )}
           </div>
         </div>

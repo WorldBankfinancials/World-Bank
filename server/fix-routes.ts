@@ -547,6 +547,39 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload user avatar/profile photo - PROTECTED with JWT authentication
+  app.post('/api/user/upload-avatar', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { avatarUrl } = req.body as { avatarUrl: string };
+      
+      if (!avatarUrl) {
+        return res.status(400).json({ error: 'Avatar URL required' });
+      }
+
+      // Validate it's a data URL (base64 encoded image)
+      if (!avatarUrl.startsWith('data:image/')) {
+        return res.status(400).json({ error: 'Invalid image format' });
+      }
+
+      const user = await (storage).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Update user with avatar
+      const updatedUser = await storage.updateUser(user.id, { avatarUrl });
+
+      res.json({
+        success: true,
+        message: 'Profile photo updated successfully',
+        user: updatedUser
+      });
+    } catch (error: any) {
+      console.error('❌ Avatar upload failed:', error);
+      res.status(500).json({ error: 'Failed to upload avatar', details: error.message });
+    }
+  });
+
   // Real user accounts endpoint - PROTECTED with JWT authentication
   app.post('/api/accounts/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
