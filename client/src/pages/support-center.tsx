@@ -1,4 +1,5 @@
 import type { User } from "@shared/schema";
+import { useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -7,10 +8,12 @@ import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Search, Phone, MessageCircle, FileText, Clock } from "lucide-react";
+import LiveChat from "@/components/LiveChat";
 
 
 export default function SupportCenter() {
   const { t } = useLanguage();
+  const [showLiveChat, setShowLiveChat] = useState(false);
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -67,7 +70,10 @@ export default function SupportCenter() {
             </CardHeader>
             <CardContent>
               <p className="text-wb-text mb-4">Chat with our support team</p>
-              <Button className="bg-wb-blue text-white w-full">
+              <Button 
+                onClick={() => setShowLiveChat(true)}
+                className="bg-wb-blue text-white w-full"
+              >
                 Start Chat
               </Button>
             </CardContent>
@@ -111,6 +117,11 @@ export default function SupportCenter() {
           </CardContent>
         </Card>
       </div>
+
+      <LiveChat 
+        isOpen={showLiveChat} 
+        onClose={() => setShowLiveChat(false)} 
+      />
 
       <Footer />
     </div>

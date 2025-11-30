@@ -37,14 +37,41 @@ export default function CustomerSupport() {
     }
     setIsSubmitting(true);
     try {
-      toast({
-        title: 'Ticket Submitted',
-        description: 'Support ticket submitted successfully!',
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/support/tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject,
+          category,
+          priority,
+          description,
+          userEmail: user?.email
+        })
       });
-      setSubject('');
-      setCategory('');
-      setPriority('');
-      setDescription('');
+
+      if (response.ok) {
+        toast({
+          title: 'Ticket Submitted',
+          description: 'Support ticket submitted successfully!',
+        });
+        setSubject('');
+        setCategory('');
+        setPriority('');
+        setDescription('');
+      } else {
+        toast({
+          title: 'Submission Failed',
+          description: 'Failed to submit ticket. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'An error occurred while submitting your ticket.',
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }
