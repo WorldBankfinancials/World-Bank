@@ -51,15 +51,13 @@ export default function InternationalTransfer() {
   
   // CRITICAL: Fetch user data FIRST before using it
   const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user', userProfile?.email],
+    queryKey: ['/api/user'],
     queryFn: async () => {
-      if (!userProfile?.email) return null;
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch(`/api/user?email=${encodeURIComponent(userProfile.email)}`);
+      const response = await authenticatedFetch('/api/user');
       if (!response.ok) throw new Error('Failed to fetch user');
       return response.json();
-    },
-    enabled: !!userProfile?.email
+    }
   });
 
   const handleInternationalTransfer = () => {
