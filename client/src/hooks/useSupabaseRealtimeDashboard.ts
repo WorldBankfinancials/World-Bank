@@ -1,7 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { getDashboardWebSocketClient, resetDashboardWebSocketClient } from '@/lib/websocket-dashboard';
 
 interface Account {
   id: number;
@@ -19,19 +17,21 @@ interface Transaction {
   date?: string;
 }
 
+/**
+ * Supabase Realtime + Polling for accounts
+ * Primary: Supabase Realtime instant updates
+ * Fallback: Smart polling if realtime fails
+ */
 export function useSupabaseRealtimeAccounts(
   onAccountsChange: (accounts: Account[]) => void,
   enabled = true
 ) {
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const wsClientRef = useRef<any>(null);
 
   const fetchAccountsData = useCallback(async () => {
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch(`/api/accounts?t=${Date.now()}`, {
-        headers: { 'Cache-Control': 'no-cache' }
-      });
+      const response = await authenticatedFetch(`/api/accounts?t=${Date.now()}`);
 
       if (response.ok) {
         const accountsData = await response.json();
@@ -40,74 +40,41 @@ export function useSupabaseRealtimeAccounts(
         }
       }
     } catch (error) {
-      console.error('Error fetching accounts:', error);
+      // Silent fail - polling will retry
     }
   }, [onAccountsChange]);
 
   useEffect(() => {
     if (!enabled) return;
 
-    // First fetch
+    // Initial fetch
     fetchAccountsData();
 
-    // Setup WebSocket connection for real-time updates
-    const setupWebSocket = async () => {
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const userResponse = await authenticatedFetch('/api/user');
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          const wsClient = getDashboardWebSocketClient(userData.id, userData.email);
-          
-          // Connect if not already connected
-          if (!wsClient.isConnected()) {
-            await wsClient.connect();
-          }
+    // Setup Supabase Realtime subscription
+    try {
+      const channel = supabase
+        .channel(`realtime:accounts:${Math.random()}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'bank_accounts' },
+          () => fetchAccountsData()
+        )
+        .subscribe();
 
-          wsClientRef.current = wsClient;
-
-          // Listen for account updates via WebSocket
-          wsClient.on('account_update', () => {
-            fetchAccountsData();
-          });
-
-          // Ping every 30 seconds to keep connection alive
-          const pingInterval = setInterval(() => wsClient.ping(), 30000);
-          unsubscribeRef.current = () => {
-            clearInterval(pingInterval);
-            wsClient.off('account_update');
-          };
-        }
-      } catch (error) {
-        console.warn('WebSocket setup failed, using Supabase Realtime:', error);
-        
-        // Fallback to Supabase Realtime
-        try {
-          const channel = supabase
-            .channel(`realtime:bank_accounts:${Date.now()}`)
-            .on(
-              'postgres_changes',
-              {
-                event: '*',
-                schema: 'public',
-                table: 'bank_accounts'
-              },
-              (payload: any) => {
-                fetchAccountsData();
-              }
-            )
-            .subscribe();
-
-          unsubscribeRef.current = () => channel.unsubscribe();
-        } catch (supabaseError) {
-          console.warn('Supabase Realtime failed, using polling:', supabaseError);
-          const pollInterval = setInterval(fetchAccountsData, 5000);
-          unsubscribeRef.current = () => clearInterval(pollInterval);
-        }
-      }
-    };
-
-    setupWebSocket();
+      unsubscribeRef.current = () => channel.unsubscribe();
+      
+      // Fallback polling every 5 seconds
+      const pollInterval = setInterval(fetchAccountsData, 5000);
+      const originalUnsub = unsubscribeRef.current;
+      unsubscribeRef.current = () => {
+        originalUnsub?.();
+        clearInterval(pollInterval);
+      };
+    } catch (error) {
+      // If realtime fails, use polling
+      const pollInterval = setInterval(fetchAccountsData, 5000);
+      unsubscribeRef.current = () => clearInterval(pollInterval);
+    }
 
     return () => {
       if (unsubscribeRef.current) {
@@ -119,19 +86,19 @@ export function useSupabaseRealtimeAccounts(
   return { fetchAccountsData };
 }
 
+/**
+ * Supabase Realtime + Polling for transactions
+ */
 export function useSupabaseRealtimeTransactions(
   onTransactionsChange: (transactions: Transaction[]) => void,
   enabled = true
 ) {
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const wsClientRef = useRef<any>(null);
 
   const fetchTransactionsData = useCallback(async () => {
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/transactions', {
-        headers: { 'Cache-Control': 'no-cache' }
-      });
+      const response = await authenticatedFetch('/api/transactions');
 
       if (response.ok) {
         const data = await response.json();
@@ -148,70 +115,41 @@ export function useSupabaseRealtimeTransactions(
         }
       }
     } catch (error) {
-      console.error('Error fetching transactions:', error);
+      // Silent fail - polling will retry
     }
   }, [onTransactionsChange]);
 
   useEffect(() => {
     if (!enabled) return;
 
-    // First fetch
+    // Initial fetch
     fetchTransactionsData();
 
-    // Setup WebSocket connection for real-time updates
-    const setupWebSocket = async () => {
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const userResponse = await authenticatedFetch('/api/user');
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          const wsClient = getDashboardWebSocketClient(userData.id, userData.email);
-          
-          if (!wsClient.isConnected()) {
-            await wsClient.connect();
-          }
+    // Setup Supabase Realtime subscription
+    try {
+      const channel = supabase
+        .channel(`realtime:transactions:${Math.random()}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'bank_transactions' },
+          () => fetchTransactionsData()
+        )
+        .subscribe();
 
-          wsClientRef.current = wsClient;
+      unsubscribeRef.current = () => channel.unsubscribe();
 
-          wsClient.on('transaction_update', () => {
-            fetchTransactionsData();
-          });
-
-          const pingInterval = setInterval(() => wsClient.ping(), 30000);
-          unsubscribeRef.current = () => {
-            clearInterval(pingInterval);
-            wsClient.off('transaction_update');
-          };
-        }
-      } catch (error) {
-        console.warn('WebSocket setup failed, using Supabase Realtime:', error);
-        
-        try {
-          const channel = supabase
-            .channel(`realtime:bank_transactions:${Date.now()}`)
-            .on(
-              'postgres_changes',
-              {
-                event: '*',
-                schema: 'public',
-                table: 'bank_transactions'
-              },
-              (payload: any) => {
-                fetchTransactionsData();
-              }
-            )
-            .subscribe();
-
-          unsubscribeRef.current = () => channel.unsubscribe();
-        } catch (supabaseError) {
-          console.warn('Supabase Realtime failed, using polling:', supabaseError);
-          const pollInterval = setInterval(fetchTransactionsData, 3000);
-          unsubscribeRef.current = () => clearInterval(pollInterval);
-        }
-      }
-    };
-
-    setupWebSocket();
+      // Fallback polling every 3 seconds
+      const pollInterval = setInterval(fetchTransactionsData, 3000);
+      const originalUnsub = unsubscribeRef.current;
+      unsubscribeRef.current = () => {
+        originalUnsub?.();
+        clearInterval(pollInterval);
+      };
+    } catch (error) {
+      // If realtime fails, use polling
+      const pollInterval = setInterval(fetchTransactionsData, 3000);
+      unsubscribeRef.current = () => clearInterval(pollInterval);
+    }
 
     return () => {
       if (unsubscribeRef.current) {
@@ -223,89 +161,60 @@ export function useSupabaseRealtimeTransactions(
   return { fetchTransactionsData };
 }
 
+/**
+ * Supabase Realtime + Polling for user balance
+ */
 export function useSupabaseRealtimeUserBalance(
   onUserChange: (userData: any) => void,
   enabled = true
 ) {
   const unsubscribeRef = useRef<(() => void) | null>(null);
-  const wsClientRef = useRef<any>(null);
 
   const fetchUserData = useCallback(async () => {
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch(`/api/user`, {
-        headers: { 'Cache-Control': 'no-cache' }
-      });
+      const response = await authenticatedFetch(`/api/user`);
 
       if (response.ok) {
         const data = await response.json();
         onUserChange(data);
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      // Silent fail - polling will retry
     }
   }, [onUserChange]);
 
   useEffect(() => {
     if (!enabled) return;
 
-    // First fetch
+    // Initial fetch
     fetchUserData();
 
-    // Setup WebSocket connection for real-time updates
-    const setupWebSocket = async () => {
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const userResponse = await authenticatedFetch('/api/user');
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          const wsClient = getDashboardWebSocketClient(userData.id, userData.email);
-          
-          if (!wsClient.isConnected()) {
-            await wsClient.connect();
-          }
+    // Setup Supabase Realtime subscription
+    try {
+      const channel = supabase
+        .channel(`realtime:users:${Math.random()}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'bank_users' },
+          () => fetchUserData()
+        )
+        .subscribe();
 
-          wsClientRef.current = wsClient;
+      unsubscribeRef.current = () => channel.unsubscribe();
 
-          wsClient.on('user_update', () => {
-            fetchUserData();
-          });
-
-          const pingInterval = setInterval(() => wsClient.ping(), 30000);
-          unsubscribeRef.current = () => {
-            clearInterval(pingInterval);
-            wsClient.off('user_update');
-          };
-        }
-      } catch (error) {
-        console.warn('WebSocket setup failed, using Supabase Realtime:', error);
-        
-        try {
-          const channel = supabase
-            .channel(`realtime:bank_users:${Date.now()}`)
-            .on(
-              'postgres_changes',
-              {
-                event: '*',
-                schema: 'public',
-                table: 'bank_users'
-              },
-              (payload: any) => {
-                fetchUserData();
-              }
-            )
-            .subscribe();
-
-          unsubscribeRef.current = () => channel.unsubscribe();
-        } catch (supabaseError) {
-          console.warn('Supabase Realtime failed, using polling:', supabaseError);
-          const pollInterval = setInterval(fetchUserData, 4000);
-          unsubscribeRef.current = () => clearInterval(pollInterval);
-        }
-      }
-    };
-
-    setupWebSocket();
+      // Fallback polling every 4 seconds
+      const pollInterval = setInterval(fetchUserData, 4000);
+      const originalUnsub = unsubscribeRef.current;
+      unsubscribeRef.current = () => {
+        originalUnsub?.();
+        clearInterval(pollInterval);
+      };
+    } catch (error) {
+      // If realtime fails, use polling
+      const pollInterval = setInterval(fetchUserData, 4000);
+      unsubscribeRef.current = () => clearInterval(pollInterval);
+    }
 
     return () => {
       if (unsubscribeRef.current) {
