@@ -552,6 +552,10 @@ const translations = {
     'loan_services': 'Loan Services',
     'education_financing': 'Education Financing',
     'insurance_services': 'Insurance Services',
+
+    // Business Banking
+    'corporate_clients_label': 'Corporate Clients',
+    'assets_under_mgmt_label': 'Assets Under Management',
   },
   zh: {
     // Login & Auth
@@ -985,6 +989,10 @@ const translations = {
     'loan_services': '贷款服务',
     'education_financing': '教育融资',
     'insurance_services': '保险服务',
+
+    // Business Banking
+    'corporate_clients_label': '企业客户',
+    'assets_under_mgmt_label': '管理资产',
 
     // Industries
     'industry_technology': '科技',

@@ -158,7 +158,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 w-96 max-h-96 z-50 shadow-2xl flex flex-col">
+    <div className="fixed bottom-32 right-6 w-96 max-h-80 z-50 shadow-2xl flex flex-col">
       <Card className="rounded-xl overflow-hidden border-2 border-blue-500 bg-white h-full flex flex-col">
         <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-3">
