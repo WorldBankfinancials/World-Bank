@@ -467,7 +467,15 @@ const translations = {
     'go_to_dashboard': 'Go to Dashboard',
     'support_ticket_submission_failed': 'Support Ticket Submission Failed',
     'your_support_ticket_could_not_be_submitted': 'Your support ticket could not be submitted. Please try again or contact us directly.',
-    'preferences_saved': 'Preferences saved successfully.'
+    'preferences_saved': 'Preferences saved successfully.',
+
+    // Add Money / Payment Methods
+    'payment_method': 'Payment Method',
+    'mobile_money': 'Mobile Money',
+    'mobile_money_desc': 'Send to mobile numbers',
+    'digital_wallet': 'Digital Wallet',
+    'digital_wallet_desc': 'Secure digital payments',
+    'add_funds_to_account': 'Add funds to your World Bank account',
   },
   zh: {
     // Login & Auth
