@@ -27,6 +27,7 @@ import {
   Trash2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useRealtimeAlerts } from "@/hooks/useRealtimeAlerts";
 
 interface Alert {
   id: number;
@@ -43,6 +44,9 @@ export default function Alerts() {
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
+
+  // Real-time alerts via Supabase Realtime
+  useRealtimeAlerts(user?.id ? (typeof user.id === 'number' ? user.id : parseInt(user.id)) : undefined, !!user);
 
   // Fetch real alerts from database
   const { data: alerts = [], isLoading: alertsLoading } = useQuery<Alert[]>({
