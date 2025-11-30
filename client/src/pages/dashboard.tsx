@@ -458,7 +458,7 @@ function AlertsSection() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
-            {alerts.slice(0, 3).map((alert: any, idx: number) => (
+            {Array.isArray(alerts) && alerts.length > 0 ? alerts.slice(0, 3).map((alert: any, idx: number) => (
               <div
                 key={`alert-${alert.id || idx}`}
                 className={`p-3 border rounded-lg ${!alert.read ? 'bg-blue-50 border-blue-200' : 'bg-white'}`}
@@ -470,13 +470,13 @@ function AlertsSection() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
-                        <h3 className="font-medium text-sm">{alert.title}</h3>
+                        <h3 className="font-medium text-sm">{alert.title || 'Alert'}</h3>
                         {!alert.read && (
                           <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                         )}
                       </div>
-                      <p className="text-xs text-gray-600 mb-1">{alert.message}</p>
-                      <p className="text-xs text-gray-500">{alert.time}</p>
+                      <p className="text-xs text-gray-600 mb-1">{alert.message || 'New notification'}</p>
+                      <p className="text-xs text-gray-500">{alert.time || new Date().toLocaleDateString()}</p>
                     </div>
                   </div>
                   {!alert.read && (
@@ -490,7 +490,9 @@ function AlertsSection() {
                   )}
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-4 text-gray-500">No alerts</div>
+            )}
           </div>
 
           <div className="border-t pt-4">
@@ -762,12 +764,12 @@ export default function Dashboard() {
                   {/* Scrollable Menu Items */}
                   <div className="max-h-64 overflow-y-auto">
                     {profileMenuItems.map((section, sectionIndex) => (
-                      <div key={sectionIndex} className="mb-4">
+                      <div key={`section-${section.category.toLowerCase().replace(/\s+/g, '-')}`} className="mb-4">
                         <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                           {section.category}
                         </div>
                         {section.items.map((item, itemIndex) => (
-                          <Link key={itemIndex} href={item.href}>
+                          <Link key={`${section.category}-${item.label}`} href={item.href}>
                             <div 
                               onClick={() => setShowProfileMenu(false)}
                               className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors cursor-pointer"
