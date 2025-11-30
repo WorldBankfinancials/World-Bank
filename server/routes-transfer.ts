@@ -155,6 +155,18 @@ export function setupTransferRoutes(app: Express) {
 
       // Create transaction with pending status
       try {
+        // ✅ CRITICAL: DEBIT ACCOUNT IMMEDIATELY FOR INTERNATIONAL TRANSFER
+        const numAmount = parseFloat(String(amount));
+        const currentBalance = parseFloat(String(user.balance || '0'));
+        
+        if (currentBalance < numAmount) {
+          return res.status(400).json({ message: "Insufficient funds for this international transfer" });
+        }
+        
+        // Deduct amount from user balance
+        const newBalance = currentBalance - numAmount;
+        await storage.updateUserBalance(user.id, newBalance);
+        
         // Truncate all fields to match database constraints
         const recipientNameTrunc = String(recipientName).substring(0, 20);
         const recipientCountryTrunc = String(recipientCountry).substring(0, 20);
@@ -177,10 +189,11 @@ export function setupTransferRoutes(app: Express) {
         const transaction = await storage.createTransaction(transactionData);
 
         res.json({ 
-          message: "International transfer submitted successfully", 
+          message: "International transfer submitted successfully - funds debited, awaiting admin approval",
           transactionId: transactionId,
           status: "pending",
-          amount: amount
+          amount: amount,
+          newBalance: newBalance
         });
       } catch (dbError: any) {
         console.error('International transfer creation error:', dbError);
@@ -362,6 +375,114 @@ export function setupTransferRoutes(app: Express) {
     try {
       const pendingTransfers = await storage.getPendingTransactions();
       res.json(pendingTransfers);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin approve international transfer - PROTECTED: requires admin role
+  app.post('/api/admin/international-transfers/:id/approve', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const transactionId = parseInt(req.params.id);
+      const { notes } = req.body;
+      
+      // SECURITY: Get admin user from authenticated JWT
+      const admin = await storage.getUserByEmail(req.user!.email);
+      const adminId = admin?.id || 1;
+
+      // Get transaction to verify it exists
+      const pendingTransactions = await storage.getPendingTransactions();
+      const targetTxn = pendingTransactions.find((t: any) => t.id === transactionId);
+      
+      if (!targetTxn) {
+        return res.status(404).json({ message: "International transfer not found" });
+      }
+
+      // ✅ CRITICAL: When approved, funds are now TRANSFERRED (already debited)
+      // Status changes to 'completed' to indicate success
+      const transaction = await storage.updateTransactionStatus(transactionId, 'completed', adminId, notes);
+      
+      if (transaction) {
+        // Log admin action
+        await storage.createAdminAction({
+          adminId: adminId,
+          action: 'approve_international_transfer',
+          targetType: 'transaction',
+          targetId: transactionId,
+          details: notes ? { notes } : {}
+        });
+      }
+
+      res.json({ message: "International transfer approved successfully - funds transferred", transaction });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin reject international transfer with manual reversal option - PROTECTED: requires admin role
+  app.post('/api/admin/international-transfers/:id/reject', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const transactionId = parseInt(req.params.id);
+      const { notes, reverseToAccount } = req.body;
+      
+      // SECURITY: Get admin user from authenticated JWT
+      const admin = await storage.getUserByEmail(req.user!.email);
+      const adminId = admin?.id || 1;
+
+      // Get transaction details
+      const pendingTransactions = await storage.getPendingTransactions();
+      const targetTxn = pendingTransactions.find((t: any) => t.id === transactionId);
+      
+      if (!targetTxn) {
+        return res.status(404).json({ message: "International transfer not found" });
+      }
+
+      const transaction = await storage.updateTransactionStatus(transactionId, 'rejected', adminId, notes);
+      
+      // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
+      // If reverseToAccount = true, credit back to user's account
+      if (reverseToAccount && targetTxn.fromUserId) {
+        const customer = await storage.getUser(targetTxn.fromUserId);
+        if (customer) {
+          const numAmount = parseFloat(String(targetTxn.amount));
+          const currentBalance = parseFloat(String(customer.balance || '0'));
+          const reversedBalance = currentBalance + numAmount;
+          await storage.updateUserBalance(targetTxn.fromUserId, reversedBalance);
+        }
+      }
+      
+      if (transaction) {
+        // Log admin action
+        await storage.createAdminAction({
+          adminId: adminId,
+          action: 'reject_international_transfer',
+          targetType: 'transaction',
+          targetId: transactionId,
+          details: { 
+            notes, 
+            reversed: reverseToAccount || false 
+          }
+        });
+
+        // Create automatic support ticket for rejected international transfer
+        if (targetTxn.fromUserId) {
+          await storage.createSupportTicket({
+            userId: targetTxn.fromUserId,
+            subject: `International Transfer Rejection - Transaction #${transaction.id}`,
+            description: `Your international transfer has been rejected.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Recipient Country: ${transaction.recipientCountry}\n- Reason for rejection: ${notes}\n- Funds Reversed: ${reverseToAccount ? 'Yes' : 'No'}\n\nPlease contact support for assistance.`,
+            priority: 'high',
+            status: 'open'
+          });
+        }
+      }
+
+      res.json({ 
+        message: reverseToAccount 
+          ? "International transfer rejected and funds reversed to customer account" 
+          : "International transfer rejected - funds retained in pending state", 
+        transaction,
+        reversed: reverseToAccount || false
+      });
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
