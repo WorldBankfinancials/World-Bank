@@ -27,7 +27,7 @@ import * as bcrypt from 'bcryptjs';
 // Type definitions for transactions
 interface Transaction {
   id: string | number;
-  createdAt: string | Date;
+  createdAt: string | Date | null;
   [key: string]: any;
 }
 
