@@ -1,3 +1,4 @@
+import { verifySupabaseIntegration } from './database-verification';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerFixedRoutes } from "./fix-routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -63,6 +64,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Verify Supabase integration is active
+  verifySupabaseIntegration();
+  
+  // Initialize Express server with all routes
   const server = await registerFixedRoutes(app);
 
   // Enable WebSocket for live chat with separate path to avoid Vite conflicts
