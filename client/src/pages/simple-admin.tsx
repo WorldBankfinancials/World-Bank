@@ -239,53 +239,30 @@ export default function SimpleAdmin() {
   };
 
   const fetchSupportTickets = async () => {
-    const token = sessionStorage.getItem('adminToken');
-    if (!token) return; // Short-circuit if no token
-    
     try {
-      // Server-side admin authentication via API
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: username,
-          password: password
-        })
-      });
+      // Use authenticatedFetch to get support tickets with proper JWT auth
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/support-tickets');
       
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Authentication failed' }));
+        const error = await response.json().catch(() => ({ message: 'Failed to fetch' }));
         toast({
-          title: 'Authentication Failed',
-          description: error.message || 'Invalid admin credentials. Please try again.',
+          title: 'Fetch Failed',
+          description: error.message || 'Unable to load support tickets.',
           variant: 'destructive'
         });
         return;
       }
       
-      const data = await response.json().catch(() => {
-        toast({
-          title: 'Parse Error',
-          description: 'Failed to parse login response',
-          variant: 'destructive'
-        });
-        return null;
-      });
-      
-      if (!data) return;
-      
-      // Store admin token in sessionStorage for subsequent API requests
-      sessionStorage.setItem('adminToken', data.token);
-      sessionStorage.setItem('adminUser', JSON.stringify(data.user));
-      
-      setIsAuthenticated(true);
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setSupportTickets(data);
+      }
     } catch (error) {
-      // Login error occurred
+      // Error fetching tickets
       toast({
-        title: 'Login Error',
-        description: 'Failed to authenticate. Please check your credentials and try again.',
+        title: 'Error Loading Tickets',
+        description: 'Failed to load support tickets. Please try again.',
         variant: 'destructive'
       });
     }

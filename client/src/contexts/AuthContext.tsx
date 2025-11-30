@@ -72,16 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const token = localStorage.getItem('jwt_token') || localStorage.getItem('token');
-      if (!token) {
-        console.warn('⚠️ AuthContext: No token available for API call');
-        return;
-      }
-
       console.log('📥 AuthContext: Fetching user profile...');
-      const response = await fetch(`/api/users/${authUser.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/users/${authUser.id}`);
       
       if (!response.ok) {
         console.warn(`⚠️ AuthContext: Failed to fetch user profile (${response.status})`);

@@ -2316,7 +2316,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         status: transfer.status,
         referenceNumber: transfer.referenceNumber,
         amount: transfer.amount,
-        createdAt: transfer.createdAt
+        type: transfer.type,
+        currency: transfer.currency,
+        description: transfer.description,
+        recipientName: transfer.recipientName,
+        recipientCountry: transfer.recipientCountry,
+        createdAt: transfer.createdAt,
+        updatedAt: transfer.updatedAt
       });
     } catch (error: any) {
       console.error('❌ Transfer status error:', error.message, error);
