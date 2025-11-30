@@ -79,6 +79,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { CustomerData, TransactionData } from "@/types";
+import { useSupabaseRealtimeAccounts, useSupabaseRealtimeTransactions, useSupabaseRealtimeUserBalance } from "@/hooks/useSupabaseRealtimeDashboard";
 
 export default function Dashboard() {
   const { t } = useLanguage();
@@ -128,30 +129,8 @@ export default function Dashboard() {
   //   userProfile?.fullName || userProfile?.email
   // );
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch(`/api/user`, {
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setUserData(data);
-        }
-      } catch (error) {
-      }
-    };
-
-    fetchUserData();
-    
-    // Refresh every 3 seconds for real-time updates
-    const interval = setInterval(fetchUserData, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  // Subscribe to realtime user balance updates
+  useSupabaseRealtimeUserBalance((data) => setUserData(data), true);
 
   useEffect(() => {
     const handleToggleChat = () => setIsChatOpen(!isChatOpen);
@@ -170,49 +149,25 @@ export default function Dashboard() {
     id: number;
   }>>([]);
 
-  useEffect(() => {
-    const fetchAccounts = async () => {
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch(`/api/accounts?t=${Date.now()}`, {
-          headers: {
-            'Cache-Control': 'no-cache'
-          }
-        });
-        
-        if (response.ok) {
-          const accountsData = await response.json();
+  // Subscribe to realtime account updates
+  useSupabaseRealtimeAccounts((accountsData: any[]) => {
+    if (Array.isArray(accountsData) && accountsData.length > 0) {
+      const formattedAccounts = accountsData.map((account: any) => ({
+        type: account.accountType ? account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1) : 'Account',
+        number: account.accountNumber ? `****${account.accountNumber.slice(-4)}` : '****0000',
+        balance: account.balance ? parseFloat(account.balance.toString()) : 0,
+        icon: account.accountType === 'checking' ? Wallet : 
+              account.accountType === 'savings' ? Building2 : TrendingUp,
+        id: account.id
+      }));
+      setAccounts(formattedAccounts);
+    }
+  }, true);
 
-          if (Array.isArray(accountsData) && accountsData.length > 0) {
-            const formattedAccounts = accountsData.map((account: any) => ({
-              type: account.accountType ? account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1) : 'Account',
-              number: account.accountNumber ? `****${account.accountNumber.slice(-4)}` : '****0000',
-              balance: account.balance ? parseFloat(account.balance.toString()) : 0,
-              icon: account.accountType === 'checking' ? Wallet : 
-                    account.accountType === 'savings' ? Building2 : TrendingUp,
-              id: account.id
-            }));
-            setAccounts(formattedAccounts);
-          }
-        }
-      } catch (error) {
-      }
-    };
-
-    fetchAccounts();
-    
-    // Refresh accounts every 2 seconds for realtime
-    const interval = setInterval(fetchAccounts, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Refresh transactions every 2 seconds for realtime
-  useEffect(() => {
-    const interval = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: ['/api/transactions/recent'] });
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [queryClient]);
+  // Subscribe to realtime transaction updates
+  useSupabaseRealtimeTransactions((transactions: any[]) => {
+    queryClient.setQueryData(['/api/transactions/recent'], transactions);
+  }, true);
 
   const { signOut } = useAuth();
   
