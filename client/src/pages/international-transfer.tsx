@@ -54,14 +54,7 @@ export default function InternationalTransfer() {
   
   // Fetch user data - called at top level
   const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user'],
-    queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/user');
-      if (!response.ok) throw new Error('Failed to fetch user');
-      return response.json();
-    },
-    staleTime: 60000
+    queryKey: ['/api/user']
   });
 
   // Fetch exchange rates - top level
