@@ -2335,9 +2335,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const referenceNumber = generateReferenceNumber('WB');
 
-      // Get authenticated user's account
-      const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 1);
-      const userAccounts = await storage.getUserAccounts(userId);
+      // Get authenticated user's account using email from auth middleware
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+      
+      const userAccounts = await storage.getUserAccounts(user.id);
       if (!userAccounts || userAccounts.length === 0) {
         return res.status(400).json({ error: 'User has no accounts' });
       }
@@ -2449,9 +2453,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const referenceNumber = generateReferenceNumber('INT');
       
-      // Get authenticated user's account
-      const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 1);
-      const userAccounts = await storage.getUserAccounts(userId);
+      // Get authenticated user's account using email from auth middleware
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+      
+      const userAccounts = await storage.getUserAccounts(user.id);
       if (!userAccounts || userAccounts.length === 0) {
         return res.status(400).json({ error: 'User has no accounts' });
       }
