@@ -218,7 +218,7 @@ export default function QuickActions() {
   ];
 
   const handleSendMessage = async () => {
-    if (!currentMessage.trim() || !wsRef.current) return;
+    if (!currentMessage.trim()) return;
 
     const message: ChatMessage = {
       id: Date.now().toString(),
@@ -240,14 +240,16 @@ export default function QuickActions() {
         body: JSON.stringify({
           content: currentMessage,
           recipientId: 1,
-          sessionId: 'session_customer'
+          sessionId: 'session_1'
         })
       });
       if (!response.ok) {
-        console.error('Message save failed:', response.statusText);
+        console.error('❌ Message save failed:', response.statusText);
+      } else {
+        console.log('✅ Message saved successfully');
       }
     } catch (error) {
-      console.error('Failed to save message:', error);
+      console.error('❌ Failed to save message:', error);
     }
 
     setCurrentMessage("");

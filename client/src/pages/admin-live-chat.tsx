@@ -48,10 +48,15 @@ export default function AdminLiveChat() {
       if (!selectedSession?.id) return [];
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch(`/api/messages/session/${selectedSession.id}`);
+        const sessionId = `session_${selectedSession.customerId || selectedSession.id}`;
+        console.log('📨 Fetching messages for session:', sessionId);
+        const response = await authenticatedFetch(`/api/messages/session/${sessionId}`);
         if (!response.ok) return [];
-        return response.json();
-      } catch {
+        const data = await response.json();
+        console.log('✅ Fetched', data.length, 'messages');
+        return data;
+      } catch (error) {
+        console.error('❌ Failed to fetch messages:', error);
         return [];
       }
     },
