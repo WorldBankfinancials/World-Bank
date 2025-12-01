@@ -17,30 +17,8 @@ export default function Header({}: HeaderProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { userProfile } = useAuth();
   const { t } = useLanguage();
-  const [freshUserData, setFreshUserData] = useState<UserType | null>(null);
 
-  // Fetch fresh user data once only
-  useEffect(() => {
-    const fetchFreshUserData = async () => {
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch('/api/user', {
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
-        });
-        if (response.ok) {
-          const userData = await response.json();
-          setFreshUserData(userData);
-        }
-      } catch (error) {
-        // Silent error handling
-      }
-    };
-
-    fetchFreshUserData();
-  }, []);
+  // CRITICAL: Use cached profile - NO FETCH CALL
 
   const profileMenuItems = [
     { 

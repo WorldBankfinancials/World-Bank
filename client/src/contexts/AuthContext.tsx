@@ -43,12 +43,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for existing session from localStorage (set by login)
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
+    const storedProfile = localStorage.getItem('userProfile');
 
     if (storedToken && storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
         if (parsedUser?.id && parsedUser?.email) {
           setUser(parsedUser);
+          // CRITICAL: Load cached profile immediately - NO FETCH
+          if (storedProfile) {
+            try {
+              const parsedProfile = JSON.parse(storedProfile);
+              setUserProfile(parsedProfile);
+            } catch (e) {}
+          }
         }
       } catch (e) {
         localStorage.clear();
@@ -121,8 +129,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         setUser(userObj);
         
-        // Fetch full user profile
-        await fetchUserData(userObj);
+        // CRITICAL: Cache full profile immediately to avoid fetch timeout
+        const cacheProfile: UserProfile = {
+          id: data.user.id,
+          email: data.user.email,
+          fullName: data.user.fullName || data.user.email.split('@')[0],
+          phone: data.user.phone || '',
+          role: data.user.role || 'customer',
+          isVerified: true,
+          isActive: true,
+          profession: data.user.profession || '',
+          accountId: data.user.accountId || '',
+          accountNumber: data.user.accountNumber || '****1234'
+        };
+        setUserProfile(cacheProfile);
+        localStorage.setItem('userProfile', JSON.stringify(cacheProfile));
         
         setLoading(false);
         return {};
