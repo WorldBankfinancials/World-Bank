@@ -163,14 +163,31 @@ export default function Transfer() {
       }
       
       const numAmount = parseFloat(amount);
-      const userBalance = parseFloat(user?.balance?.toString() || '0');
-      if (numAmount > userBalance) {
-        toast({
-          title: 'Insufficient balance',
-          description: `Your balance is $${userBalance.toFixed(2)}. Please enter an amount up to $${userBalance.toFixed(2)}`,
-          variant: 'destructive'
-        });
-        return;
+      // Fetch fresh balance from server - dashboard balance is authoritative
+      try {
+        const { authenticatedFetch } = await import('@/lib/queryClient');
+        const resp = await authenticatedFetch('/api/user');
+        const freshUser = await resp.json();
+        const userBalance = parseFloat(freshUser?.balance?.toString() || '0');
+        if (numAmount > userBalance) {
+          toast({
+            title: 'Insufficient balance',
+            description: `Your balance is $${userBalance.toFixed(2)}. Please enter an amount up to $${userBalance.toFixed(2)}`,
+            variant: 'destructive'
+          });
+          return;
+        }
+      } catch (e) {
+        // Fallback to local state
+        const userBalance = parseFloat(user?.balance?.toString() || '0');
+        if (numAmount > userBalance) {
+          toast({
+            title: 'Insufficient balance',
+            description: `Your balance is $${userBalance.toFixed(2)}. Please enter an amount up to $${userBalance.toFixed(2)}`,
+            variant: 'destructive'
+          });
+          return;
+        }
       }
       
       if (!recipientDetails.fullName) {

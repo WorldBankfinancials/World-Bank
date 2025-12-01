@@ -63,10 +63,16 @@ export function setupTransferRoutes(app: Express) {
         
         // ✅ CRITICAL: DEBIT ACCOUNT IMMEDIATELY WHEN TRANSFER SUBMITTED
         const numAmount = parseFloat(String(amount));
-        const currentBalance = parseFloat(String(user.balance || '0'));
+        
+        // FIX: Get actual balance from all user accounts, not from bank_users.balance
+        const userAccounts = await storage.getUserAccounts(user.id);
+        let currentBalance = 0;
+        if (userAccounts && userAccounts.length > 0) {
+          currentBalance = userAccounts.reduce((sum, acc) => sum + parseFloat(String(acc.balance || '0')), 0);
+        }
         
         if (currentBalance < numAmount) {
-          return res.status(400).json({ message: `Insufficient funds. Your balance is $${currentBalance.toFixed(2)} but you're trying to transfer $${numAmount.toFixed(2)}` });
+          return res.status(400).json({ message: `Insufficient funds. Your total balance is $${currentBalance.toFixed(2)} but you're trying to transfer $${numAmount.toFixed(2)}` });
         }
         
         // Deduct amount from user balance
@@ -167,10 +173,16 @@ export function setupTransferRoutes(app: Express) {
       try {
         // ✅ CRITICAL: DEBIT ACCOUNT IMMEDIATELY FOR INTERNATIONAL TRANSFER
         const numAmount = parseFloat(String(amount));
-        const currentBalance = parseFloat(String(user.balance || '0'));
+        
+        // FIX: Get actual balance from all user accounts, not from bank_users.balance
+        const userAccounts = await storage.getUserAccounts(user.id);
+        let currentBalance = 0;
+        if (userAccounts && userAccounts.length > 0) {
+          currentBalance = userAccounts.reduce((sum, acc) => sum + parseFloat(String(acc.balance || '0')), 0);
+        }
         
         if (currentBalance < numAmount) {
-          return res.status(400).json({ message: `Insufficient funds. Your balance is $${currentBalance.toFixed(2)} but you're trying to transfer $${numAmount.toFixed(2)}` });
+          return res.status(400).json({ message: `Insufficient funds. Your total balance is $${currentBalance.toFixed(2)} but you're trying to transfer $${numAmount.toFixed(2)}` });
         }
         
         // Deduct amount from user balance
