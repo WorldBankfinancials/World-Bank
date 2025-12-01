@@ -39,6 +39,15 @@ export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 
 
 const mapUser = (user: Record<string, any>): User => {
+  // Ensure balance is always a valid number string
+  let balance = '0';
+  if (user.balance !== null && user.balance !== undefined) {
+    const balNum = parseFloat(String(user.balance));
+    balance = isNaN(balNum) ? '0' : balNum.toString();
+  }
+  
+  console.log('mapUser: user.id=', user.id, ', balance=', balance, ', raw balance=', user.balance);
+  
   return {
     id: user.id,
     username: user.username || '',
@@ -63,7 +72,7 @@ const mapUser = (user: Record<string, any>): User => {
     role: user.role || 'customer',
     isVerified: user.is_verified || false,
     isActive: user.is_active || false,
-    balance: (user.balance || '0').toString(),
+    balance: balance,
     createdAt: user.created_at,
     updatedAt: user.updated_at
   };

@@ -28,6 +28,8 @@ export function setupTransferRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
       
+      console.log('Transfer request - User balance:', user.balance, 'Amount requested:', amount);
+      
       // Validate required fields first
       if (!amount || !recipientName || !recipientAccount) {
         return res.status(400).json({ message: "Missing required transfer details: amount, recipient name, and account number" });
@@ -65,7 +67,10 @@ export function setupTransferRoutes(app: Express) {
         const numAmount = parseFloat(String(amount));
         const currentBalance = parseFloat(String(user.balance || '0'));
         
+        console.log('Balance check - Current:', currentBalance, 'Requested:', numAmount, 'Sufficient:', currentBalance >= numAmount);
+        
         if (currentBalance < numAmount) {
+          console.error('INSUFFICIENT FUNDS - User ID:', user.id, 'Balance:', currentBalance, 'Requested:', numAmount);
           return res.status(400).json({ message: "Insufficient funds for this transfer" });
         }
         
@@ -137,6 +142,8 @@ export function setupTransferRoutes(app: Express) {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
+      
+      console.log('International Transfer - User balance:', user.balance, 'Amount requested:', amount);
       
       // PIN VALIDATION - Verify against stored PIN
       if (!transferPin || String(transferPin).length !== 4) {
