@@ -69,62 +69,58 @@ export function useSupabaseRealtimeAccounts(
     // Initial fetch
     fetchAccountsData();
 
-    // Try Supabase Realtime first
+    // Try Supabase Realtime with async/await pattern to prevent blocking
     let pollInterval: NodeJS.Timeout | null = null;
     let channel: any = null;
+    let realtimeConnected = false;
 
-    try {
-      // Subscribe to Supabase Realtime with STATIC channel name for accounts
-      channel = supabase
-        .channel('bank_accounts_realtime', {
-          config: {
-            broadcast: { ack: false },
-            presence: { key: 'accounts' },
-          }
-        })
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'bank_accounts' },
-          (payload: any) => {
-            console.log('🔄 Realtime update received for bank_accounts:', payload);
-            fetchAccountsData();
-          }
-        )
-        .subscribe(async (status: string) => {
-          console.log(`📡 Realtime channel status for accounts: ${status}`);
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ Supabase Realtime CONNECTED for accounts - WebSocket active');
-            // Do initial fetch on subscription
-            await fetchAccountsData();
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.log('⚠️ Supabase Realtime unavailable for accounts, using polling');
-            // Start polling if realtime fails
-            if (!pollInterval) {
-              pollInterval = setInterval(fetchAccountsData, 8000);
+    const setupRealtime = async () => {
+      try {
+        // Create channel with non-blocking subscribe
+        channel = supabase
+          .channel('bank_accounts_realtime', {
+            config: {
+              broadcast: { ack: false },
+              presence: { key: 'accounts' }
             }
-          }
-        });
+          })
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'bank_accounts' },
+            () => fetchAccountsData()
+          )
+          .subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Supabase Realtime CONNECTED for accounts');
+              realtimeConnected = true;
+              if (pollInterval) clearInterval(pollInterval);
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              // Silently fallback to polling - WebSocket blocked in dev (HTTP only)
+              if (!pollInterval) {
+                pollInterval = setInterval(fetchAccountsData, 8000);
+              }
+            }
+          });
+      } catch (error: any) {
+        // Silently fallback to polling
+        if (!pollInterval) {
+          pollInterval = setInterval(fetchAccountsData, 8000);
+        }
+      }
+    };
 
-      unsubscribeRef.current = () => {
-        if (channel) channel.unsubscribe();
-        if (pollInterval) clearInterval(pollInterval);
-      };
-    } catch (error: any) {
-      console.log('⚠️ Supabase Realtime error for accounts, using polling:', error?.message);
-      // Fallback to polling
-      pollInterval = setInterval(fetchAccountsData, 8000);
-      unsubscribeRef.current = () => {
-        if (channel) channel.unsubscribe();
-        if (pollInterval) clearInterval(pollInterval);
-      };
-    }
+    // Start realtime setup asynchronously (non-blocking)
+    setupRealtime();
 
-    // Safety net: Always poll in addition to realtime
-    const safetyPollInterval = setInterval(fetchAccountsData, 15000);
-    const originalUnsub = unsubscribeRef.current;
+    // Also start polling as safety net
+    const safetyPollInterval = setInterval(() => {
+      if (!realtimeConnected) fetchAccountsData();
+    }, 8000);
+
     unsubscribeRef.current = () => {
-      originalUnsub?.();
-      clearInterval(safetyPollInterval);
+      if (channel) channel.unsubscribe();
+      if (pollInterval) clearInterval(pollInterval);
+      if (safetyPollInterval) clearInterval(safetyPollInterval);
     };
 
     return () => {
@@ -132,7 +128,7 @@ export function useSupabaseRealtimeAccounts(
         unsubscribeRef.current();
       }
     };
-  }, [enabled, fetchAccountsData]);
+  }, [enabled, onAccountsChange, fetchAccountsData]);
 
   return { fetchAccountsData };
 }
@@ -153,7 +149,13 @@ export function useSupabaseRealtimeTransactions(
       }
 
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/transactions');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      
+      const response = await authenticatedFetch(`/api/transactions?t=${Date.now()}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         return;
@@ -172,63 +174,63 @@ export function useSupabaseRealtimeTransactions(
         onTransactionsChange(txns);
       }
     } catch (error: any) {
-      // Silent fail - polling will retry
+      // Silent fail
     }
   }, [onTransactionsChange]);
 
   useEffect(() => {
     if (!enabled) return;
 
-    // Initial fetch
     fetchTransactionsData();
 
     let pollInterval: NodeJS.Timeout | null = null;
     let channel: any = null;
+    let realtimeConnected = false;
 
-    try {
-      channel = supabase
-        .channel('bank_transactions_realtime', {
-          config: {
-            broadcast: { ack: false },
-            presence: { key: 'transactions' }
-          }
-        })
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'bank_transactions' },
-          () => fetchTransactionsData()
-        )
-        .subscribe(async (status: string) => {
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ Supabase Realtime CONNECTED for transactions');
-            await fetchTransactionsData();
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.log('⚠️ Supabase Realtime error for transactions, using polling');
-            if (!pollInterval) {
-              pollInterval = setInterval(fetchTransactionsData, 5000);
+    const setupRealtime = async () => {
+      try {
+        channel = supabase
+          .channel('bank_transactions_realtime', {
+            config: {
+              broadcast: { ack: false },
+              presence: { key: 'transactions' }
             }
-          }
-        });
+          })
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'transactions' },
+            () => fetchTransactionsData()
+          )
+          .subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Supabase Realtime CONNECTED for transactions');
+              realtimeConnected = true;
+              if (pollInterval) clearInterval(pollInterval);
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              // Silently fallback to polling - WebSocket blocked in dev (HTTP only)
+              if (!pollInterval) {
+                pollInterval = setInterval(fetchTransactionsData, 8000);
+              }
+            }
+          });
+      } catch (error: any) {
+        // Silently fallback to polling
+        if (!pollInterval) {
+          pollInterval = setInterval(fetchTransactionsData, 8000);
+        }
+      }
+    };
 
-      unsubscribeRef.current = () => {
-        if (channel) channel.unsubscribe();
-        if (pollInterval) clearInterval(pollInterval);
-      };
-    } catch (error: any) {
-      console.log('⚠️ Supabase Realtime error for transactions, using polling:', error?.message);
-      pollInterval = setInterval(fetchTransactionsData, 5000);
-      unsubscribeRef.current = () => {
-        if (channel) channel.unsubscribe();
-        if (pollInterval) clearInterval(pollInterval);
-      };
-    }
+    setupRealtime();
 
-    // Safety net polling
-    const safetyPollInterval = setInterval(fetchTransactionsData, 10000);
-    const originalUnsub = unsubscribeRef.current;
+    const safetyPollInterval = setInterval(() => {
+      if (!realtimeConnected) fetchTransactionsData();
+    }, 8000);
+
     unsubscribeRef.current = () => {
-      originalUnsub?.();
-      clearInterval(safetyPollInterval);
+      if (channel) channel.unsubscribe();
+      if (pollInterval) clearInterval(pollInterval);
+      if (safetyPollInterval) clearInterval(safetyPollInterval);
     };
 
     return () => {
@@ -236,7 +238,7 @@ export function useSupabaseRealtimeTransactions(
         unsubscribeRef.current();
       }
     };
-  }, [enabled, fetchTransactionsData]);
+  }, [enabled, onTransactionsChange, fetchTransactionsData]);
 
   return { fetchTransactionsData };
 }
@@ -245,7 +247,7 @@ export function useSupabaseRealtimeTransactions(
  * Supabase Realtime for user balance
  */
 export function useSupabaseRealtimeUserBalance(
-  onUserChange: (userData: any) => void,
+  onBalanceChange: (balance: any) => void,
   enabled = true
 ) {
   const unsubscribeRef = useRef<(() => void) | null>(null);
@@ -257,72 +259,80 @@ export function useSupabaseRealtimeUserBalance(
       }
 
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch(`/api/user`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      
+      const response = await authenticatedFetch(`/api/user?t=${Date.now()}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         return;
       }
 
-      const data = await response.json();
-      onUserChange(data);
+      const userData = await response.json();
+      if (userData) {
+        onBalanceChange(userData);
+      }
     } catch (error: any) {
-      // Silent fail - polling will retry
+      // Silent fail
     }
-  }, [onUserChange]);
+  }, [onBalanceChange]);
 
   useEffect(() => {
     if (!enabled) return;
 
-    // Initial fetch
     fetchUserData();
 
     let pollInterval: NodeJS.Timeout | null = null;
     let channel: any = null;
+    let realtimeConnected = false;
 
-    try {
-      channel = supabase
-        .channel('bank_users_realtime', {
-          config: {
-            broadcast: { ack: false },
-            presence: { key: 'user' }
-          }
-        })
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'bank_users' },
-          () => fetchUserData()
-        )
-        .subscribe(async (status: string) => {
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ Supabase Realtime CONNECTED for user balance');
-            await fetchUserData();
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.log('⚠️ Supabase Realtime error for user balance, using polling');
-            if (!pollInterval) {
-              pollInterval = setInterval(fetchUserData, 6000);
+    const setupRealtime = async () => {
+      try {
+        channel = supabase
+          .channel('bank_users_realtime', {
+            config: {
+              broadcast: { ack: false },
+              presence: { key: 'user' }
             }
-          }
-        });
+          })
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'bank_users' },
+            () => fetchUserData()
+          )
+          .subscribe((status: string) => {
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Supabase Realtime CONNECTED for user balance');
+              realtimeConnected = true;
+              if (pollInterval) clearInterval(pollInterval);
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              // Silently fallback to polling - WebSocket blocked in dev (HTTP only)
+              if (!pollInterval) {
+                pollInterval = setInterval(fetchUserData, 8000);
+              }
+            }
+          });
+      } catch (error: any) {
+        // Silently fallback to polling
+        if (!pollInterval) {
+          pollInterval = setInterval(fetchUserData, 8000);
+        }
+      }
+    };
 
-      unsubscribeRef.current = () => {
-        if (channel) channel.unsubscribe();
-        if (pollInterval) clearInterval(pollInterval);
-      };
-    } catch (error: any) {
-      console.log('⚠️ Supabase Realtime error for user balance, using polling:', error?.message);
-      pollInterval = setInterval(fetchUserData, 6000);
-      unsubscribeRef.current = () => {
-        if (channel) channel.unsubscribe();
-        if (pollInterval) clearInterval(pollInterval);
-      };
-    }
+    setupRealtime();
 
-    // Safety net polling
-    const safetyPollInterval = setInterval(fetchUserData, 12000);
-    const originalUnsub = unsubscribeRef.current;
+    const safetyPollInterval = setInterval(() => {
+      if (!realtimeConnected) fetchUserData();
+    }, 8000);
+
     unsubscribeRef.current = () => {
-      originalUnsub?.();
-      clearInterval(safetyPollInterval);
+      if (channel) channel.unsubscribe();
+      if (pollInterval) clearInterval(pollInterval);
+      if (safetyPollInterval) clearInterval(safetyPollInterval);
     };
 
     return () => {
@@ -330,7 +340,7 @@ export function useSupabaseRealtimeUserBalance(
         unsubscribeRef.current();
       }
     };
-  }, [enabled, fetchUserData]);
+  }, [enabled, onBalanceChange, fetchUserData]);
 
   return { fetchUserData };
 }
