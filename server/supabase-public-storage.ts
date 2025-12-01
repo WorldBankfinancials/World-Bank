@@ -173,15 +173,21 @@ export class SupabasePublicStorage implements IStorage {
 
   async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
     try {
+      const numAmount = parseFloat(String(amount));
       const { data: user, error } = await supabase
         .from('bank_users')
-        .update({ balance: amount })
+        .update({ balance: numAmount.toString() })
         .eq('id', id)
-        .select('id, full_name, email, balance, created_at, updated_at')
+        .select('*')
         .single();
-      if (error || !user) return undefined;
+      if (error) {
+        console.error('Supabase updateUserBalance error:', error);
+        return undefined;
+      }
+      if (!user) return undefined;
       return mapUser(user);
     } catch (error) {
+      console.error('updateUserBalance exception:', error);
       return undefined;
     }
   }

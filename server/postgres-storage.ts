@@ -227,17 +227,23 @@ export class PostgresStorage implements IStorage {
 
   async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
     try {
+      const numAmount = parseFloat(String(amount));
       const result = await getConnection()`
         UPDATE public.bank_users 
-        SET balance = ${amount}, updated_at = CURRENT_TIMESTAMP
+        SET balance = ${numAmount}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
         RETURNING *
       `;
 
-      if (result.length === 0) return undefined;
+      if (result.length === 0) {
+        console.error('No user found to update balance:', id, numAmount);
+        return undefined;
+      }
       
+      console.log('Balance updated successfully:', id, numAmount);
       return this.mapDbUser(result[0]);
     } catch (error) {
+      console.error('Postgres updateUserBalance error:', error);
       return undefined;
     }
   }

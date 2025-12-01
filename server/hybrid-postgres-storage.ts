@@ -142,14 +142,21 @@ export class HybridPostgresStorage implements IStorage {
 
   async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
     try {
+      const numAmount = parseFloat(String(amount));
       const result = await sql`
         UPDATE bank_users
-        SET balance = ${amount.toString()}
+        SET balance = ${numAmount.toString()}
         WHERE id = ${id}
         RETURNING *
       `;
+      if (!result || result.length === 0) {
+        console.error('No user found to update balance:', id, numAmount);
+        return undefined;
+      }
+      console.log('Balance updated successfully:', id, numAmount);
       return (result[0] as any) as User | undefined;
     } catch (error) {
+      console.error('Hybrid updateUserBalance error:', error);
       return undefined;
     }
   }
