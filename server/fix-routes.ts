@@ -760,16 +760,16 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const body = req.body as { email?: string; username?: string; pin: string };
       const identifier = body.email || body.username;
 
-      console.log('🔑 /api/verify-pin called with identifier:', identifier, 'pin length:', body.pin?.length);
+      
 
       if (!identifier || !body.pin) {
-        console.error('❌ Missing identifier or PIN');
+        
         return res.status(400).json({ message: 'Email and PIN required', verified: false });
       }
 
       // Lookup user by email
       const user = await storage.getUserByEmail(identifier);
-      console.log('📋 Found user:', user ? `ID ${user.id}` : 'NOT FOUND');
+      
 
       if (!user) {
         return res.status(404).json({ message: 'User not found', verified: false });
@@ -806,14 +806,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
       
       if (!pinMatch) {
-        console.error('❌ PIN mismatch for user:', identifier);
+        
         return res.status(401).json({ message: 'Invalid PIN', verified: false });
       }
 
-      console.log('✅ PIN verified successfully for:', identifier);
+      
       res.json({ success: true, verified: true });
     } catch (error) {
-      console.error('❌ PIN verification error:', error);
+      
       res.status(500).json({ error: 'Failed to verify PIN', verified: false });
     }
   });
@@ -2055,7 +2055,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         }
         // Update last login timestamp
         await storage.updateUser(dbUser.id, { lastLogin: new Date() });
-        console.log(`✅ Updated last login for user ${dbUser.id}`);
+        
       }
 
       // STEP 3: Cache session data in memory for PIN validation

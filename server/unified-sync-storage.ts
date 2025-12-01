@@ -47,7 +47,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
       
       if (error) {
-        console.error(`❌ getUser(${id}) error:`, error.message);
+        
         return undefined;
       }
       if (!data) return undefined;
@@ -55,7 +55,7 @@ export class UnifiedSyncStorage implements IStorage {
       this.setCache(cacheKey, user);
       return user;
     } catch (error) {
-      console.error(`❌ getUser(${id}) catch:`, error);
+      
       return undefined;
     }
   }
@@ -73,19 +73,19 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
       
       if (error) {
-        console.error(`❌ getUserByEmail(${email}) error:`, error.message);
+        
         return undefined;
       }
       if (!data) {
-        console.warn(`⚠️ getUserByEmail(${email}): No user found`);
+        
         return undefined;
       }
       const user = this.mapDatabaseToUser(data);
       this.setCache(cacheKey, user);
-      console.log(`✅ getUserByEmail(${email}): Success`);
+      
       return user;
     } catch (error) {
-      console.error(`❌ getUserByEmail(${email}) catch:`, error);
+      
       return undefined;
     }
   }
@@ -99,13 +99,13 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
       
       if (error) {
-        console.error(`❌ getUserByUsername(${username}) error:`, error.message);
+        
         return undefined;
       }
       if (!data) return undefined;
       return this.mapDatabaseToUser(data);
     } catch (error) {
-      console.error(`❌ getUserByUsername(${username}) catch:`, error);
+      
       return undefined;
     }
   }
@@ -119,13 +119,13 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
       
       if (error) {
-        console.error(`❌ getUserByPhone(${phone}) error:`, error.message);
+        
         return undefined;
       }
       if (!data) return undefined;
       return this.mapDatabaseToUser(data);
     } catch (error) {
-      console.error(`❌ getUserByPhone catch:`, error);
+      
       return undefined;
     }
   }
@@ -139,13 +139,13 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
       
       if (error) {
-        console.error(`❌ getUserBySupabaseId(${supabaseUserId}) error:`, error.message);
+        
         return undefined;
       }
       if (!data) return undefined;
       return this.mapDatabaseToUser(data);
     } catch (error) {
-      console.error(`❌ getUserBySupabaseId catch:`, error);
+      
       return undefined;
     }
   }
@@ -158,13 +158,13 @@ export class UnifiedSyncStorage implements IStorage {
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('❌ getAllUsers error:', error.message);
+        
         return [];
       }
       if (!data) return [];
       return data.map(row => this.mapDatabaseToUser(row));
     } catch (error) {
-      console.error('❌ getAllUsers catch:', error);
+      
       return [];
     }
   }
@@ -204,16 +204,16 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        console.error('❌ createUser Supabase error:', error);
+        
         throw error;
       }
       if (!data) throw new Error('No data returned from insert');
       
       const newUser = this.mapDatabaseToUser(data);
-      console.log('✅ createUser success:', newUser.email);
+      
       return newUser;
     } catch (error: any) {
-      console.error('❌ createUser error:', error.message);
+      
       throw error;
     }
   }
@@ -237,7 +237,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        console.error(`❌ updateUser(${id}) error:`, error);
+        
         return undefined;
       }
       if (!data) return undefined;
@@ -246,7 +246,7 @@ export class UnifiedSyncStorage implements IStorage {
       memCache.delete(`user:email:${updated.email}`);
       return updated;
     } catch (error) {
-      console.error(`❌ updateUser catch:`, error);
+      
       return undefined;
     }
   }
@@ -261,7 +261,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        console.error(`❌ updateUserBalance(${id}) error:`, error);
+        
         return undefined;
       }
       if (!data) return undefined;
@@ -269,7 +269,7 @@ export class UnifiedSyncStorage implements IStorage {
       memCache.delete(`user:${id}`);
       return updated;
     } catch (error) {
-      console.error(`❌ updateUserBalance catch:`, error);
+      
       return undefined;
     }
   }
@@ -286,16 +286,16 @@ export class UnifiedSyncStorage implements IStorage {
         .eq('user_id', userId);
 
       if (error) {
-        console.error(`❌ getUserAccounts(${userId}) error:`, error.message);
+        
         return [];
       }
       if (!data) return [];
       const accounts = data.map(row => this.mapDatabaseToAccount(row));
       this.setCache(cacheKey, accounts);
-      console.log(`✅ getUserAccounts(${userId}): ${accounts.length} accounts`);
+      
       return accounts;
     } catch (error) {
-      console.error(`❌ getUserAccounts catch:`, error);
+      
       return [];
     }
   }
@@ -309,13 +309,13 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        console.error(`❌ getAccount(${id}) error:`, error.message);
+        
         return undefined;
       }
       if (!data) return undefined;
       return this.mapDatabaseToAccount(data);
     } catch (error) {
-      console.error(`❌ getAccount catch:`, error);
+      
       return undefined;
     }
   }
@@ -336,14 +336,14 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        console.error('❌ createAccount error:', error);
+        
         throw error;
       }
       if (!data) throw new Error('No data returned');
       memCache.delete(`accounts:user:${account.userId}`);
       return this.mapDatabaseToAccount(data);
     } catch (error: any) {
-      console.error('❌ createAccount catch:', error.message);
+      
       throw error;
     }
   }
@@ -358,13 +358,13 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        console.error(`❌ updateAccount(${id}) error:`, error);
+        
         return undefined;
       }
       if (!data) return undefined;
       return this.mapDatabaseToAccount(data);
     } catch (error) {
-      console.error(`❌ updateAccount catch:`, error);
+      
       return undefined;
     }
   }
@@ -378,13 +378,13 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        console.error(`❌ getTransaction(${id}) error:`, error.message);
+        
         return undefined;
       }
       if (!data) return undefined;
       return this.mapDatabaseToTransaction(data);
     } catch (error) {
-      console.error(`❌ getTransaction catch:`, error);
+      
       return undefined;
     }
   }
@@ -399,14 +399,14 @@ export class UnifiedSyncStorage implements IStorage {
         .limit(100);
 
       if (error) {
-        console.error(`❌ getAccountTransactions(${accountId}) error:`, error.message);
+        
         return [];
       }
       if (!data) return [];
-      console.log(`✅ getAccountTransactions(${accountId}): ${data.length} transactions`);
+      
       return data.map(row => this.mapDatabaseToTransaction(row));
     } catch (error) {
-      console.error(`❌ getAccountTransactions catch:`, error);
+      
       return [];
     }
   }
@@ -420,13 +420,13 @@ export class UnifiedSyncStorage implements IStorage {
         .limit(500);
 
       if (error) {
-        console.error('❌ getAllTransactions error:', error.message);
+        
         return [];
       }
       if (!data) return [];
       return data.map(row => this.mapDatabaseToTransaction(row));
     } catch (error) {
-      console.error('❌ getAllTransactions catch:', error);
+      
       return [];
     }
   }
@@ -449,13 +449,13 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        console.error('❌ createTransaction error:', error);
+        
         throw error;
       }
       if (!data) throw new Error('No data returned');
       return this.mapDatabaseToTransaction(data);
     } catch (error: any) {
-      console.error('❌ createTransaction catch:', error.message);
+      
       throw error;
     }
   }
@@ -475,13 +475,13 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        console.error('❌ createAdminAction error:', error);
+        
         throw error;
       }
       if (!data) throw new Error('No data returned');
       return data as any as AdminAction;
     } catch (error: any) {
-      console.error('❌ createAdminAction catch:', error.message);
+      
       throw error;
     }
   }
@@ -571,57 +571,451 @@ export class UnifiedSyncStorage implements IStorage {
 
   async getUserCards(userId: number): Promise<Card[]> {
     try {
-      console.log(`📇 getUserCards(${userId})`);
       const { data, error } = await supabase
         .from('bank_cards')
         .select('*')
         .eq('user_id', userId);
 
-      if (error) {
-        console.error(`❌ getUserCards(${userId}) error:`, error.message);
-        return [];
-      }
-      if (!data) {
-        console.log(`⚠️ getUserCards(${userId}): No cards found`);
-        return [];
-      }
-      console.log(`✅ getUserCards(${userId}): ${data.length} cards`);
+      if (error || !data) return [];
       return data as any as Card[];
     } catch (error) {
-      console.error(`❌ getUserCards catch:`, error);
       return [];
     }
   }
 
-  // ==================== STUB IMPLEMENTATIONS ====================
-  async getAlert(id: number): Promise<Alert | undefined> { return undefined; }
-  async getUserAlerts(userId: number): Promise<Alert[]> { return []; }
-  async getUnreadAlerts(userId: number): Promise<Alert[]> { return []; }
-  async createAlert(alert: any): Promise<Alert> { throw new Error('Not implemented'); }
-  async markAlertAsRead(id: number): Promise<Alert | undefined> { return undefined; }
-  async deleteAlert(id: number): Promise<void> {}
-  async getCard(id: number): Promise<Card | undefined> { return undefined; }
-  async createCard(card: any): Promise<Card> { throw new Error('Not implemented'); }
-  async updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined> { return undefined; }
-  async getInvestment(id: number): Promise<Investment | undefined> { return undefined; }
-  async getUserInvestments(userId: number): Promise<Investment[]> { return []; }
-  async createInvestment(investment: any): Promise<Investment> { throw new Error('Not implemented'); }
-  async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> { return undefined; }
-  async getMessage(id: string): Promise<Message | undefined> { return undefined; }
-  async getMessages(conversationId?: string): Promise<Message[]> { return []; }
-  async getUserMessages(userId: number): Promise<Message[]> { return []; }
-  async createMessage(message: any): Promise<Message> { throw new Error('Not implemented'); }
-  async markMessageAsRead(id: number): Promise<Message | undefined> { return undefined; }
-  async getSupportTicket(id: number): Promise<SupportTicket | undefined> { return undefined; }
-  async getSupportTickets(userId?: number): Promise<SupportTicket[]> { return []; }
-  async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> { throw new Error('Not implemented'); }
-  async updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> { return undefined; }
-  async getBranches(): Promise<any[]> { return []; }
-  async getAtms(): Promise<any[]> { return []; }
-  async getExchangeRates(): Promise<any[]> { return []; }
-  async getStatementsByUserId(userId: number): Promise<any[]> { return []; }
-  async getMarketRates(): Promise<any[]> { return []; }
-  async updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<Transaction | undefined> { return undefined; }
-  async getPendingTransactions(): Promise<Transaction[]> { return []; }
-  async getAdminActions(adminId?: number): Promise<AdminAction[]> { return []; }
+  async getCard(id: number): Promise<Card | undefined> {
+    try {
+      const { data, error } = await supabase
+        .from('bank_cards')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) return undefined;
+      return data as any as Card;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async createCard(card: any): Promise<Card> {
+    try {
+      const { data, error } = await supabase
+        .from('bank_cards')
+        .insert([card])
+        .select()
+        .single();
+
+      if (error || !data) throw error;
+      return data as any as Card;
+    } catch (error: any) {
+      throw error;
+    }
+  }
+
+  async updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined> {
+    try {
+      const { data, error } = await supabase
+        .from('bank_cards')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error || !data) return undefined;
+      return data as any as Card;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async getAlert(id: number): Promise<Alert | undefined> {
+    try {
+      const { data, error } = await supabase
+        .from('alerts')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) return undefined;
+      return data as any as Alert;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async getUserAlerts(userId: number): Promise<Alert[]> {
+    try {
+      const { data, error } = await supabase
+        .from('alerts')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error || !data) return [];
+      return data as any as Alert[];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getUnreadAlerts(userId: number): Promise<Alert[]> {
+    try {
+      const { data, error } = await supabase
+        .from('alerts')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_read', false);
+
+      if (error || !data) return [];
+      return data as any as Alert[];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async createAlert(alert: any): Promise<Alert> {
+    try {
+      const { data, error } = await supabase
+        .from('alerts')
+        .insert([alert])
+        .select()
+        .single();
+
+      if (error || !data) throw error;
+      return data as any as Alert;
+    } catch (error: any) {
+      throw error;
+    }
+  }
+
+  async markAlertAsRead(id: number): Promise<Alert | undefined> {
+    try {
+      const { data, error } = await supabase
+        .from('alerts')
+        .update({ is_read: true })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error || !data) return undefined;
+      return data as any as Alert;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async deleteAlert(id: number): Promise<void> {
+    try {
+      await supabase.from('alerts').delete().eq('id', id);
+    } catch (error) {
+      // Silently fail
+    }
+  }
+
+  async getInvestment(id: number): Promise<Investment | undefined> {
+    try {
+      const { data, error } = await supabase
+        .from('investments')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) return undefined;
+      return data as any as Investment;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async getUserInvestments(userId: number): Promise<Investment[]> {
+    try {
+      const { data, error } = await supabase
+        .from('investments')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error || !data) return [];
+      return data as any as Investment[];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async createInvestment(investment: any): Promise<Investment> {
+    try {
+      const { data, error } = await supabase
+        .from('investments')
+        .insert([investment])
+        .select()
+        .single();
+
+      if (error || !data) throw error;
+      return data as any as Investment;
+    } catch (error: any) {
+      throw error;
+    }
+  }
+
+  async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> {
+    try {
+      const { data, error } = await supabase
+        .from('investments')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error || !data) return undefined;
+      return data as any as Investment;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async getMessage(id: string): Promise<Message | undefined> {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) return undefined;
+      return data as any as Message;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async getMessages(conversationId?: string): Promise<Message[]> {
+    try {
+      let query = supabase.from('messages').select('*');
+      if (conversationId) {
+        query = query.eq('conversation_id', conversationId);
+      }
+      const { data, error } = await query;
+
+      if (error || !data) return [];
+      return data as any as Message[];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getUserMessages(userId: number): Promise<Message[]> {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error || !data) return [];
+      return data as any as Message[];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async createMessage(message: any): Promise<Message> {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .insert([message])
+        .select()
+        .single();
+
+      if (error || !data) throw error;
+      return data as any as Message;
+    } catch (error: any) {
+      throw error;
+    }
+  }
+
+  async markMessageAsRead(id: number): Promise<Message | undefined> {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error || !data) return undefined;
+      return data as any as Message;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async getSupportTicket(id: number): Promise<SupportTicket | undefined> {
+    try {
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) return undefined;
+      return data as any as SupportTicket;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async getSupportTickets(userId?: number): Promise<SupportTicket[]> {
+    try {
+      let query = supabase.from('support_tickets').select('*');
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+      const { data, error } = await query;
+
+      if (error || !data) return [];
+      return data as any as SupportTicket[];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> {
+    try {
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .insert([ticket])
+        .select()
+        .single();
+
+      if (error || !data) throw error;
+      return data as any as SupportTicket;
+    } catch (error: any) {
+      throw error;
+    }
+  }
+
+  async updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
+    try {
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error || !data) return undefined;
+      return data as any as SupportTicket;
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async getBranches(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('branches')
+        .select('*');
+
+      if (error || !data) return [];
+      return data;
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getAtms(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('atms')
+        .select('*');
+
+      if (error || !data) return [];
+      return data;
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getExchangeRates(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('exchange_rates')
+        .select('*');
+
+      if (error || !data) return [];
+      return data;
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getMarketRates(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('market_rates')
+        .select('*');
+
+      if (error || !data) return [];
+      return data;
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getStatementsByUserId(userId: number): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('statements')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error || !data) return [];
+      return data;
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<Transaction | undefined> {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .update({ status, admin_notes: notes, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error || !data) return undefined;
+      return this.mapDatabaseToTransaction(data);
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async getPendingTransactions(): Promise<Transaction[]> {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('status', 'pending');
+
+      if (error || !data) return [];
+      return data.map(row => this.mapDatabaseToTransaction(row));
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getAdminActions(adminId?: number): Promise<AdminAction[]> {
+    try {
+      let query = supabase.from('admin_actions').select('*');
+      if (adminId) {
+        query = query.eq('admin_id', adminId);
+      }
+      const { data, error } = await query;
+
+      if (error || !data) return [];
+      return data as any as AdminAction[];
+    } catch (error) {
+      return [];
+    }
+  }
 }
