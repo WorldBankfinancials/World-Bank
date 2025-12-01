@@ -39,31 +39,30 @@ export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 
 
 const mapUser = (user: Record<string, any>): User => {
-  const [firstName, lastName] = (user.full_name || '').split(' ');
   return {
     id: user.id,
-    username: '',
-    password: '',
-    firstName: firstName || '',
-    lastName: lastName || '',
+    username: user.username || '',
+    password: user.password || '',
+    firstName: user.first_name || '',
+    lastName: user.last_name || '',
     email: user.email || '',
-    phone: '',
-    accountNumber: '',
-    accountId: 0,
-    profession: '',
-    dateOfBirth: '',
-    address: '',
-    city: '',
-    state: '',
-    country: '',
-    postalCode: '',
-    annualIncome: '',
-    idType: '',
-    idNumber: '',
-    transferPin: '',
-    role: 'customer',
-    isVerified: false,
-    isActive: false,
+    phone: user.phone || '',
+    accountNumber: user.account_number || '',
+    accountId: user.account_id || 0,
+    profession: user.profession || '',
+    dateOfBirth: user.date_of_birth || '',
+    address: user.address || '',
+    city: user.city || '',
+    state: user.state || '',
+    country: user.country || '',
+    postalCode: user.postal_code || '',
+    annualIncome: user.annual_income || '',
+    idType: user.id_type || '',
+    idNumber: user.id_number || '',
+    transferPin: user.transfer_pin || '',
+    role: user.role || 'customer',
+    isVerified: user.is_verified || false,
+    isActive: user.is_active || false,
     balance: (user.balance || '0').toString(),
     createdAt: user.created_at,
     updatedAt: user.updated_at
@@ -75,12 +74,13 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data: user, error } = await supabase
         .from('bank_users')
-        .select('id, full_name, email, balance, created_at, updated_at')
+        .select('*')
         .eq('id', id)
         .single();
       if (error || !user) return undefined;
       return mapUser(user);
     } catch (error) {
+      console.error('getUser error:', error);
       return undefined;
     }
   }
@@ -89,9 +89,10 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data: user, error } = await supabase
         .from('bank_users')
-        .select('id, full_name, email, balance, created_at, updated_at')
+        .select('*')
         .eq('email', email);
       if (error) {
+        console.error('getUserByEmail error:', error);
         return undefined;
       }
       if (!user || user.length === 0) {
@@ -99,6 +100,7 @@ export class SupabasePublicStorage implements IStorage {
       }
       return mapUser(user[0]);
     } catch (error) {
+      console.error('getUserByEmail exception:', error);
       return undefined;
     }
   }
@@ -115,10 +117,11 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data: users, error } = await supabase
         .from('bank_users')
-        .select('id, full_name, email, balance, created_at, updated_at');
+        .select('*');
       if (error || !users) return [];
       return users.map(user => mapUser(user));
     } catch (error) {
+      console.error('getAllUsers error:', error);
       return [];
     }
   }
@@ -137,7 +140,7 @@ export class SupabasePublicStorage implements IStorage {
           email: data.email,
           balance: data.balance || '0'
         })
-        .select('id, full_name, email, balance, created_at, updated_at')
+        .select('*')
         .single();
       if (error) throw error;
       if (!user) throw new Error('Failed to create user');
@@ -162,7 +165,7 @@ export class SupabasePublicStorage implements IStorage {
         .from('bank_users')
         .update(updateData)
         .eq('id', id)
-        .select('id, full_name, email, balance, created_at, updated_at')
+        .select('*')
         .single();
       if (error || !user) return undefined;
       return mapUser(user);
@@ -184,7 +187,11 @@ export class SupabasePublicStorage implements IStorage {
         console.error('Supabase updateUserBalance error:', error);
         return undefined;
       }
-      if (!user) return undefined;
+      if (!user) {
+        console.error('No user returned from updateUserBalance');
+        return undefined;
+      }
+      console.log('Balance updated successfully for user', id, ':', numAmount);
       return mapUser(user);
     } catch (error) {
       console.error('updateUserBalance exception:', error);
