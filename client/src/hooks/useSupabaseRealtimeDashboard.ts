@@ -74,9 +74,9 @@ export function useSupabaseRealtimeAccounts(
     let channel: any = null;
 
     try {
-      // Subscribe to Supabase Realtime with proper initialization
+      // Subscribe to Supabase Realtime with STATIC channel name for accounts
       channel = supabase
-        .channel(`realtime:accounts:${Math.random()}`, {
+        .channel('bank_accounts_realtime', {
           config: {
             broadcast: { ack: false },
             presence: { key: 'accounts' }
@@ -183,7 +183,7 @@ export function useSupabaseRealtimeTransactions(
 
     try {
       channel = supabase
-        .channel(`realtime:txn:${Math.random()}`, {
+        .channel('bank_transactions_realtime', {
           config: {
             broadcast: { ack: false },
             presence: { key: 'transactions' }
@@ -277,7 +277,7 @@ export function useSupabaseRealtimeUserBalance(
 
     try {
       channel = supabase
-        .channel(`realtime:user:${Math.random()}`, {
+        .channel('bank_users_realtime', {
           config: {
             broadcast: { ack: false },
             presence: { key: 'user' }
