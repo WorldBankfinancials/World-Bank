@@ -1765,10 +1765,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/pending-transfers', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const allTransfers = await storage.getAllTransactions();
-      const transfers = allTransfers.filter((t: any) => t.status === 'pending');
+      const transfers = allTransfers.filter((t: Transaction) => t.status === 'pending');
       
       // Format for admin dashboard
-      const formattedTransfers = transfers.map((t: any) => ({
+      const formattedTransfers = transfers.map((t: Transaction) => ({
         id: t.id,
         amount: t.amount,
         currency: t.currency || 'USD',
@@ -1825,7 +1825,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const customers = await storage.getAllUsers();
       // Filter out admins, only return customers
-      const customerList = customers.filter((user: any) => user.role === 'customer');
+      const customerList = customers.filter((user: User) => user.role === 'customer');
       res.json(customerList);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch customers' });
@@ -2088,17 +2088,18 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // STEP 5: Return full user profile for immediate caching
-      const fullProfile: any = dbUser || {
-        id: supabaseUser.id,
-        email: supabaseUser.email,
+      const fullProfile: User = dbUser || {
+        id: supabaseUser.id || Date.now(),
+        email: supabaseUser.email || '',
+        password: '',
         firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
         lastName: supabaseUser.user_metadata?.last_name || 'User',
+        username: email.split('@')[0],
         phone: supabaseUser.user_metadata?.phone || '',
         role: supabaseUser.app_metadata?.role || 'customer',
-        fullName: `${supabaseUser.user_metadata?.first_name || email.split('@')[0]} ${supabaseUser.user_metadata?.last_name || 'User'}`,
         profession: 'Customer',
-        accountId: (dbUser as any)?.accountId || 'WB-' + Date.now(),
-        accountNumber: (dbUser as any)?.accountNumber || '****1234',
+        accountId: dbUser?.accountId || Date.now(),
+        accountNumber: dbUser?.accountNumber || '****1234',
         isVerified: true,
         isActive: true
       };
@@ -2154,7 +2155,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       res.json({
         total: data.users.length,
-        users: data.users.map((u: any) => ({
+        users: data.users.map((u: User) => ({
           id: u.id,
           email: u.email,
           role: u.app_metadata?.role || 'customer',
@@ -2243,7 +2244,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to list users' });
       }
 
-      const userToUpdate = users.users.find((u: any) => u.email === email);
+      const userToUpdate = users.users.find((u: User) => u.email === email);
       if (!userToUpdate) {
         return res.status(404).json({ error: 'User not found in Supabase Auth' });
       }
@@ -2324,7 +2325,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to list users' });
       }
 
-      const userToDelete = users.users.find((u: any) => u.email === email);
+      const userToDelete = users.users.find((u: User) => u.email === email);
       if (!userToDelete) {
         return res.status(404).json({ error: 'User not found in Supabase Auth' });
       }
@@ -2359,7 +2360,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Get original transaction
       const allTransactions = await storage.getAllTransactions();
-      const transaction = allTransactions.find((t: any) => t.id === txnId);
+      const transaction = allTransactions.find((t: Transaction) => t.id === txnId);
       
       if (!transaction) {
         return res.status(404).json({ error: 'Transaction not found' });
@@ -2410,7 +2411,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== TRANSFER WORKFLOW ENDPOINTS ====================
   
   // Idempotency cache for transfers (prevent duplicates within 5 minutes)
-  const transferIdempotencyCache = new Map<string, { response: any; timestamp: number }>();
+  const transferIdempotencyCache = new Map<string, { response: { id: string | number; transactionId: string; status: string }; timestamp: number }>();
   
   // Create a transfer with IDEMPOTENCY protection
   app.post('/api/transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -2501,7 +2502,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       
       const allTransactions = await storage.getAllTransactions();
       
-      const transfer = allTransactions.find((t: any) => {
+      const transfer = allTransactions.find((t: Transaction) => {
         const idMatch = t.id?.toString() === id?.toString();
         const refMatch = t.referenceNumber === id;
         return idMatch || refMatch;
@@ -2531,7 +2532,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   });
 
   // Idempotency cache for international transfers
-  const intlTransferIdempotencyCache = new Map<string, { response: any; timestamp: number }>();
+  const intlTransferIdempotencyCache = new Map<string, { response: { id: string | number; transactionId: string; status: string }; timestamp: number }>();
   
   // Create international transfer with IDEMPOTENCY protection
   app.post('/api/international-transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
