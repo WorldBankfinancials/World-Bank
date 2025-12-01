@@ -438,7 +438,7 @@ export class UnifiedSyncStorage implements IStorage {
         .from('transactions')
         .insert([{
           from_account_id: transaction.fromAccountId,
-          to_account_id: transaction.toAccountId || 0,
+          to_account_id: transaction.toAccountId || null,
           amount: transaction.amount || '0',
           transaction_type: transaction.type || 'transfer',
           status: transaction.status || 'pending',
