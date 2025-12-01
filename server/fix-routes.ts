@@ -507,39 +507,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const email = req.user!.email;
-      const userId = (req.user as any).id || (req.user as any).userId;
-      
-      // Try 1: Get by email
-      let user = await storage.getUserByEmail(email);
-      
-      // Try 2: If not found by email, try by Supabase ID
-      if (!user && userId && typeof storage.getUserBySupabaseId === 'function') {
-        user = await storage.getUserBySupabaseId(userId);
-      }
-      
-      // Try 3: Get all users and find manually (fallback)
-      if (!user) {
-        try {
-          const allUsers = await storage.getAllUsers();
-          user = allUsers.find(u => u.email === email);
-          if (!user) {
-            user = await storage.createUser({
-              username: email.split('@')[0],
-              email: email,
-              firstName: 'Customer',
-              lastName: 'Account',
-              phone: '0000000000',
-              password: 'supabase_auth',
-              profession: 'Banking Customer',
-              accountNumber: generateAccountNumber(),
-              accountId: Math.floor(Math.random() * 1000000),
-              balance: '0'
-            });
-          }
-        } catch (searchError: any) {
-          // Silently fail on user search errors
-        }
-      }
+      const user = await storage.getUserByEmail(email);
       
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
@@ -547,7 +515,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       
       res.json(user);
     } catch (error: any) {
-      // Silent error handling
       res.status(500).json({ error: 'Failed to get user', details: error?.message });
     }
   });
@@ -2410,11 +2377,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         const currentBalance = parseFloat(currentBalanceStr);
         const newBalance = (currentBalance - parseFloat(amount.toString())).toFixed(2);
         const balanceNum = parseFloat(newBalance);
-        if (!isNaN(balanceNum) && senderAccountId) {
-          await storage.updateAccount(senderAccountId, { balance: balanceNum as any });
+        if (!isNaN(balanceNum) && senderAccountId && storage?.updateAccount) {
+          await (storage.updateAccount as Function)(senderAccountId, { balance: balanceNum });
         }
       } catch (balanceError) {
-        // Silent error handling
+        // Non-blocking balance update
       }
 
       const response = {

@@ -417,7 +417,7 @@ export default function Dashboard() {
               </div>
               <div className="text-right">
                 <p className="text-blue-100 text-sm">{t('account')}</p>
-                <p className="text-sm font-medium">****1234</p>
+                <p className="text-sm font-medium">{accounts.length > 0 ? accounts[0].number : '••••'}</p>
               </div>
             </div>
 
