@@ -215,7 +215,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     } catch (error: unknown) {
       return res.status(500).json({ 
         error: 'Registration failed',
-        details: (error as any)?.message || "Unknown error" 
+        details: (error)?.message || "Unknown error" 
       });
     }
   });
@@ -328,7 +328,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Password reset failed', details: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ error: 'Password reset failed', details: (error)?.message || "Unknown error" });
     }
   });
 
@@ -444,7 +444,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     } catch (error: unknown) {
       return res.status(500).json({ 
         error: 'Failed to create user profile',
-        details: (error as any)?.message || "Unknown error" 
+        details: (error)?.message || "Unknown error" 
       });
     }
   });
@@ -547,7 +547,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         user: updatedUser
       });
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to upload avatar', details: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ error: 'Failed to upload avatar', details: (error)?.message || "Unknown error" });
     }
   });
 
@@ -1476,11 +1476,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         .select();
 
       if (error) {
-        return res.status(500).json({ error: 'Failed to save message', details: (error as any)?.message || "Unknown error" });
+        return res.status(500).json({ error: 'Failed to save message', details: (error)?.message || "Unknown error" });
       }
       return res.json(data?.[0] || { success: true });
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to save message', details: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ error: 'Failed to save message', details: (error)?.message || "Unknown error" });
     }
   });
 
@@ -1782,7 +1782,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       return res.json(formattedTransfers);
     } catch (error: unknown) {
-      return res.status(500).json({ message: 'Failed to fetch pending transfers', error: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ message: 'Failed to fetch pending transfers', error: (error)?.message || "Unknown error" });
     }
   });
 
@@ -1817,7 +1817,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       return res.json(formattedTickets);
     } catch (error: unknown) {
-      return res.status(500).json({ message: 'Failed to fetch support tickets', error: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ message: 'Failed to fetch support tickets', error: (error)?.message || "Unknown error" });
     }
   });
 
@@ -1974,7 +1974,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     } catch (error: unknown) {
       return res.status(500).json({ 
         error: 'Admin user creation failed',
-        details: (error as any)?.message || "Unknown error" 
+        details: (error)?.message || "Unknown error" 
       });
     }
   });
@@ -2110,7 +2110,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         user: fullProfile
       });
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Login failed', details: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ error: 'Login failed', details: (error)?.message || "Unknown error" });
     }
   });
 
@@ -2150,7 +2150,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const { data, error } = await supabaseAdmin.auth.admin.listUsers();
       if (error) {
-        return res.status(500).json({ error: 'Failed to list users', details: (error as any)?.message || "Unknown error" });
+        return res.status(500).json({ error: 'Failed to list users', details: (error)?.message || "Unknown error" });
       }
 
       return res.json({
@@ -2163,7 +2163,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         }))
       });
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to list users', details: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ error: 'Failed to list users', details: (error)?.message || "Unknown error" });
     }
   });
 
@@ -2266,7 +2266,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         email: email
       });
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to reset password', details: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ error: 'Failed to reset password', details: (error)?.message || "Unknown error" });
     }
   });
 
@@ -2298,7 +2298,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         user: updatedUser
       });
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to upload profile photo', details: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ error: 'Failed to upload profile photo', details: (error)?.message || "Unknown error" });
     }
   });
 
@@ -2343,7 +2343,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         deleted_email: email
       });
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to delete user', details: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ error: 'Failed to delete user', details: (error)?.message || "Unknown error" });
     }
   });
 
@@ -2404,7 +2404,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         amountRefunded: transaction.amount
       });
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to reverse transaction', details: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ error: 'Failed to reverse transaction', details: (error)?.message || "Unknown error" });
     }
   });
 
@@ -2491,7 +2491,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       return res.json(response);
     } catch (error: unknown) {
-      return res.status(500).json({ error: (error as any)?.message || "Unknown error" || 'Failed to create transfer', details: error.toString() });
+      return res.status(500).json({ error: (error)?.message || "Unknown error" || 'Failed to create transfer', details: (error)?.toString?.() || 'Unknown error' });
     }
   });
 
@@ -2527,7 +2527,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         updatedAt: transfer.updatedAt
       });
     } catch (error: unknown) {
-      return res.status(500).json({ error: (error as any)?.message || "Unknown error" || 'Failed to fetch transfer status', details: error.toString() });
+      return res.status(500).json({ error: (error)?.message || "Unknown error" || 'Failed to fetch transfer status', details: (error)?.toString?.() || 'Unknown error' });
     }
   });
 
@@ -2599,7 +2599,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       return res.json(response);
     } catch (error: unknown) {
-      return res.status(500).json({ error: (error as any)?.message || "Unknown error" || 'Failed to create international transfer', details: error.toString() });
+      return res.status(500).json({ error: (error)?.message || "Unknown error" || 'Failed to create international transfer', details: (error)?.toString?.() || 'Unknown error' });
     }
   });
 
@@ -2627,7 +2627,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       return res.json(message);
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to save message', details: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ error: 'Failed to save message', details: (error)?.message || "Unknown error" });
     }
   });
 
@@ -2644,7 +2644,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       
       return res.json(messages);
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to fetch messages', details: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ error: 'Failed to fetch messages', details: (error)?.message || "Unknown error" });
     }
   });
 
@@ -2655,7 +2655,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const messages = await storage.getUserMessages(userId);
       return res.json(messages);
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to fetch messages', details: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ error: 'Failed to fetch messages', details: (error)?.message || "Unknown error" });
     }
   });
 
@@ -2694,7 +2694,7 @@ export async function registerLiveChatRoutes(app: Express) {
 
       return res.json({ success: true });
     } catch (error: unknown) {
-      return res.status(500).json({ error: (error as any)?.message || "Unknown error" });
+      return res.status(500).json({ error: (error)?.message || "Unknown error" });
     }
   });
 }
