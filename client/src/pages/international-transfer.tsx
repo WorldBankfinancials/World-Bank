@@ -235,6 +235,10 @@ export default function InternationalTransfer() {
         setTransferStatus("processing");
         setShowPendingStatus(true);
         
+        // Refresh user data to reflect balance changes
+        const { queryClient } = await import('@/lib/queryClient');
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        
         const interval = setInterval(async () => {
           try {
             const { authenticatedFetch } = await import('@/lib/queryClient');

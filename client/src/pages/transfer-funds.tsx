@@ -151,6 +151,10 @@ export default function TransferFunds() {
         setHasSubmitted(true);
         form.reset();
         
+        // Refresh user data to reflect balance changes
+        const { queryClient } = await import('@/lib/queryClient');
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        
         // Poll for transfer status updates
         const interval = setInterval(async () => {
           try {
