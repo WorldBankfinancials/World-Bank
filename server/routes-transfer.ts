@@ -73,8 +73,19 @@ export function setupTransferRoutes(app: Express) {
         const newBalance = currentBalance - numAmount;
         await storage.updateUserBalance(user.id, newBalance);
         
+        // Get user's first account for transaction
+        const userAccounts = await storage.getUserAccounts(user.id);
+        if (!userAccounts || userAccounts.length === 0) {
+          return res.status(400).json({ message: "User has no account" });
+        }
+        const fromAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
+        if (!fromAccountId || fromAccountId <= 0) {
+          return res.status(400).json({ message: "Invalid account ID" });
+        }
+        
         const transactionData: any = {
           fromUserId: user.id,
+          fromAccountId: fromAccountId,
           amount: String(amount),
           currency: 'USD',
           type: 'transfer',
@@ -171,8 +182,19 @@ export function setupTransferRoutes(app: Express) {
         const recipientNameTrunc = String(recipientName).substring(0, 20);
         const recipientCountryTrunc = String(recipientCountry).substring(0, 20);
         
+        // Get user's first account for transaction
+        const userAccounts = await storage.getUserAccounts(user.id);
+        if (!userAccounts || userAccounts.length === 0) {
+          return res.status(400).json({ message: "User has no account" });
+        }
+        const fromAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
+        if (!fromAccountId || fromAccountId <= 0) {
+          return res.status(400).json({ message: "Invalid account ID" });
+        }
+        
         const transactionData: any = {
           fromUserId: user.id,
+          fromAccountId: fromAccountId,
           amount: String(amount),
           currency: 'USD',
           type: 'transfer',
