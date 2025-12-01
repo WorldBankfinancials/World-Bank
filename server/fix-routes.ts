@@ -58,59 +58,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     res.json({ status: 'OK', timestamp: new Date() });
   });
 
-  // Test Supabase connection and verify tables exist - ADMIN ONLY
-  app.get('/test-supabase-connection', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { SupabasePublicStorage } = await import('./supabase-public-storage');
-      const { supabase } = await import('./supabase-public-storage');
-
-      // Test connection by checking if bank_users table exists
-      const { data, error } = await supabase
-        .from('bank_users')
-        .select('id, full_name, email, balance')
-        .order('id', { ascending: false })
-        .limit(10);
-
-      if (error) {
-        res.json({ 
-          connected: false, 
-          message: 'Banking tables not found in Supabase',
-          error: error.message,
-          action: 'Please run the SQL in supabase-cleanup-and-setup.sql'
-        });
-      } else {
-        res.json({ 
-          connected: true, 
-          message: `Banking tables working! Found ${data?.length || 0} users`,
-          users: data,
-          details: 'International banking system ready with realtime synchronization'
-        });
-      }
-    } catch (error: any) {
-      res.status(500).json({ error: 'Connection test failed', details: error.message });
-    }
-  });
-
-  // SECURITY: Test user creation endpoint - ADMIN ONLY
-  app.post('/api/admin/create-test-user', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const testUser = await storage.createUser({
-        username: 'testuser',
-        email: req.body.email || 'test@example.com',
-        firstName: 'Test',
-        lastName: 'User',
-        phone: '1234567890',
-        password: 'supabase_auth',
-        profession: 'Developer',
-        accountNumber: '123456789',
-        accountId: 1001,
-        balance: '10000'
-      });
-      res.json({ success: true, user: testUser });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to create test user' });
-    }
-  });
 
   // Get user by Supabase UUID
   app.get('/api/users/supabase/:supabaseId', async (req: Request, res: Response) => {
@@ -494,14 +441,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // SECURITY: Test user endpoint COMPLETELY DISABLED in production and dev for safety
-  app.post('/api/create-test-user', async (req: Request, res: Response) => {
-    // CRITICAL: This endpoint is disabled for security - use normal registration only
-    return res.status(403).json({ 
-      error: 'Forbidden',
-      message: 'Test user endpoint is disabled for security reasons. Use normal registration instead.'
-    });
-  });
 
   // User endpoints - PROTECTED with JWT authentication
   app.get('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
