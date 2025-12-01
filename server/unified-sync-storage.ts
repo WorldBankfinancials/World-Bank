@@ -47,15 +47,15 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
       
       if (error) {
-        console.error('❌ getUser Supabase error:', error);
+        console.error(`❌ getUser(${id}) error:`, error.message);
         return undefined;
       }
       if (!data) return undefined;
-      const user = data as any as User;
+      const user = this.mapDatabaseToUser(data);
       this.setCache(cacheKey, user);
       return user;
     } catch (error) {
-      console.error('❌ getUser catch error:', error);
+      console.error(`❌ getUser(${id}) catch:`, error);
       return undefined;
     }
   }
@@ -72,12 +72,20 @@ export class UnifiedSyncStorage implements IStorage {
         .eq('email', email)
         .single();
       
-      if (error || !data) return undefined;
-      const user = data as any as User;
+      if (error) {
+        console.error(`❌ getUserByEmail(${email}) error:`, error.message);
+        return undefined;
+      }
+      if (!data) {
+        console.warn(`⚠️ getUserByEmail(${email}): No user found`);
+        return undefined;
+      }
+      const user = this.mapDatabaseToUser(data);
       this.setCache(cacheKey, user);
+      console.log(`✅ getUserByEmail(${email}): Success`);
       return user;
     } catch (error) {
-      console.error('❌ getUserByEmail error:', error);
+      console.error(`❌ getUserByEmail(${email}) catch:`, error);
       return undefined;
     }
   }
@@ -90,10 +98,14 @@ export class UnifiedSyncStorage implements IStorage {
         .eq('username', username)
         .single();
       
-      if (error || !data) return undefined;
-      return data as any as User;
+      if (error) {
+        console.error(`❌ getUserByUsername(${username}) error:`, error.message);
+        return undefined;
+      }
+      if (!data) return undefined;
+      return this.mapDatabaseToUser(data);
     } catch (error) {
-      console.error('❌ getUserByUsername error:', error);
+      console.error(`❌ getUserByUsername(${username}) catch:`, error);
       return undefined;
     }
   }
@@ -106,9 +118,14 @@ export class UnifiedSyncStorage implements IStorage {
         .eq('phone', phone)
         .single();
       
-      if (error || !data) return undefined;
-      return data as any as User;
+      if (error) {
+        console.error(`❌ getUserByPhone(${phone}) error:`, error.message);
+        return undefined;
+      }
+      if (!data) return undefined;
+      return this.mapDatabaseToUser(data);
     } catch (error) {
+      console.error(`❌ getUserByPhone catch:`, error);
       return undefined;
     }
   }
@@ -121,9 +138,14 @@ export class UnifiedSyncStorage implements IStorage {
         .eq('supabase_id', supabaseUserId)
         .single();
       
-      if (error || !data) return undefined;
-      return data as any as User;
+      if (error) {
+        console.error(`❌ getUserBySupabaseId(${supabaseUserId}) error:`, error.message);
+        return undefined;
+      }
+      if (!data) return undefined;
+      return this.mapDatabaseToUser(data);
     } catch (error) {
+      console.error(`❌ getUserBySupabaseId catch:`, error);
       return undefined;
     }
   }
@@ -135,68 +157,96 @@ export class UnifiedSyncStorage implements IStorage {
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error || !data) return [];
-      return data as any as User[];
+      if (error) {
+        console.error('❌ getAllUsers error:', error.message);
+        return [];
+      }
+      if (!data) return [];
+      return data.map(row => this.mapDatabaseToUser(row));
     } catch (error) {
+      console.error('❌ getAllUsers catch:', error);
       return [];
     }
   }
 
   async createUser(user: InsertUser): Promise<User> {
     try {
+      const dbRow = {
+        username: user.username || '',
+        email: user.email || '',
+        password: user.password || '',
+        first_name: user.firstName || '',
+        last_name: user.lastName || '',
+        phone: user.phone || '',
+        date_of_birth: user.dateOfBirth || null,
+        address: user.address || '',
+        city: user.city || '',
+        state: user.state || '',
+        country: user.country || '',
+        postal_code: user.postalCode || '',
+        profession: user.profession || '',
+        annual_income: user.annualIncome || '',
+        id_type: user.idType || '',
+        id_number: user.idNumber || '',
+        account_number: user.accountNumber || '',
+        account_id: user.accountId || Date.now(),
+        balance: user.balance || '0.00',
+        is_verified: user.isVerified || false,
+        is_active: user.isActive || false,
+        transfer_pin: user.transferPin || '',
+        role: user.role || 'customer'
+      };
+
       const { data, error } = await supabase
         .from('bank_users')
-        .insert([{
-          username: user.username || '',
-          email: user.email || '',
-          password: user.password || '',
-          first_name: user.firstName || '',
-          last_name: user.lastName || '',
-          phone: user.phone || '',
-          date_of_birth: user.dateOfBirth || null,
-          address: user.address || '',
-          city: user.city || '',
-          state: user.state || '',
-          country: user.country || '',
-          postal_code: user.postalCode || '',
-          profession: user.profession || '',
-          annual_income: user.annualIncome || '',
-          id_type: user.idType || '',
-          id_number: user.idNumber || '',
-          account_number: user.accountNumber || '',
-          account_id: user.accountId || Date.now(),
-          balance: user.balance || '0',
-          is_verified: user.isVerified || false,
-          is_active: user.isActive || false,
-          transfer_pin: user.transferPin || '',
-          role: user.role || 'customer'
-        }])
+        .insert([dbRow])
         .select()
         .single();
 
-      if (error || !data) throw error;
-      const newUser = data as any as User;
-      this.setCache(`user:${newUser.id}`, newUser);
+      if (error) {
+        console.error('❌ createUser Supabase error:', error);
+        throw error;
+      }
+      if (!data) throw new Error('No data returned from insert');
+      
+      const newUser = this.mapDatabaseToUser(data);
+      console.log('✅ createUser success:', newUser.email);
       return newUser;
     } catch (error: any) {
+      console.error('❌ createUser error:', error.message);
       throw error;
     }
   }
 
   async updateUser(id: number, user: Partial<User>): Promise<User | undefined> {
     try {
+      const dbUpdate: any = {};
+      if (user.firstName) dbUpdate.first_name = user.firstName;
+      if (user.lastName) dbUpdate.last_name = user.lastName;
+      if (user.email) dbUpdate.email = user.email;
+      if (user.phone) dbUpdate.phone = user.phone;
+      if (user.transferPin !== undefined) dbUpdate.transfer_pin = user.transferPin;
+      if (user.isActive !== undefined) dbUpdate.is_active = user.isActive;
+      if (user.isVerified !== undefined) dbUpdate.is_verified = user.isVerified;
+
       const { data, error } = await supabase
         .from('bank_users')
-        .update(user as any)
+        .update(dbUpdate)
         .eq('id', id)
         .select()
         .single();
 
-      if (error || !data) return undefined;
-      const updated = data as any as User;
+      if (error) {
+        console.error(`❌ updateUser(${id}) error:`, error);
+        return undefined;
+      }
+      if (!data) return undefined;
+      const updated = this.mapDatabaseToUser(data);
       memCache.delete(`user:${id}`);
+      memCache.delete(`user:email:${updated.email}`);
       return updated;
     } catch (error) {
+      console.error(`❌ updateUser catch:`, error);
       return undefined;
     }
   }
@@ -210,11 +260,16 @@ export class UnifiedSyncStorage implements IStorage {
         .select()
         .single();
 
-      if (error || !data) return undefined;
-      const updated = data as any as User;
+      if (error) {
+        console.error(`❌ updateUserBalance(${id}) error:`, error);
+        return undefined;
+      }
+      if (!data) return undefined;
+      const updated = this.mapDatabaseToUser(data);
       memCache.delete(`user:${id}`);
       return updated;
     } catch (error) {
+      console.error(`❌ updateUserBalance catch:`, error);
       return undefined;
     }
   }
@@ -230,11 +285,17 @@ export class UnifiedSyncStorage implements IStorage {
         .select('*')
         .eq('user_id', userId);
 
-      if (error || !data) return [];
-      const accounts = data as any as Account[];
+      if (error) {
+        console.error(`❌ getUserAccounts(${userId}) error:`, error.message);
+        return [];
+      }
+      if (!data) return [];
+      const accounts = data.map(row => this.mapDatabaseToAccount(row));
       this.setCache(cacheKey, accounts);
+      console.log(`✅ getUserAccounts(${userId}): ${accounts.length} accounts`);
       return accounts;
     } catch (error) {
+      console.error(`❌ getUserAccounts catch:`, error);
       return [];
     }
   }
@@ -247,9 +308,14 @@ export class UnifiedSyncStorage implements IStorage {
         .eq('id', id)
         .single();
 
-      if (error || !data) return undefined;
-      return data as any as Account;
+      if (error) {
+        console.error(`❌ getAccount(${id}) error:`, error.message);
+        return undefined;
+      }
+      if (!data) return undefined;
+      return this.mapDatabaseToAccount(data);
     } catch (error) {
+      console.error(`❌ getAccount catch:`, error);
       return undefined;
     }
   }
@@ -269,10 +335,15 @@ export class UnifiedSyncStorage implements IStorage {
         .select()
         .single();
 
-      if (error || !data) throw error;
+      if (error) {
+        console.error('❌ createAccount error:', error);
+        throw error;
+      }
+      if (!data) throw new Error('No data returned');
       memCache.delete(`accounts:user:${account.userId}`);
-      return data as any as Account;
+      return this.mapDatabaseToAccount(data);
     } catch (error: any) {
+      console.error('❌ createAccount catch:', error.message);
       throw error;
     }
   }
@@ -286,9 +357,14 @@ export class UnifiedSyncStorage implements IStorage {
         .select()
         .single();
 
-      if (error || !data) return undefined;
-      return data as any as Account;
+      if (error) {
+        console.error(`❌ updateAccount(${id}) error:`, error);
+        return undefined;
+      }
+      if (!data) return undefined;
+      return this.mapDatabaseToAccount(data);
     } catch (error) {
+      console.error(`❌ updateAccount catch:`, error);
       return undefined;
     }
   }
@@ -296,14 +372,19 @@ export class UnifiedSyncStorage implements IStorage {
   async getTransaction(id: string): Promise<Transaction | undefined> {
     try {
       const { data, error } = await supabase
-        .from('bank_transactions')
+        .from('transactions')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error || !data) return undefined;
-      return data as any as Transaction;
+      if (error) {
+        console.error(`❌ getTransaction(${id}) error:`, error.message);
+        return undefined;
+      }
+      if (!data) return undefined;
+      return this.mapDatabaseToTransaction(data);
     } catch (error) {
+      console.error(`❌ getTransaction catch:`, error);
       return undefined;
     }
   }
@@ -311,15 +392,21 @@ export class UnifiedSyncStorage implements IStorage {
   async getAccountTransactions(accountId: number): Promise<Transaction[]> {
     try {
       const { data, error } = await supabase
-        .from('bank_transactions')
+        .from('transactions')
         .select('*')
         .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (error || !data) return [];
-      return data as any as Transaction[];
+      if (error) {
+        console.error(`❌ getAccountTransactions(${accountId}) error:`, error.message);
+        return [];
+      }
+      if (!data) return [];
+      console.log(`✅ getAccountTransactions(${accountId}): ${data.length} transactions`);
+      return data.map(row => this.mapDatabaseToTransaction(row));
     } catch (error) {
+      console.error(`❌ getAccountTransactions catch:`, error);
       return [];
     }
   }
@@ -327,14 +414,19 @@ export class UnifiedSyncStorage implements IStorage {
   async getAllTransactions(): Promise<Transaction[]> {
     try {
       const { data, error } = await supabase
-        .from('bank_transactions')
+        .from('transactions')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(500);
 
-      if (error || !data) return [];
-      return data as any as Transaction[];
+      if (error) {
+        console.error('❌ getAllTransactions error:', error.message);
+        return [];
+      }
+      if (!data) return [];
+      return data.map(row => this.mapDatabaseToTransaction(row));
     } catch (error) {
+      console.error('❌ getAllTransactions catch:', error);
       return [];
     }
   }
@@ -342,7 +434,7 @@ export class UnifiedSyncStorage implements IStorage {
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
     try {
       const { data, error } = await supabase
-        .from('bank_transactions')
+        .from('transactions')
         .insert([{
           from_account_id: transaction.fromAccountId || 0,
           to_account_id: transaction.toAccountId || 0,
@@ -356,9 +448,14 @@ export class UnifiedSyncStorage implements IStorage {
         .select()
         .single();
 
-      if (error || !data) throw error;
-      return data as any as Transaction;
+      if (error) {
+        console.error('❌ createTransaction error:', error);
+        throw error;
+      }
+      if (!data) throw new Error('No data returned');
+      return this.mapDatabaseToTransaction(data);
     } catch (error: any) {
+      console.error('❌ createTransaction catch:', error.message);
       throw error;
     }
   }
@@ -366,7 +463,7 @@ export class UnifiedSyncStorage implements IStorage {
   async createAdminAction(action: InsertAdminAction): Promise<AdminAction> {
     try {
       const { data, error } = await supabase
-        .from('bank_admin_actions')
+        .from('admin_actions')
         .insert([{
           admin_id: action.adminId || 0,
           action_type: (action as any).actionType || 'unknown',
@@ -377,11 +474,98 @@ export class UnifiedSyncStorage implements IStorage {
         .select()
         .single();
 
-      if (error || !data) throw error;
+      if (error) {
+        console.error('❌ createAdminAction error:', error);
+        throw error;
+      }
+      if (!data) throw new Error('No data returned');
       return data as any as AdminAction;
     } catch (error: any) {
+      console.error('❌ createAdminAction catch:', error.message);
       throw error;
     }
+  }
+
+  // ==================== DATA MAPPERS ====================
+  private mapDatabaseToUser(dbRow: any): User {
+    return {
+      id: dbRow.id,
+      email: dbRow.email,
+      password: dbRow.password,
+      firstName: dbRow.first_name,
+      lastName: dbRow.last_name,
+      username: dbRow.username,
+      phone: dbRow.phone,
+      profession: dbRow.profession,
+      accountId: dbRow.account_id,
+      accountNumber: dbRow.account_number,
+      balance: dbRow.balance,
+      dateOfBirth: dbRow.date_of_birth,
+      address: dbRow.address,
+      city: dbRow.city,
+      state: dbRow.state,
+      country: dbRow.country,
+      postalCode: dbRow.postal_code,
+      annualIncome: dbRow.annual_income,
+      idType: dbRow.id_type,
+      idNumber: dbRow.id_number,
+      transferPin: dbRow.transfer_pin,
+      isActive: dbRow.is_active,
+      isVerified: dbRow.is_verified,
+      role: dbRow.role,
+      createdAt: dbRow.created_at,
+      updatedAt: dbRow.updated_at,
+    };
+  }
+
+  private mapDatabaseToAccount(dbRow: any): Account {
+    return {
+      id: dbRow.id,
+      userId: dbRow.user_id,
+      accountNumber: dbRow.account_number,
+      accountType: dbRow.account_type,
+      balance: dbRow.balance,
+      currency: dbRow.currency,
+      status: dbRow.status,
+      createdAt: dbRow.created_at,
+      updatedAt: dbRow.updated_at,
+    };
+  }
+
+  private mapDatabaseToTransaction(dbRow: any): Transaction {
+    return {
+      id: dbRow.id,
+      fromAccountId: dbRow.from_account_id,
+      toAccountId: dbRow.to_account_id,
+      fromUserId: dbRow.from_user_id,
+      toUserId: dbRow.to_user_id,
+      transactionId: dbRow.transaction_id,
+      transactionType: dbRow.transaction_type,
+      amount: dbRow.amount,
+      currency: dbRow.currency,
+      type: dbRow.type,
+      status: dbRow.status,
+      description: dbRow.description,
+      referenceNumber: dbRow.reference_number,
+      fee: dbRow.fee,
+      exchangeRate: dbRow.exchange_rate,
+      countryCode: dbRow.country_code,
+      recipientName: dbRow.recipient_name,
+      recipientAccount: dbRow.recipient_account,
+      recipientAddress: dbRow.recipient_address,
+      recipientCountry: dbRow.recipient_country,
+      bankName: dbRow.bank_name,
+      swiftCode: dbRow.swift_code,
+      transferPurpose: dbRow.transfer_purpose,
+      category: dbRow.category,
+      adminNotes: dbRow.admin_notes,
+      approvedBy: dbRow.approved_by,
+      approvedAt: dbRow.approved_at,
+      rejectedBy: dbRow.rejected_by,
+      rejectedAt: dbRow.rejected_at,
+      createdAt: dbRow.created_at,
+      updatedAt: dbRow.updated_at,
+    };
   }
 
   // ==================== STUB IMPLEMENTATIONS ====================
