@@ -286,16 +286,14 @@ export class UnifiedSyncStorage implements IStorage {
         .eq('user_id', userId);
 
       if (error) {
-        
         return [];
       }
       if (!data) return [];
-      const accounts = data.map(row => this.mapDatabaseToAccount(row));
+      const accounts = data.map(row => this.mapDatabaseToAccount(row)).filter(acc => acc.id && acc.id > 0);
       this.setCache(cacheKey, accounts);
       
       return accounts;
     } catch (error) {
-      
       return [];
     }
   }
@@ -433,10 +431,13 @@ export class UnifiedSyncStorage implements IStorage {
 
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
     try {
+      if (!transaction.fromAccountId || transaction.fromAccountId <= 0) {
+        throw new Error('Invalid fromAccountId - must be a positive number');
+      }
       const { data, error } = await supabase
         .from('transactions')
         .insert([{
-          from_account_id: transaction.fromAccountId || 0,
+          from_account_id: transaction.fromAccountId,
           to_account_id: transaction.toAccountId || 0,
           amount: transaction.amount || '0',
           transaction_type: transaction.type || 'transfer',
