@@ -2410,7 +2410,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         const currentBalance = parseFloat(currentBalanceStr);
         const newBalance = (currentBalance - parseFloat(amount.toString())).toFixed(2);
         const balanceNum = parseFloat(newBalance);
-        if (!isNaN(balanceNum)) {
+        if (!isNaN(balanceNum) && senderAccountId) {
           await storage.updateAccount(senderAccountId, { balance: balanceNum as any });
         }
       } catch (balanceError) {
