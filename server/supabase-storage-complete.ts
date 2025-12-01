@@ -5,7 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import type { IStorage } from "./storage";
-import type { User, Account, Transaction, AdminAction, SupportTicket, InsertUser, InsertAccount, InsertTransaction, InsertAdminAction, InsertSupportTicket } from "@shared/schema";
+import type { User, Account, Transaction, AdminAction, SupportTicket, Card, Investment, Message, Alert, InsertUser, InsertAccount, InsertTransaction, InsertAdminAction, InsertSupportTicket } from "@shared/schema";
 import { mapSupabaseUserToUser, mapUserToSupabaseInsert, mapSupabaseAccountToAccount, mapAccountToSupabaseInsert, mapSupabaseTransactionToTransaction } from './supabase-mapping';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
@@ -320,7 +320,7 @@ export class CompleteSupabaseStorage implements IStorage {
     return error ? undefined : data;
   }
 
-  async createCard(card: Partial<BankCard>): Promise<any> {
+  async createCard(card: Partial<Card>): Promise<any> {
     const { data, error } = await supabase
       .from('cards')
       .insert([{...card, created_at: new Date().toISOString()}])
@@ -330,7 +330,7 @@ export class CompleteSupabaseStorage implements IStorage {
     return data;
   }
 
-  async updateCard(id: number, updates: Partial<BankCard>): Promise<any | undefined> {
+  async updateCard(id: number, updates: Partial<Card>): Promise<any | undefined> {
     const { data, error } = await supabase
       .from('cards')
       .update({...updates, updated_at: new Date().toISOString()})
@@ -362,7 +362,7 @@ export class CompleteSupabaseStorage implements IStorage {
     return error ? undefined : data;
   }
 
-  async createInvestment(investment: Partial<Investment>): Promise<any> {
+  async createInvestment(investment: Partial<Investment>): Promise<Investment> {
     const { data, error } = await supabase
       .from('investments')
       .insert([{...investment, created_at: new Date().toISOString()}])
@@ -372,7 +372,7 @@ export class CompleteSupabaseStorage implements IStorage {
     return data;
   }
 
-  async updateInvestment(id: number, updates: Partial<Investment>): Promise<any | undefined> {
+  async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> {
     const { data, error } = await supabase
       .from('investments')
       .update({...updates, updated_at: new Date().toISOString()})
@@ -399,7 +399,7 @@ export class CompleteSupabaseStorage implements IStorage {
     return error ? [] : (data || []);
   }
 
-  async createMessage(message: Partial<ChatMessage>): Promise<any> {
+  async createMessage(message: Partial<Message>): Promise<Message> {
     const { data, error } = await supabase
       .from('messages')
       .insert([{...message, created_at: new Date().toISOString()}])
@@ -439,7 +439,7 @@ export class CompleteSupabaseStorage implements IStorage {
     return error ? [] : (data || []);
   }
 
-  async createAlert(alert: Partial<BankAlert>): Promise<any> {
+  async createAlert(alert: Partial<Alert>): Promise<Alert> {
     const { data, error } = await supabase
       .from('alerts')
       .insert([{...alert, created_at: new Date().toISOString()}])
