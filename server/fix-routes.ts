@@ -29,7 +29,15 @@ import * as bcrypt from 'bcryptjs';
 interface Transaction {
   id: string | number;
   createdAt: string | Date | null;
-  [key: string]: any;
+  status: string;
+  amount: string | number;
+  type: string;
+  description?: string;
+  recipientName?: string;
+  recipientAccount?: string;
+  referenceNumber?: string;
+  fromAccountId?: string | number;
+  toAccountId?: string | number;
 }
 
 // Initialize Supabase client
@@ -47,7 +55,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   
   // Runtime config endpoint - serves Supabase credentials to frontend
   app.get('/api/config', (req: Request, res: Response) => {
-    res.json({
+    return res.json({
       supabaseUrl: process.env.VITE_SUPABASE_URL,
       supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY,
     });
@@ -55,7 +63,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   
   // Health check endpoint
   app.get('/api/health', (req: Request, res: Response) => {
-    res.json({ status: 'OK', timestamp: new Date() });
+    return res.json({ status: 'OK', timestamp: new Date() });
   });
 
 
@@ -68,14 +76,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Supabase ID required' });
       }
 
-      const user = await (storage as any).getUserBySupabaseId(supabaseId);
+      const user = await storage.getUserBySupabaseId?.(supabaseId) || null;
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
 
       res.json(user);
     } catch (error: unknown) {
-      res.status(500).json({ error: 'Failed to get user' });
+      return res.status(500).json({ error: 'Failed to get user' });
     }
   });
 

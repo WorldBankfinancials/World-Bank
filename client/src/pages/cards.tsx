@@ -221,7 +221,7 @@ export default function Cards() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={userProfile as any} />
+      <Header user={userProfile || { email: '', firstName: '', lastName: '' }} />
       
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Page Header */}
@@ -239,7 +239,7 @@ export default function Cards() {
         {/* Credit Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {cardsLoading && <div className="text-center py-8">Loading cards...</div>}
-          {creditCards && creditCards.map((card: any) => (
+          {creditCards && creditCards.map((card: typeof creditCards[0]) => (
             <Card key={card.id} className="overflow-hidden">
               <div className={`${card.color} text-white p-6 relative`}>
                 <div className="flex justify-between items-start mb-4">
