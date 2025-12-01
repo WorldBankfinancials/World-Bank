@@ -439,7 +439,7 @@ export class UnifiedSyncStorage implements IStorage {
           from_account_id: transaction.fromAccountId || 0,
           to_account_id: transaction.toAccountId || 0,
           amount: transaction.amount || '0',
-          type: transaction.type || 'transfer',
+          transaction_type: transaction.type || 'transfer',
           status: transaction.status || 'pending',
           reference_number: transaction.referenceNumber || '',
           description: transaction.description || '',
@@ -449,13 +449,11 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        
         throw error;
       }
       if (!data) throw new Error('No data returned');
       return this.mapDatabaseToTransaction(data);
     } catch (error: any) {
-      
       throw error;
     }
   }
