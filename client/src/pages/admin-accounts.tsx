@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit, Trash2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Account {
   id: number;
@@ -25,6 +26,7 @@ interface AccountManagementProps {
 }
 
 export default function AdminAccountManagement({ onBack }: AccountManagementProps) {
+  const { t } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: accounts = [], isLoading: accountsLoading } = useQuery<Account[]>({

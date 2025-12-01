@@ -105,7 +105,7 @@ export default function Header({}: HeaderProps) {
                     <div className="flex items-center space-x-3">
                       <Avatar size={64} />
                       <div className="flex-1">
-                        <div className="font-semibold text-gray-900">{userProfile?.firstName && userProfile?.lastName ? `${userProfile.firstName} ${userProfile.lastName}` : userProfile?.fullName || 'Banking Customer'}</div>
+                        <div className="font-semibold text-gray-900">{userProfile?.fullName || 'Banking Customer'}</div>
                       <div className="text-sm text-gray-600">{userProfile?.profession || 'Account Holder'}</div>
                       <div className="text-sm text-gray-600">{userProfile?.email || ''}</div>
                         <div className="flex items-center space-x-2 mt-1">
@@ -146,7 +146,7 @@ export default function Header({}: HeaderProps) {
                       Account ID: {userProfile?.accountId || 'Loading...'}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Last Active: {userProfile?.lastLogin ? new Date(userProfile.lastLogin).toLocaleDateString() : 'Loading...'}
+                      Status: Active
                     </div>
                   </div>
                 </div>
