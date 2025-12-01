@@ -65,14 +65,11 @@ export default function AdminLiveChat() {
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const sessionId = `session_${selectedSession.customerId || selectedSession.id}`;
-        console.log('📨 Fetching messages for session:', sessionId);
         const response = await authenticatedFetch(`/api/messages/session/${sessionId}`);
         if (!response.ok) return [];
         const data = await response.json();
-        console.log('✅ Fetched', data.length, 'messages');
         return data;
       } catch (error) {
-        console.error('❌ Failed to fetch messages:', error);
         return [];
       }
     },
@@ -139,7 +136,7 @@ export default function AdminLiveChat() {
           setMessages((prev: Message[]) => [...prev, msg]);
         }
       } catch (error) {
-        console.error('Error parsing chat message:', error);
+        // Error parsing chat message - skip
       }
     };
 
