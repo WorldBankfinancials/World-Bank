@@ -2337,16 +2337,25 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Get authenticated user's account using email from auth middleware
       const user = await storage.getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(400).json({ error: 'User not found' });
+      console.log('🔍 Transfer endpoint - User lookup:', { email: req.user!.email, userId: user?.id, userName: user?.email });
+      if (!user || !user.id) {
+        console.error('❌ User not found or no ID:', user);
+        return res.status(400).json({ error: 'User not found or invalid user ID' });
       }
       
       const userAccounts = await storage.getUserAccounts(user.id);
+      console.log('🔍 User accounts retrieved:', { userId: user.id, accountCount: userAccounts?.length, accounts: userAccounts });
       if (!userAccounts || userAccounts.length === 0) {
         return res.status(400).json({ error: 'User has no accounts' });
       }
       
       const senderAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
+      console.log('🔍 Sender account ID extracted:', { rawId: userAccounts[0].id, parsedId: senderAccountId, accountData: userAccounts[0] });
+      
+      if (!senderAccountId || senderAccountId === 0) {
+        console.error('❌ Invalid sender account ID:', senderAccountId);
+        return res.status(400).json({ error: 'Invalid sender account - no valid account ID found' });
+      }
 
       const transfer = await storage.createTransaction({
         fromAccountId: senderAccountId,
@@ -2455,16 +2464,25 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       
       // Get authenticated user's account using email from auth middleware
       const user = await storage.getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(400).json({ error: 'User not found' });
+      console.log('🔍 Intl Transfer endpoint - User lookup:', { email: req.user!.email, userId: user?.id, userName: user?.email });
+      if (!user || !user.id) {
+        console.error('❌ User not found or no ID:', user);
+        return res.status(400).json({ error: 'User not found or invalid user ID' });
       }
       
       const userAccounts = await storage.getUserAccounts(user.id);
+      console.log('🔍 User accounts retrieved:', { userId: user.id, accountCount: userAccounts?.length, accounts: userAccounts });
       if (!userAccounts || userAccounts.length === 0) {
         return res.status(400).json({ error: 'User has no accounts' });
       }
       
       const senderAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
+      console.log('🔍 Sender account ID extracted:', { rawId: userAccounts[0].id, parsedId: senderAccountId, accountData: userAccounts[0] });
+      
+      if (!senderAccountId || senderAccountId === 0) {
+        console.error('❌ Invalid sender account ID:', senderAccountId);
+        return res.status(400).json({ error: 'Invalid sender account - no valid account ID found' });
+      }
 
       const transfer = await storage.createTransaction({
         fromAccountId: senderAccountId,
