@@ -2457,7 +2457,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         const userAccounts = await storage.getUserAccounts(userId);
         if (userAccounts && userAccounts.length > 0) {
           const senderAccount = userAccounts[0];
-          const balanceStr = senderAccount?.balance?.toString?.() || '0';
+          const balanceValue = senderAccount?.balance;
+          const balanceStr = (balanceValue && typeof balanceValue.toString === 'function') ? balanceValue.toString() : '0';
           const currentBalance = parseFloat(balanceStr);
           const newBalance = (currentBalance - parseFloat(amount.toString())).toFixed(2);
           const accountId = typeof senderAccount.id === 'string' ? parseInt(senderAccount.id) : senderAccount.id;
