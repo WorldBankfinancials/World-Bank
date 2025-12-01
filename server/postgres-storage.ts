@@ -274,7 +274,7 @@ export class PostgresStorage implements IStorage {
 
   async createAccount(account: InsertAccount): Promise<Account> {
     try {
-      const balance = account.balance ? parseFloat(account.balance as string) : 0.00;
+      const balance = account.balance ? parseFloat(account.balance) : 0.00;
       const userId = account.userId ?? 0;
       const accountNumber = account.accountNumber ?? '';
       const accountType = account.accountType ?? 'savings';

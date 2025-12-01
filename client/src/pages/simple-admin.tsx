@@ -604,7 +604,7 @@ export default function SimpleAdmin() {
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
-          let base64Image = e.target?.result as string;
+          let base64Image = e.target?.result;
           
           if (!base64Image) {
             throw new Error('Failed to read image file');
