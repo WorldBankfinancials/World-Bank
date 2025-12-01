@@ -46,8 +46,6 @@ const mapUser = (user: Record<string, any>): User => {
     balance = isNaN(balNum) ? '0' : balNum.toString();
   }
   
-  console.log('mapUser: user.id=', user.id, ', balance=', balance, ', raw balance=', user.balance);
-  
   return {
     id: user.id,
     username: user.username || '',
