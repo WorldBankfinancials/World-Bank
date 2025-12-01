@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import RegistrationStep1 from './register/step1';
-import RegistrationStep2 from './register/step2';
-import RegistrationStep3 from './register/step3';
-import RegistrationStep4 from './register/step4';
+import RegistrationStep1 from '@/pages/register/step1';
+import RegistrationStep2 from '@/pages/register/step2';
+import RegistrationStep3 from '@/pages/register/step3';
+import RegistrationStep4 from '@/pages/register/step4';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { publicPost } from '@/lib/fetch-client';

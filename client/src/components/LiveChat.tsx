@@ -18,7 +18,7 @@ interface LiveChatProps {
   onClose?: () => void;
 }
 
-const STORAGE_KEY = 'wb_chat_messages';
+const STORAGE_KEY = 'wb_chat_messages_v2';
 
 export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   const { toast } = useToast();
@@ -29,53 +29,63 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const subscriptionRef = useRef<any>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const initializedRef = useRef(false);
 
-  // STEP 1: Load messages from localStorage on mount (PERSISTENT)
+  // LOAD MESSAGES ON COMPONENT MOUNT (NOT JUST ON isOpen CHANGE)
   useEffect(() => {
-    if (!isOpen) return;
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed.map((m: any) => ({
-            ...m,
-            timestamp: new Date(m.timestamp)
-          })));
-          return;
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMessages(parsed.map((m: any) => ({
+              ...m,
+              timestamp: new Date(m.timestamp)
+            })));
+            return;
+          }
+        } catch {
+          localStorage.removeItem(STORAGE_KEY);
         }
       }
     } catch (e) {
-      // Ignore parse errors
+      // Ignore errors
     }
     
-    // Default message
     const defaultMsg: Message = {
-      id: '1',
+      id: Date.now().toString(),
       sender: 'agent',
       text: 'Hello! How can we help you today?',
       timestamp: new Date()
     };
     setMessages([defaultMsg]);
     localStorage.setItem(STORAGE_KEY, JSON.stringify([defaultMsg]));
-  }, [isOpen]);
+  }, []);
 
-  // STEP 2: Save messages to localStorage whenever they change (PERSISTENT)
+  // SAVE TO LOCALSTORAGE WHENEVER MESSAGES CHANGE
   useEffect(() => {
     if (messages.length === 0) return;
     
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     
     saveTimeoutRef.current = setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-    }, 1000);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      } catch (e) {
+        // Storage quota exceeded or other error - continue anyway
+      }
+    }, 500);
 
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
   }, [messages]);
 
-  // STEP 3: Setup Realtime subscription
+  // REALTIME SUBSCRIPTION
   useEffect(() => {
     if (!isOpen) return;
 
@@ -138,7 +148,11 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
     
     setMessages(prev => {
       const updated = [...prev, userMessage];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        // Ignore storage errors
+      }
       return updated;
     });
 
@@ -159,12 +173,18 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
         };
         setMessages(prev => {
           const updated = [...prev, agentMessage];
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+          } catch (e) {
+            // Ignore storage errors
+          }
           return updated;
         });
+      } else {
+        toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' });
       }
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Connection failed', variant: 'destructive' });
     }
   }, [inputText, toast]);
 
@@ -197,28 +217,32 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
 
         <div className="flex flex-col flex-1 bg-gray-50 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4 pr-6 space-y-4 border-b-2 border-gray-200">
-            {messages.map(msg => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.sender === 'user' ? 'justify-end pr-2' : 'justify-start'}`}
-              >
+            {messages.length === 0 ? (
+              <div className="text-center text-gray-500 text-sm mt-4">No messages yet</div>
+            ) : (
+              messages.map(msg => (
                 <div
-                  className={`max-w-xs px-4 py-2 rounded-lg text-sm break-words ${
-                    msg.sender === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-none shadow'
-                      : 'bg-white text-gray-900 border border-gray-300 rounded-bl-none shadow'
-                  }`}
+                  key={msg.id}
+                  className={`flex ${msg.sender === 'user' ? 'justify-end pr-2' : 'justify-start'}`}
                 >
-                  <p className="mb-1 leading-relaxed">{msg.text}</p>
-                  <p className={`text-xs ${msg.sender === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
-                    {msg.timestamp.toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
+                  <div
+                    className={`max-w-xs px-4 py-2 rounded-lg text-sm break-words ${
+                      msg.sender === 'user'
+                        ? 'bg-blue-600 text-white rounded-br-none shadow'
+                        : 'bg-white text-gray-900 border border-gray-300 rounded-bl-none shadow'
+                    }`}
+                  >
+                    <p className="mb-1 leading-relaxed">{msg.text}</p>
+                    <p className={`text-xs ${msg.sender === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
+                      {msg.timestamp.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
             <div ref={messagesEndRef} />
           </div>
 
