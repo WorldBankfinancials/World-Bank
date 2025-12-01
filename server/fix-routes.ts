@@ -2453,12 +2453,16 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // ATOMIC: Update sender account balance (deduct amount)
       try {
-        const userAccounts = await storage.getUserAccounts(req.user?.id || 1);
+        const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 1);
+        const userAccounts = await storage.getUserAccounts(userId);
         if (userAccounts && userAccounts.length > 0) {
           const senderAccount = userAccounts[0];
-          const newBalance = (parseFloat(senderAccount.balance.toString()) - parseFloat(amount.toString())).toFixed(2);
-          await storage.updateAccount(senderAccount.id, { balance: parseFloat(newBalance) as any });
-          console.info('✅ Sender balance updated:', { accountId: senderAccount.id, newBalance });
+          const balanceStr = senderAccount?.balance?.toString?.() || '0';
+          const currentBalance = parseFloat(balanceStr);
+          const newBalance = (currentBalance - parseFloat(amount.toString())).toFixed(2);
+          const accountId = typeof senderAccount.id === 'string' ? parseInt(senderAccount.id) : senderAccount.id;
+          await storage.updateAccount(accountId, { balance: parseFloat(newBalance) as any });
+          console.info('✅ Sender balance updated:', { accountId, newBalance });
         }
       } catch (balanceError) {
         console.warn('⚠️ Balance update warning (non-blocking):', balanceError);
@@ -2609,8 +2613,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Content and sessionId required' });
       }
 
+      const senderId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 0);
       const message = await storage.createMessage({
-        senderId: req.user?.id,
+        senderId: senderId,
         senderRole: req.user?.role === 'admin' ? 'admin' : 'customer',
         recipientId: recipientId ? parseInt(recipientId) : undefined,
         recipientRole: recipientId ? 'admin' : 'customer',
@@ -2650,7 +2655,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // GET /api/messages - Fetch user messages
   app.get('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const messages = await storage.getUserMessages(req.user?.id || 0);
+      const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 0);
+      const messages = await storage.getUserMessages(userId);
       console.info('✅ Fetched', messages.length, 'user messages');
       res.json(messages);
     } catch (error: any) {
