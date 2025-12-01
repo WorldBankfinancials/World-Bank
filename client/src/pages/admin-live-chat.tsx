@@ -32,14 +32,15 @@ export default function AdminLiveChat() {
   const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
 
-  // Realtime chat with message handling
-  const { sendMessage: sendRealtimeMessage, isConnected: rtConnected } = useRealtimeChat(
+  // Realtime chat with message handling (disabled if hook returns null)
+  const realtimeChat = useRealtimeChat?.(
     'admin_1',
-    (message) => {
+    (message: Message) => {
       setMessages((prev) => [...prev, message]);
-      toast({ title: 'New Message', description: `From ${message.senderName}` });
     }
   );
+  const sendRealtimeMessage = realtimeChat?.sendMessage || (() => {});
+  const rtConnected = realtimeChat?.isConnected || false;
   
   // Fetch messages from API when session is selected
   const { data: queryMessages = [] } = useQuery<Message[]>({

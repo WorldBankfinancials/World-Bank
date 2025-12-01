@@ -355,7 +355,7 @@ export default function Dashboard() {
                       Account ID: {userProfile?.accountId || t('loading')}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Last Login: {userProfile && 'lastLogin' in userProfile && userProfile.lastLogin ? new Date(userProfile.lastLogin).toLocaleDateString() : t('loading')}
+                      Last Login: {userProfile && 'lastLogin' in userProfile && userProfile.lastLogin ? new Date(String(userProfile.lastLogin)).toLocaleDateString() : t('loading')}
                     </div>
                   </div>
                 </div>

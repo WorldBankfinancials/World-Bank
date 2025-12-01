@@ -5,6 +5,7 @@ import { Server, createServer } from 'http';
 import { storage } from './storage-factory';
 import { setupTransferRoutes } from './routes-transfer';
 import { config, logConfiguration } from './config';
+import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
 import { 
   authRateLimiter, 
@@ -30,6 +31,12 @@ interface Transaction {
   createdAt: string | Date | null;
   [key: string]: any;
 }
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || ''
+);
 
 // Fixed route handlers with proper typing
 export async function registerFixedRoutes(app: Express): Promise<Server> {
@@ -510,7 +517,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const email = req.user!.email;
-      const userId = req.user!.userId;
+      const userId = (req.user as any).id || (req.user as any).userId;
       
       console.log(`🔍 /api/user endpoint called for email: ${email}, userId: ${userId}`);
       
@@ -613,7 +620,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // Update user with avatar
-      const updatedUser = await storage.updateUser(user.id, { avatarUrl });
+      const updatedUser = await storage.updateUser(user.id, { profile_photo_url: avatarUrl });
 
       res.json({
         success: true,
