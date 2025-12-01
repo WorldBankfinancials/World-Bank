@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, Send, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
 
 interface Message {
   id: string;
@@ -19,6 +18,8 @@ interface LiveChatProps {
   onClose?: () => void;
 }
 
+const STORAGE_KEY = 'wb_chat_messages';
+
 export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -27,51 +28,59 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const subscriptionRef = useRef<any>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // Fetch messages from database on mount and when user opens chat
-  const { data: chatMessages = [] } = useQuery<Message[]>({
-    queryKey: ['/api/chat/history'],
-    queryFn: async () => {
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch('/api/chat/history');
-        if (!response.ok) return [];
-        const data = await response.json();
-        return Array.isArray(data) ? data.map((msg: any): Message => ({
-          id: msg.id || msg.message_id || Date.now().toString(),
-          sender: (msg.sender_type === 'user' ? 'user' : 'agent') as 'user' | 'agent',
-          text: msg.content || msg.message || msg.text || '',
-          timestamp: new Date(msg.created_at || msg.timestamp || new Date())
-        })) : [];
-      } catch {
-        return [];
-      }
-    },
-    enabled: !!isOpen,
-    staleTime: 5000,
-  });
-
-  // Update local messages when query data changes
+  // STEP 1: Load messages from localStorage on mount (PERSISTENT)
   useEffect(() => {
-    if (chatMessages && chatMessages.length > 0) {
-      setMessages(chatMessages);
-    } else if (messages.length === 0) {
-      setMessages([{
-        id: '1',
-        sender: 'agent',
-        text: 'Hello! How can we help you today?',
-        timestamp: new Date()
-      }]);
+    if (!isOpen) return;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed.map((m: any) => ({
+            ...m,
+            timestamp: new Date(m.timestamp)
+          })));
+          return;
+        }
+      }
+    } catch (e) {
+      // Ignore parse errors
     }
-  }, [chatMessages]);
+    
+    // Default message
+    const defaultMsg: Message = {
+      id: '1',
+      sender: 'agent',
+      text: 'Hello! How can we help you today?',
+      timestamp: new Date()
+    };
+    setMessages([defaultMsg]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([defaultMsg]));
+  }, [isOpen]);
 
-  // SUPABASE REALTIME: Subscribe to chat messages changes
+  // STEP 2: Save messages to localStorage whenever they change (PERSISTENT)
+  useEffect(() => {
+    if (messages.length === 0) return;
+    
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    }, 1000);
+
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [messages]);
+
+  // STEP 3: Setup Realtime subscription
   useEffect(() => {
     if (!isOpen) return;
 
     const setupRealtimeSubscription = async () => {
       try {
-        // Subscribe to bank_chat_messages table changes
         const channel = supabase
           .channel('chat_messages_realtime')
           .on(
@@ -114,7 +123,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     if (!inputText.trim()) return;
 
     const userMessage: Message = {
@@ -124,9 +133,14 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
     const messageText = inputText;
     setInputText('');
+    
+    setMessages(prev => {
+      const updated = [...prev, userMessage];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
 
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -138,19 +152,21 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
 
       if (response.ok) {
         const agentMessage: Message = {
-          id: Date.now().toString() + '_agent',
+          id: (Date.now() + 1).toString(),
           sender: 'agent',
           text: 'Your message has been received. An agent will respond shortly.',
           timestamp: new Date()
         };
-        setMessages(prev => [...prev, agentMessage]);
-      } else {
-        toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' });
+        setMessages(prev => {
+          const updated = [...prev, agentMessage];
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+          return updated;
+        });
       }
     } catch (error) {
-      toast({ title: 'Error', description: 'Connection failed', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' });
     }
-  };
+  }, [inputText, toast]);
 
   if (!isOpen) return null;
 
@@ -223,25 +239,22 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
                   }}
                   autoFocus
                   type="text"
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  className="text-base p-3 border-2 border-blue-400 rounded-lg font-medium flex-1 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+                  className="border-blue-200 focus:border-blue-500"
                 />
                 <Button
                   onClick={handleSendMessage}
                   disabled={!inputText.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 h-12 font-bold rounded-lg flex-shrink-0"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4"
                   size="sm"
                 >
-                  <Send className="w-5 h-5" />
+                  <Send className="w-4 h-4" />
                 </Button>
               </div>
             </div>
-            {isConnected && (
-              <p className="text-xs text-green-700 font-semibold text-center">✓ Connected to support</p>
-            )}
             {!isConnected && (
-              <p className="text-xs text-gray-600 font-semibold text-center">Connecting...</p>
+              <div className="text-xs text-orange-600 bg-orange-50 p-2 rounded">
+                Connection status: Reconnecting...
+              </div>
             )}
           </div>
         </div>

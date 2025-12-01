@@ -81,7 +81,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      res.json(user);
+      return res.json(user);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to get user' });
     }
@@ -261,7 +261,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json({
+      return res.json({
         available: true,
         message: 'Email available'
       });
@@ -321,7 +321,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to update password', details: updateError.message });
       }
 
-      res.json({ 
+      return res.json({ 
         success: true, 
         message: 'Password updated successfully',
         email: email
@@ -460,7 +460,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
       
-      res.json(user);
+      return res.json(user);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to get user', details: error?.message });
     }
@@ -480,7 +480,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const accounts = await storage.getUserAccounts(user.id);
       const cards = await storage.getUserCards(user.id);
       
-      res.json({
+      return res.json({
         ...user,
         accounts,
         cards
@@ -498,7 +498,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-      res.json(user);
+      return res.json(user);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to get user' });
     }
@@ -512,7 +512,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      res.json(user);
+      return res.json(user);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to get user profile' });
     }
@@ -541,7 +541,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // Note: profile photo storage can be handled via separate photo table if needed
       const updatedUser = user;
 
-      res.json({
+      return res.json({
         success: true,
         message: 'Profile photo updated successfully',
         user: updatedUser
@@ -560,7 +560,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const accounts = await storage.getUserAccounts(user.id);
-      res.json(accounts);
+      return res.json(accounts);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to get user accounts' });
     }
@@ -618,7 +618,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      res.json({ 
+      return res.json({ 
         success: true, 
         transaction,
         message: 'Transaction created successfully'
@@ -668,7 +668,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      res.json({ 
+      return res.json({ 
         success: true, 
         message: 'Account balance updated successfully',
         newBalance: newBalance,
@@ -705,7 +705,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      res.json({ 
+      return res.json({ 
         success: true, 
         user: updatedUser,
         message: 'Balance updated successfully',
@@ -742,7 +742,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      res.json({ 
+      return res.json({ 
         success: true, 
         user: updatedUser,
         message: 'Customer updated successfully'
@@ -756,7 +756,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/transactions', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const transactions = await storage.getAllTransactions();
-      res.json(transactions);
+      return res.json(transactions);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to get transactions' });
     }
@@ -819,7 +819,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       
-      res.json({ success: true, verified: true });
+      return res.json({ success: true, verified: true });
     } catch (error) {
       
       return res.status(500).json({ error: 'Failed to verify PIN', verified: false });
@@ -853,7 +853,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return dateB - dateA;
       });
 
-      res.json(allTransactions);
+      return res.json(allTransactions);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch transactions' });
     }
@@ -872,7 +872,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const accounts = await storage.getUserAccounts(user.id);
-      res.json(accounts);
+      return res.json(accounts);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to get accounts' });
     }
@@ -896,7 +896,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const transactions = await storage.getAccountTransactions(accountId);
-      res.json(transactions);
+      return res.json(transactions);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to get transactions' });
     }
@@ -907,7 +907,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const users = await storage.getAllUsers();
       const pending = users.filter(user => !user.isActive && user.role === 'customer');
-      res.json(pending);
+      return res.json(pending);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to get pending registrations' });
     }
@@ -995,7 +995,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       } catch (error) {
       }
       
-      res.json({ 
+      return res.json({ 
         success: true,
         message: 'Registration approved successfully',
         user: updatedUser
@@ -1056,7 +1056,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       } catch (error) {
       }
 
-      res.json({ 
+      return res.json({ 
         success: true,
         message: 'Registration rejected successfully'
       });
@@ -1103,7 +1103,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Use authenticated user's ID (not hardcoded)
       await storage.updateUser(user.id, { transferPin: hashedNewPin });
-      res.json({ success: true, message: 'PIN updated successfully' });
+      return res.json({ success: true, message: 'PIN updated successfully' });
     } catch (error) {
       return res.status(500).json({ error: 'Failed to change PIN' });
     }
@@ -1123,7 +1123,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'User not found' });
       }
       const cards = await storage.getUserCards(user.id);
-      res.json(cards);
+      return res.json(cards);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch cards' });
     }
@@ -1150,7 +1150,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied' });
       }
 
-      res.json(card);
+      return res.json(card);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch card' });
     }
@@ -1178,7 +1178,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const updatedCard = await storage.updateCard(cardId, { status: isLocked ? 'locked' : 'active' });
-      res.json({ success: true, card: updatedCard });
+      return res.json({ success: true, card: updatedCard });
     } catch (error) {
       return res.status(500).json({ error: 'Failed to update card' });
     }
@@ -1210,7 +1210,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (contactlessEnabled !== undefined) updates.contactlessEnabled = contactlessEnabled;
 
       const updatedCard = await storage.updateCard(cardId, updates);
-      res.json({ success: true, card: updatedCard });
+      return res.json({ success: true, card: updatedCard });
     } catch (error) {
       return res.status(500).json({ error: 'Failed to update card settings' });
     }
@@ -1224,7 +1224,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'User not found' });
       }
       const investments = await storage.getUserInvestments(user.id);
-      res.json(investments);
+      return res.json(investments);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch investments' });
     }
@@ -1249,7 +1249,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied' });
       }
 
-      res.json(investment);
+      return res.json(investment);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch investment' });
     }
@@ -1279,7 +1279,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         forex: transformedData.forex || { change: 0, trending: 'up' as const }
       };
 
-      res.json(result);
+      return res.json(result);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch market rates' });
     }
@@ -1298,7 +1298,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         { name: 'DAX', value: '16,784.86', change: '+92.12', changePercent: '+0.55%', trend: 'up' },
         { name: 'NIKKEI 225', value: '33,377.42', change: '-124.56', changePercent: '-0.37%', trend: 'down' }
       ];
-      res.json(indices);
+      return res.json(indices);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch market indices' });
     }
@@ -1317,7 +1317,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         { symbol: 'NVDA', name: 'NVIDIA Corp.', price: '$495.34', change: '+12.87', changePercent: '+2.67%', trend: 'up' },
         { symbol: 'TSLA', name: 'Tesla Inc.', price: '$248.42', change: '-4.56', changePercent: '-1.80%', trend: 'down' }
       ];
-      res.json(stocks);
+      return res.json(stocks);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch top stocks' });
     }
@@ -1361,7 +1361,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         change: assetAllocation[name].change >= 0 ? `+${assetAllocation[name].change.toFixed(2)}%` : `${assetAllocation[name].change.toFixed(2)}%`
       }));
 
-      res.json(assets);
+      return res.json(assets);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch portfolio assets' });
     }
@@ -1400,7 +1400,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const convertedAmount = (amount / fromRate) * toRate;
       const exchangeRate = toRate / fromRate;
 
-      res.json({
+      return res.json({
         success: true,
         fromCurrency,
         toCurrency,
@@ -1426,7 +1426,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const messages = await storage.getUserMessages(user.id);
 
       // Note: Messages schema doesn't have conversationId, so we return all user messages
-      res.json(messages);
+      return res.json(messages);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch messages' });
     }
@@ -1439,7 +1439,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'User not found' });
       }
       const messages = await storage.getUserMessages(user.id);
-      res.json(messages);
+      return res.json(messages);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch user messages' });
     }
@@ -1478,7 +1478,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (error) {
         return res.status(500).json({ error: 'Failed to save message', details: error.message });
       }
-      res.json(data?.[0] || { success: true });
+      return res.json(data?.[0] || { success: true });
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to save message', details: error.message });
     }
@@ -1496,9 +1496,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (error) {
         return res.json([]);
       }
-      res.json(data || []);
+      return res.json(data || []);
     } catch (error) {
-      res.json([]);
+      return res.json([]);
     }
   });
 
@@ -1517,7 +1517,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         customerName: user.full_name || user.email,
         status: 'active'
       }));
-      res.json(sessions);
+      return res.json(sessions);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch chat sessions' });
     }
@@ -1541,7 +1541,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const message = await storage.markMessageAsRead(id);
-      res.json(message);
+      return res.json(message);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to mark message as read' });
     }
@@ -1563,9 +1563,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (error) {
         return res.json([]);
       }
-      res.json(data || []);
+      return res.json(data || []);
     } catch (error) {
-      res.json([]);
+      return res.json([]);
     }
   });
 
@@ -1576,7 +1576,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'User not found' });
       }
       const alerts = await storage.getUnreadAlerts(user.id);
-      res.json(alerts);
+      return res.json(alerts);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch unread alerts' });
     }
@@ -1597,7 +1597,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       };
 
       const alert = await storage.createAlert(alertData);
-      res.json(alert);
+      return res.json(alert);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to create alert' });
     }
@@ -1622,7 +1622,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       await storage.deleteAlert(id);
-      res.json({ success: true });
+      return res.json({ success: true });
     } catch (error) {
       return res.status(500).json({ error: 'Failed to delete alert' });
     }
@@ -1646,7 +1646,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const alert = await storage.markAlertAsRead(id);
-      res.json(alert);
+      return res.json(alert);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to mark alert as read' });
     }
@@ -1665,7 +1665,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         ? await storage.getSupportTickets()  // No userId = get all
         : await storage.getSupportTickets(user.id);  // With userId = get user's tickets
 
-      res.json(tickets);
+      return res.json(tickets);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch support tickets' });
     }
@@ -1688,7 +1688,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       };
 
       const ticket = await storage.createSupportTicket(ticketData);
-      res.json(ticket);
+      return res.json(ticket);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to create support ticket' });
     }
@@ -1718,7 +1718,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      res.json(updatedTicket);
+      return res.json(updatedTicket);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to update support ticket' });
     }
@@ -1729,7 +1729,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/branches', async (req: Request, res: Response) => {
     try {
       const branches = await storage.getBranches();
-      res.json(branches);
+      return res.json(branches);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch branches' });
     }
@@ -1739,7 +1739,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/atms', async (req: Request, res: Response) => {
     try {
       const atms = await storage.getAtms();
-      res.json(atms);
+      return res.json(atms);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch ATMs' });
     }
@@ -1754,7 +1754,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       rates.forEach((rate: Record<string, any>) => {
         ratesObject[rate.targetCurrency || rate.target_currency] = parseFloat(rate.rate);
       });
-      res.json(ratesObject);
+      return res.json(ratesObject);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch exchange rates' });
     }
@@ -1780,7 +1780,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         status: t.status
       }));
 
-      res.json(formattedTransfers);
+      return res.json(formattedTransfers);
     } catch (error: unknown) {
       return res.status(500).json({ message: 'Failed to fetch pending transfers', error: error.message });
     }
@@ -1815,7 +1815,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         };
       }));
 
-      res.json(formattedTickets);
+      return res.json(formattedTickets);
     } catch (error: unknown) {
       return res.status(500).json({ message: 'Failed to fetch support tickets', error: error.message });
     }
@@ -1826,7 +1826,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const customers = await storage.getAllUsers();
       // Filter out admins, only return customers
       const customerList = customers.filter((user: User) => user.role === 'customer');
-      res.json(customerList);
+      return res.json(customerList);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch customers' });
     }
@@ -1841,7 +1841,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const statements = await storage.getStatementsByUserId(userId);
-      res.json(statements);
+      return res.json(statements);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch statements' });
     }
@@ -1873,7 +1873,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         message: 'File uploaded successfully'
       };
 
-      res.json(uploadResult);
+      return res.json(uploadResult);
     } catch (error) {
       return res.status(500).json({ error: 'Failed to upload file' });
     }
@@ -2104,7 +2104,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         isActive: true
       };
 
-      res.json({ 
+      return res.json({ 
         token: accessToken,
         refreshToken: data.session?.refresh_token,
         user: fullProfile
@@ -2125,13 +2125,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         // Supabase invalidates JWTs on server side automatically
       }
       
-      res.json({ 
+      return res.json({ 
         message: "Logged out successfully",
         status: "ok"
       });
     } catch (error) {
       // Even if error, consider logout successful
-      res.json({ 
+      return res.json({ 
         message: "Logged out successfully",
         status: "ok"
       });
@@ -2153,7 +2153,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to list users', details: error.message });
       }
 
-      res.json({
+      return res.json({
         total: data.users.length,
         users: data.users.map((u: User) => ({
           id: u.id,
@@ -2207,7 +2207,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
 
-      res.json({ 
+      return res.json({ 
         token: accessToken,
         refreshToken: data.session?.refresh_token,
         user: {
@@ -2260,7 +2260,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
 
-      res.json({ 
+      return res.json({ 
         success: true, 
         message: `Password reset successfully for ${email}. You can now login with the new password.`,
         email: email
@@ -2292,7 +2292,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      res.json({ 
+      return res.json({ 
         success: true, 
         message: 'Profile photo updated successfully',
         user: updatedUser
@@ -2337,7 +2337,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
 
-      res.json({ 
+      return res.json({ 
         success: true, 
         message: `User ${email} deleted successfully from Supabase Auth`,
         deleted_email: email
@@ -2397,7 +2397,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // Update original transaction to mark as reversed
       await storage.updateTransactionStatus(txnId, 'reversed', req.user?.id ? parseInt(req.user.id) : 1, reason);
 
-      res.json({ 
+      return res.json({ 
         success: true, 
         message: 'Transaction reversed successfully',
         reversalTransactionId: reversalTxn.id,
@@ -2489,7 +2489,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         transferIdempotencyCache.set(idempotencyKey, { response, timestamp: Date.now() });
       }
 
-      res.json(response);
+      return res.json(response);
     } catch (error: unknown) {
       return res.status(500).json({ error: error.message || 'Failed to create transfer', details: error.toString() });
     }
@@ -2513,7 +2513,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
 
-      res.json({
+      return res.json({
         id: transfer.id,
         status: transfer.status,
         referenceNumber: transfer.referenceNumber,
@@ -2597,7 +2597,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         intlTransferIdempotencyCache.set(idempotencyKey, { response, timestamp: Date.now() });
       }
 
-      res.json(response);
+      return res.json(response);
     } catch (error: unknown) {
       return res.status(500).json({ error: error.message || 'Failed to create international transfer', details: error.toString() });
     }
@@ -2625,7 +2625,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         isRead: false
       });
 
-      res.json(message);
+      return res.json(message);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to save message', details: error.message });
     }
@@ -2642,7 +2642,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const messages = await storage.getMessages(sessionId);
       
-      res.json(messages);
+      return res.json(messages);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch messages', details: error.message });
     }
@@ -2653,7 +2653,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 0);
       const messages = await storage.getUserMessages(userId);
-      res.json(messages);
+      return res.json(messages);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch messages', details: error.message });
     }
@@ -2692,7 +2692,7 @@ export async function registerLiveChatRoutes(app: Express) {
         payload: { message, timestamp: new Date() }
       });
 
-      res.json({ success: true });
+      return res.json({ success: true });
     } catch (error: unknown) {
       return res.status(500).json({ error: error.message });
     }
