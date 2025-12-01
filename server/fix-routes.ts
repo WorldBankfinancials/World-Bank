@@ -2572,7 +2572,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         type: 'international_transfer',
         amount: amount.toString(),
         description: `International transfer to ${recipientCountry}`,
-        status: 'pending_approval',
+        status: 'processing',
         currency: 'USD',
         referenceNumber: referenceNumber
       });

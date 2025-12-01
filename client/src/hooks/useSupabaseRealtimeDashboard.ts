@@ -91,11 +91,9 @@ export function useSupabaseRealtimeAccounts(
           )
           .subscribe((status: string) => {
             if (status === 'SUBSCRIBED') {
-              console.log('✅ Supabase Realtime CONNECTED for accounts');
               realtimeConnected = true;
               if (pollInterval) clearInterval(pollInterval);
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              // Silently fallback to polling - WebSocket blocked in dev (HTTP only)
               if (!pollInterval) {
                 pollInterval = setInterval(fetchAccountsData, 8000);
               }
@@ -203,11 +201,9 @@ export function useSupabaseRealtimeTransactions(
           )
           .subscribe((status: string) => {
             if (status === 'SUBSCRIBED') {
-              console.log('✅ Supabase Realtime CONNECTED for transactions');
               realtimeConnected = true;
               if (pollInterval) clearInterval(pollInterval);
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              // Silently fallback to polling - WebSocket blocked in dev (HTTP only)
               if (!pollInterval) {
                 pollInterval = setInterval(fetchTransactionsData, 8000);
               }

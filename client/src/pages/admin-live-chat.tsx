@@ -183,10 +183,8 @@ export default function AdminLiveChat() {
       // CRITICAL: Invalidate message cache so messages persist when returning to chat
       if (queryClient && response.ok) {
         queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedSession?.id] });
-        console.log('✅ Message cache invalidated - messages will persist');
       }
     } catch (error) {
-      console.error('Failed to save message:', error);
     }
 
     setMessageText('');
