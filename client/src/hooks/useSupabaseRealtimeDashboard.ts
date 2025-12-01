@@ -301,11 +301,9 @@ export function useSupabaseRealtimeUserBalance(
           )
           .subscribe((status: string) => {
             if (status === 'SUBSCRIBED') {
-              console.log('✅ Supabase Realtime CONNECTED for user balance');
               realtimeConnected = true;
               if (pollInterval) clearInterval(pollInterval);
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              // Silently fallback to polling - WebSocket blocked in dev (HTTP only)
               if (!pollInterval) {
                 pollInterval = setInterval(fetchUserData, 8000);
               }
