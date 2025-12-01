@@ -93,14 +93,10 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
           )
           .subscribe((status) => {
             setIsConnected(status === 'SUBSCRIBED');
-            if (status === 'SUBSCRIBED') {
-              console.log('✅ Connected to Supabase Realtime chat');
-            }
           });
 
         subscriptionRef.current = channel;
       } catch (error) {
-        console.error('❌ Realtime subscription failed:', error);
         setIsConnected(false);
       }
     };

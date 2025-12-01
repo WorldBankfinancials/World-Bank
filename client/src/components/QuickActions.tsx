@@ -245,13 +245,7 @@ export default function QuickActions() {
           sessionId: 'session_1'
         })
       });
-      if (!response.ok) {
-        console.error('❌ Message save failed:', response.statusText);
-      } else {
-        console.log('✅ Message saved successfully');
-      }
     } catch (error) {
-      console.error('❌ Failed to save message:', error);
     }
 
     setCurrentMessage("");

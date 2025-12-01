@@ -2450,7 +2450,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         type: 'transfer',
         amount: amount.toString(),
         description: `Transfer to ${recipientName} in ${recipientCountry}`,
-        status: 'pending_approval',
+        status: 'processing',
         currency: 'USD',
         referenceNumber: referenceNumber
       });
@@ -2472,7 +2472,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const response = {
         id: transfer.id,
         transactionId: transfer.referenceNumber,
-        status: 'pending_approval'
+        status: 'processing'
       };
 
       // Cache the response for idempotency
@@ -2580,7 +2580,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const response = {
         id: transfer.id,
         transactionId: transfer.referenceNumber,
-        status: 'pending_approval'
+        status: 'processing'
       };
 
       // Cache the response for idempotency
