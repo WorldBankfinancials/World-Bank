@@ -82,7 +82,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profile && typeof profile === 'object') {
         setUserProfile(profile);
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Silently fail - profile already loaded from localStorage
     }
   }, []);
 
