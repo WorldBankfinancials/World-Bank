@@ -261,15 +261,14 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        
         return undefined;
       }
       if (!data) return undefined;
       const updated = this.mapDatabaseToUser(data);
       memCache.delete(`user:${id}`);
+      memCache.delete(`user:email:${updated.email}`);
       return updated;
     } catch (error) {
-      
       return undefined;
     }
   }
