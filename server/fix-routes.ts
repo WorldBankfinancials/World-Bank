@@ -2440,9 +2440,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const referenceNumber = generateReferenceNumber('WB');
       console.info('🔄 Creating transaction with reference:', referenceNumber);
 
-      console.error('💾 Calling storage.createTransaction()...');
+      // Get authenticated user's account
+      const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 1);
+      const userAccounts = await storage.getUserAccounts(userId);
+      if (!userAccounts || userAccounts.length === 0) {
+        return res.status(400).json({ error: 'User has no accounts' });
+      }
+      
+      const senderAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
+
       const transfer = await storage.createTransaction({
-        fromAccountId: 1,
+        fromAccountId: senderAccountId,
         type: 'transfer',
         amount: amount.toString(),
         description: `Transfer to ${recipientName} in ${recipientCountry}`,
@@ -2453,28 +2461,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // ATOMIC: Update sender account balance (deduct amount)
       try {
-        const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 1);
-        const userAccounts = await storage.getUserAccounts(userId);
-        if (userAccounts && userAccounts.length > 0) {
-          const senderAccount = userAccounts[0];
-          const balanceValue = senderAccount?.balance;
-          const balanceStr = (balanceValue && typeof balanceValue.toString === 'function') ? balanceValue.toString() : '0';
-          const currentBalance = parseFloat(balanceStr);
-          const newBalance = (currentBalance - parseFloat(amount.toString())).toFixed(2);
-          const accountId = typeof senderAccount.id === 'string' ? parseInt(senderAccount.id) : senderAccount.id;
-          await storage.updateAccount(accountId, { balance: parseFloat(newBalance) as any });
-          console.info('✅ Sender balance updated:', { accountId, newBalance });
-        }
+        const senderAccount = userAccounts[0];
+        const currentBalanceStr = String(senderAccount?.balance || '0');
+        const currentBalance = parseFloat(currentBalanceStr);
+        const newBalance = (currentBalance - parseFloat(amount.toString())).toFixed(2);
+        await storage.updateAccount(senderAccountId, { balance: parseFloat(newBalance) as any });
       } catch (balanceError) {
-        console.warn('⚠️ Balance update warning (non-blocking):', balanceError);
+        // Log non-blocking balance update errors
       }
-
-      console.info('✅ Transfer created successfully:', { 
-        id: transfer.id, 
-        referenceNumber: transfer.referenceNumber, 
-        status: transfer.status,
-        timestamp: new Date().toISOString()
-      });
 
       const response = {
         id: transfer.id,
@@ -2571,10 +2565,18 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const referenceNumber = generateReferenceNumber('INT');
-      console.info('🔄 Creating international transaction:', referenceNumber);
+      
+      // Get authenticated user's account
+      const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 1);
+      const userAccounts = await storage.getUserAccounts(userId);
+      if (!userAccounts || userAccounts.length === 0) {
+        return res.status(400).json({ error: 'User has no accounts' });
+      }
+      
+      const senderAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
 
       const transfer = await storage.createTransaction({
-        fromAccountId: 1,
+        fromAccountId: senderAccountId,
         type: 'international_transfer',
         amount: amount.toString(),
         description: `International transfer to ${recipientCountry}`,
@@ -2582,8 +2584,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         currency: 'USD',
         referenceNumber: referenceNumber
       });
-
-      console.info('✅ International transfer created:', { id: transfer.id, referenceNumber: transfer.referenceNumber });
 
       const response = {
         id: transfer.id,
