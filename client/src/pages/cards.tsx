@@ -267,12 +267,12 @@ export default function Cards() {
                   <div>
                     <p className="text-xs opacity-80">Available Credit</p>
                     <p className="text-xl font-bold">
-                      {showBalance ? `$${(card.limit - card.balance).toLocaleString()}` : '••••••'}
+                      {showBalance ? `$${(((card as any).limit || 0) - ((card as any).balance || 0)).toLocaleString()}` : '••••••'}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs opacity-80">Expires</p>
-                    <p className="text-sm">{card.expiry}</p>
+                    <p className="text-sm">{(card as any).expiry || 'N/A'}</p>
                   </div>
                 </div>
                 
@@ -285,11 +285,11 @@ export default function Cards() {
                 <div className="grid grid-cols-2 gap-4 pb-4 border-b border-gray-200">
                   <div>
                     <p className="text-xs text-gray-500 font-medium mb-1">Current Balance</p>
-                    <p className="text-lg font-bold text-gray-900">{showBalance ? `$${card.balance.toLocaleString()}` : '••••••'}</p>
+                    <p className="text-lg font-bold text-gray-900">{showBalance ? `$${(((card as any).balance || 0).toLocaleString())}` : '••••••'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium mb-1">Credit Limit</p>
-                    <p className="text-lg font-bold text-gray-900">${card.limit.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-gray-900">${(((card as any).limit || 0).toLocaleString())}</p>
                   </div>
                 </div>
                 
