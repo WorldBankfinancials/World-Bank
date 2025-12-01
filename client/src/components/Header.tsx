@@ -105,9 +105,9 @@ export default function Header({}: HeaderProps) {
                     <div className="flex items-center space-x-3">
                       <Avatar size={64} />
                       <div className="flex-1">
-                        <div className="font-semibold text-gray-900">{freshUserData?.firstName && freshUserData?.lastName ? `${freshUserData.firstName} ${freshUserData.lastName}` : userProfile?.fullName || 'Banking Customer'}</div>
-                      <div className="text-sm text-gray-600">{freshUserData?.profession || userProfile?.profession || 'Account Holder'}</div>
-                      <div className="text-sm text-gray-600">{freshUserData?.email || userProfile?.email || ''}</div>
+                        <div className="font-semibold text-gray-900">{userProfile?.firstName && userProfile?.lastName ? `${userProfile.firstName} ${userProfile.lastName}` : userProfile?.fullName || 'Banking Customer'}</div>
+                      <div className="text-sm text-gray-600">{userProfile?.profession || 'Account Holder'}</div>
+                      <div className="text-sm text-gray-600">{userProfile?.email || ''}</div>
                         <div className="flex items-center space-x-2 mt-1">
                           <Badge variant="default" className="text-xs bg-green-100 text-green-800 flex items-center space-x-1">
                             <Check className="w-3 h-3" />
@@ -143,10 +143,10 @@ export default function Header({}: HeaderProps) {
                   {/* Account Info Footer */}
                   <div className="p-4 border-t border-gray-100 bg-gray-50">
                     <div className="text-xs text-gray-500">
-                      Account ID: {freshUserData?.accountId || userProfile?.accountId || 'Loading...'}
+                      Account ID: {userProfile?.accountId || 'Loading...'}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Last Active: {freshUserData?.updatedAt ? new Date(freshUserData.updatedAt).toLocaleDateString() : 'Loading...'}
+                      Last Active: {userProfile?.lastLogin ? new Date(userProfile.lastLogin).toLocaleDateString() : 'Loading...'}
                     </div>
                   </div>
                 </div>

@@ -2586,9 +2586,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         referenceNumber: referenceNumber
       });
 
-      const response = {
-        id: transfer.id,
-        transactionId: transfer.referenceNumber,
+      const response: { id: string | number; transactionId: string; status: string } = {
+        id: transfer.id || Date.now(),
+        transactionId: transfer.referenceNumber || '',
         status: 'processing'
       };
 
