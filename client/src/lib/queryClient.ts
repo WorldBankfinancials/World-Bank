@@ -36,9 +36,9 @@ export async function authenticatedFetch(
   try {
     const authHeaders = await getAuthHeaders();
     
-    // Create abort controller for timeout protection (5 second timeout - direct Postgres is instant)
+    // Create abort controller for timeout protection (10 second timeout - Supabase REST API)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
       const response = await fetch(url, {
@@ -80,9 +80,9 @@ export async function apiRequest(
 ): Promise<Response> {
   const authHeaders = await getAuthHeaders();
   
-  // Create abort controller for timeout protection (5 second timeout - direct Postgres is instant)
+  // Create abort controller for timeout protection (10 second timeout - Supabase REST API)
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
   
   try {
     const res = await fetch(url, {
@@ -117,9 +117,9 @@ export const getQueryFn: <T>(options: {
     const url = queryKey[0] as string;
     const authHeaders = await getAuthHeaders();
     
-    // Create abort controller for timeout protection (5 second timeout - direct Postgres is instant)
+    // Create abort controller for timeout protection (10 second timeout - Supabase REST API)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
       const res = await fetch(url, {

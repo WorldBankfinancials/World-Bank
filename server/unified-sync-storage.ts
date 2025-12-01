@@ -46,12 +46,16 @@ export class UnifiedSyncStorage implements IStorage {
         .eq('id', id)
         .single();
       
-      if (error || !data) return undefined;
+      if (error) {
+        console.error('❌ getUser Supabase error:', error);
+        return undefined;
+      }
+      if (!data) return undefined;
       const user = data as any as User;
       this.setCache(cacheKey, user);
       return user;
     } catch (error) {
-      console.error('❌ getUser error:', error);
+      console.error('❌ getUser catch error:', error);
       return undefined;
     }
   }
