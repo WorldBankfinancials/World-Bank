@@ -279,7 +279,7 @@ export class HybridPostgresStorage implements IStorage {
     try {
       const result = await sql`
         INSERT INTO bank_admin_actions (admin_id, action_type, target_id, details, created_at)
-        VALUES (${action.adminId || 0}, ${(action as any).action || 'unknown'}, ${action.targetId || 0}, ${action.details || ''}, NOW())
+        VALUES (${action.adminId || 0}, ${(action as any).actionType || 'unknown'}, ${action.targetId || 0}, ${(action as any).details || ''}, NOW())
         RETURNING *
       `;
       return (result[0] as any) as AdminAction;
@@ -291,41 +291,51 @@ export class HybridPostgresStorage implements IStorage {
   // ==================== ALERT OPERATIONS ====================
   async getAlert(id: number): Promise<Alert | undefined> { return undefined; }
   async getUserAlerts(userId: number): Promise<Alert[]> { return []; }
+  async getUnreadAlerts(userId: number): Promise<Alert[]> { return []; }
   async createAlert(alert: any): Promise<Alert> { throw new Error('Not implemented'); }
+  async markAlertAsRead(id: number): Promise<Alert | undefined> { return undefined; }
+  async deleteAlert(id: number): Promise<void> {}
 
   // ==================== CARD OPERATIONS ====================
   async getCard(id: number): Promise<Card | undefined> { return undefined; }
   async getUserCards(userId: number): Promise<Card[]> { return []; }
   async createCard(card: any): Promise<Card> { throw new Error('Not implemented'); }
+  async updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined> { return undefined; }
 
   // ==================== INVESTMENT OPERATIONS ====================
   async getInvestment(id: number): Promise<Investment | undefined> { return undefined; }
   async getUserInvestments(userId: number): Promise<Investment[]> { return []; }
   async createInvestment(investment: any): Promise<Investment> { throw new Error('Not implemented'); }
+  async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> { return undefined; }
 
   // ==================== MESSAGE OPERATIONS ====================
   async getMessage(id: string): Promise<Message | undefined> { return undefined; }
-  async getConversationMessages(conversationId: string): Promise<Message[]> { return []; }
+  async getMessages(conversationId?: string): Promise<Message[]> { return []; }
+  async getUserMessages(userId: number): Promise<Message[]> { return []; }
   async createMessage(message: any): Promise<Message> { throw new Error('Not implemented'); }
+  async markMessageAsRead(id: number): Promise<Message | undefined> { return undefined; }
 
   // ==================== SUPPORT TICKET OPERATIONS ====================
   async getSupportTicket(id: number): Promise<SupportTicket | undefined> { return undefined; }
-  async getUserSupportTickets(userId: number): Promise<SupportTicket[]> { return []; }
+  async getSupportTickets(userId?: number): Promise<SupportTicket[]> { return []; }
   async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> { throw new Error('Not implemented'); }
+  async updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> { return undefined; }
 
-  // ==================== ADDITIONAL OPERATIONS ====================
-  async updateTransactionStatus(id: string, status: string): Promise<Transaction | undefined> { return undefined; }
+  // ==================== BRANCH & ATM OPERATIONS ====================
+  async getBranches(): Promise<any[]> { return []; }
+  async getAtms(): Promise<any[]> { return []; }
+
+  // ==================== EXCHANGE RATE OPERATIONS ====================
+  async getExchangeRates(): Promise<any[]> { return []; }
+
+  // ==================== STATEMENT OPERATIONS ====================
+  async getStatementsByUserId(userId: number): Promise<any[]> { return []; }
+
+  // ==================== MARKET RATE OPERATIONS ====================
+  async getMarketRates(): Promise<any[]> { return []; }
+
+  // ==================== TRANSACTION OPERATIONS (EXTENDED) ====================
+  async updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<Transaction | undefined> { return undefined; }
   async getPendingTransactions(): Promise<Transaction[]> { return []; }
-  async getAdminActions(): Promise<AdminAction[]> { return []; }
-  async getSupportTickets(): Promise<SupportTicket[]> { return []; }
-  async getMessages(): Promise<Message[]> { return []; }
-  async getInvestments(): Promise<Investment[]> { return []; }
-  async getAllCards(): Promise<Card[]> { return []; }
-  async getAllAlerts(): Promise<Alert[]> { return []; }
-  async getTransactionByReference(reference: string): Promise<Transaction | undefined> { return undefined; }
-  async updateTransactionApproval(id: string, approved: boolean): Promise<Transaction | undefined> { return undefined; }
-  async deleteTransaction(id: string): Promise<void> {}
-  async deleteAccount(id: number): Promise<void> {}
-  async deleteUser(id: number): Promise<void> {}
-  async createTransactionApproval(approval: any): Promise<any> { throw new Error('Not implemented'); }
+  async getAdminActions(adminId?: number): Promise<AdminAction[]> { return []; }
 }

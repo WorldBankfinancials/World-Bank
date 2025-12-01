@@ -2107,7 +2107,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // STEP 5: Return full user profile for immediate caching
-      const fullProfile = dbUser || {
+      const fullProfile: any = dbUser || {
         id: supabaseUser.id,
         email: supabaseUser.email,
         firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
@@ -2116,8 +2116,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         role: supabaseUser.app_metadata?.role || 'customer',
         fullName: `${supabaseUser.user_metadata?.first_name || email.split('@')[0]} ${supabaseUser.user_metadata?.last_name || 'User'}`,
         profession: 'Customer',
-        accountId: dbUser?.accountId || 'WB-' + Date.now(),
-        accountNumber: dbUser?.accountNumber || '****1234',
+        accountId: (dbUser as any)?.accountId || 'WB-' + Date.now(),
+        accountNumber: (dbUser as any)?.accountNumber || '****1234',
         isVerified: true,
         isActive: true
       };
