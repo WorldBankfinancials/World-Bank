@@ -135,14 +135,18 @@ export default function Dashboard() {
     queryKey: ['/api/alerts'],
     queryFn: async () => {
       try {
+        console.log('🔔 Fetching alerts...');
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const response = await authenticatedFetch('/api/alerts');
         if (!response.ok) {
+          console.error('❌ Alerts response not ok:', response.status);
           return [];
         }
         const data = await response.json();
+        console.log('✅ Fetched', data.length, 'alerts');
         return data;
       } catch (error) {
+        console.error('❌ Failed to fetch alerts:', error);
         return [];
       }
     },
