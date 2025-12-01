@@ -32,12 +32,18 @@ export default function AdminLiveChat() {
   const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
 
-  // Realtime chat (hook may not be available)
-  const realtimeChat = useRealtimeChat?.('admin_1', (msg: any) => {
-    if (msg) setMessages((prev) => [...prev, msg]);
+  // Realtime chat messaging support
+  useRealtimeChat?.('admin_1', (incomingMessage: any) => {
+    if (incomingMessage) {
+      const newMsg: Message = {
+        id: incomingMessage.id || Date.now().toString(),
+        sender: incomingMessage.sender || 'admin',
+        text: incomingMessage.text || incomingMessage.message || '',
+        timestamp: incomingMessage.timestamp || new Date().toISOString()
+      };
+      setMessages((prev) => [...prev, newMsg]);
+    }
   });
-  const sendRealtimeMessage = (realtimeChat as any)?.sendMessage || (() => {});
-  const rtConnected = (realtimeChat as any)?.isConnected || false;
   
   // Fetch messages from API when session is selected
   const { data: queryMessages = [] } = useQuery<Message[]>({
@@ -63,8 +69,8 @@ export default function AdminLiveChat() {
 
   // Update local messages state when query data changes
   useEffect(() => {
-    if (queryMessages && queryMessages.length > 0) {
-      setMessages(queryMessages);
+    if (queryMessages && Array.isArray(queryMessages) && queryMessages.length > 0) {
+      setMessages(queryMessages as Message[]);
     }
   }, [queryMessages]);
 

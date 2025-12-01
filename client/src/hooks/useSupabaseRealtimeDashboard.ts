@@ -183,19 +183,25 @@ export function useSupabaseRealtimeTransactions(
 
     try {
       channel = supabase
-        .channel(`realtime:transactions:${Math.random()}`)
+        .channel(`realtime:txn:${Math.random()}`, {
+          config: {
+            broadcast: { ack: false },
+            presence: { key: 'transactions' }
+          }
+        })
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'bank_transactions' },
           () => fetchTransactionsData()
         )
-        .subscribe((status) => {
+        .subscribe(async (status: string) => {
           if (status === 'SUBSCRIBED') {
-            console.log('✅ Supabase Realtime connected for transactions');
+            console.log('✅ Supabase Realtime CONNECTED for transactions');
+            await fetchTransactionsData();
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.log('⚠️ Supabase Realtime unavailable, using polling for transactions');
+            console.log('⚠️ Supabase Realtime error for transactions, using polling');
             if (!pollInterval) {
-              pollInterval = setInterval(fetchTransactionsData, 3000);
+              pollInterval = setInterval(fetchTransactionsData, 5000);
             }
           }
         });
@@ -205,8 +211,8 @@ export function useSupabaseRealtimeTransactions(
         if (pollInterval) clearInterval(pollInterval);
       };
     } catch (error: any) {
-      console.log('⚠️ Supabase Realtime error, using polling for transactions');
-      pollInterval = setInterval(fetchTransactionsData, 3000);
+      console.log('⚠️ Supabase Realtime error for transactions, using polling:', error?.message);
+      pollInterval = setInterval(fetchTransactionsData, 5000);
       unsubscribeRef.current = () => {
         if (channel) channel.unsubscribe();
         if (pollInterval) clearInterval(pollInterval);
@@ -271,19 +277,25 @@ export function useSupabaseRealtimeUserBalance(
 
     try {
       channel = supabase
-        .channel(`realtime:users:${Math.random()}`)
+        .channel(`realtime:user:${Math.random()}`, {
+          config: {
+            broadcast: { ack: false },
+            presence: { key: 'user' }
+          }
+        })
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'bank_users' },
           () => fetchUserData()
         )
-        .subscribe((status) => {
+        .subscribe(async (status: string) => {
           if (status === 'SUBSCRIBED') {
-            console.log('✅ Supabase Realtime connected for user balance');
+            console.log('✅ Supabase Realtime CONNECTED for user balance');
+            await fetchUserData();
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.log('⚠️ Supabase Realtime unavailable, using polling for user balance');
+            console.log('⚠️ Supabase Realtime error for user balance, using polling');
             if (!pollInterval) {
-              pollInterval = setInterval(fetchUserData, 4000);
+              pollInterval = setInterval(fetchUserData, 6000);
             }
           }
         });
@@ -293,8 +305,8 @@ export function useSupabaseRealtimeUserBalance(
         if (pollInterval) clearInterval(pollInterval);
       };
     } catch (error: any) {
-      console.log('⚠️ Supabase Realtime error, using polling for user balance');
-      pollInterval = setInterval(fetchUserData, 4000);
+      console.log('⚠️ Supabase Realtime error for user balance, using polling:', error?.message);
+      pollInterval = setInterval(fetchUserData, 6000);
       unsubscribeRef.current = () => {
         if (channel) channel.unsubscribe();
         if (pollInterval) clearInterval(pollInterval);
