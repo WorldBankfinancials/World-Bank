@@ -133,7 +133,7 @@ export default function TransferFunds() {
           amount: Number(formData.amount),
           recipientName: formData.recipientName,
           recipientCountry: formData.recipientCountry,
-          recipientAccount: formData.accountNumber || formData.recipientAccount,
+          accountNumber: formData.accountNumber || formData.accountNumber,
           purpose: formData.purpose,
           transferPin: String(transferPin)
         })
@@ -281,7 +281,7 @@ export default function TransferFunds() {
 
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header user={userProfile || undefined} />
+        <Header user={(userProfile as any) || undefined} />
         
         <div className="px-4 py-6 pb-20">
           <div className="max-w-md mx-auto">
@@ -342,7 +342,7 @@ export default function TransferFunds() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <Header user={userProfile || undefined} />
+      <Header user={(userProfile as any) || undefined} />
       
       <div className="max-w-3xl mx-auto px-4 py-6">
         {/* Page Title */}

@@ -492,7 +492,7 @@ export default function Transfer() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={userProfile || user} />
+      <Header user={(userProfile as any || user as any) || undefined} />
       
       <div className="px-4 py-6 pb-20">
         {/* Header Section */}

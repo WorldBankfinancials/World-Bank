@@ -58,7 +58,7 @@ export default function SupportTicket() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <Header user={user || undefined} />
+      <Header user={(user as any) || undefined} />
       <main className="pt-16 pb-20 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
