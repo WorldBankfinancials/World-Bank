@@ -620,7 +620,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // Update user with avatar
-      const updatedUser = await storage.updateUser(user.id, { profile_photo_url: avatarUrl });
+      const updatedUser = await storage.updateUser(user.id, { profilePhotoUrl: avatarUrl });
 
       res.json({
         success: true,

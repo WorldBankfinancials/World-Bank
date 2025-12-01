@@ -42,7 +42,13 @@ export function useSupabaseRealtimeAccounts(
       }
 
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch(`/api/accounts?t=${Date.now()}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      
+      const response = await authenticatedFetch(`/api/accounts?t=${Date.now()}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         return;
@@ -68,21 +74,29 @@ export function useSupabaseRealtimeAccounts(
     let channel: any = null;
 
     try {
+      // Subscribe to Supabase Realtime with proper initialization
       channel = supabase
-        .channel(`realtime:accounts:${Math.random()}`)
+        .channel(`realtime:accounts:${Math.random()}`, {
+          config: {
+            broadcast: { ack: false },
+            presence: { key: 'accounts' }
+          }
+        })
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'bank_accounts' },
           () => fetchAccountsData()
         )
-        .subscribe((status) => {
+        .subscribe(async (status: string) => {
           if (status === 'SUBSCRIBED') {
-            console.log('✅ Supabase Realtime connected for accounts');
+            console.log('✅ Supabase Realtime CONNECTED for accounts');
+            // Do initial fetch on subscription
+            await fetchAccountsData();
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.log('⚠️ Supabase Realtime unavailable, using polling for accounts');
+            console.log('⚠️ Supabase Realtime unavailable for accounts, using polling');
             // Start polling if realtime fails
             if (!pollInterval) {
-              pollInterval = setInterval(fetchAccountsData, 5000);
+              pollInterval = setInterval(fetchAccountsData, 8000);
             }
           }
         });
@@ -92,9 +106,9 @@ export function useSupabaseRealtimeAccounts(
         if (pollInterval) clearInterval(pollInterval);
       };
     } catch (error: any) {
-      console.log('⚠️ Supabase Realtime error, using polling for accounts');
+      console.log('⚠️ Supabase Realtime error for accounts, using polling:', error?.message);
       // Fallback to polling
-      pollInterval = setInterval(fetchAccountsData, 5000);
+      pollInterval = setInterval(fetchAccountsData, 8000);
       unsubscribeRef.current = () => {
         if (channel) channel.unsubscribe();
         if (pollInterval) clearInterval(pollInterval);
