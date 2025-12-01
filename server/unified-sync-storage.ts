@@ -349,7 +349,7 @@ export class UnifiedSyncStorage implements IStorage {
     try {
       const { data, error } = await supabase
         .from('bank_accounts')
-        .update(updates as any)
+        .update(updates)
         .eq('id', id)
         .select()
         .single();
@@ -464,9 +464,9 @@ export class UnifiedSyncStorage implements IStorage {
         .from('admin_actions')
         .insert([{
           admin_id: action.adminId || 0,
-          action_type: (action as any).actionType || 'unknown',
+          action_type: action.actionType || 'unknown',
           target_id: action.targetId || 0,
-          details: (action as any).details || '',
+          details: action.details || '',
           created_at: new Date().toISOString()
         }])
         .select()
@@ -477,7 +477,7 @@ export class UnifiedSyncStorage implements IStorage {
         throw error;
       }
       if (!data) throw new Error('No data returned');
-      return data as any as AdminAction;
+      return data as AdminAction;
     } catch (error: any) {
       
       throw error;
@@ -485,7 +485,7 @@ export class UnifiedSyncStorage implements IStorage {
   }
 
   // ==================== DATA MAPPERS ====================
-  private mapDatabaseToUser(dbRow: any): User {
+  private mapDatabaseToUser(dbRow: Record<string, any>): User {
     return {
       id: dbRow.id,
       email: dbRow.email,
@@ -517,7 +517,7 @@ export class UnifiedSyncStorage implements IStorage {
     };
   }
 
-  private mapDatabaseToAccount(dbRow: any): Account {
+  private mapDatabaseToAccount(dbRow: Record<string, any>): Account {
     return {
       id: dbRow.id,
       userId: dbRow.user_id,
@@ -531,7 +531,7 @@ export class UnifiedSyncStorage implements IStorage {
     };
   }
 
-  private mapDatabaseToTransaction(dbRow: any): Transaction {
+  private mapDatabaseToTransaction(dbRow: Record<string, any>): Transaction {
     return {
       id: dbRow.id,
       fromAccountId: dbRow.from_account_id,
@@ -575,7 +575,7 @@ export class UnifiedSyncStorage implements IStorage {
         .eq('user_id', userId);
 
       if (error || !data) return [];
-      return data as any as Card[];
+      return data as Card[];
     } catch (error) {
       return [];
     }
@@ -590,7 +590,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) return undefined;
-      return data as any as Card;
+      return data as Card;
     } catch (error) {
       return undefined;
     }
@@ -605,7 +605,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) throw error;
-      return data as any as Card;
+      return data as Card;
     } catch (error: any) {
       throw error;
     }
@@ -621,7 +621,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) return undefined;
-      return data as any as Card;
+      return data as Card;
     } catch (error) {
       return undefined;
     }
@@ -636,7 +636,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) return undefined;
-      return data as any as Alert;
+      return data as Alert;
     } catch (error) {
       return undefined;
     }
@@ -650,7 +650,7 @@ export class UnifiedSyncStorage implements IStorage {
         .eq('user_id', userId);
 
       if (error || !data) return [];
-      return data as any as Alert[];
+      return data as Alert[];
     } catch (error) {
       return [];
     }
@@ -665,7 +665,7 @@ export class UnifiedSyncStorage implements IStorage {
         .eq('is_read', false);
 
       if (error || !data) return [];
-      return data as any as Alert[];
+      return data as Alert[];
     } catch (error) {
       return [];
     }
@@ -680,7 +680,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) throw error;
-      return data as any as Alert;
+      return data as Alert;
     } catch (error: any) {
       throw error;
     }
@@ -696,7 +696,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) return undefined;
-      return data as any as Alert;
+      return data as Alert;
     } catch (error) {
       return undefined;
     }
@@ -719,7 +719,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) return undefined;
-      return data as any as Investment;
+      return data as Investment;
     } catch (error) {
       return undefined;
     }
@@ -733,7 +733,7 @@ export class UnifiedSyncStorage implements IStorage {
         .eq('user_id', userId);
 
       if (error || !data) return [];
-      return data as any as Investment[];
+      return data as Investment[];
     } catch (error) {
       return [];
     }
@@ -748,7 +748,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) throw error;
-      return data as any as Investment;
+      return data as Investment;
     } catch (error: any) {
       throw error;
     }
@@ -764,7 +764,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) return undefined;
-      return data as any as Investment;
+      return data as Investment;
     } catch (error) {
       return undefined;
     }
@@ -779,7 +779,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) return undefined;
-      return data as any as Message;
+      return data as Message;
     } catch (error) {
       return undefined;
     }
@@ -794,7 +794,7 @@ export class UnifiedSyncStorage implements IStorage {
       const { data, error } = await query;
 
       if (error || !data) return [];
-      return data as any as Message[];
+      return data as Message[];
     } catch (error) {
       return [];
     }
@@ -808,7 +808,7 @@ export class UnifiedSyncStorage implements IStorage {
         .eq('user_id', userId);
 
       if (error || !data) return [];
-      return data as any as Message[];
+      return data as Message[];
     } catch (error) {
       return [];
     }
@@ -823,7 +823,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) throw error;
-      return data as any as Message;
+      return data as Message;
     } catch (error: any) {
       throw error;
     }
@@ -839,7 +839,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) return undefined;
-      return data as any as Message;
+      return data as Message;
     } catch (error) {
       return undefined;
     }
@@ -854,7 +854,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) return undefined;
-      return data as any as SupportTicket;
+      return data as SupportTicket;
     } catch (error) {
       return undefined;
     }
@@ -869,7 +869,7 @@ export class UnifiedSyncStorage implements IStorage {
       const { data, error } = await query;
 
       if (error || !data) return [];
-      return data as any as SupportTicket[];
+      return data as SupportTicket[];
     } catch (error) {
       return [];
     }
@@ -884,7 +884,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) throw error;
-      return data as any as SupportTicket;
+      return data as SupportTicket;
     } catch (error: any) {
       throw error;
     }
@@ -900,7 +900,7 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error || !data) return undefined;
-      return data as any as SupportTicket;
+      return data as SupportTicket;
     } catch (error) {
       return undefined;
     }
@@ -1011,7 +1011,7 @@ export class UnifiedSyncStorage implements IStorage {
       const { data, error } = await query;
 
       if (error || !data) return [];
-      return data as any as AdminAction[];
+      return data as AdminAction[];
     } catch (error) {
       return [];
     }

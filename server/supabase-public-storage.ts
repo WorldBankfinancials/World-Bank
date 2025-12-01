@@ -67,7 +67,7 @@ const mapUser = (user: Record<string, any>): User => {
     balance: (user.balance || '0').toString(),
     createdAt: user.created_at,
     updatedAt: user.updated_at
-  } as any;
+  };
 };
 
 export class SupabasePublicStorage implements IStorage {
@@ -208,7 +208,7 @@ export class SupabasePublicStorage implements IStorage {
         .eq('id', id)
         .single();
       if (error || !account) return undefined;
-      return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at } as any;
+      return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at };
     } catch (error) {
       return undefined;
     }
@@ -222,7 +222,7 @@ export class SupabasePublicStorage implements IStorage {
         .select()
         .single();
       if (error || !account) throw error;
-      return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at } as any;
+      return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at };
     } catch (error) {
       throw error;
     }
@@ -235,7 +235,7 @@ export class SupabasePublicStorage implements IStorage {
       if (updates.status !== undefined) updateData.status = updates.status;
       const { data: account, error } = await supabase.from('bank_accounts').update(updateData).eq('id', id).select().single();
       if (error || !account) return undefined;
-      return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at } as any;
+      return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at };
     } catch (error) {
       return undefined;
     }
@@ -245,7 +245,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('transactions').select('*').or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`).order('created_at', { ascending: false });
       if (error) return [];
-      return (data || []) as any;
+      return (data || []);
     } catch (error) {
       return [];
     }
@@ -255,7 +255,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data: transaction, error } = await supabase.from('transactions').insert(data as any).select().single();
       if (error || !transaction) throw error;
-      return transaction as any;
+      return transaction;
     } catch (error) {
       throw error;
     }
@@ -267,7 +267,7 @@ export class SupabasePublicStorage implements IStorage {
       if (notes) updateData.admin_notes = notes;
       const { data, error } = await supabase.from('transactions').update(updateData).eq('id', id).select().single();
       if (error) return undefined;
-      return data as any;
+      return data;
     } catch (error) {
       return undefined;
     }
@@ -277,7 +277,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('transactions').select('*').eq('status', 'pending');
       if (error) return [];
-      return (data || []) as any;
+      return (data || []);
     } catch (error) {
       return [];
     }
@@ -287,7 +287,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('transactions').select('*');
       if (error) return [];
-      return (data || []) as any;
+      return (data || []);
     } catch (error) {
       return [];
     }
@@ -297,7 +297,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data: action, error } = await supabase.from('admin_actions').insert(data as any).select().single();
       if (error || !action) throw error;
-      return action as any;
+      return action;
     } catch (error) {
       throw error;
     }
@@ -309,7 +309,7 @@ export class SupabasePublicStorage implements IStorage {
       if (adminId) query = query.eq('admin_id', adminId);
       const { data, error } = await query;
       if (error) return [];
-      return (data || []) as any;
+      return (data || []);
     } catch (error) {
       return [];
     }
@@ -319,7 +319,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data: ticket, error } = await supabase.from('support_tickets').insert(data as any).select().single();
       if (error || !ticket) throw error;
-      return ticket as any;
+      return ticket;
     } catch (error) {
       throw error;
     }
@@ -329,7 +329,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('support_tickets').select('*').eq('id', id).single();
       if (error) return undefined;
-      return data as any;
+      return data;
     } catch (error) {
       return undefined;
     }
@@ -341,7 +341,7 @@ export class SupabasePublicStorage implements IStorage {
       if (userId) query = query.eq('user_id', userId);
       const { data, error } = await query;
       if (error) return [];
-      return (data || []) as any;
+      return (data || []);
     } catch (error) {
       return [];
     }
@@ -351,7 +351,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('support_tickets').update(updates as any).eq('id', id).select().single();
       if (error) return undefined;
-      return data as any;
+      return data;
     } catch (error) {
       return undefined;
     }
@@ -361,7 +361,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('cards').select('*').eq('id', id).single();
       if (error) return undefined;
-      return data as any;
+      return data;
     } catch (error) {
       return undefined;
     }
@@ -371,7 +371,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data: card, error } = await supabase.from('cards').insert(data as any).select().single();
       if (error || !card) throw error;
-      return card as any;
+      return card;
     } catch (error) {
       throw error;
     }
@@ -383,7 +383,7 @@ export class SupabasePublicStorage implements IStorage {
       if (!accounts.length) return [];
       const { data, error } = await supabase.from('cards').select('*').in('account_id', accounts.map(a => a.id));
       if (error) return [];
-      return (data || []) as any;
+      return (data || []);
     } catch (error) {
       return [];
     }
@@ -393,7 +393,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('cards').update(updates as any).eq('id', id).select().single();
       if (error) return undefined;
-      return data as any;
+      return data;
     } catch (error) {
       return undefined;
     }
@@ -403,7 +403,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('investments').select('*').eq('id', id).single();
       if (error) return undefined;
-      return data as any;
+      return data;
     } catch (error) {
       return undefined;
     }
@@ -413,7 +413,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data: investment, error } = await supabase.from('investments').insert(data as any).select().single();
       if (error || !investment) throw error;
-      return investment as any;
+      return investment;
     } catch (error) {
       throw error;
     }
@@ -423,7 +423,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('investments').select('*').eq('user_id', userId);
       if (error) return [];
-      return (data || []) as any;
+      return (data || []);
     } catch (error) {
       return [];
     }
@@ -433,7 +433,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('investments').update(updates as any).eq('id', id).select().single();
       if (error) return undefined;
-      return data as any;
+      return data;
     } catch (error) {
       return undefined;
     }
@@ -443,7 +443,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('messages').select('*');
       if (error) return [];
-      return (data || []) as any;
+      return (data || []);
     } catch (error) {
       return [];
     }
@@ -453,7 +453,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('messages').select('*').eq('sender_id', userId);
       if (error) return [];
-      return (data || []) as any;
+      return (data || []);
     } catch (error) {
       return [];
     }
@@ -463,7 +463,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data: message, error } = await supabase.from('messages').insert(data as any).select().single();
       if (error || !message) throw error;
-      return message as any;
+      return message;
     } catch (error) {
       throw error;
     }
@@ -473,7 +473,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('messages').update({ is_read: true }).eq('id', id).select().single();
       if (error) return undefined;
-      return data as any;
+      return data;
     } catch (error) {
       return undefined;
     }
@@ -483,7 +483,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('alerts').select('*').eq('user_id', userId);
       if (error) return [];
-      return (data || []) as any;
+      return (data || []);
     } catch (error) {
       return [];
     }
@@ -493,7 +493,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('alerts').select('*').eq('user_id', userId).eq('is_read', false);
       if (error) return [];
-      return (data || []) as any;
+      return (data || []);
     } catch (error) {
       return [];
     }
@@ -503,7 +503,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data: alert, error } = await supabase.from('alerts').insert(data as any).select().single();
       if (error || !alert) throw error;
-      return alert as any;
+      return alert;
     } catch (error) {
       throw error;
     }
@@ -513,7 +513,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('alerts').update({ is_read: true }).eq('id', id).select().single();
       if (error) return undefined;
-      return data as any;
+      return data;
     } catch (error) {
       return undefined;
     }

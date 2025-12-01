@@ -109,7 +109,7 @@ export function setupTransferRoutes(app: Express) {
           amount: amount,
           newBalance: newBalance
         });
-      } catch (dbError: any) {
+      } catch (dbError: unknown) {
         return res.status(500).json({ message: "Failed to submit transfer", error: dbError.message });
       }
     } catch (error) {
@@ -216,7 +216,7 @@ export function setupTransferRoutes(app: Express) {
           amount: amount,
           newBalance: newBalance
         });
-      } catch (dbError: any) {
+      } catch (dbError: unknown) {
         return res.status(500).json({ message: "Failed to submit international transfer", error: dbError.message });
       }
     } catch (error) {
