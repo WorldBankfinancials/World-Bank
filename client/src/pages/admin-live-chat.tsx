@@ -74,6 +74,9 @@ export default function AdminLiveChat() {
     }
   }, [queryMessages]);
 
+  // Query client for cache invalidation
+  const queryClient = require('@tanstack/react-query').useQueryClient?.() || null;
+
   const { data: chatSessions = [] } = useQuery<ChatSession[]>({
     queryKey: ['/api/admin/chat-sessions'],
     queryFn: async () => {
@@ -143,7 +146,9 @@ export default function AdminLiveChat() {
     
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      await authenticatedFetch('/api/messages', {
+      const { queryClient } = await import('@/lib/queryClient');
+      
+      const response = await authenticatedFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -152,6 +157,12 @@ export default function AdminLiveChat() {
           sessionId: selectedSession.id
         })
       });
+
+      // CRITICAL: Invalidate message cache so messages persist when returning to chat
+      if (queryClient && response.ok) {
+        queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedSession?.id] });
+        console.log('✅ Message cache invalidated - messages will persist');
+      }
     } catch (error) {
       console.error('Failed to save message:', error);
     }

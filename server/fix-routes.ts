@@ -2451,6 +2451,19 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         referenceNumber: referenceNumber
       });
 
+      // ATOMIC: Update sender account balance (deduct amount)
+      try {
+        const userAccounts = await storage.getUserAccounts(req.user?.id || 1);
+        if (userAccounts && userAccounts.length > 0) {
+          const senderAccount = userAccounts[0];
+          const newBalance = (parseFloat(senderAccount.balance.toString()) - parseFloat(amount.toString())).toFixed(2);
+          await storage.updateAccount(senderAccount.id, { balance: parseFloat(newBalance) as any });
+          console.info('✅ Sender balance updated:', { accountId: senderAccount.id, newBalance });
+        }
+      } catch (balanceError) {
+        console.warn('⚠️ Balance update warning (non-blocking):', balanceError);
+      }
+
       console.info('✅ Transfer created successfully:', { 
         id: transfer.id, 
         referenceNumber: transfer.referenceNumber, 
@@ -2582,6 +2595,67 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.info('❌ International transfer error:', error.message, error);
       res.status(500).json({ error: error.message || 'Failed to create international transfer', details: error.toString() });
+    }
+  });
+
+  // ==================== MESSAGE ENDPOINTS ====================
+  
+  // POST /api/messages - Save a new message
+  app.post('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { content, recipientId, sessionId } = req.body;
+      
+      if (!content || !sessionId) {
+        return res.status(400).json({ error: 'Content and sessionId required' });
+      }
+
+      const message = await storage.createMessage({
+        senderId: req.user?.id,
+        senderRole: req.user?.role === 'admin' ? 'admin' : 'customer',
+        recipientId: recipientId ? parseInt(recipientId) : undefined,
+        recipientRole: recipientId ? 'admin' : 'customer',
+        content: content,
+        sessionId: sessionId,
+        isRead: false
+      });
+
+      console.info('✅ Message saved:', { id: message.id, sessionId, timestamp: new Date().toISOString() });
+      res.json(message);
+    } catch (error: any) {
+      console.error('❌ Failed to save message:', error.message);
+      res.status(500).json({ error: 'Failed to save message', details: error.message });
+    }
+  });
+
+  // GET /api/messages/session/:sessionId - Fetch messages for a session
+  app.get('/api/messages/session/:sessionId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: 'sessionId required' });
+      }
+
+      // Fetch all messages for this session
+      const messages = await storage.getMessages(sessionId);
+      
+      console.info('✅ Fetched', messages.length, 'messages for session:', sessionId);
+      res.json(messages);
+    } catch (error: any) {
+      console.error('❌ Failed to fetch messages:', error.message);
+      res.status(500).json({ error: 'Failed to fetch messages', details: error.message });
+    }
+  });
+
+  // GET /api/messages - Fetch user messages
+  app.get('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const messages = await storage.getUserMessages(req.user?.id || 0);
+      console.info('✅ Fetched', messages.length, 'user messages');
+      res.json(messages);
+    } catch (error: any) {
+      console.error('❌ Failed to fetch user messages:', error.message);
+      res.status(500).json({ error: 'Failed to fetch messages', details: error.message });
     }
   });
 
