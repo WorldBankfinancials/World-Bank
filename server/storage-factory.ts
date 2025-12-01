@@ -1,23 +1,23 @@
 import { config } from './config';
-import { CompleteSupabaseStorage } from './supabase-storage-complete';
+import { HybridPostgresStorage } from './hybrid-postgres-storage';
 import type { IStorage } from './storage';
 
-// SUPABASE ONLY - No fallbacks, no Replit Postgres
+// HYBRID MODE: Direct Postgres + Supabase Auth
 export function createStorage(): IStorage {
-  if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('❌ CRITICAL: Supabase credentials required! Set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
+  if (!process.env.DATABASE_URL) {
+    throw new Error('❌ CRITICAL: DATABASE_URL required for direct Postgres connection.');
   }
   
-  console.log('🔧 Storage Factory: Creating CompleteSupabaseStorage instance...');
-  console.log('📍 Supabase URL:', process.env.VITE_SUPABASE_URL);
+  console.log('🔧 Storage Factory: Creating HybridPostgresStorage (Direct Postgres) instance...');
+  console.log('⚡ Using DIRECT Postgres connection - bypassing REST API for maximum speed');
   
-  const instance = new CompleteSupabaseStorage();
+  const instance = new HybridPostgresStorage();
   
-  console.log('✅ Storage Factory: CompleteSupabaseStorage instance created successfully');
+  console.log('✅ Storage Factory: HybridPostgresStorage instance created successfully');
   return instance;
 }
 
 // Export singleton storage instance
-console.log('🚀 Initializing storage factory...');
+console.log('🚀 Initializing storage factory with DIRECT POSTGRES...');
 export const storage = createStorage();
-console.log('✅ Storage factory initialized - ready for database operations');
+console.log('✅ Storage factory initialized - DIRECT POSTGRES ready for operations');
