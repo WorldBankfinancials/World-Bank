@@ -266,10 +266,39 @@ export class SupabasePublicStorage implements IStorage {
 
   async createTransaction(data: InsertTransaction): Promise<Transaction> {
     try {
-      const { data: transaction, error } = await supabase.from('transactions').insert(data as any).select().single();
-      if (error || !transaction) throw error;
+      // Map camelCase fields to snake_case for database
+      const dbData: any = {
+        from_user_id: data.fromUserId,
+        from_account_id: data.fromAccountId,
+        to_account_id: data.toAccountId,
+        amount: String(data.amount),
+        currency: data.currency || 'USD',
+        type: data.type || 'transfer',
+        transaction_type: data.transactionType || 'transfer',
+        status: data.status || 'processing',
+        description: data.description,
+        recipient_name: data.recipientName,
+        recipient_account: data.recipientAccount,
+        recipient_country: data.recipientCountry,
+        bank_name: data.bankName,
+        swift_code: data.swiftCode,
+        transfer_purpose: data.transferPurpose,
+        reference_number: data.referenceNumber,
+        iban: data.iban,
+        routing_number: data.routingNumber
+      };
+      // Remove undefined fields
+      Object.keys(dbData).forEach(key => dbData[key] === undefined && delete dbData[key]);
+      
+      const { data: transaction, error } = await supabase.from('transactions').insert(dbData).select().single();
+      if (error) {
+        console.error('createTransaction error:', error);
+        throw error;
+      }
+      if (!transaction) throw new Error('Failed to create transaction');
       return transaction;
     } catch (error) {
+      console.error('createTransaction exception:', error);
       throw error;
     }
   }
@@ -278,20 +307,30 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const updateData: any = { status };
       if (notes) updateData.admin_notes = notes;
-      const { data, error } = await supabase.from('transactions').update(updateData).eq('id', id).select().single();
-      if (error) return undefined;
+      if (adminId) updateData.admin_id = adminId;
+      updateData.updated_at = new Date().toISOString();
+      const { data, error } = await supabase.from('transactions').update(updateData).eq('id', id).select('*').single();
+      if (error) {
+        console.error('updateTransactionStatus error:', error);
+        return undefined;
+      }
       return data;
     } catch (error) {
+      console.error('updateTransactionStatus exception:', error);
       return undefined;
     }
   }
 
   async getPendingTransactions(): Promise<Transaction[]> {
     try {
-      const { data, error } = await supabase.from('transactions').select('*').eq('status', 'pending');
-      if (error) return [];
+      const { data, error } = await supabase.from('transactions').select('*').eq('status', 'processing');
+      if (error) {
+        console.error('getPendingTransactions error:', error);
+        return [];
+      }
       return (data || []);
     } catch (error) {
+      console.error('getPendingTransactions exception:', error);
       return [];
     }
   }
