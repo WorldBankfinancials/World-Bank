@@ -30,7 +30,19 @@ export default function AdminLiveChat() {
   const [isConnected, setIsConnected] = useState(false);
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
   const [messageText, setMessageText] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    // Load messages from localStorage on mount
+    const sessionId = selectedSession?.id ? `chat_session_${selectedSession.id}` : null;
+    if (sessionId) {
+      try {
+        const stored = localStorage.getItem(sessionId);
+        return stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
 
   // Realtime chat messaging support
   useRealtimeChat?.('admin_1', (incomingMessage: any) => {
@@ -67,12 +79,25 @@ export default function AdminLiveChat() {
     enabled: !!selectedSession?.id
   });
 
-  // Update local messages state when query data changes
+  // Update local messages state when query data changes + persist to localStorage
   useEffect(() => {
-    if (queryMessages && Array.isArray(queryMessages) && queryMessages.length > 0) {
+    if (queryMessages && Array.isArray(queryMessages)) {
       setMessages(queryMessages as Message[]);
+      // Persist to localStorage
+      if (selectedSession?.id) {
+        const sessionId = `chat_session_${selectedSession.id}`;
+        localStorage.setItem(sessionId, JSON.stringify(queryMessages));
+      }
     }
-  }, [queryMessages]);
+  }, [queryMessages, selectedSession?.id]);
+  
+  // Save messages whenever they change
+  useEffect(() => {
+    if (selectedSession?.id && messages.length > 0) {
+      const sessionId = `chat_session_${selectedSession.id}`;
+      localStorage.setItem(sessionId, JSON.stringify(messages));
+    }
+  }, [messages, selectedSession?.id]);
 
   // Query client for cache invalidation
   const queryClient = require('@tanstack/react-query').useQueryClient?.() || null;

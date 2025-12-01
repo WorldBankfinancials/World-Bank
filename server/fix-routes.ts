@@ -2261,6 +2261,38 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ADMIN ONLY: Upload customer profile photo - updates user profile in real-time
+  app.post('/api/admin/users/:id/profile-photo', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { photoUrl } = req.body;
+      
+      if (!id || !photoUrl) {
+        return res.status(400).json({ error: 'User ID and photo URL required' });
+      }
+
+      const userId = parseInt(id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+      }
+
+      // Update user profile photo
+      const updatedUser = await storage.updateUser(userId, { profilePhoto: photoUrl });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      res.json({ 
+        success: true, 
+        message: 'Profile photo updated successfully',
+        user: updatedUser
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to upload profile photo', details: error.message });
+    }
+  });
+
   // ADMIN ONLY: Delete user from Supabase Auth and local database
   app.post('/api/admin/delete-user/:email', async (req: Request, res: Response) => {
     try {
@@ -2303,6 +2335,67 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       res.status(500).json({ error: 'Failed to delete user', details: error.message });
+    }
+  });
+
+  // TRANSACTION REVERSAL: Reverse a completed transaction and credit the sender
+  app.post('/api/transactions/:id/reverse', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      
+      const txnId = parseInt(id);
+      if (isNaN(txnId)) {
+        return res.status(400).json({ error: 'Invalid transaction ID' });
+      }
+
+      // Get original transaction
+      const allTransactions = await storage.getAllTransactions();
+      const transaction = allTransactions.find((t: any) => t.id === txnId);
+      
+      if (!transaction) {
+        return res.status(404).json({ error: 'Transaction not found' });
+      }
+
+      if (transaction.status === 'reversed') {
+        return res.status(400).json({ error: 'Transaction already reversed' });
+      }
+
+      // Get sender account and refund the amount
+      if (transaction.fromAccountId) {
+        const fromAccount = await storage.getAccount(transaction.fromAccountId);
+        if (fromAccount) {
+          const refundAmount = parseFloat(transaction.amount) || 0;
+          const currentBalance = parseFloat(fromAccount.balance) || 0;
+          const newBalance = currentBalance + refundAmount;
+          
+          // Update account balance
+          await storage.updateAccount(transaction.fromAccountId, { balance: newBalance.toString() });
+        }
+      }
+
+      // Mark transaction as reversed
+      const reversalTxn = await storage.createTransaction({
+        fromAccountId: transaction.toAccountId || transaction.fromAccountId,
+        toAccountId: transaction.fromAccountId,
+        type: 'reversal',
+        amount: transaction.amount,
+        status: 'reversed',
+        description: `Reversal of transaction #${txnId}. Reason: ${reason || 'No reason provided'}`,
+        currency: transaction.currency || 'USD'
+      });
+
+      // Update original transaction to mark as reversed
+      await storage.updateTransactionStatus(txnId, 'reversed', req.user?.id ? parseInt(req.user.id) : 1, reason);
+
+      res.json({ 
+        success: true, 
+        message: 'Transaction reversed successfully',
+        reversalTransactionId: reversalTxn.id,
+        amountRefunded: transaction.amount
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to reverse transaction', details: error.message });
     }
   });
 

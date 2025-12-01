@@ -48,6 +48,7 @@ export const users = pgTable('bank_users', {
   idNumber: text('id_number'),
   transferPin: text('transfer_pin'),
   lastLogin: timestamp('last_login'),
+  profilePhoto: text('profile_photo'),
   isActive: boolean('is_active').default(false),
   isVerified: boolean('is_verified').default(false),
   role: text('role').default('customer'),
