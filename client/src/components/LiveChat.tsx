@@ -29,7 +29,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   const subscriptionRef = useRef<any>(null);
 
   // Fetch messages from database on mount and when user opens chat
-  const { data: chatMessages = [] } = useQuery({
+  const { data: chatMessages = [] } = useQuery<Message[]>({
     queryKey: ['/api/chat/history'],
     queryFn: async () => {
       try {
@@ -37,9 +37,9 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
         const response = await authenticatedFetch('/api/chat/history');
         if (!response.ok) return [];
         const data = await response.json();
-        return Array.isArray(data) ? data.map((msg: any) => ({
+        return Array.isArray(data) ? data.map((msg: any): Message => ({
           id: msg.id || msg.message_id || Date.now().toString(),
-          sender: msg.sender_type === 'user' ? 'user' : 'agent',
+          sender: (msg.sender_type === 'user' ? 'user' : 'agent') as 'user' | 'agent',
           text: msg.content || msg.message || msg.text || '',
           timestamp: new Date(msg.created_at || msg.timestamp || new Date())
         })) : [];
@@ -84,7 +84,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
             (payload: any) => {
               const newMessage: Message = {
                 id: payload.new.id?.toString() || Date.now().toString(),
-                sender: payload.new.sender_type === 'user' ? 'user' : 'agent',
+                sender: (payload.new.sender_type === 'user' ? 'user' : 'agent') as 'user' | 'agent',
                 text: payload.new.content || payload.new.message || '',
                 timestamp: new Date(payload.new.created_at || new Date())
               };
