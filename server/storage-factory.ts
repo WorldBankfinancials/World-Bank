@@ -1,14 +1,11 @@
 import { config } from './config';
-import { UnifiedSyncStorage } from './unified-sync-storage';
+import { SupabasePublicStorage } from './supabase-public-storage';
 import type { IStorage } from './storage';
 
-// UNIFIED SYNC MODE: Postgres + Supabase + Memory Cache (TRIPLE-LAYER)
+// SUPABASE REST API MODE: HTTP-based, works in Replit's restricted network
 export function createStorage(): IStorage {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL required for Postgres connection');
-  }
-  
-  const instance = new UnifiedSyncStorage();
+  // Use Supabase REST API which works in Replit (HTTP-based, not direct Postgres)
+  const instance = new SupabasePublicStorage();
   return instance;
 }
 
