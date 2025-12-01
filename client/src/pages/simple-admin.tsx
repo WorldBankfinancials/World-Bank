@@ -263,7 +263,7 @@ export default function SimpleAdmin() {
       
       const data = await response.json();
       if (Array.isArray(data)) {
-        setSupportTickets(data);
+        setSupportTickets?.(data);
       }
     } catch (error) {
       // Error fetching tickets

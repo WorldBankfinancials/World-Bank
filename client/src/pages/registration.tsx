@@ -130,9 +130,9 @@ export default function Registration() {
           idNumber: formData.idNumber,
           transferPin: formData.transferPin,
         })
-      }).catch(() => ({ ok: false }));
+      }).catch(() => ({ ok: false })) as any;
 
-      const data = await response.json().catch(() => null);
+      const data = (await (response as any).json?.().catch(() => null)) || {};
 
       if (!response.ok || data.error) {
         toast({

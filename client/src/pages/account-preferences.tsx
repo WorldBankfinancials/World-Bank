@@ -111,7 +111,7 @@ export default function AccountPreferences() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <Header user={user || { id: 0, email: '', firstName: '', lastName: '', username: '', password: '', role: 'customer', isVerified: false, isActive: true, fullName: '', profession: '', accountId: 0, accountNumber: '', idType: null, idNumber: null, transferPin: null, annualIncome: null, address: null, city: null, state: null, postalCode: null, country: null, dateOfBirth: null, mothersMaidenName: null, citizenship: null, taxId: null, industry: null, phone: null, createdAt: new Date(), updatedAt: null }} />
+      <Header user={(user as any) || undefined} />
       
       <main className="pt-16 pb-20 px-4">
         <div className="max-w-4xl mx-auto">

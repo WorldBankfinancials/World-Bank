@@ -41,7 +41,7 @@ export default function ProfileSettings() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={displayUser} />
+      <Header user={(displayUser as any) || undefined} />
 
       <div className="px-4 py-6 pb-20">
         {/* Header */}
@@ -62,9 +62,9 @@ export default function ProfileSettings() {
             <div className="space-y-6">
               {/* Profile Picture Section */}
               <div className="flex items-center space-x-4">
-                {displayUser && 'avatarUrl' in displayUser && displayUser.avatarUrl ? (
+                {displayUser && 'avatarUrl' in displayUser && (displayUser as any).avatarUrl ? (
                   <img
-                    src={displayUser.avatarUrl}
+                    src={(displayUser as any).avatarUrl}
                     alt="Profile"
                     className="w-20 h-20 rounded-full object-cover border-4 border-blue-200"
                   />

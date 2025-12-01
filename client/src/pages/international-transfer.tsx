@@ -83,7 +83,7 @@ export default function InternationalTransfer() {
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header user={userProfile} />
+        <Header user={(userProfile as any) || undefined} />
         <div className="flex items-center justify-center p-4 mt-20">
           <Card className="w-full max-w-md">
             <CardContent className="pt-6">
@@ -354,7 +354,7 @@ export default function InternationalTransfer() {
 
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header user={userProfile || undefined} />
+        <Header user={(userProfile as any) || undefined} />
         
         <div className="px-4 py-6 pb-20">
           <div className="max-w-md mx-auto">
@@ -429,7 +429,7 @@ export default function InternationalTransfer() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={userProfile || user} />
+      <Header user={(userProfile || user) as any} />
       
       <div className="px-4 py-6 pb-20">
         {/* Header Section */}
