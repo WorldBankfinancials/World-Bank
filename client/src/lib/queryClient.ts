@@ -36,9 +36,9 @@ export async function authenticatedFetch(
   try {
     const authHeaders = await getAuthHeaders();
     
-    // Create abort controller for timeout protection (10 second timeout - Supabase REST API)
+    // Create abort controller for timeout protection (30 second timeout - Supabase REST API)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     
     try {
       const response = await fetch(url, {
@@ -82,7 +82,7 @@ export async function apiRequest(
   
   // Create abort controller for timeout protection (10 second timeout - Supabase REST API)
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   
   try {
     const res = await fetch(url, {
@@ -117,9 +117,9 @@ export const getQueryFn: <T>(options: {
     const url = queryKey[0] as string;
     const authHeaders = await getAuthHeaders();
     
-    // Create abort controller for timeout protection (10 second timeout - Supabase REST API)
+    // Create abort controller for timeout protection (30 second timeout - Supabase REST API)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     
     try {
       const res = await fetch(url, {
