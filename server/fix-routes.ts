@@ -518,6 +518,30 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to get user', details: error?.message });
     }
   });
+
+  // Profile endpoint - PROTECTED with JWT authentication
+  app.get('/api/profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const email = req.user!.email;
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Get user accounts and cards for profile
+      const accounts = await storage.getUserAccounts(user.id);
+      const cards = await storage.getUserCards(user.id);
+      
+      res.json({
+        ...user,
+        accounts,
+        cards
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to get profile', details: error?.message });
+    }
+  });
   
   // Get user by ID - PROTECTED with JWT authentication
   app.get('/api/users/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -2090,6 +2114,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             status: 'active'
           });
         }
+        // Update last login timestamp
+        await storage.updateUser(dbUser.id, { lastLogin: new Date() });
+        console.log(`✅ Updated last login for user ${dbUser.id}`);
       }
 
       // STEP 3: Cache session data in memory for PIN validation
