@@ -9,11 +9,6 @@ export function verifySupabaseIntegration() {
   if (!supabaseUrl) throw new Error('VITE_SUPABASE_URL not configured');
   if (!supabaseKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY not configured');
   
-  console.info('✅ Supabase PostgreSQL Integration Verified');
-  console.info(`📍 Database: ${supabaseUrl}`);
-  console.info('✅ Using Supabase REST API for all database operations');
-  console.info('✅ All data persisted to Supabase PostgreSQL');
-  
   return {
     verified: true,
     supabaseUrl,

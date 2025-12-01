@@ -20,7 +20,6 @@ export async function requireAuth(
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('❌ Auth: No Bearer token provided');
       return res.status(401).json({ error: 'Authentication required' });
     }
 
@@ -36,7 +35,6 @@ export async function requireAuth(
       const parts = trimmedToken.split('.');
       
       if (parts.length !== 3) {
-        console.error('❌ Auth: Token has', parts.length, 'parts, expected 3');
         throw new Error(`Invalid token format - expected 3 parts, got ${parts.length}`);
       }
       
@@ -55,13 +53,9 @@ export async function requireAuth(
       userId = payload.sub || payload.id;
       
       if (!email) {
-        console.error('❌ Auth: JWT has no email field');
         throw new Error('Invalid token - no email in JWT');
       }
-      
-      console.log('✅ Auth: Supabase JWT validated', { email, userId });
     } catch (parseError) {
-      console.error('❌ Auth: Invalid JWT token:', parseError);
       return res.status(401).json({ error: 'Invalid authentication token' });
     }
 

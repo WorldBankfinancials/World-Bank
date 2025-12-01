@@ -110,7 +110,6 @@ export function setupTransferRoutes(app: Express) {
           newBalance: newBalance
         });
       } catch (dbError: any) {
-        console.error('Transfer creation error:', dbError);
         return res.status(500).json({ message: "Failed to submit transfer", error: dbError.message });
       }
     } catch (error) {
@@ -218,7 +217,6 @@ export function setupTransferRoutes(app: Express) {
           newBalance: newBalance
         });
       } catch (dbError: any) {
-        console.error('International transfer creation error:', dbError);
         return res.status(500).json({ message: "Failed to submit international transfer", error: dbError.message });
       }
     } catch (error) {
