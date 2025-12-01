@@ -421,22 +421,50 @@ export class CompleteSupabaseStorage implements IStorage {
 
   // ==================== ALERTS ====================
   async getUserAlerts(userId: number): Promise<any[]> {
-    const { data, error } = await supabase
-      .from('alerts')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-    return error ? [] : (data || []);
+    try {
+      const { data, error } = await supabase
+        .from('alerts')
+        .select('*')
+        .eq('user_id', userId.toString())
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.warn('Alerts query error, trying numeric approach:', error);
+        // Fallback: try without conversion
+        const { data: fallbackData } = await supabase
+          .from('alerts')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        return fallbackData || [];
+      }
+      return data || [];
+    } catch (err) {
+      return [];
+    }
   }
 
   async getUnreadAlerts(userId: number): Promise<any[]> {
-    const { data, error } = await supabase
-      .from('alerts')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_read', false)
-      .order('created_at', { ascending: false });
-    return error ? [] : (data || []);
+    try {
+      const { data, error } = await supabase
+        .from('alerts')
+        .select('*')
+        .eq('user_id', userId.toString())
+        .eq('is_read', false)
+        .order('created_at', { ascending: false });
+      if (error) {
+        // Fallback: try without conversion
+        const { data: fallbackData } = await supabase
+          .from('alerts')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('is_read', false)
+          .order('created_at', { ascending: false });
+        return fallbackData || [];
+      }
+      return data || [];
+    } catch (err) {
+      return [];
+    }
   }
 
   async createAlert(alert: Partial<Alert>): Promise<Alert> {

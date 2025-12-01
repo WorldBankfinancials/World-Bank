@@ -79,17 +79,21 @@ export function useSupabaseRealtimeAccounts(
         .channel('bank_accounts_realtime', {
           config: {
             broadcast: { ack: false },
-            presence: { key: 'accounts' }
+            presence: { key: 'accounts' },
           }
         })
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'bank_accounts' },
-          () => fetchAccountsData()
+          (payload: any) => {
+            console.log('🔄 Realtime update received for bank_accounts:', payload);
+            fetchAccountsData();
+          }
         )
         .subscribe(async (status: string) => {
+          console.log(`📡 Realtime channel status for accounts: ${status}`);
           if (status === 'SUBSCRIBED') {
-            console.log('✅ Supabase Realtime CONNECTED for accounts');
+            console.log('✅ Supabase Realtime CONNECTED for accounts - WebSocket active');
             // Do initial fetch on subscription
             await fetchAccountsData();
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
