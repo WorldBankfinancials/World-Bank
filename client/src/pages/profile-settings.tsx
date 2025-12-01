@@ -102,10 +102,10 @@ export default function ProfileSettings() {
                 )}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">{displayUser?.firstName || displayUser?.fullName || 'User'}</h3>
-                  <p className="text-gray-600">(displayUser as any)?.profession ? (displayUser as any).profession : 'Customer'}</p>
+                  <p className="text-gray-600">{(displayUser as any)?.profession ? (displayUser as any).profession : 'Customer'}</p>
                   <Badge className="bg-green-100 text-green-800 mt-1">
                     <Check className="w-3 h-3 mr-1" />
-                    (displayUser as any)?.isVerified ? t('verified_account') : 'Account'}
+                    {(displayUser as any)?.isVerified ? t('verified_account') : 'Account'}
                   </Badge>
                 </div>
               </div>
@@ -117,23 +117,23 @@ export default function ProfileSettings() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('email_address')}</label>
-                  <p className="text-gray-900">(displayUser as any)?.email ? (displayUser as any).email : 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.email || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('phone')}</label>
-                  <p className="text-gray-900">(displayUser as any)?.phone ? (displayUser as any).phone : 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.phone || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('profession')}</label>
-                  <p className="text-gray-900">(displayUser as any)?.profession ? (displayUser as any).profession : 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.profession || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('nationality')}</label>
-                  <p className="text-gray-900">(displayUser as any)?.nationality ?? (displayUser as any)?.country : 'Not provided')}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.nationality || (displayUser as any)?.country || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">{t('annual_income')}</label>
-                  <p className="text-gray-900">(displayUser as any)?.annualIncome : 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.annualIncome || 'Not provided'}</p>
                 </div>
               </div>
 
@@ -162,11 +162,11 @@ export default function ProfileSettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Account Number</label>
-                  <p className="text-gray-900 font-mono">(displayUser as any)?.accountNumber : 'Not assigned'}</p>
+                  <p className="text-gray-900 font-mono">{(displayUser as any)?.accountNumber || 'Not assigned'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Account ID</label>
-                  <p className="text-gray-900 font-mono">(displayUser as any)?.accountId : 'Not assigned'}</p>
+                  <p className="text-gray-900 font-mono">{(displayUser as any)?.accountId || 'Not assigned'}</p>
                 </div>
               </div>
             </div>
@@ -186,19 +186,19 @@ export default function ProfileSettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Address</label>
-                  <p className="text-gray-900">(displayUser as any)?.address : 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.address || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">City</label>
-                  <p className="text-gray-900">(displayUser as any)?.city : 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.city || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Country</label>
-                  <p className="text-gray-900">(displayUser as any)?.country : 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.country || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Postal Code</label>
-                  <p className="text-gray-900">(displayUser as any)?.postalCode : 'Not provided'}</p>
+                  <p className="text-gray-900">{(displayUser as any)?.postalCode || 'Not provided'}</p>
                 </div>
               </div>
             </div>
