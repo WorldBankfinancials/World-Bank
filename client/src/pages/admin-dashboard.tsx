@@ -67,7 +67,7 @@ export default function AdminDashboard() {
   const [, setLocation] = useLocation();
 
   // Real-time updates via Supabase Realtime
-  useRealtimeTransactions(undefined, true);
+  useRealtimeTransactions();
 
   // Fetch real customer data from API
   const { data: customers = [], isLoading: customersLoading } = useQuery<CustomerData[]>({
@@ -222,7 +222,7 @@ export default function AdminDashboard() {
     updateTicketMutation.mutate({ ticketId, status, resolution });
   };
 
-  const adminUser = {
+  const adminUser: any = {
     id: 1,
     username: "admin",
     firstName: "World",
@@ -233,7 +233,26 @@ export default function AdminDashboard() {
     accountId: 1,
     profession: "Banking Administrator",
     isVerified: true,
-    role: "admin"
+    role: "admin",
+    fullName: "World Bank",
+    idType: null,
+    idNumber: null,
+    transferPin: null,
+    annualIncome: null,
+    address: null,
+    city: null,
+    state: null,
+    postalCode: null,
+    country: null,
+    dateOfBirth: null,
+    mothersMaidenName: null,
+    citizenship: null,
+    taxId: null,
+    industry: null,
+    phone: null,
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: null
   };
 
   // Show loading state
@@ -291,7 +310,7 @@ export default function AdminDashboard() {
                 <Users className="w-5 h-5 text-blue-600" />
                 <div>
                   <p className="text-sm text-gray-600">Customers</p>
-                  <p className="text-xl font-bold">{adminStats && 'totalCustomers' in adminStats ? adminStats.totalCustomers : 0}</p>
+                  <p className="text-xl font-bold">{(adminStats as any)?.totalCustomers || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -303,7 +322,7 @@ export default function AdminDashboard() {
                 <CreditCard className="w-5 h-5 text-green-600" />
                 <div>
                   <p className="text-sm text-gray-600">Today's Volume</p>
-                  <p className="text-xl font-bold">${adminStats && 'todayVolume' in adminStats ? adminStats.todayVolume : 0}</p>
+                  <p className="text-xl font-bold">${(adminStats as any)?.todayVolume || 0}</p>
                 </div>
               </div>
             </CardContent>

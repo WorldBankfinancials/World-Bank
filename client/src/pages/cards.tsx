@@ -221,7 +221,7 @@ export default function Cards() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={userProfile || { email: '', firstName: '', lastName: '' }} />
+      <Header user={userProfile as any || { id: 0, email: '', firstName: '', lastName: '', username: '', password: '', role: 'customer', isVerified: false, isActive: true, fullName: '', profession: '', accountId: 0, accountNumber: '', idType: null, idNumber: null, transferPin: null, annualIncome: null, address: null, city: null, state: null, postalCode: null, country: null, dateOfBirth: null, mothersMaidenName: null, citizenship: null, taxId: null, industry: null, phone: null, createdAt: new Date(), updatedAt: null }} />
       
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Page Header */}
@@ -241,7 +241,7 @@ export default function Cards() {
           {cardsLoading && <div className="text-center py-8">Loading cards...</div>}
           {creditCards && creditCards.map((card: typeof creditCards[0]) => (
             <Card key={card.id} className="overflow-hidden">
-              <div className={`${card.color} text-white p-6 relative`}>
+              <div className={`${(card as any).color || 'bg-gradient-to-br from-blue-600 to-blue-800'} text-white p-6 relative`}>
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <p className="text-sm opacity-80">{card.name}</p>

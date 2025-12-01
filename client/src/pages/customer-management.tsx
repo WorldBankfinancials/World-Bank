@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Search, Edit3, UserCheck, AlertTriangle, Save, X } from "lucide-react";
@@ -46,6 +47,7 @@ interface Customer {
 export default function CustomerManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
