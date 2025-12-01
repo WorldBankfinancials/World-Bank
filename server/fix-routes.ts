@@ -1533,10 +1533,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (error) {
         return res.status(500).json({ error: 'Failed to save message', details: error.message });
       }
-      console.log('✅ Message saved successfully');
       res.json(data?.[0] || { success: true });
     } catch (error: any) {
-      console.error('❌ Message save error:', error);
       res.status(500).json({ error: 'Failed to save message', details: error.message });
     }
   });
@@ -1618,7 +1616,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Supabase alerts query error:', error);
         return res.json([]);
       }
       res.json(data || []);
@@ -2412,9 +2409,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         const currentBalanceStr = String(senderAccount?.balance || '0');
         const currentBalance = parseFloat(currentBalanceStr);
         const newBalance = (currentBalance - parseFloat(amount.toString())).toFixed(2);
-        await storage.updateAccount(senderAccountId, { balance: parseFloat(newBalance) as any });
+        const balanceNum = parseFloat(newBalance);
+        if (!isNaN(balanceNum)) {
+          await storage.updateAccount(senderAccountId, { balance: balanceNum as any });
+        }
       } catch (balanceError) {
-        // Log non-blocking balance update errors
+        // Silent error handling
       }
 
       const response = {
@@ -2488,7 +2488,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
       
       if (!amount || !recipientCountry || !transferPin) {
-        console.info('❌ Missing required fields:', { amount, recipientCountry, transferPin });
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
@@ -2572,13 +2571,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'sessionId required' });
       }
 
-      // Fetch all messages for this session
       const messages = await storage.getMessages(sessionId);
       
-      console.info('✅ Fetched', messages.length, 'messages for session:', sessionId);
       res.json(messages);
     } catch (error: any) {
-      console.error('❌ Failed to fetch messages:', error.message);
       res.status(500).json({ error: 'Failed to fetch messages', details: error.message });
     }
   });
