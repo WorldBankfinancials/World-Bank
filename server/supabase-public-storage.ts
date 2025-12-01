@@ -76,15 +76,36 @@ const mapUser = (user: Record<string, any>): User => {
   };
 };
 
+// Add retry logic with exponential backoff for network failures
+async function withRetry<T>(fn: () => Promise<T>, maxAttempts: number = 3): Promise<T> {
+  let lastError: any;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxAttempts) {
+        const delayMs = Math.pow(2, attempt) * 100; // 200ms, 400ms, 800ms
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export class SupabasePublicStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     try {
-      const { data: user, error } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('id', id)
-        .single();
-      if (error || !user) return undefined;
+      const user = await withRetry(async () => {
+        const { data: user, error } = await supabase
+          .from('bank_users')
+          .select('*')
+          .eq('id', id)
+          .single();
+        if (error) throw new Error(`Supabase error: ${error.message}`);
+        return user;
+      });
+      if (!user) return undefined;
       return mapUser(user);
     } catch (error) {
       console.error('getUser error:', error);
@@ -94,20 +115,19 @@ export class SupabasePublicStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
-      const { data: user, error } = await supabase
-        .from('bank_users')
-        .select('*')
-        .eq('email', email);
-      if (error) {
-        console.error('getUserByEmail error:', error);
-        return undefined;
-      }
-      if (!user || user.length === 0) {
-        return undefined;
-      }
-      return mapUser(user[0]);
+      const user = await withRetry(async () => {
+        const { data: user, error } = await supabase
+          .from('bank_users')
+          .select('*')
+          .eq('email', email);
+        if (error) throw new Error(`Supabase error: ${error.message}`);
+        if (!user || user.length === 0) return null;
+        return user[0];
+      });
+      if (!user) return undefined;
+      return mapUser(user);
     } catch (error) {
-      console.error('getUserByEmail exception:', error);
+      console.error('getUserByEmail error:', error);
       return undefined;
     }
   }
@@ -184,38 +204,39 @@ export class SupabasePublicStorage implements IStorage {
   async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
     try {
       const numAmount = parseFloat(String(amount));
-      const { data: user, error } = await supabase
-        .from('bank_users')
-        .update({ balance: numAmount.toString() })
-        .eq('id', id)
-        .select('*')
-        .single();
-      if (error) {
-        console.error('Supabase updateUserBalance error:', error);
-        return undefined;
-      }
-      if (!user) {
-        console.error('No user returned from updateUserBalance');
-        return undefined;
-      }
+      const user = await withRetry(async () => {
+        const { data: user, error } = await supabase
+          .from('bank_users')
+          .update({ balance: numAmount.toString() })
+          .eq('id', id)
+          .select('*')
+          .single();
+        if (error) throw new Error(`Supabase error: ${error.message}`);
+        if (!user) throw new Error('No user returned');
+        return user;
+      });
       console.log('Balance updated successfully for user', id, ':', numAmount);
       return mapUser(user);
     } catch (error) {
-      console.error('updateUserBalance exception:', error);
+      console.error('updateUserBalance error:', error);
       return undefined;
     }
   }
 
   async getUserAccounts(userId: number): Promise<Account[]> {
     try {
-      const { data: accounts, error } = await supabase
-        .from('bank_accounts')
-        .select('*')
-        .eq('user_id', userId)
-        .order('id');
-      if (error) return [];
-      return (accounts || []).map(acc => ({ id: acc.id, userId: acc.user_id, accountNumber: acc.account_number, accountType: acc.account_type, balance: acc.balance?.toString() || '0', currency: acc.currency, status: acc.status || 'active', createdAt: acc.created_at, updatedAt: acc.updated_at } as any));
+      const accounts = await withRetry(async () => {
+        const { data: accounts, error } = await supabase
+          .from('bank_accounts')
+          .select('*')
+          .eq('user_id', userId)
+          .order('id');
+        if (error) throw new Error(`Supabase error: ${error.message}`);
+        return accounts || [];
+      });
+      return accounts.map(acc => ({ id: acc.id, userId: acc.user_id, accountNumber: acc.account_number, accountType: acc.account_type, balance: acc.balance?.toString() || '0', currency: acc.currency, status: acc.status || 'active', createdAt: acc.created_at, updatedAt: acc.updated_at } as any));
     } catch (error) {
+      console.error('getUserAccounts error:', error);
       return [];
     }
   }
@@ -273,39 +294,39 @@ export class SupabasePublicStorage implements IStorage {
 
   async createTransaction(data: InsertTransaction): Promise<Transaction> {
     try {
-      // Map camelCase fields to snake_case for database
-      const dbData: any = {
-        from_user_id: data.fromUserId,
-        from_account_id: data.fromAccountId,
-        to_account_id: data.toAccountId,
-        amount: String(data.amount),
-        currency: data.currency || 'USD',
-        type: data.type || 'transfer',
-        transaction_type: data.transactionType || 'transfer',
-        status: data.status || 'processing',
-        description: data.description,
-        recipient_name: data.recipientName,
-        recipient_account: data.recipientAccount,
-        recipient_country: data.recipientCountry,
-        bank_name: data.bankName,
-        swift_code: data.swiftCode,
-        transfer_purpose: data.transferPurpose,
-        reference_number: data.referenceNumber,
-        iban: data.iban,
-        routing_number: data.routingNumber
-      };
-      // Remove undefined fields
-      Object.keys(dbData).forEach(key => dbData[key] === undefined && delete dbData[key]);
-      
-      const { data: transaction, error } = await supabase.from('transactions').insert(dbData).select().single();
-      if (error) {
-        console.error('createTransaction error:', error);
-        throw error;
-      }
-      if (!transaction) throw new Error('Failed to create transaction');
+      const transaction = await withRetry(async () => {
+        // Map camelCase fields to snake_case for database
+        const dbData: any = {
+          from_user_id: data.fromUserId,
+          from_account_id: data.fromAccountId,
+          to_account_id: data.toAccountId,
+          amount: String(data.amount),
+          currency: data.currency || 'USD',
+          type: data.type || 'transfer',
+          transaction_type: data.transactionType || 'transfer',
+          status: data.status || 'processing',
+          description: data.description,
+          recipient_name: data.recipientName,
+          recipient_account: data.recipientAccount,
+          recipient_country: data.recipientCountry,
+          bank_name: data.bankName,
+          swift_code: data.swiftCode,
+          transfer_purpose: data.transferPurpose,
+          reference_number: data.referenceNumber,
+          iban: data.iban,
+          routing_number: data.routingNumber
+        };
+        // Remove undefined fields
+        Object.keys(dbData).forEach(key => dbData[key] === undefined && delete dbData[key]);
+        
+        const { data: transaction, error } = await supabase.from('transactions').insert(dbData).select().single();
+        if (error) throw new Error(`Supabase error: ${error.message}`);
+        if (!transaction) throw new Error('Failed to create transaction');
+        return transaction;
+      });
       return transaction;
     } catch (error) {
-      console.error('createTransaction exception:', error);
+      console.error('createTransaction error:', error);
       throw error;
     }
   }
