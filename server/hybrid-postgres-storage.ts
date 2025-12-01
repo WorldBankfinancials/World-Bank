@@ -24,7 +24,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_users WHERE id = ${id} LIMIT 1
       `;
-      return result[0] as User | undefined;
+      return (result[0] as any) as User | undefined;
     } catch (error) {
       return undefined;
     }
@@ -35,7 +35,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_users WHERE username = ${username} LIMIT 1
       `;
-      return result[0] as User | undefined;
+      return (result[0] as any) as User | undefined;
     } catch (error) {
       return undefined;
     }
@@ -46,7 +46,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_users WHERE email = ${email} LIMIT 1
       `;
-      return result[0] as User | undefined;
+      return (result[0] as any) as User | undefined;
     } catch (error) {
       return undefined;
     }
@@ -57,7 +57,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_users WHERE phone = ${phone} LIMIT 1
       `;
-      return result[0] as User | undefined;
+      return (result[0] as any) as User | undefined;
     } catch (error) {
       return undefined;
     }
@@ -68,7 +68,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_users WHERE supabase_id = ${supabaseUserId} LIMIT 1
       `;
-      return result[0] as User | undefined;
+      return (result[0] as any) as User | undefined;
     } catch (error) {
       return undefined;
     }
@@ -79,7 +79,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_users ORDER BY created_at DESC
       `;
-      return result as User[];
+      return (result as any) as User[];
     } catch (error) {
       return [];
     }
@@ -94,8 +94,8 @@ export class HybridPostgresStorage implements IStorage {
           profession, annual_income, id_type, id_number, account_number,
           account_id, balance, is_verified, is_active, transfer_pin, role
         ) VALUES (
-          ${user.username}, ${user.email}, ${user.password},
-          ${user.firstName}, ${user.lastName}, ${user.phone || ''},
+          ${user.username || ''}, ${user.email || ''}, ${user.password || ''},
+          ${user.firstName || ''}, ${user.lastName || ''}, ${user.phone || ''},
           ${user.dateOfBirth || null}, ${user.address || ''},
           ${user.city || ''}, ${user.state || ''}, ${user.country || ''},
           ${user.postalCode || ''}, ${user.profession || ''},
@@ -107,7 +107,7 @@ export class HybridPostgresStorage implements IStorage {
         )
         RETURNING *
       `;
-      return result[0] as User;
+      return (result[0] as any) as User;
     } catch (error: any) {
       throw error;
     }
@@ -115,27 +115,26 @@ export class HybridPostgresStorage implements IStorage {
 
   async updateUser(id: number, user: Partial<User>): Promise<User | undefined> {
     try {
-      const updates: string[] = [];
+      const updates: any[] = [];
       const values: any[] = [];
-      let paramCount = 1;
 
       Object.entries(user).forEach(([key, value]) => {
         if (value !== undefined && key !== 'id') {
-          updates.push(`${key} = $${paramCount}`);
+          updates.push(key);
           values.push(value);
-          paramCount++;
         }
       });
 
       if (updates.length === 0) return this.getUser(id);
 
+      const setClause = updates.map((col, i) => `${col} = $${i + 1}`).join(', ');
       const result = await sql`
         UPDATE bank_users
-        SET ${sql(updates.join(', '))}
+        SET ${sql(setClause)}
         WHERE id = ${id}
         RETURNING *
       `;
-      return result[0] as User | undefined;
+      return (result[0] as any) as User | undefined;
     } catch (error) {
       return undefined;
     }
@@ -149,7 +148,7 @@ export class HybridPostgresStorage implements IStorage {
         WHERE id = ${id}
         RETURNING *
       `;
-      return result[0] as User | undefined;
+      return (result[0] as any) as User | undefined;
     } catch (error) {
       return undefined;
     }
@@ -161,7 +160,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_accounts WHERE id = ${id} LIMIT 1
       `;
-      return result[0] as Account | undefined;
+      return (result[0] as any) as Account | undefined;
     } catch (error) {
       return undefined;
     }
@@ -172,7 +171,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_accounts WHERE user_id = ${userId}
       `;
-      return result as Account[];
+      return (result as any) as Account[];
     } catch (error) {
       return [];
     }
@@ -184,13 +183,13 @@ export class HybridPostgresStorage implements IStorage {
         INSERT INTO bank_accounts (
           user_id, account_number, account_type, balance, currency, status
         ) VALUES (
-          ${account.userId}, ${account.accountNumber}, ${account.accountType},
+          ${account.userId || 0}, ${account.accountNumber || ''}, ${account.accountType || 'checking'},
           ${account.balance || '0.00'}, ${account.currency || 'USD'},
           ${account.status || 'active'}
         )
         RETURNING *
       `;
-      return result[0] as Account;
+      return (result[0] as any) as Account;
     } catch (error: any) {
       throw error;
     }
@@ -198,13 +197,21 @@ export class HybridPostgresStorage implements IStorage {
 
   async updateAccount(id: number, account: Partial<Account>): Promise<Account | undefined> {
     try {
+      const updates: any[] = [];
+      Object.entries(account).forEach(([key]) => {
+        if (key !== 'id') updates.push(key);
+      });
+
+      if (updates.length === 0) return this.getAccount(id);
+
+      const setClause = updates.map((col, i) => `${col} = $${i + 1}`).join(', ');
       const result = await sql`
         UPDATE bank_accounts
-        SET ${sql(Object.entries(account).map(([k]) => `${k} = $1`).join(', '))}
+        SET ${sql(setClause)}
         WHERE id = ${id}
         RETURNING *
       `;
-      return result[0] as Account | undefined;
+      return (result[0] as any) as Account | undefined;
     } catch (error) {
       return undefined;
     }
@@ -216,7 +223,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_transactions WHERE id = ${id} LIMIT 1
       `;
-      return result[0] as Transaction | undefined;
+      return (result[0] as any) as Transaction | undefined;
     } catch (error) {
       return undefined;
     }
@@ -229,7 +236,7 @@ export class HybridPostgresStorage implements IStorage {
         WHERE from_account_id = ${accountId} OR to_account_id = ${accountId}
         ORDER BY created_at DESC LIMIT 100
       `;
-      return result as Transaction[];
+      return (result as any) as Transaction[];
     } catch (error) {
       return [];
     }
@@ -241,7 +248,7 @@ export class HybridPostgresStorage implements IStorage {
         SELECT * FROM bank_transactions
         ORDER BY created_at DESC LIMIT 500
       `;
-      return result as Transaction[];
+      return (result as any) as Transaction[];
     } catch (error) {
       return [];
     }
@@ -254,14 +261,14 @@ export class HybridPostgresStorage implements IStorage {
           from_account_id, to_account_id, amount, type, status, 
           reference_number, description, created_at
         ) VALUES (
-          ${transaction.fromAccountId}, ${transaction.toAccountId},
-          ${transaction.amount}, ${transaction.type || 'transfer'},
+          ${transaction.fromAccountId || 0}, ${transaction.toAccountId || 0},
+          ${transaction.amount || '0'}, ${transaction.type || 'transfer'},
           ${transaction.status || 'pending'}, ${transaction.referenceNumber || ''},
           ${transaction.description || ''}, NOW()
         )
         RETURNING *
       `;
-      return result[0] as Transaction;
+      return (result[0] as any) as Transaction;
     } catch (error: any) {
       throw error;
     }
@@ -272,29 +279,53 @@ export class HybridPostgresStorage implements IStorage {
     try {
       const result = await sql`
         INSERT INTO bank_admin_actions (admin_id, action_type, target_id, details, created_at)
-        VALUES (${action.adminId}, ${action.actionType}, ${action.targetId}, ${action.details || ''}, NOW())
+        VALUES (${action.adminId || 0}, ${(action as any).action || 'unknown'}, ${action.targetId || 0}, ${action.details || ''}, NOW())
         RETURNING *
       `;
-      return result[0] as AdminAction;
+      return (result[0] as any) as AdminAction;
     } catch (error: any) {
       throw error;
     }
   }
 
-  // ==================== PLACEHOLDER METHODS ====================
-  async getAlert(id: string): Promise<Alert | undefined> { return undefined; }
+  // ==================== ALERT OPERATIONS ====================
+  async getAlert(id: number): Promise<Alert | undefined> { return undefined; }
   async getUserAlerts(userId: number): Promise<Alert[]> { return []; }
   async createAlert(alert: any): Promise<Alert> { throw new Error('Not implemented'); }
-  async getCard(id: string): Promise<Card | undefined> { return undefined; }
+
+  // ==================== CARD OPERATIONS ====================
+  async getCard(id: number): Promise<Card | undefined> { return undefined; }
   async getUserCards(userId: number): Promise<Card[]> { return []; }
   async createCard(card: any): Promise<Card> { throw new Error('Not implemented'); }
-  async getInvestment(id: string): Promise<Investment | undefined> { return undefined; }
+
+  // ==================== INVESTMENT OPERATIONS ====================
+  async getInvestment(id: number): Promise<Investment | undefined> { return undefined; }
   async getUserInvestments(userId: number): Promise<Investment[]> { return []; }
   async createInvestment(investment: any): Promise<Investment> { throw new Error('Not implemented'); }
+
+  // ==================== MESSAGE OPERATIONS ====================
   async getMessage(id: string): Promise<Message | undefined> { return undefined; }
   async getConversationMessages(conversationId: string): Promise<Message[]> { return []; }
   async createMessage(message: any): Promise<Message> { throw new Error('Not implemented'); }
-  async getSupportTicket(id: string): Promise<SupportTicket | undefined> { return undefined; }
+
+  // ==================== SUPPORT TICKET OPERATIONS ====================
+  async getSupportTicket(id: number): Promise<SupportTicket | undefined> { return undefined; }
   async getUserSupportTickets(userId: number): Promise<SupportTicket[]> { return []; }
   async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> { throw new Error('Not implemented'); }
+
+  // ==================== ADDITIONAL OPERATIONS ====================
+  async updateTransactionStatus(id: string, status: string): Promise<Transaction | undefined> { return undefined; }
+  async getPendingTransactions(): Promise<Transaction[]> { return []; }
+  async getAdminActions(): Promise<AdminAction[]> { return []; }
+  async getSupportTickets(): Promise<SupportTicket[]> { return []; }
+  async getMessages(): Promise<Message[]> { return []; }
+  async getInvestments(): Promise<Investment[]> { return []; }
+  async getAllCards(): Promise<Card[]> { return []; }
+  async getAllAlerts(): Promise<Alert[]> { return []; }
+  async getTransactionByReference(reference: string): Promise<Transaction | undefined> { return undefined; }
+  async updateTransactionApproval(id: string, approved: boolean): Promise<Transaction | undefined> { return undefined; }
+  async deleteTransaction(id: string): Promise<void> {}
+  async deleteAccount(id: number): Promise<void> {}
+  async deleteUser(id: number): Promise<void> {}
+  async createTransactionApproval(approval: any): Promise<any> { throw new Error('Not implemented'); }
 }

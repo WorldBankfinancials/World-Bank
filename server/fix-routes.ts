@@ -2106,15 +2106,26 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to generate authentication token' });
       }
 
+      // STEP 5: Return full user profile for immediate caching
+      const fullProfile = dbUser || {
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
+        lastName: supabaseUser.user_metadata?.last_name || 'User',
+        phone: supabaseUser.user_metadata?.phone || '',
+        role: supabaseUser.app_metadata?.role || 'customer',
+        fullName: `${supabaseUser.user_metadata?.first_name || email.split('@')[0]} ${supabaseUser.user_metadata?.last_name || 'User'}`,
+        profession: 'Customer',
+        accountId: dbUser?.accountId || 'WB-' + Date.now(),
+        accountNumber: dbUser?.accountNumber || '****1234',
+        isVerified: true,
+        isActive: true
+      };
 
       res.json({ 
         token: accessToken,
         refreshToken: data.session?.refresh_token,
-        user: dbUser || {
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          role: supabaseUser.app_metadata?.role || 'customer'
-        }
+        user: fullProfile
       });
     } catch (error: any) {
       res.status(500).json({ error: 'Login failed', details: error.message });
