@@ -205,9 +205,7 @@ export default function InternationalTransfer() {
         accountNumber: accountNumber,
         transferPurpose: transferPurpose,
         transferPin: transferPin,
-        userEmail: userProfile?.email || user?.email!,
-        status: "pending_approval",
-        requiresApproval: parsedAmount >= 10000
+        userEmail: userProfile?.email || user?.email!
       };
       
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -245,14 +243,12 @@ export default function InternationalTransfer() {
             const statusResponse = await authenticatedFetch(`/api/international-transfers/${txnId}/status`);
             if (statusResponse.ok) {
               const statusData = await statusResponse.json();
-              if (statusData.status === 'approved') {
+              if (statusData.status === 'approved' || statusData.status === 'completed') {
                 setTransferStatus('success');
                 clearInterval(interval);
-              } else if (statusData.status === 'rejected') {
+              } else if (statusData.status === 'rejected' || statusData.status === 'failed') {
                 setTransferStatus('failed');
                 clearInterval(interval);
-              } else if (statusData.status === 'pending_approval') {
-                setTransferStatus('pending');
               }
             }
           } catch (error) {

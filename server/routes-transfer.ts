@@ -245,8 +245,7 @@ export function setupTransferRoutes(app: Express) {
         bankName,
         swiftCode,
         transferType,
-        purpose,
-        status = 'pending_approval'
+        purpose
       } = req.body;
 
       // Validate required fields
@@ -262,7 +261,7 @@ export function setupTransferRoutes(app: Express) {
 
       const fromAccount = accounts[0];
 
-      // Create transaction record for admin approval (all transfers require approval)
+      // Create transaction record as "processing" - admin approval happens secretly in admin dashboard
       const transaction = await storage.createTransaction({
         fromAccountId: fromAccount.id,
         type: transferType || "international_transfer",
@@ -271,7 +270,7 @@ export function setupTransferRoutes(app: Express) {
         recipientName: recipientName,
         recipientCountry: recipientCountry || "Unknown",
         currency: currency || "USD",
-        status: "pending_approval"
+        status: "processing"
       });
 
       res.json({ 

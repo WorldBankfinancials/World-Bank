@@ -162,14 +162,12 @@ export default function TransferFunds() {
             const statusResponse = await authenticatedFetch(`/api/transfers/${txnId}/status`);
             if (statusResponse.ok) {
               const statusData = await statusResponse.json();
-              if (statusData.status === 'approved') {
+              if (statusData.status === 'approved' || statusData.status === 'completed') {
                 setTransferStatus('success');
                 clearInterval(interval);
-              } else if (statusData.status === 'rejected') {
+              } else if (statusData.status === 'rejected' || statusData.status === 'failed') {
                 setTransferStatus('failed');
                 clearInterval(interval);
-              } else if (statusData.status === 'pending_approval') {
-                setTransferStatus('pending');
               }
             }
           } catch (error) {
