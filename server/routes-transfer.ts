@@ -79,8 +79,7 @@ export function setupTransferRoutes(app: Express) {
         const newBalance = currentBalance - numAmount;
         await storage.updateUserBalance(user.id, newBalance);
         
-        // Get user's first account for transaction
-        const userAccounts = await storage.getUserAccounts(user.id);
+        // Use existing userAccounts from above - already fetched
         if (!userAccounts || userAccounts.length === 0) {
           return res.status(400).json({ message: "User has no account" });
         }
@@ -193,8 +192,7 @@ export function setupTransferRoutes(app: Express) {
         const recipientNameTrunc = String(recipientName).substring(0, 20);
         const recipientCountryTrunc = String(recipientCountry).substring(0, 20);
         
-        // Get user's first account for transaction
-        const userAccounts = await storage.getUserAccounts(user.id);
+        // Use existing userAccounts from above - already fetched
         if (!userAccounts || userAccounts.length === 0) {
           return res.status(400).json({ message: "User has no account" });
         }
