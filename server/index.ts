@@ -4,7 +4,6 @@ import { registerFixedRoutes } from "./fix-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { WebSocketServer } from "ws";
 import { setupLiveChatWebSocket } from "./supabase-live-chat";
-import { setupDashboardRealtimeWebSocket } from "./supabase-dashboard-realtime";
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
