@@ -625,7 +625,6 @@ export class UnifiedSyncStorage implements IStorage {
   async markAlertAsRead(id: number): Promise<Alert | undefined> { return undefined; }
   async deleteAlert(id: number): Promise<void> {}
   async getCard(id: number): Promise<Card | undefined> { return undefined; }
-  async getUserCards(userId: number): Promise<Card[]> { return []; }
   async createCard(card: any): Promise<Card> { throw new Error('Not implemented'); }
   async updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined> { return undefined; }
   async getInvestment(id: number): Promise<Investment | undefined> { return undefined; }
