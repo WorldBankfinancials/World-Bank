@@ -577,42 +577,18 @@ export class UnifiedSyncStorage implements IStorage {
         .select('*')
         .eq('user_id', userId);
 
-      if (error || !data) {
-        console.log(`⚠️ No cards table - returning mock cards`);
-        // Return mock cards for demo
-        return [
-          {
-            id: 1,
-            userId: userId,
-            cardNumber: '****-****-****-1234',
-            cardName: 'Platinum Card',
-            status: 'active',
-            expiryDate: '12/25',
-            dailyLimit: 5000,
-            contactlessEnabled: true,
-            accountId: 1,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          } as any,
-          {
-            id: 2,
-            userId: userId,
-            cardNumber: '****-****-****-5678',
-            cardName: 'Gold Card',
-            status: 'active',
-            expiryDate: '08/26',
-            dailyLimit: 3000,
-            contactlessEnabled: true,
-            accountId: 2,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          } as any
-        ];
+      if (error) {
+        console.error(`❌ getUserCards(${userId}) error:`, error.message);
+        return [];
+      }
+      if (!data) {
+        console.log(`⚠️ getUserCards(${userId}): No cards found`);
+        return [];
       }
       console.log(`✅ getUserCards(${userId}): ${data.length} cards`);
       return data as any as Card[];
     } catch (error) {
-      console.error(`❌ getUserCards error:`, error);
+      console.error(`❌ getUserCards catch:`, error);
       return [];
     }
   }
