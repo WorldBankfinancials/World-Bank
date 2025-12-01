@@ -510,6 +510,7 @@ export class UnifiedSyncStorage implements IStorage {
       idType: dbRow.id_type,
       idNumber: dbRow.id_number,
       transferPin: dbRow.transfer_pin,
+      lastLogin: dbRow.last_login,
       isActive: dbRow.is_active,
       isVerified: dbRow.is_verified,
       role: dbRow.role,
