@@ -8,10 +8,9 @@ export function createStorage(): IStorage {
     throw new Error('❌ CRITICAL: DATABASE_URL required for direct Postgres connection.');
   }
   
-  console.log('🚀 Storage Factory: Creating UnifiedSyncStorage (Triple-layer)...');
-  console.log('⚡ Layer 1: Direct Postgres (<1ms)');
-  console.log('⚡ Layer 2: Supabase (redundant sync)');
-  console.log('⚡ Layer 3: Memory Cache (instant <0.1ms)');
+  console.log('🚀 Storage Factory: Creating UnifiedSyncStorage...');
+  console.log('⚡ Layer 1: Supabase REST API (works from Replit)');
+  console.log('⚡ Layer 2: Memory Cache (instant <0.1ms)');
   
   const instance = new UnifiedSyncStorage();
   
@@ -22,4 +21,4 @@ export function createStorage(): IStorage {
 // Export singleton storage instance
 console.log('🚀 Initializing unified sync storage factory...');
 export const storage = createStorage();
-console.log('✅ Storage factory initialized - TRIPLE-LAYER storage ready for operations');
+console.log('✅ Storage factory initialized - Supabase REST API + Memory Cache ready');

@@ -1,25 +1,20 @@
 /**
- * UNIFIED SYNC STORAGE - Postgres + Supabase + Memory Cache
- * Triple-layer storage: Direct Postgres (fast), Supabase (redundant), Memory cache (instant)
- * All writes sync to both backends automatically
+ * UNIFIED SYNC STORAGE - Supabase REST API + Memory Cache
+ * Uses Supabase REST API (works from Replit) + instant memory cache
+ * Direct Postgres connection fails on Replit (network unreachable)
  */
 
-import postgres from 'postgres';
 import { createClient } from '@supabase/supabase-js';
 import type { IStorage } from "./storage";
 import type { User, Account, Transaction, AdminAction, SupportTicket, Card, Investment, Message, Alert, InsertUser, InsertAccount, InsertTransaction, InsertAdminAction, InsertSupportTicket } from "@shared/schema";
 
-// Layer 1: Direct Postgres (FASTEST - <1ms)
-const dbUrl = process.env.DATABASE_URL;
-if (!dbUrl) throw new Error('DATABASE_URL required');
-const sql = postgres(dbUrl, { max: 20, idle_timeout: 30, connect_timeout: 10 });
-
-// Layer 2: Supabase (REDUNDANT - backup/sync)
+// Supabase client - WORKS from Replit (REST API)
 const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+if (!supabaseUrl || !supabaseKey) throw new Error('Supabase credentials required');
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Layer 3: Memory Cache (INSTANT - <0.1ms)
+// Memory Cache (INSTANT - <0.1ms)
 const memCache = new Map<string, any>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -45,11 +40,18 @@ export class UnifiedSyncStorage implements IStorage {
     if (cached) return cached;
 
     try {
-      const result = await sql`SELECT * FROM bank_users WHERE id = ${id} LIMIT 1`;
-      const user = (result[0] as any) as User | undefined;
-      if (user) this.setCache(cacheKey, user);
+      const { data, error } = await supabase
+        .from('bank_users')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error || !data) return undefined;
+      const user = data as any as User;
+      this.setCache(cacheKey, user);
       return user;
     } catch (error) {
+      console.error('❌ getUser error:', error);
       return undefined;
     }
   }
@@ -60,32 +62,48 @@ export class UnifiedSyncStorage implements IStorage {
     if (cached) return cached;
 
     try {
-      const result = await sql`SELECT * FROM bank_users WHERE email = ${email} LIMIT 1`;
-      const user = (result[0] as any) as User | undefined;
-      if (user) this.setCache(cacheKey, user);
+      const { data, error } = await supabase
+        .from('bank_users')
+        .select('*')
+        .eq('email', email)
+        .single();
+      
+      if (error || !data) return undefined;
+      const user = data as any as User;
+      this.setCache(cacheKey, user);
       return user;
     } catch (error) {
+      console.error('❌ getUserByEmail error:', error);
       return undefined;
     }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const cacheKey = `user:username:${username}`;
-    const cached = this.getCache(cacheKey);
-    if (cached) return cached;
-
     try {
-      const result = await sql`SELECT * FROM bank_users WHERE username = ${username} LIMIT 1`;
-      return (result[0] as any) as User | undefined;
+      const { data, error } = await supabase
+        .from('bank_users')
+        .select('*')
+        .eq('username', username)
+        .single();
+      
+      if (error || !data) return undefined;
+      return data as any as User;
     } catch (error) {
+      console.error('❌ getUserByUsername error:', error);
       return undefined;
     }
   }
 
   async getUserByPhone(phone: string): Promise<User | undefined> {
     try {
-      const result = await sql`SELECT * FROM bank_users WHERE phone = ${phone} LIMIT 1`;
-      return (result[0] as any) as User | undefined;
+      const { data, error } = await supabase
+        .from('bank_users')
+        .select('*')
+        .eq('phone', phone)
+        .single();
+      
+      if (error || !data) return undefined;
+      return data as any as User;
     } catch (error) {
       return undefined;
     }
@@ -93,8 +111,14 @@ export class UnifiedSyncStorage implements IStorage {
 
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
     try {
-      const result = await sql`SELECT * FROM bank_users WHERE supabase_id = ${supabaseUserId} LIMIT 1`;
-      return (result[0] as any) as User | undefined;
+      const { data, error } = await supabase
+        .from('bank_users')
+        .select('*')
+        .eq('supabase_id', supabaseUserId)
+        .single();
+      
+      if (error || !data) return undefined;
+      return data as any as User;
     } catch (error) {
       return undefined;
     }
@@ -102,8 +126,13 @@ export class UnifiedSyncStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     try {
-      const result = await sql`SELECT * FROM bank_users ORDER BY created_at DESC`;
-      return (result as any) as User[];
+      const { data, error } = await supabase
+        .from('bank_users')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error || !data) return [];
+      return data as any as User[];
     } catch (error) {
       return [];
     }
@@ -111,29 +140,39 @@ export class UnifiedSyncStorage implements IStorage {
 
   async createUser(user: InsertUser): Promise<User> {
     try {
-      const result = await sql`
-        INSERT INTO bank_users (
-          username, email, password, first_name, last_name, phone,
-          date_of_birth, address, city, state, country, postal_code,
-          profession, annual_income, id_type, id_number, account_number,
-          account_id, balance, is_verified, is_active, transfer_pin, role
-        ) VALUES (
-          ${user.username || ''}, ${user.email || ''}, ${user.password || ''},
-          ${user.firstName || ''}, ${user.lastName || ''}, ${user.phone || ''},
-          ${user.dateOfBirth || null}, ${user.address || ''},
-          ${user.city || ''}, ${user.state || ''}, ${user.country || ''},
-          ${user.postalCode || ''}, ${user.profession || ''},
-          ${user.annualIncome || ''}, ${user.idType || ''},
-          ${user.idNumber || ''}, ${user.accountNumber || ''},
-          ${user.accountId || Date.now()}, ${user.balance || '0'},
-          ${user.isVerified || false}, ${user.isActive || false},
-          ${user.transferPin || ''}, ${user.role || 'customer'}
-        )
-        RETURNING *
-      `;
-      const newUser = (result[0] as any) as User;
+      const { data, error } = await supabase
+        .from('bank_users')
+        .insert([{
+          username: user.username || '',
+          email: user.email || '',
+          password: user.password || '',
+          first_name: user.firstName || '',
+          last_name: user.lastName || '',
+          phone: user.phone || '',
+          date_of_birth: user.dateOfBirth || null,
+          address: user.address || '',
+          city: user.city || '',
+          state: user.state || '',
+          country: user.country || '',
+          postal_code: user.postalCode || '',
+          profession: user.profession || '',
+          annual_income: user.annualIncome || '',
+          id_type: user.idType || '',
+          id_number: user.idNumber || '',
+          account_number: user.accountNumber || '',
+          account_id: user.accountId || Date.now(),
+          balance: user.balance || '0',
+          is_verified: user.isVerified || false,
+          is_active: user.isActive || false,
+          transfer_pin: user.transferPin || '',
+          role: user.role || 'customer'
+        }])
+        .select()
+        .single();
+
+      if (error || !data) throw error;
+      const newUser = data as any as User;
       this.setCache(`user:${newUser.id}`, newUser);
-      this.setCache(`user:email:${newUser.email}`, newUser);
       return newUser;
     } catch (error: any) {
       throw error;
@@ -142,22 +181,16 @@ export class UnifiedSyncStorage implements IStorage {
 
   async updateUser(id: number, user: Partial<User>): Promise<User | undefined> {
     try {
-      const setClauses = Object.entries(user)
-        .filter(([key]) => key !== 'id')
-        .map(([key, value]) => `${key} = ${sql`${value}`}`)
-        .join(', ');
+      const { data, error } = await supabase
+        .from('bank_users')
+        .update(user as any)
+        .eq('id', id)
+        .select()
+        .single();
 
-      if (!setClauses) return this.getUser(id);
-
-      const result = await sql`
-        UPDATE bank_users
-        SET ${sql(setClauses)}
-        WHERE id = ${id}
-        RETURNING *
-      `;
-      const updated = (result[0] as any) as User;
+      if (error || !data) return undefined;
+      const updated = data as any as User;
       memCache.delete(`user:${id}`);
-      this.setCache(`user:${id}`, updated);
       return updated;
     } catch (error) {
       return undefined;
@@ -166,13 +199,15 @@ export class UnifiedSyncStorage implements IStorage {
 
   async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
     try {
-      const result = await sql`
-        UPDATE bank_users
-        SET balance = ${amount.toString()}
-        WHERE id = ${id}
-        RETURNING *
-      `;
-      const updated = (result[0] as any) as User;
+      const { data, error } = await supabase
+        .from('bank_users')
+        .update({ balance: amount.toString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error || !data) return undefined;
+      const updated = data as any as User;
       memCache.delete(`user:${id}`);
       return updated;
     } catch (error) {
@@ -186,8 +221,13 @@ export class UnifiedSyncStorage implements IStorage {
     if (cached) return cached;
 
     try {
-      const result = await sql`SELECT * FROM bank_accounts WHERE user_id = ${userId}`;
-      const accounts = (result as any) as Account[];
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error || !data) return [];
+      const accounts = data as any as Account[];
       this.setCache(cacheKey, accounts);
       return accounts;
     } catch (error) {
@@ -197,8 +237,14 @@ export class UnifiedSyncStorage implements IStorage {
 
   async getAccount(id: number): Promise<Account | undefined> {
     try {
-      const result = await sql`SELECT * FROM bank_accounts WHERE id = ${id} LIMIT 1`;
-      return (result[0] as any) as Account | undefined;
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) return undefined;
+      return data as any as Account;
     } catch (error) {
       return undefined;
     }
@@ -206,19 +252,22 @@ export class UnifiedSyncStorage implements IStorage {
 
   async createAccount(account: InsertAccount): Promise<Account> {
     try {
-      const result = await sql`
-        INSERT INTO bank_accounts (
-          user_id, account_number, account_type, balance, currency, status
-        ) VALUES (
-          ${account.userId || 0}, ${account.accountNumber || ''}, ${account.accountType || 'checking'},
-          ${account.balance || '0.00'}, ${account.currency || 'USD'},
-          ${account.status || 'active'}
-        )
-        RETURNING *
-      `;
-      const newAccount = (result[0] as any) as Account;
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .insert([{
+          user_id: account.userId || 0,
+          account_number: account.accountNumber || '',
+          account_type: account.accountType || 'checking',
+          balance: account.balance || '0.00',
+          currency: account.currency || 'USD',
+          status: account.status || 'active'
+        }])
+        .select()
+        .single();
+
+      if (error || !data) throw error;
       memCache.delete(`accounts:user:${account.userId}`);
-      return newAccount;
+      return data as any as Account;
     } catch (error: any) {
       throw error;
     }
@@ -226,20 +275,15 @@ export class UnifiedSyncStorage implements IStorage {
 
   async updateAccount(id: number, updates: Partial<Account>): Promise<Account | undefined> {
     try {
-      const setClauses = Object.entries(updates)
-        .filter(([key]) => key !== 'id')
-        .map(([key, value]) => `${key} = ${sql`${value}`}`)
-        .join(', ');
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .update(updates as any)
+        .eq('id', id)
+        .select()
+        .single();
 
-      if (!setClauses) return this.getAccount(id);
-
-      const result = await sql`
-        UPDATE bank_accounts
-        SET ${sql(setClauses)}
-        WHERE id = ${id}
-        RETURNING *
-      `;
-      return (result[0] as any) as Account | undefined;
+      if (error || !data) return undefined;
+      return data as any as Account;
     } catch (error) {
       return undefined;
     }
@@ -247,8 +291,14 @@ export class UnifiedSyncStorage implements IStorage {
 
   async getTransaction(id: string): Promise<Transaction | undefined> {
     try {
-      const result = await sql`SELECT * FROM bank_transactions WHERE id = ${id} LIMIT 1`;
-      return (result[0] as any) as Transaction | undefined;
+      const { data, error } = await supabase
+        .from('bank_transactions')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) return undefined;
+      return data as any as Transaction;
     } catch (error) {
       return undefined;
     }
@@ -256,12 +306,15 @@ export class UnifiedSyncStorage implements IStorage {
 
   async getAccountTransactions(accountId: number): Promise<Transaction[]> {
     try {
-      const result = await sql`
-        SELECT * FROM bank_transactions
-        WHERE from_account_id = ${accountId} OR to_account_id = ${accountId}
-        ORDER BY created_at DESC LIMIT 100
-      `;
-      return (result as any) as Transaction[];
+      const { data, error } = await supabase
+        .from('bank_transactions')
+        .select('*')
+        .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error || !data) return [];
+      return data as any as Transaction[];
     } catch (error) {
       return [];
     }
@@ -269,8 +322,14 @@ export class UnifiedSyncStorage implements IStorage {
 
   async getAllTransactions(): Promise<Transaction[]> {
     try {
-      const result = await sql`SELECT * FROM bank_transactions ORDER BY created_at DESC LIMIT 500`;
-      return (result as any) as Transaction[];
+      const { data, error } = await supabase
+        .from('bank_transactions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(500);
+
+      if (error || !data) return [];
+      return data as any as Transaction[];
     } catch (error) {
       return [];
     }
@@ -278,19 +337,23 @@ export class UnifiedSyncStorage implements IStorage {
 
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
     try {
-      const result = await sql`
-        INSERT INTO bank_transactions (
-          from_account_id, to_account_id, amount, type, status,
-          reference_number, description, created_at
-        ) VALUES (
-          ${transaction.fromAccountId || 0}, ${transaction.toAccountId || 0},
-          ${transaction.amount || '0'}, ${transaction.type || 'transfer'},
-          ${transaction.status || 'pending'}, ${transaction.referenceNumber || ''},
-          ${transaction.description || ''}, NOW()
-        )
-        RETURNING *
-      `;
-      return (result[0] as any) as Transaction;
+      const { data, error } = await supabase
+        .from('bank_transactions')
+        .insert([{
+          from_account_id: transaction.fromAccountId || 0,
+          to_account_id: transaction.toAccountId || 0,
+          amount: transaction.amount || '0',
+          type: transaction.type || 'transfer',
+          status: transaction.status || 'pending',
+          reference_number: transaction.referenceNumber || '',
+          description: transaction.description || '',
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error || !data) throw error;
+      return data as any as Transaction;
     } catch (error: any) {
       throw error;
     }
@@ -298,12 +361,20 @@ export class UnifiedSyncStorage implements IStorage {
 
   async createAdminAction(action: InsertAdminAction): Promise<AdminAction> {
     try {
-      const result = await sql`
-        INSERT INTO bank_admin_actions (admin_id, action_type, target_id, details, created_at)
-        VALUES (${action.adminId || 0}, ${(action as any).actionType || 'unknown'}, ${action.targetId || 0}, ${(action as any).details || ''}, NOW())
-        RETURNING *
-      `;
-      return (result[0] as any) as AdminAction;
+      const { data, error } = await supabase
+        .from('bank_admin_actions')
+        .insert([{
+          admin_id: action.adminId || 0,
+          action_type: (action as any).actionType || 'unknown',
+          target_id: action.targetId || 0,
+          details: (action as any).details || '',
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error || !data) throw error;
+      return data as any as AdminAction;
     } catch (error: any) {
       throw error;
     }
