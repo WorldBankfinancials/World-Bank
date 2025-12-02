@@ -187,13 +187,8 @@ export default function Transfer() {
         recipientName: recipientDetails.fullName,
         recipientAccount: recipientDetails.accountNumber,
         recipientCountry: recipientDetails.country,
-        bankName: recipientDetails.bankName,
-        swiftCode: recipientDetails.swiftCode,
-        transferPurpose: recipientDetails.purpose,
-        transferPin: transferPin,
-        userEmail: userProfile?.email || user?.email!,
-        status: "pending_approval",
-        requiresApproval: parsedAmount >= 10000 // Transfers over $10k require support team approval
+        purpose: recipientDetails.purpose,
+        transferPin: transferPin
       };
       
       const { authenticatedFetch } = await import('@/lib/queryClient');

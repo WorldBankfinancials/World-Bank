@@ -147,14 +147,8 @@ export default function InternationalTransfer() {
     try {
       const transferData = {
         amount: parsedAmount,
-        recipientName: recipientFullName,
         recipientCountry: recipientCountry,
-        bankName: bankName,
-        swiftCode: swiftCode,
-        accountNumber: accountNumber,
-        transferPurpose: transferPurpose,
-        transferPin: transferPin,
-        userEmail: userProfile?.email || user?.email!
+        transferPin: transferPin
       };
       
       const { authenticatedFetch } = await import('@/lib/queryClient');
