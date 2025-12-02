@@ -35,39 +35,7 @@ export default function Transfer() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
   const { toast } = useToast();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dataError, setDataError] = useState<string | null>(null);
-  
-  // Fetch user data using useEffect
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        setIsLoading(true);
-        setDataError(null);
-        // Wait for userProfile to be available (with timeout)
-        let attempts = 0;
-        while (!userProfile?.email && attempts < 5) {
-          await new Promise(r => setTimeout(r, 500));
-          attempts++;
-        }
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch(`/api/user`);
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-          setDataError(null);
-        } else {
-          setDataError('Failed to load user data. Please refresh.');
-        }
-      } catch (error: any) {
-        setDataError('Unable to load user profile. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchUser();
-  }, []);
+  const user = (userProfile as User) || null;
   
   const [amount, setAmount] = useState("");
   const [transferType, setTransferType] = useState("international");
@@ -100,29 +68,13 @@ export default function Transfer() {
     relationship: ""
   });
 
-  if (isLoading) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading transfer...</p>
-        </div>
+        <div className="text-gray-600">{t('loading')}</div>
       </div>
     );
   }
-
-  if (dataError) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex items-center justify-center p-4 mt-20">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6">
-              <div className="text-center text-red-600">
-                <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-500" />
-                <p className="font-semibold mb-2">Unable to Load</p>
-                <p className="text-sm">{dataError}</p>
-                <Button 
                   variant="outline" 
                   onClick={() => window.location.reload()}
                   className="w-full mt-4"

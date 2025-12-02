@@ -25,32 +25,7 @@ export default function InternationalTransfer() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
   const { toast } = useToast();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dataError, setDataError] = useState<string | null>(null);
-  
-  // Fetch user data using useEffect
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        setIsLoading(true);
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch(`/api/user`);
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-          setDataError(null);
-        } else {
-          setDataError('Failed to load user data');
-        }
-      } catch (error: any) {
-        setDataError(error?.message || 'Failed to load user data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchUser();
-  }, []);
+  const user = (userProfile as User) || null;
 
   const [transferAmount, setTransferAmount] = useState("");
   const [recipientFullName, setRecipientFullName] = useState("");
@@ -72,37 +47,10 @@ export default function InternationalTransfer() {
   const [transferStatus, setTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
   const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
 
-  if (isLoading) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">{t('loading')}</div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header user={(userProfile as any) || undefined} />
-        <div className="flex items-center justify-center p-4 mt-20">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6">
-              <div className="text-center text-red-600">
-                <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-500" />
-                <p className="font-semibold mb-2">Unable to Load</p>
-                <p className="text-sm">{dataError || 'Please refresh or login again'}</p>
-                <Button 
-                  variant="outline" 
-                  onClick={() => window.location.reload()}
-                  className="w-full mt-4"
-                >
-                  Refresh Page
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <BottomNavigation />
       </div>
     );
   }
