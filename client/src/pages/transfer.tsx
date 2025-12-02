@@ -75,20 +75,6 @@ export default function Transfer() {
       </div>
     );
   }
-                  variant="outline" 
-                  onClick={() => window.location.reload()}
-                  className="w-full mt-4"
-                >
-                  Refresh Page
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <BottomNavigation />
-      </div>
-    );
-  }
 
   const quickTransferOptions = [
     { icon: Globe, label: "International Wire", description: "SWIFT transfers worldwide", action: () => setTransferType("international") },
