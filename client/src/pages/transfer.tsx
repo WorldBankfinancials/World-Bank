@@ -100,17 +100,6 @@ export default function Transfer() {
         return;
       }
       
-      const numAmount = parseFloat(amount);
-      const userBalance = parseFloat(user?.balance?.toString() || '0');
-      if (numAmount > userBalance) {
-        toast({
-          title: 'Insufficient balance',
-          description: `Your balance is $${userBalance.toFixed(2)}. Please enter an amount up to $${userBalance.toFixed(2)}`,
-          variant: 'destructive'
-        });
-        return;
-      }
-      
       if (!recipientDetails.fullName) {
         toast({
           title: 'Recipient name required',
@@ -129,7 +118,7 @@ export default function Transfer() {
         return;
       }
 
-      // Show PIN verification modal
+      // Show PIN verification modal - let backend validate balance
       setShowPinVerification(true);
     } catch (error: any) {
       toast({

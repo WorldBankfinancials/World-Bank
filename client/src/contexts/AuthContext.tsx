@@ -137,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           fullName: data.user.fullName || data.user.email.split('@')[0],
           phone: data.user.phone || '',
           role: data.user.role || 'customer',
+          balance: data.user.balance || '0',
           isVerified: true,
           isActive: true,
           profession: data.user.profession || '',
