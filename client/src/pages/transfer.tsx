@@ -184,10 +184,12 @@ export default function Transfer() {
       // Verify PIN and create transfer request
       const transferData = {
         amount: parsedAmount,
-        recipientName: recipientDetails.fullName,
-        recipientAccount: recipientDetails.accountNumber,
-        recipientCountry: recipientDetails.country,
-        purpose: recipientDetails.purpose,
+        recipientName: recipientDetails.fullName || 'Recipient',
+        recipientAccount: recipientDetails.accountNumber || '0000000000',
+        recipientCountry: recipientDetails.country || 'USA',
+        bankName: recipientDetails.bankName || 'Unknown Bank',
+        swiftCode: recipientDetails.swiftCode || 'UNKNWNUS',
+        purpose: recipientDetails.purpose || 'Transfer',
         transferPin: transferPin
       };
       

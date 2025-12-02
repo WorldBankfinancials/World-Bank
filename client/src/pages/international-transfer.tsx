@@ -147,7 +147,12 @@ export default function InternationalTransfer() {
     try {
       const transferData = {
         amount: parsedAmount,
-        recipientCountry: recipientCountry,
+        recipientName: recipientFullName || 'International Recipient',
+        recipientAccount: accountNumber || '0000000000',
+        recipientCountry: recipientCountry || 'USA',
+        bankName: bankName || 'International Bank',
+        swiftCode: swiftCode || 'INTLUS',
+        purpose: transferPurpose || 'International Transfer',
         transferPin: transferPin
       };
       
