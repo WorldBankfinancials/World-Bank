@@ -170,11 +170,13 @@ export default function InternationalTransfer() {
         try {
           result = await response.json();
         } catch (e) {
+          console.error('Failed to parse intl transfer response:', e);
           setPinError("Failed to parse transfer response");
           setIsProcessing(false);
           return;
         }
         
+        console.log('DEBUG: Intl transfer response:', result);
         setShowPinVerification(false);
         setTransferPin("");
         const txnId = result.transactionId || result.id || `INT-${Date.now()}`;
@@ -182,9 +184,25 @@ export default function InternationalTransfer() {
         setTransferStatus("processing");
         setShowPendingStatus(true);
         
-        // Refresh user data to reflect balance changes
-        const { queryClient } = await import('@/lib/queryClient');
-        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        // Refresh user data to reflect balance changes - immediately and cached
+        try {
+          const { authenticatedFetch, queryClient } = await import('@/lib/queryClient');
+          // Force fresh fetch of updated user balance
+          const userResponse = await authenticatedFetch('/api/user');
+          if (userResponse.ok) {
+            const freshUser = await userResponse.json();
+            if (freshUser && freshUser.balance !== undefined) {
+              localStorage.setItem('userProfile', JSON.stringify({
+                ...JSON.parse(localStorage.getItem('userProfile') || '{}'),
+                balance: freshUser.balance
+              }));
+              console.log('DEBUG: Updated cached balance:', freshUser.balance);
+            }
+          }
+          queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        } catch (e) {
+          console.error('Failed to refresh balance:', e);
+        }
         
         const interval = setInterval(async () => {
           try {
@@ -227,8 +245,9 @@ export default function InternationalTransfer() {
           return;
         }
         
-        console.log('DEBUG: Intl transfer failed:', error);
-        setPinError(error?.message || error?.error || "Transfer failed. Please try again.");
+        const statusCode = response.status;
+        console.error(`DEBUG: Intl transfer failed with status ${statusCode}:`, error);
+        setPinError(error?.message || error?.error || `Transfer failed (${statusCode}). Please try again.`);
         setIsProcessing(false);
       }
     } catch (error) {
