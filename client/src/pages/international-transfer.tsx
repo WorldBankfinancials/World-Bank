@@ -147,15 +147,16 @@ export default function InternationalTransfer() {
     try {
       const transferData = {
         amount: parsedAmount,
-        recipientName: recipientFullName || 'International Recipient',
-        recipientAccount: accountNumber || '0000000000',
-        recipientCountry: recipientCountry || 'USA',
-        bankName: bankName || 'International Bank',
-        swiftCode: swiftCode || 'INTLUS',
-        purpose: transferPurpose || 'International Transfer',
+        recipientName: recipientFullName && recipientFullName.trim() ? recipientFullName : 'International Recipient',
+        recipientCountry: recipientCountry && recipientCountry.trim() ? recipientCountry : 'US',
+        bankName: bankName && bankName.trim() ? bankName : 'Bank',
+        swiftCode: swiftCode && swiftCode.trim() ? swiftCode : 'INTL',
+        accountNumber: accountNumber && accountNumber.trim() ? accountNumber : '00000000',
+        transferPurpose: transferPurpose && transferPurpose.trim() ? transferPurpose : 'transfer',
         transferPin: transferPin
       };
       
+      console.log('DEBUG: Sending intl transfer:', JSON.stringify(transferData));
       const { authenticatedFetch } = await import('@/lib/queryClient');
 
       const response = await authenticatedFetch('/api/international-transfers', {
@@ -226,7 +227,8 @@ export default function InternationalTransfer() {
           return;
         }
         
-        setPinError(error?.message || "Invalid PIN. Please verify your 4-digit transfer PIN.");
+        console.log('DEBUG: Intl transfer failed:', error);
+        setPinError(error?.message || error?.error || "Transfer failed. Please try again.");
         setIsProcessing(false);
       }
     } catch (error) {

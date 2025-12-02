@@ -28,9 +28,15 @@ export function setupTransferRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Validate required fields first
-      if (!amount || !recipientName || !recipientAccount) {
-        return res.status(400).json({ message: "Missing required transfer details: amount, recipient name, and account number" });
+      // Validate required fields first - with better error messaging
+      if (!amount) {
+        return res.status(400).json({ message: "Amount is required" });
+      }
+      if (!recipientName) {
+        return res.status(400).json({ message: "Recipient name is required" });
+      }
+      if (!recipientAccount) {
+        return res.status(400).json({ message: "Recipient account/number is required" });
       }
 
       // PIN VALIDATION - Verify against stored PIN

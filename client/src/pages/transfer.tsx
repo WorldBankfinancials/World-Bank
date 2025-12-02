@@ -181,18 +181,19 @@ export default function Transfer() {
     }
     
     try {
-      // Verify PIN and create transfer request
+      // Verify PIN and create transfer request - ensure all fields have values
       const transferData = {
         amount: parsedAmount,
-        recipientName: recipientDetails.fullName || 'Recipient',
-        recipientAccount: recipientDetails.accountNumber || '0000000000',
-        recipientCountry: recipientDetails.country || 'USA',
-        bankName: recipientDetails.bankName || 'Unknown Bank',
-        swiftCode: recipientDetails.swiftCode || 'UNKNWNUS',
-        purpose: recipientDetails.purpose || 'Transfer',
+        recipientName: recipientDetails.fullName && recipientDetails.fullName.trim() ? recipientDetails.fullName : 'Transfer Recipient',
+        recipientAccount: recipientDetails.accountNumber && recipientDetails.accountNumber.trim() ? recipientDetails.accountNumber : '00000000',
+        recipientCountry: recipientDetails.country && recipientDetails.country.trim() ? recipientDetails.country : 'US',
+        bankName: recipientDetails.bankName && recipientDetails.bankName.trim() ? recipientDetails.bankName : 'Bank',
+        swiftCode: recipientDetails.swiftCode && recipientDetails.swiftCode.trim() ? recipientDetails.swiftCode : 'INTLUS',
+        purpose: recipientDetails.purpose && recipientDetails.purpose.trim() ? recipientDetails.purpose : 'transfer',
         transferPin: transferPin
       };
       
+      console.log('DEBUG: Sending transfer with data:', JSON.stringify(transferData));
       const { authenticatedFetch } = await import('@/lib/queryClient');
 
       const response = await authenticatedFetch('/api/transfers', {
@@ -276,7 +277,8 @@ export default function Transfer() {
           return;
         }
         
-        setPinError(error?.message || "Invalid PIN. Please verify your 4-digit transfer PIN.");
+        console.log('DEBUG: Transfer failed with error:', error);
+        setPinError(error?.message || error?.error || "Transfer failed. Please verify all details and try again.");
         setIsProcessing(false);
       }
     } catch (error) {
