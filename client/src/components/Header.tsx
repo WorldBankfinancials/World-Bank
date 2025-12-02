@@ -17,8 +17,35 @@ export default function Header({}: HeaderProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { userProfile } = useAuth();
   const { t } = useLanguage();
+  const [displayBalance, setDisplayBalance] = useState<string | number>(userProfile?.balance || '0');
 
-  // CRITICAL: Use cached profile - NO FETCH CALL
+  // Subscribe to balance changes from localStorage
+  useEffect(() => {
+    const checkBalance = () => {
+      try {
+        const cachedProfile = localStorage.getItem('userProfile');
+        if (cachedProfile) {
+          const profile = JSON.parse(cachedProfile);
+          if (profile.balance !== undefined) {
+            setDisplayBalance(profile.balance);
+          }
+        }
+      } catch (e) {}
+    };
+    
+    checkBalance();
+    
+    // Listen for storage changes (balance updates from transfers)
+    window.addEventListener('storage', checkBalance);
+    return () => window.removeEventListener('storage', checkBalance);
+  }, []);
+
+  // Also update when userProfile changes
+  useEffect(() => {
+    if (userProfile?.balance !== undefined) {
+      setDisplayBalance(userProfile.balance);
+    }
+  }, [userProfile?.balance]);
 
   const profileMenuItems = [
     { 
