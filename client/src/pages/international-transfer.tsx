@@ -25,7 +25,7 @@ export default function InternationalTransfer() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
   const { toast } = useToast();
-  const user = (userProfile as User) || null;
+  const user = (userProfile as any as User) || null;
 
   const [transferAmount, setTransferAmount] = useState("");
   const [recipientFullName, setRecipientFullName] = useState("");

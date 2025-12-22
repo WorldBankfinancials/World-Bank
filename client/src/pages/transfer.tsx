@@ -35,7 +35,7 @@ export default function Transfer() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
   const { toast } = useToast();
-  const user = (userProfile as User) || null;
+  const user = (userProfile as any as User) || null;
   
   const [amount, setAmount] = useState("");
   const [transferType, setTransferType] = useState("international");
@@ -375,7 +375,7 @@ export default function Transfer() {
 
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header user={userProfile || undefined} />
+        <Header user={undefined} />
         
         <div className="px-4 py-6 pb-20">
           <div className="max-w-md mx-auto">
@@ -527,7 +527,7 @@ export default function Transfer() {
                   <Input
                     id="fullName"
                     placeholder="John Smith"
-                    value={recipientDetails.fullName}
+                    value={recipientDetails.fullName as any}
                     onChange={(e) => setRecipientDetails(prev => ({...prev, fullName: e.target.value}))}
                   />
                 </div>
