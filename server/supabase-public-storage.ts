@@ -215,6 +215,18 @@ export class SupabasePublicStorage implements IStorage {
         if (!user) throw new Error('No user returned');
         return user;
       });
+      
+      // CRITICAL: Also update the primary account balance in bank_accounts table
+      const accounts = await this.getUserAccounts(id);
+      if (accounts && accounts.length > 0) {
+        const primaryAccount = accounts[0];
+        await supabase
+          .from('bank_accounts')
+          .update({ balance: numAmount.toString() })
+          .eq('id', primaryAccount.id)
+          .select();
+      }
+      
       console.log('Balance updated successfully for user', id, ':', numAmount);
       return mapUser(user);
     } catch (error) {
