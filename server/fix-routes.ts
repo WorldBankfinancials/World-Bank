@@ -216,7 +216,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     } catch (error: unknown) {
       return res.status(500).json({ 
         error: 'Registration failed',
-        details: (error)?.message || "Unknown error" 
+        details: (error as Error)?.message || "Unknown error" 
       });
     }
   });
@@ -253,7 +253,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!users) { return res.status(500).json({ error: "Failed to fetch users" }); }
 
       if (!error && users) {
-        const emailExists = users.users.some((u: User) => u.email === email);
+        const emailExists = users.users.some((u: any) => u.email === email);
         if (emailExists) {
           return res.json({
             available: false,
@@ -307,7 +307,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to list users' });
       }
 
-      const user = users.users.find((u: User) => u.email === email);
+      const user = users.users.find((u: any) => u.email === email);
       if (!user) {
         return res.status(404).json({ error: 'User not found in authentication system' });
       }
@@ -376,7 +376,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { data: users, error: authError } = await supabase.auth.admin.listUsers();
 
       if (!authError && users) {
-        const emailExistsInSupabase = users.users.some((u: User) => u.email === userData.email);
+        const emailExistsInSupabase = users.users.some((u: any) => u.email === userData.email);
         if (emailExistsInSupabase) {
           // This case should ideally be caught by the /api/auth/check-email endpoint,
           // but if it reaches here, it means the user is in Supabase Auth but not in our DB.

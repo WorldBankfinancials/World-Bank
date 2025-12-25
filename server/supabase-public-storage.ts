@@ -67,6 +67,8 @@ const mapUser = (user: Record<string, any>): User => {
     idType: user.id_type || '',
     idNumber: user.id_number || '',
     transferPin: user.transfer_pin || '',
+    lastLogin: user.last_login || null,
+    profilePhoto: user.profile_photo || null,
     role: user.role || 'customer',
     isVerified: user.is_verified || false,
     isActive: user.is_active || false,
@@ -324,9 +326,7 @@ export class SupabasePublicStorage implements IStorage {
           bank_name: data.bankName,
           swift_code: data.swiftCode,
           transfer_purpose: data.transferPurpose,
-          reference_number: data.referenceNumber,
-          iban: data.iban,
-          routing_number: data.routingNumber
+          reference_number: data.referenceNumber
         };
         // Remove undefined fields
         Object.keys(dbData).forEach(key => dbData[key] === undefined && delete dbData[key]);
