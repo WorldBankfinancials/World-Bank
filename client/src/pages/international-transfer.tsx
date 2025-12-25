@@ -156,7 +156,6 @@ export default function InternationalTransfer() {
         transferPin: transferPin
       };
       
-      console.log('DEBUG: Sending intl transfer:', JSON.stringify(transferData));
       const { authenticatedFetch } = await import('@/lib/queryClient');
 
       const response = await authenticatedFetch('/api/international-transfers', {
@@ -176,7 +175,6 @@ export default function InternationalTransfer() {
           return;
         }
         
-        console.log('DEBUG: Intl transfer response:', result);
         setShowPinVerification(false);
         setTransferPin("");
         const txnId = result.transactionId || result.id || `INT-${Date.now()}`;
@@ -196,7 +194,6 @@ export default function InternationalTransfer() {
                 ...JSON.parse(localStorage.getItem('userProfile') || '{}'),
                 balance: freshUser.balance
               }));
-              console.log('DEBUG: Updated cached balance:', freshUser.balance);
             }
           }
           queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -246,7 +243,6 @@ export default function InternationalTransfer() {
         }
         
         const statusCode = response.status;
-        console.error(`DEBUG: Intl transfer failed with status ${statusCode}:`, error);
         setPinError(error?.message || error?.error || `Transfer failed (${statusCode}). Please try again.`);
         setIsProcessing(false);
       }

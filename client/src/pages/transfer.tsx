@@ -193,7 +193,6 @@ export default function Transfer() {
         transferPin: transferPin
       };
       
-      console.log('DEBUG: Sending transfer with data:', JSON.stringify(transferData));
       const { authenticatedFetch } = await import('@/lib/queryClient');
 
       const response = await authenticatedFetch('/api/transfers', {
@@ -215,7 +214,6 @@ export default function Transfer() {
           return;
         }
         
-        console.log('DEBUG: Transfer response:', result);
         setShowPinVerification(false);
         setTransferPin("");
         const txnId = result.transactionId || result.id || `WB-${Date.now()}`;
@@ -235,7 +233,6 @@ export default function Transfer() {
                 ...JSON.parse(localStorage.getItem('userProfile') || '{}'),
                 balance: freshUser.balance
               }));
-              console.log('DEBUG: Updated cached balance:', freshUser.balance);
             }
           }
           queryClient.invalidateQueries({ queryKey: ['/api/user'] });
@@ -297,7 +294,6 @@ export default function Transfer() {
           return;
         }
         
-        console.error(`DEBUG: Transfer failed with status ${statusCode}:`, error);
         setPinError(error?.message || error?.error || `Transfer failed (${statusCode}). Please verify all details and try again.`);
         setIsProcessing(false);
       }
