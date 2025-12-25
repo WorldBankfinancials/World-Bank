@@ -121,7 +121,7 @@ export function setupTransferRoutes(app: Express) {
           newBalance: newBalance
         });
       } catch (dbError: unknown) {
-        return res.status(500).json({ message: "Failed to submit transfer", error: dbError.message });
+        return res.status(500).json({ message: "Failed to submit transfer", error: (dbError as Error).message });
       }
     } catch (error) {
       res.status(500).json({ message: "Transfer system error" });
@@ -233,7 +233,7 @@ export function setupTransferRoutes(app: Express) {
           newBalance: newBalance
         });
       } catch (dbError: unknown) {
-        return res.status(500).json({ message: "Failed to submit international transfer", error: dbError.message });
+        return res.status(500).json({ message: "Failed to submit international transfer", error: (dbError as Error).message });
       }
     } catch (error) {
       res.status(500).json({ message: "International transfer system error" });
@@ -546,7 +546,8 @@ export function setupTransferRoutes(app: Express) {
       }
 
       // Get all user transactions and find by reference ID
-      const transactions = await storage.getUserTransactions(user.id);
+      const allTransactions = await storage.getAllTransactions();
+      const transactions = allTransactions.filter((t: any) => t.fromUserId === user.id);
       const transaction = transactions.find((t: any) => {
         // Match by transaction ID or description containing the reference
         return String(t.id) === id || String(t.transactionId) === id;
@@ -578,7 +579,8 @@ export function setupTransferRoutes(app: Express) {
       }
 
       // Get all user transactions and find by reference ID
-      const transactions = await storage.getUserTransactions(user.id);
+      const allTransactions = await storage.getAllTransactions();
+      const transactions = allTransactions.filter((t: any) => t.fromUserId === user.id);
       const transaction = transactions.find((t: any) => {
         // Match by transaction ID or ID string
         return String(t.id) === id || String(t.transactionId) === id || t.id === id;
