@@ -5,6 +5,7 @@ import { Express, Request, Response, NextFunction } from 'express';
 import { Server, createServer } from 'http';
 import { storage } from './storage-factory';
 import { setupTransferRoutes } from './routes-transfer';
+import { log } from './vite';
 import { config, logConfiguration } from './config';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
@@ -2190,6 +2191,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         }))
       });
     } catch (error: any) {
+      log(`Error listing users: ${error?.message || error}`);
       return res.status(500).json({ error: 'Failed to list users', details: error?.message || "Unknown error" });
     }
   });
