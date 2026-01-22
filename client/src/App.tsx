@@ -53,6 +53,7 @@ import TransactionRouter from "@/pages/transaction-router";
 import About from "@/pages/about";
 import Investment from "@/pages/investment";
 import Exchange from "@/pages/exchange";
+import AccountingDashboard from "@/pages/business/accounting";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -122,6 +123,7 @@ function App() {
                         <Route path="/fund-management" component={FundManagement} />
                         <Route path="/investment" component={Investment} />
                         <Route path="/exchange" component={Exchange} />
+                        <Route path="/accounting" component={AccountingDashboard} />
                         <Route path="/about" component={About} />
 
                         <Route component={NotFound} />
