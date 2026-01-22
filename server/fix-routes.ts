@@ -30,7 +30,7 @@ import * as bcrypt from 'bcryptjs';
 interface Transaction {
   id: string | number;
   createdAt: string | Date | null;
-  status: string;
+  status: string | null;
   amount: string | number;
   type: string;
   description?: string;
@@ -39,6 +39,29 @@ interface Transaction {
   referenceNumber?: string;
   fromAccountId?: string | number;
   toAccountId?: string | number;
+  currency?: string;
+  recipientBank?: string;
+}
+
+interface Investment {
+  id: number;
+  userId: number;
+  type: string;
+  symbol: string;
+  shares: string;
+  averagePrice: string;
+  currentPrice: string;
+  status: string;
+}
+
+interface Alert {
+  id: number;
+  userId: number;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: Date | null;
 }
 
 // Initialize Supabase client
