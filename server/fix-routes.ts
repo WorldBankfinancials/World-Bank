@@ -2680,7 +2680,6 @@ export async function registerLiveChatRoutes(app: Express) {
   // Create support ticket from chat
   app.post('/api/chat/create-ticket', requireAuth, createTicketFromChat);
 
-  // Real-time notifications
   app.post('/api/chat/notify', requireAuth, async (req: Request, res: Response) => {
     try {
       const { userId, type, message } = req.body;
@@ -2696,45 +2695,6 @@ export async function registerLiveChatRoutes(app: Express) {
       return res.json({ success: true });
     } catch (error: unknown) {
       return res.status(500).json({ error: (error)?.message || "Unknown error" });
-    }
-  });
-
-  // BUSINESS ACCOUNTING EXPORT ENDPOINT
-  app.get('/api/business/accounting-export', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const user = await storage.getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const { format, software } = req.query as { format: string; software: string };
-      
-      // Security check - only business/admin or regular customers with accounts
-      const accounts = await storage.getUserAccounts(user.id);
-      if (accounts.length === 0 && user.role !== 'admin') {
-        return res.status(403).json({ error: 'No active accounts found for export' });
-      }
-
-      const transactions = await storage.getAllTransactions();
-      const userTransactions = transactions.filter((t: any) => t.fromUserId === user.id);
-
-      if (format === 'csv') {
-        let csv = 'Date,Description,Amount,Type,Reference\n';
-        userTransactions.forEach((t: any) => {
-          csv += `${t.createdAt},"${t.description}",${t.amount},${t.type},${t.id}\n`;
-        });
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename=accounting_export_${software}.csv`);
-        return res.send(csv);
-      }
-
-      return res.json({
-        software,
-        generatedAt: new Date().toISOString(),
-        transactions: userTransactions
-      });
-    } catch (error: any) {
-      return res.status(500).json({ error: 'Failed to generate accounting export' });
     }
   });
 }
