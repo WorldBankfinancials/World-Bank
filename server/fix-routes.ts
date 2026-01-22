@@ -1506,12 +1506,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         })
         .select();
 
-      if (error) {
-        return res.status(500).json({ error: 'Failed to save message', details: (error)?.message || "Unknown error" });
-      }
-      return res.json(data?.[0] || { success: true });
-    } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to save message', details: (error)?.message || "Unknown error" });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to save message', details: error?.message || "Unknown error" });
     }
   });
 
@@ -2405,12 +2401,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (transaction.fromAccountId) {
         const fromAccount = await storage.getAccount(transaction.fromAccountId);
         if (fromAccount) {
-          const refundAmount = parseFloat(transaction.amount) || 0;
-          const currentBalance = parseFloat(fromAccount.balance) || 0;
+          const refundAmount = parseFloat(String(transaction.amount)) || 0;
+          const currentBalance = parseFloat(String(fromAccount.balance)) || 0;
           const newBalance = currentBalance + refundAmount;
           
           // Update account balance
-          await storage.updateAccount(transaction.fromAccountId, { balance: newBalance.toString() });
+          if (storage.updateAccount) {
+            await (storage.updateAccount as any)(transaction.fromAccountId, { balance: newBalance.toString() });
+          }
         }
       }
 
@@ -2509,9 +2507,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         // Non-blocking balance update
       }
 
-      const response = {
+      const response: any = {
         id: transfer.id,
-        transactionId: transfer.referenceNumber,
+        transactionId: transfer.referenceNumber || String(transfer.id),
         status: 'processing'
       };
 
