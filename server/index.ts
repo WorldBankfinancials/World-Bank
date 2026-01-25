@@ -65,15 +65,15 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    log("Starting server initialization...");
+    console.log("Starting server initialization...");
     // Verify Supabase integration is active
     verifySupabaseIntegration();
-    log("Supabase integration verified.");
+    console.log("Supabase integration verified.");
     
     // Initialize Express server with all routes
-    log("Registering routes...");
+    console.log("Registering routes...");
     const server = await registerFixedRoutes(app);
-    log("Routes registered.");
+    console.log("Routes registered.");
 
     // Enable WebSocket for live chat with separate path to avoid Vite conflicts
     const wss = new WebSocketServer({ server, path: '/ws/chat' });
@@ -91,9 +91,9 @@ app.use((req, res, next) => {
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes
     if (app.get("env") === "development") {
-      log("Setting up Vite...");
+      console.log("Setting up Vite...");
       await setupVite(app, server);
-      log("Vite setup complete.");
+      console.log("Vite setup complete.");
     } else {
       serveStatic(app);
     }
@@ -107,11 +107,11 @@ app.use((req, res, next) => {
       host: "0.0.0.0",
       reusePort: true,
     }, () => {
-      log(`serving on port ${port}`);
+      console.log(`serving on port ${port}`);
     });
   } catch (error: any) {
-    log(`FATAL ERROR DURING STARTUP: ${error.message}`);
-    console.error("FATAL ERROR:", error);
+    console.error(`FATAL ERROR DURING STARTUP: ${error.message}`);
+    console.error("FATAL ERROR STACK:", error.stack);
     process.exit(1);
   }
 })();
