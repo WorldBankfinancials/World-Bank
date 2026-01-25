@@ -49,20 +49,26 @@ export async function runStartupChecks(): Promise<void> {
     { name: 'Atomic Balance Function', test: verifyAtomicBalanceFunction }
   ];
 
+  console.log('Running startup checks...');
   const failures: string[] = [];
   
   for (const check of checks) {
+    console.log(`Testing: ${check.name}`);
     const passed = await check.test();
     if (!passed) {
       const message = `Startup check FAILED: ${check.name}`;
+      console.error(message);
       failures.push(message);
+    } else {
+      console.log(`Passed: ${check.name}`);
     }
   }
 
   if (failures.length > 0) {
-    
+    console.error(`Startup aborted. Failures: ${failures.join(', ')}`);
     // CRITICAL: Throw error to ABORT startup - prevents broken server from starting
     throw new Error(`Startup checks failed: ${failures.join('; ')}`);
   }
+  console.log('All startup checks passed.');
 
 }

@@ -2166,19 +2166,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // BOOTSTRAP: List all users in Supabase Auth (for debugging)
   app.get('/api/admin/list-users', async (req: Request, res: Response) => {
     try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-
-      const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+      const { data, error } = await supabase.auth.admin.listUsers();
       if (error) {
-        return res.status(500).json({ error: 'Failed to list users', details: (error)?.message || "Unknown error" });
+        console.error('Supabase listUsers error:', error);
+        return res.status(500).json({ error: 'Failed to list users', details: error?.message || "Unknown error" });
       }
 
       return res.json({
@@ -2191,7 +2184,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         }))
       });
     } catch (error: any) {
-      log(`Error listing users: ${error?.message || error}`);
+      console.error(`Error listing users: ${error?.message || error}`);
       return res.status(500).json({ error: 'Failed to list users', details: error?.message || "Unknown error" });
     }
   });
