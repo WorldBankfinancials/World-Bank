@@ -92,19 +92,19 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
     const setupRealtimeSubscription = async () => {
       try {
         const channel = supabase
-          .channel('chat_messages_realtime')
+          .channel('messages_realtime')
           .on(
             'postgres_changes',
             {
               event: 'INSERT',
               schema: 'public',
-              table: 'bank_chat_messages'
+              table: 'messages'
             },
             (payload: any) => {
               const newMessage: Message = {
                 id: payload.new.id?.toString() || Date.now().toString(),
-                sender: (payload.new.sender_type === 'user' ? 'user' : 'agent') as 'user' | 'agent',
-                text: payload.new.content || payload.new.message || '',
+                sender: (payload.new.sender_role === 'customer' ? 'user' : 'agent') as 'user' | 'agent',
+                text: payload.new.content || '',
                 timestamp: new Date(payload.new.created_at || new Date())
               };
               setMessages(prev => [...prev, newMessage]);

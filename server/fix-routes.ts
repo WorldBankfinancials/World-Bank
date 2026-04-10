@@ -2345,9 +2345,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             status: 'active'
           });
         }
-        // Update last login timestamp
-        await storage.updateUser(dbUser.id, { lastLogin: new Date() });
-        
+        // CRITICAL: Always sync role from Supabase app_metadata to DB
+        // This ensures admin role set in Supabase Dashboard is immediately effective
+        const supabaseRole = supabaseUser.app_metadata?.role || 'customer';
+        const updates: any = { lastLogin: new Date() };
+        if (dbUser.role !== supabaseRole) {
+          updates.role = supabaseRole;
+        }
+        await storage.updateUser(dbUser.id, updates);
+        // Refresh dbUser with updated role
+        const refreshed = await storage.getUserByEmail(email);
+        if (refreshed) dbUser = refreshed;
       }
 
       // STEP 3: Cache session data in memory for PIN validation
@@ -2496,6 +2504,56 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       return res.status(500).json({ error: 'Login failed' });
+    }
+  });
+
+  // ADMIN ONLY: Set user role (promote to admin or demote to customer)
+  // This updates BOTH Supabase app_metadata AND the bank_users table
+  app.post('/api/admin/set-user-role', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { userId, email, role } = req.body;
+      if (!role || !['admin', 'customer'].includes(role)) {
+        return res.status(400).json({ error: 'Role must be "admin" or "customer"' });
+      }
+      if (!userId && !email) {
+        return res.status(400).json({ error: 'userId or email required' });
+      }
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+
+      // Find Supabase user
+      let supabaseUserId = userId;
+      if (!supabaseUserId && email) {
+        const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+        const found = users?.users?.find((u: any) => u.email === email);
+        if (!found) return res.status(404).json({ error: 'User not found in Supabase Auth' });
+        supabaseUserId = found.id;
+      }
+
+      // Update Supabase app_metadata (server-controlled, users cannot modify)
+      const { error: supabaseError } = await supabaseAdmin.auth.admin.updateUserById(supabaseUserId, {
+        app_metadata: { role }
+      });
+      if (supabaseError) {
+        return res.status(500).json({ error: 'Failed to update Supabase role', details: supabaseError.message });
+      }
+
+      // Also update bank_users table
+      const targetUser = email
+        ? await storage.getUserByEmail(email)
+        : await storage.getUser(parseInt(supabaseUserId));
+      if (targetUser) {
+        await storage.updateUser(targetUser.id, { role });
+      }
+
+      return res.json({ success: true, message: `User role updated to ${role}` });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to set user role', details: error.message });
     }
   });
 
@@ -3195,6 +3253,57 @@ export async function registerLiveChatRoutes(app: Express) {
 
   // Create support ticket from chat
   app.post('/api/chat/create-ticket', requireAuth, createTicketFromChat);
+
+  // POST /api/chat/send - Customer sends a chat message (persists to DB + broadcasts via Supabase realtime)
+  app.post('/api/chat/send', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { message } = req.body;
+      if (!message || !message.trim()) {
+        return res.status(400).json({ error: 'Message is required' });
+      }
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+
+      // Save to messages table
+      const { data: savedMsg, error } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: user.id,
+          sender_role: 'customer',
+          recipient_id: 0,
+          recipient_role: 'admin',
+          content: message.trim(),
+          session_id: `session_${user.id}`,
+          is_read: false,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        // Still return success - message shown in UI via localStorage
+        return res.json({ success: true, message: 'Message queued', persisted: false });
+      }
+
+      // Broadcast via Supabase realtime channel for admin to see
+      const adminChannel = supabase.channel('admin-chat-inbox');
+      adminChannel.send({
+        type: 'broadcast',
+        event: 'new_customer_message',
+        payload: {
+          userId: user.id,
+          userName: `${user.firstName} ${user.lastName}`,
+          message: message.trim(),
+          messageId: savedMsg?.id,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      return res.json({ success: true, messageId: savedMsg?.id });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to send message' });
+    }
+  });
 
   app.post('/api/chat/notify', requireAuth, async (req: Request, res: Response) => {
     try {

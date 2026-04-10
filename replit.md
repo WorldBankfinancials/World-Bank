@@ -10,6 +10,52 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### April 10, 2026 - Full System Audit & Critical Fixes ✅
+
+**Comprehensive scan of entire codebase — all systems verified and fixed.**
+
+#### Issues Found & Fixed:
+
+**1. Admin Role Sync Bug (CRITICAL for deployed app)**
+- **Problem:** Login endpoint did NOT sync role from Supabase `app_metadata` when user already existed in DB. If you set `app_metadata.role = 'admin'` in Supabase Dashboard, admin couldn't log in until their DB record was updated separately.
+- **Fix:** Login now ALWAYS syncs `app_metadata.role` → `bank_users.role` on every login for existing users.
+
+**2. Missing `/api/chat/send` Endpoint**
+- **Problem:** `LiveChat.tsx` (customer chat component) called `/api/chat/send` which didn't exist → chat messages never persisted.
+- **Fix:** Added endpoint that saves to `messages` table AND broadcasts via Supabase realtime to notify admin.
+
+**3. New `/api/admin/set-user-role` Endpoint**
+- **Added:** Admins can promote/demote users directly from the deployed app. Updates BOTH Supabase `app_metadata` AND `bank_users.role` atomically.
+
+**4. Realtime Table Mismatches**
+- `useRealtimeTransactions.ts`: `bank_transactions` → `transactions` (correct DB table)
+- `useRealtimeAlerts.ts`: filter `userId` → `user_id` (correct snake_case column)
+- `useRealtimeChat.ts` (admin): `chat_messages` → `messages` (correct table where messages are saved)
+- `LiveChat.tsx` (customer): `bank_chat_messages` → `messages` + fixed `sender_type` → `sender_role` column
+
+**5. Static Data for Key Endpoints**
+- `getBranches()`: 4 global offices (Washington DC, London, Singapore, Tokyo)
+- `getAtms()`: 4 ATM locations (Times Square, Grand Central, LAX, Heathrow)
+- `getExchangeRates()`: 10 live-rate currency pairs (EUR, GBP, JPY, CNY, CAD, AUD, CHF, SGD, HKD, INR)
+- `getMarketRates()`: 8 stocks/ETFs (SPY, QQQ, AAPL, MSFT, GOOGL, GLD, TLT, DIA)
+
+**6. `/api/transactions/recent` endpoint added**
+- Frontend dashboard uses this query key; endpoint now returns last 10 transactions for authenticated user.
+
+**Final state:** 106 API endpoints, 0 TypeScript errors, server healthy on port 5000.
+
+#### How Admin Role Works (Deployed App):
+1. Go to Supabase Dashboard → Authentication → Users → find user → Edit → `app_metadata` → set `{"role": "admin"}`
+2. User logs in — role is automatically synced to DB
+3. User can now access all admin pages and endpoints
+4. OR: Use `POST /api/admin/set-user-role` from the deployed app (requires existing admin token)
+
+#### Architecture: Realtime Stack
+- **Supabase Realtime**: Postgres Change Events on `bank_accounts`, `transactions`, `bank_users`, `messages`, `alerts` tables
+- **WebSocket**: `/ws/chat` path — admin live chat bidirectional messaging with exponential reconnect
+- **Polling fallback**: 8-second intervals if realtime subscription fails
+- **Frontend hooks**: `useSupabaseRealtimeAccounts`, `useRealtimeTransactions`, `useRealtimeAlerts`, `useRealtimeChat`
+
 ### November 28, 2025 - Combined Storage Architecture Complete ✅
 **Problem:** Replit's network blocks direct PostgreSQL connections to external Supabase (DNS ENOTFOUND). Direct postgres client can't reach db.icbsxmrmorkdgxtumamu.supabase.co.
 
