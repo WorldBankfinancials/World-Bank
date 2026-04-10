@@ -179,16 +179,30 @@ export class SupabasePublicStorage implements IStorage {
     }
   }
 
-  async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
+  async updateUser(id: number, updates: Partial<User> & { [key: string]: any }): Promise<User | undefined> {
     try {
       const updateData: any = {};
-      if (updates.firstName || updates.lastName) {
-        const first = updates.firstName || '';
-        const last = updates.lastName || '';
+      if (updates.firstName !== undefined || updates.lastName !== undefined) {
+        const existing = await this.getUser(id);
+        const first = updates.firstName ?? existing?.firstName ?? '';
+        const last = updates.lastName ?? existing?.lastName ?? '';
         updateData.full_name = `${first} ${last}`.trim();
+        if (updates.firstName !== undefined) updateData.first_name = updates.firstName;
+        if (updates.lastName !== undefined) updateData.last_name = updates.lastName;
       }
-      if (updates.email) updateData.email = updates.email;
+      if (updates.email !== undefined) updateData.email = updates.email;
       if (updates.balance !== undefined) updateData.balance = updates.balance;
+      if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+      if (updates.isVerified !== undefined) updateData.is_verified = updates.isVerified;
+      if (updates.profilePhoto !== undefined) updateData.profile_photo = updates.profilePhoto;
+      if (updates.phone !== undefined) updateData.phone = updates.phone;
+      if (updates.address !== undefined) updateData.address = updates.address;
+      if (updates.city !== undefined) updateData.city = updates.city;
+      if (updates.state !== undefined) updateData.state = updates.state;
+      if (updates.country !== undefined) updateData.country = updates.country;
+      if (updates.postalCode !== undefined) updateData.postal_code = updates.postalCode;
+      if (updates.transferPin !== undefined) updateData.transfer_pin = updates.transferPin;
+      if (updates.role !== undefined) updateData.role = updates.role;
       if (Object.keys(updateData).length === 0) return this.getUser(id);
       const { data: user, error } = await supabase
         .from('bank_users')
@@ -619,22 +633,72 @@ export class SupabasePublicStorage implements IStorage {
   }
 
   async getBranches(): Promise<any[]> {
-    return [];
+    return [
+      { id: 1, name: 'World Bank - New York HQ', address: '1818 H Street NW, Washington, DC 20433', city: 'Washington', state: 'DC', country: 'USA', phone: '+1-202-473-1000', hours: 'Mon-Fri 9AM-5PM', lat: 38.8986, lng: -77.0430 },
+      { id: 2, name: 'World Bank - London Office', address: '1 New Change, London EC4M 9AF', city: 'London', state: '', country: 'UK', phone: '+44-20-7246-8585', hours: 'Mon-Fri 9AM-5PM', lat: 51.5131, lng: -0.0971 },
+      { id: 3, name: 'World Bank - Singapore', address: '9 Raffles Place, Republic Plaza', city: 'Singapore', state: '', country: 'Singapore', phone: '+65-6324-4060', hours: 'Mon-Fri 9AM-5PM', lat: 1.2847, lng: 103.8514 },
+      { id: 4, name: 'World Bank - Tokyo Office', address: 'Fukoku Seimei Building, 2-2-2 Uchisaiwaicho', city: 'Tokyo', state: '', country: 'Japan', phone: '+81-3-3597-6650', hours: 'Mon-Fri 9AM-5PM', lat: 35.6762, lng: 139.6503 },
+    ];
   }
 
   async getAtms(): Promise<any[]> {
-    return [];
+    return [
+      { id: 1, name: 'World Bank ATM - Times Square', address: '1560 Broadway, New York, NY 10036', city: 'New York', country: 'USA', available: true, lat: 40.7580, lng: -73.9855 },
+      { id: 2, name: 'World Bank ATM - Grand Central', address: '87 E 42nd St, New York, NY 10017', city: 'New York', country: 'USA', available: true, lat: 40.7527, lng: -73.9772 },
+      { id: 3, name: 'World Bank ATM - LAX Airport', address: '1 World Way, Los Angeles, CA 90045', city: 'Los Angeles', country: 'USA', available: true, lat: 33.9425, lng: -118.4081 },
+      { id: 4, name: 'World Bank ATM - Heathrow', address: 'Heathrow Airport, London TW6 1EW', city: 'London', country: 'UK', available: true, lat: 51.4700, lng: -0.4543 },
+    ];
   }
 
   async getExchangeRates(): Promise<any[]> {
-    return [];
+    return [
+      { id: 1, baseCurrency: 'USD', targetCurrency: 'EUR', rate: '0.9215', updatedAt: new Date() },
+      { id: 2, baseCurrency: 'USD', targetCurrency: 'GBP', rate: '0.7891', updatedAt: new Date() },
+      { id: 3, baseCurrency: 'USD', targetCurrency: 'JPY', rate: '149.25', updatedAt: new Date() },
+      { id: 4, baseCurrency: 'USD', targetCurrency: 'CNY', rate: '7.2341', updatedAt: new Date() },
+      { id: 5, baseCurrency: 'USD', targetCurrency: 'CAD', rate: '1.3652', updatedAt: new Date() },
+      { id: 6, baseCurrency: 'USD', targetCurrency: 'AUD', rate: '1.5234', updatedAt: new Date() },
+      { id: 7, baseCurrency: 'USD', targetCurrency: 'CHF', rate: '0.8912', updatedAt: new Date() },
+      { id: 8, baseCurrency: 'USD', targetCurrency: 'SGD', rate: '1.3412', updatedAt: new Date() },
+      { id: 9, baseCurrency: 'USD', targetCurrency: 'HKD', rate: '7.8234', updatedAt: new Date() },
+      { id: 10, baseCurrency: 'USD', targetCurrency: 'INR', rate: '83.42', updatedAt: new Date() },
+    ];
   }
 
   async getStatementsByUserId(userId: number): Promise<any[]> {
-    return [];
+    try {
+      const accounts = await this.getUserAccounts(userId);
+      if (!accounts || accounts.length === 0) return [];
+      const statements: any[] = [];
+      const months = ['January', 'February', 'March'];
+      const year = new Date().getFullYear();
+      months.forEach((month, i) => {
+        statements.push({
+          id: i + 1,
+          userId,
+          month,
+          year,
+          title: `${month} ${year} Statement`,
+          generatedAt: new Date(year, i + 1, 1).toISOString(),
+          downloadUrl: `/api/statements/${userId}/${year}/${i + 1}`
+        });
+      });
+      return statements;
+    } catch (error) {
+      return [];
+    }
   }
 
   async getMarketRates(): Promise<any[]> {
-    return [];
+    return [
+      { symbol: 'SPY', name: 'S&P 500 ETF', price: 524.35, change: 2.14, changePercent: 0.41, type: 'index' },
+      { symbol: 'QQQ', name: 'NASDAQ ETF', price: 448.22, change: -1.83, changePercent: -0.41, type: 'index' },
+      { symbol: 'DIA', name: 'Dow Jones ETF', price: 389.14, change: 1.67, changePercent: 0.43, type: 'index' },
+      { symbol: 'GLD', name: 'Gold ETF', price: 192.45, change: 0.54, changePercent: 0.28, type: 'commodity' },
+      { symbol: 'TLT', name: '20+ Year Treasury', price: 92.31, change: -0.22, changePercent: -0.24, type: 'bond' },
+      { symbol: 'AAPL', name: 'Apple Inc.', price: 189.30, change: 1.45, changePercent: 0.77, type: 'stock' },
+      { symbol: 'MSFT', name: 'Microsoft Corp.', price: 415.62, change: 3.21, changePercent: 0.78, type: 'stock' },
+      { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 174.14, change: -0.89, changePercent: -0.51, type: 'stock' },
+    ];
   }
 }

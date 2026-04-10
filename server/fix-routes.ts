@@ -549,6 +549,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Save user preferences (notifications, privacy, security settings)
+  // Preferences are stored client-side; this endpoint acknowledges receipt
+  app.post('/api/user/preferences', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const preferences = req.body;
+      return res.json({ success: true, preferences, message: 'Preferences saved' });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to save preferences' });
+    }
+  });
+
   // Upload user avatar/profile photo - PROTECTED with JWT authentication
   app.post('/api/user/upload-avatar', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -598,6 +609,57 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   });
 
   // SECURITY: Admin endpoints - PROTECTED with role-based access control
+
+  // POST /api/admin/accounts - Create a new account for a customer
+  app.post('/api/admin/accounts', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { userId, accountType, accountName, balance, currency, accountNumber, isActive } = req.body;
+      if (!userId || !accountType) {
+        return res.status(400).json({ error: 'userId and accountType are required' });
+      }
+      const account = await storage.createAccount({
+        userId: parseInt(userId),
+        accountType,
+        accountName: accountName || `${accountType.charAt(0).toUpperCase() + accountType.slice(1)} Account`,
+        balance: balance || '0.00',
+        currency: currency || 'USD',
+        accountNumber: accountNumber || `WB${Date.now()}`,
+        isActive: isActive !== false
+      });
+      return res.json({ success: true, account });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to create account' });
+    }
+  });
+
+  // PATCH /api/admin/accounts/:id - Update an account
+  app.patch('/api/admin/accounts/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const updatedAccount = await (storage as any).updateAccount(id, updates);
+      if (!updatedAccount) {
+        return res.status(404).json({ error: 'Account not found' });
+      }
+      return res.json({ success: true, account: updatedAccount });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to update account' });
+    }
+  });
+
+  // DELETE /api/admin/accounts/:id - Deactivate an account
+  app.delete('/api/admin/accounts/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedAccount = await (storage as any).updateAccount(id, { isActive: false });
+      if (!updatedAccount) {
+        return res.status(404).json({ error: 'Account not found' });
+      }
+      return res.json({ success: true, message: 'Account deactivated successfully' });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to deactivate account' });
+    }
+  });
 
   // Admin transaction creation - REQUIRES ADMIN ROLE
   app.post('/api/admin/create-transaction', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -1860,6 +1922,200 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PUT /api/admin/customers/:id - Update customer (alias for PATCH, supports both methods)
+  app.put('/api/admin/customers/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const updatedUser = await storage.updateUser(id, updates);
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      if (admin) {
+        await storage.createAdminAction({
+          adminId: admin.id,
+          action: 'update_customer',
+          targetType: 'user',
+          targetId: id,
+          details: updates
+        });
+      }
+      return res.json(updatedUser);
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to update customer' });
+    }
+  });
+
+  // POST /api/admin/customers/:id/verify - Verify/activate a customer account
+  app.post('/api/admin/customers/:id/verify', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedUser = await storage.updateUser(id, { isActive: true, isVerified: true });
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'Customer not found' });
+      }
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      if (admin) {
+        await storage.createAdminAction({
+          adminId: admin.id,
+          action: 'verify_customer',
+          targetType: 'user',
+          targetId: id,
+          details: { verified: true }
+        });
+      }
+      return res.json({ success: true, user: updatedUser });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to verify customer' });
+    }
+  });
+
+  // POST /api/admin/customers/:id/profile-picture - Update customer profile picture
+  app.post('/api/admin/customers/:id/profile-picture', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { profilePhoto } = req.body;
+      if (!profilePhoto) {
+        return res.status(400).json({ error: 'profilePhoto is required' });
+      }
+      const updatedUser = await storage.updateUser(id, { profilePhoto });
+      return res.json({ success: true, user: updatedUser });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to update profile picture' });
+    }
+  });
+
+  // GET /api/admin/stats - Dashboard statistics
+  app.get('/api/admin/stats', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const customers = allUsers.filter((u: User) => u.role === 'customer');
+      const allTransactions = await storage.getAllTransactions();
+      const pendingTransactions = allTransactions.filter((t: any) => t.status === 'pending');
+      const tickets = await storage.getSupportTickets();
+      const openTickets = tickets.filter((t: any) => t.status !== 'resolved' && t.status !== 'closed');
+      return res.json({
+        totalCustomers: customers.length,
+        activeCustomers: customers.filter((u: User) => u.isActive).length,
+        pendingApprovals: customers.filter((u: User) => !u.isActive).length,
+        totalTransactions: allTransactions.length,
+        pendingTransactions: pendingTransactions.length,
+        openSupportTickets: openTickets.length,
+      });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to fetch stats' });
+    }
+  });
+
+  // POST /api/admin/transfers/:id/approve - Approve a pending transfer
+  app.post('/api/admin/transfers/:id/approve', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { notes } = req.body;
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const adminId = admin?.id || 0;
+      const { approveTransfer } = await import('./transfer-approval');
+      const transaction = await approveTransfer(id, adminId, notes);
+      return res.json({ success: true, transaction });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to approve transfer', details: error?.message });
+    }
+  });
+
+  // POST /api/admin/transfers/:id/reject - Reject a pending transfer
+  app.post('/api/admin/transfers/:id/reject', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { notes } = req.body;
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const adminId = admin?.id || 0;
+      const { rejectTransfer } = await import('./transfer-approval');
+      const transaction = await rejectTransfer(id, adminId, notes || 'Rejected by admin');
+      return res.json({ success: true, transaction });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to reject transfer', details: error?.message });
+    }
+  });
+
+  // PATCH /api/admin/support-tickets/:id - Update a support ticket (admin path)
+  app.patch('/api/admin/support-tickets/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const updatedTicket = await storage.updateSupportTicket(id, updates);
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      if (admin && updatedTicket) {
+        await storage.createAdminAction({
+          adminId: admin.id,
+          action: 'update_support_ticket',
+          targetType: 'support_ticket',
+          targetId: id,
+          details: { ticketId: id, updates }
+        });
+      }
+      return res.json(updatedTicket);
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to update support ticket' });
+    }
+  });
+
+  // POST /api/admin/tickets/:id/respond - Respond to a support ticket
+  app.post('/api/admin/tickets/:id/respond', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { response: adminResponse, status } = req.body;
+      const updates: any = {};
+      if (adminResponse) updates.adminResponse = adminResponse;
+      if (status) updates.status = status;
+      const updatedTicket = await storage.updateSupportTicket(id, updates);
+      return res.json({ success: true, ticket: updatedTicket });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to respond to ticket' });
+    }
+  });
+
+  // POST /api/admin/transactions - Create a transaction for an account (admin)
+  app.post('/api/admin/transactions', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { accountId, amount, description, type } = req.body as { accountId: number; amount: number; description: string; type: string };
+      if (!accountId || !amount || !description) {
+        return res.status(400).json({ error: 'accountId, amount, and description are required' });
+      }
+      const transaction = await storage.createTransaction({
+        fromAccountId: accountId,
+        type: type || 'deposit',
+        amount: amount.toString(),
+        description,
+        status: 'completed',
+        createdAt: new Date()
+      });
+      const account = await storage.getAccount(accountId);
+      if (account) {
+        const amountNum = parseFloat(amount.toString());
+        const isCredit = (type === 'deposit' || type === 'credit');
+        const isDebit = (type === 'withdrawal' || type === 'debit');
+        if (isCredit || isDebit) {
+          const balanceChange = isCredit ? amountNum : -amountNum;
+          await storage.updateUserBalance(account.userId, balanceChange);
+        }
+      }
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      if (admin) {
+        await storage.createAdminAction({
+          adminId: admin.id,
+          action: 'create_transaction',
+          targetType: 'transaction',
+          targetId: transaction.id,
+          details: { accountId, amount, type, description }
+        });
+      }
+      return res.json({ success: true, transaction });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to create transaction' });
+    }
+  });
+
   // Statements endpoint
   app.get('/api/statements', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -2556,6 +2812,299 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   });
 
   // Idempotency cache for international transfers
+  // GET /api/payment-requests - Get pending payment requests for user
+  app.get('/api/payment-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.json([]);
+      }
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) {
+        return res.json([]);
+      }
+      const allTxns: Transaction[] = [];
+      for (const account of accounts) {
+        const txns = await storage.getAccountTransactions(account.id);
+        allTxns.push(...txns);
+      }
+      const paymentRequests = allTxns.filter((t: Transaction) => t.type === 'payment_request' || (t.description?.toLowerCase()?.includes('payment request')));
+      return res.json(paymentRequests);
+    } catch (error: any) {
+      return res.json([]);
+    }
+  });
+
+  // POST /api/add-funds - Add funds to account via various methods
+  app.post('/api/add-funds', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { method, amount } = req.body as { method: string; amount: number };
+      if (!method || !amount || isNaN(parseFloat(String(amount))) || parseFloat(String(amount)) <= 0) {
+        return res.status(400).json({ error: 'Method and valid amount are required' });
+      }
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      const accounts = await storage.getUserAccounts(user.id);
+      if (accounts.length === 0) {
+        return res.status(404).json({ error: 'No account found' });
+      }
+      const parsedAmount = parseFloat(String(amount));
+      const currentBalance = parseFloat(String(user.balance || '0'));
+      const newBalance = currentBalance + parsedAmount;
+      const transaction = await storage.createTransaction({
+        fromAccountId: accounts[0].id,
+        type: 'deposit',
+        amount: parsedAmount.toString(),
+        description: `Funds added via ${method}`,
+        status: 'completed',
+        currency: 'USD',
+        referenceNumber: `DEP-${Date.now()}`,
+        createdAt: new Date()
+      });
+      await storage.updateUserBalance(user.id, newBalance);
+      return res.json({ success: true, transaction, amount: parsedAmount, newBalance });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to add funds' });
+    }
+  });
+
+  // ==================== SUPPLEMENTARY ENDPOINTS ====================
+
+  // GET /api/transactions/recent - Recent transactions (alias for /api/transactions with limit)
+  app.get('/api/transactions/recent', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) return res.json([]);
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) return res.json([]);
+      const allTxns: Transaction[] = [];
+      for (const account of accounts) {
+        const txns = await storage.getAccountTransactions(account.id);
+        allTxns.push(...txns);
+      }
+      allTxns.sort((a: Transaction, b: Transaction) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      return res.json(allTxns.slice(0, 10));
+    } catch (error: any) {
+      return res.json([]);
+    }
+  });
+
+  // GET /api/currencies - Available currencies for exchange
+  app.get('/api/currencies', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    return res.json([
+      { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
+      { code: 'EUR', name: 'Euro', symbol: '€', flag: '🇪🇺' },
+      { code: 'GBP', name: 'British Pound', symbol: '£', flag: '🇬🇧' },
+      { code: 'JPY', name: 'Japanese Yen', symbol: '¥', flag: '🇯🇵' },
+      { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', flag: '🇨🇳' },
+      { code: 'CAD', name: 'Canadian Dollar', symbol: 'CA$', flag: '🇨🇦' },
+      { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', flag: '🇦🇺' },
+      { code: 'CHF', name: 'Swiss Franc', symbol: 'Fr', flag: '🇨🇭' },
+      { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', flag: '🇸🇬' },
+      { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$', flag: '🇭🇰' },
+    ]);
+  });
+
+  // GET /api/admin/customers-list - All customers for simple-admin
+  app.get('/api/admin/customers-list', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const customers = await storage.getAllUsers();
+      const customerList = customers.filter((user: User) => user.role === 'customer');
+      return res.json(customerList);
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to fetch customers list' });
+    }
+  });
+
+  // GET /api/users - All users (for admin use)
+  app.get('/api/users', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const users = await storage.getAllUsers();
+      return res.json(users);
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to fetch users' });
+    }
+  });
+
+  // GET /api/card-transactions - Card transaction history
+  app.get('/api/card-transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) {
+        return res.json([]);
+      }
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) {
+        return res.json([]);
+      }
+      const allTxns: Transaction[] = [];
+      for (const account of accounts) {
+        const txns = await storage.getAccountTransactions(account.id, 20);
+        allTxns.push(...txns);
+      }
+      return res.json(allTxns.slice(0, 30));
+    } catch (error: any) {
+      return res.json([]);
+    }
+  });
+
+  // GET /api/wallet-balance - Digital wallet balance
+  app.get('/api/wallet-balance', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      return res.json({
+        balance: parseFloat(String(user.balance || '0')),
+        currency: 'USD',
+        available: parseFloat(String(user.balance || '0')),
+        pending: 0
+      });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to fetch wallet balance' });
+    }
+  });
+
+  // GET /api/wallet-transactions - Digital wallet transactions
+  app.get('/api/wallet-transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) return res.json([]);
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) return res.json([]);
+      const txns = await storage.getAccountTransactions(accounts[0].id, 20);
+      return res.json(txns);
+    } catch (error: any) {
+      return res.json([]);
+    }
+  });
+
+  // GET /api/mobile-payments - Mobile payment history
+  app.get('/api/mobile-payments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) return res.json([]);
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) return res.json([]);
+      const txns = await storage.getAccountTransactions(accounts[0].id, 20);
+      const mobilePayments = txns.filter((t: Transaction) => t.type === 'mobile_pay' || t.description?.toLowerCase().includes('mobile'));
+      return res.json(mobilePayments);
+    } catch (error: any) {
+      return res.json([]);
+    }
+  });
+
+  // GET /api/mobile-pay/merchants - Supported mobile pay merchants
+  app.get('/api/mobile-pay/merchants', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    return res.json([
+      { id: 1, name: 'Apple Pay', logo: '🍎', category: 'Digital Wallet' },
+      { id: 2, name: 'Google Pay', logo: '🔵', category: 'Digital Wallet' },
+      { id: 3, name: 'Samsung Pay', logo: '📱', category: 'Digital Wallet' },
+      { id: 4, name: 'PayPal', logo: '💙', category: 'Online Payment' },
+      { id: 5, name: 'Venmo', logo: '💜', category: 'P2P Transfer' },
+      { id: 6, name: 'Cash App', logo: '💚', category: 'P2P Transfer' },
+      { id: 7, name: 'Zelle', logo: '🟣', category: 'Bank Transfer' },
+    ]);
+  });
+
+  // GET /api/user/activity-log - User security activity log
+  app.get('/api/user/activity-log', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await (storage as any).getUserByEmail(req.user!.email);
+      if (!user) return res.json([]);
+      const accounts = await storage.getUserAccounts(user.id);
+      const recentActivity: any[] = [];
+      if (accounts && accounts.length > 0) {
+        const txns = await storage.getAccountTransactions(accounts[0].id, 10);
+        txns.forEach((t: Transaction) => {
+          recentActivity.push({
+            id: t.id,
+            action: `${t.type || 'Transaction'} of $${t.amount}`,
+            timestamp: t.createdAt,
+            ipAddress: '***.***.*.***',
+            device: 'Web Browser',
+            status: t.status || 'completed'
+          });
+        });
+      }
+      recentActivity.unshift({
+        id: 'login-recent',
+        action: 'Account login',
+        timestamp: user.lastLogin || new Date().toISOString(),
+        ipAddress: req.ip || '***',
+        device: req.get('user-agent')?.substring(0, 30) || 'Unknown',
+        status: 'success'
+      });
+      return res.json(recentActivity);
+    } catch (error: any) {
+      return res.json([]);
+    }
+  });
+
+  // GET /api/user/trusted-devices - Trusted devices list
+  app.get('/api/user/trusted-devices', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    return res.json([
+      {
+        id: 1,
+        name: 'Current Browser',
+        type: 'web',
+        lastUsed: new Date().toISOString(),
+        trusted: true,
+        current: true
+      }
+    ]);
+  });
+
+  // GET & POST /api/admin/transaction-routes - Transaction routing configuration
+  app.get('/api/admin/transaction-routes', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const allTransactions = await storage.getAllTransactions();
+      return res.json(allTransactions.map((t: Transaction) => ({
+        id: t.id,
+        amount: t.amount,
+        currency: t.currency || 'USD',
+        status: t.status,
+        type: t.type,
+        description: t.description,
+        recipientName: t.recipientName,
+        createdAt: t.createdAt
+      })));
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to fetch transaction routes' });
+    }
+  });
+
+  app.patch('/api/admin/transaction-routes/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status, notes } = req.body;
+      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const adminId = admin?.id || 0;
+      const transaction = await storage.updateTransactionStatus(id, status, adminId, notes);
+      return res.json({ success: true, transaction });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to update transaction route' });
+    }
+  });
+
+  app.post('/api/admin/transaction-routes', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { accountId, amount, description, type, status } = req.body;
+      const transaction = await storage.createTransaction({
+        fromAccountId: accountId,
+        type: type || 'transfer',
+        amount: String(amount),
+        description,
+        status: status || 'pending',
+        createdAt: new Date()
+      });
+      return res.json({ success: true, transaction });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to create transaction route' });
+    }
+  });
+
   const intlTransferIdempotencyCache = new Map<string, { response: { id: string | number; transactionId: string; status: string }; timestamp: number }>();
   
   // Create international transfer with IDEMPOTENCY protection
@@ -2624,62 +3173,6 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       return res.json(response);
     } catch (error: any) {
       return res.status(500).json({ error: error?.message || "Unknown error" || 'Failed to create international transfer', details: error?.toString?.() || 'Unknown error' });
-    }
-  });
-
-  // ==================== MESSAGE ENDPOINTS ====================
-  
-  // POST /api/messages - Save a new message
-  app.post('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { content, recipientId, sessionId } = req.body;
-      
-      if (!content || !sessionId) {
-        return res.status(400).json({ error: 'Content and sessionId required' });
-      }
-
-      const senderId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 0);
-      const message = await storage.createMessage({
-        senderId: senderId,
-        senderRole: req.user?.role === 'admin' ? 'admin' : 'customer',
-        recipientId: recipientId ? parseInt(recipientId) : undefined,
-        recipientRole: recipientId ? 'admin' : 'customer',
-        content: content,
-        sessionId: sessionId,
-        isRead: false
-      });
-
-      return res.json(message);
-    } catch (error: any) {
-      return res.status(500).json({ error: 'Failed to save message', details: error?.message || "Unknown error" });
-    }
-  });
-
-  // GET /api/messages/session/:sessionId - Fetch messages for a session
-  app.get('/api/messages/session/:sessionId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { sessionId } = req.params;
-      
-      if (!sessionId) {
-        return res.status(400).json({ error: 'sessionId required' });
-      }
-
-      const messages = await storage.getMessages(sessionId);
-      
-      return res.json(messages);
-    } catch (error: any) {
-      return res.status(500).json({ error: 'Failed to fetch messages', details: error?.message || "Unknown error" });
-    }
-  });
-
-  // GET /api/messages - Fetch user messages
-  app.get('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 0);
-      const messages = await storage.getUserMessages(userId);
-      return res.json(messages);
-    } catch (error: any) {
-      return res.status(500).json({ error: 'Failed to fetch messages', details: error?.message || "Unknown error" });
     }
   });
 
