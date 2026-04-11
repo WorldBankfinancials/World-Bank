@@ -776,11 +776,20 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/customers/:id/balance', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const customerId = parseInt(req.params.id, 10);
-      const body = req.body as { amount: string; description: string };
+      const body = req.body as { amount: string | number; description: string; type?: string };
 
-      const amountNum = validateAmount(body.amount);
+      const amountNum = parseFloat(String(body.amount));
+      if (isNaN(amountNum) || amountNum <= 0) {
+        return res.status(400).json({ error: 'Invalid amount' });
+      }
+
+      // Support credit/debit and deposit/withdrawal naming conventions
+      const isCredit = ['credit', 'deposit', 'add', 'fund'].includes((body.type || 'credit').toLowerCase());
+      const delta = isCredit ? amountNum : -amountNum;
+
       const oldUser = await (storage).getUser(customerId);
-      const updatedUser = await storage.updateUserBalance(customerId, amountNum);
+      const oldBalance = parseFloat(String(oldUser?.balance || '0'));
+      const updatedUser = await storage.updateUserBalance(customerId, delta);
 
       if (!updatedUser) {
         return res.status(404).json({ error: 'Customer not found' });
@@ -798,10 +807,41 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
+      const newBalance = parseFloat(String(updatedUser.balance || '0'));
+      // Also create a transaction record for this admin action
+      const userAccounts = await storage.getUserAccounts(customerId);
+      if (userAccounts.length > 0) {
+        await storage.createTransaction({
+          fromAccountId: userAccounts[0].id,
+          toAccountId: isCredit ? userAccounts[0].id : undefined,
+          type: isCredit ? 'credit' : 'debit',
+          transactionType: isCredit ? 'deposit' : 'withdrawal',
+          amount: amountNum.toString(),
+          currency: 'USD',
+          description: body.description || (isCredit ? 'Admin credit' : 'Admin debit'),
+          status: 'success',
+          createdAt: new Date()
+        } as any);
+      }
+
+      // Broadcast realtime balance update via Supabase
+      try {
+        const { supabase } = await import('./supabase-public-storage');
+        const channel = supabase.channel(`user-balance-${customerId}`);
+        channel.send({
+          type: 'broadcast',
+          event: 'balance_update',
+          payload: { userId: customerId, newBalance, oldBalance, delta, timestamp: new Date().toISOString() }
+        });
+      } catch (_) {}
+
       return res.json({ 
         success: true, 
         user: updatedUser,
-        message: 'Balance updated successfully',
+        oldBalance,
+        newBalance,
+        delta,
+        message: `Balance ${isCredit ? 'credited' : 'debited'} successfully. New balance: $${newBalance.toFixed(2)}`,
         timestamp: new Date().toISOString()
       });
     } catch (error: any) {

@@ -217,13 +217,26 @@ export class SupabasePublicStorage implements IStorage {
     }
   }
 
-  async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
+  async updateUserBalance(id: number, amountDelta: number): Promise<User | undefined> {
     try {
-      const numAmount = parseFloat(String(amount));
+      const delta = parseFloat(String(amountDelta));
+      
+      // STEP 1: Get current balance
+      const { data: currentUser, error: fetchError } = await supabase
+        .from('bank_users')
+        .select('balance')
+        .eq('id', id)
+        .single();
+      if (fetchError) throw new Error(`Fetch error: ${fetchError.message}`);
+      
+      const currentBalance = parseFloat(String(currentUser?.balance || '0')) || 0;
+      const newBalance = Math.max(0, currentBalance + delta); // Prevent negative balance
+      
+      // STEP 2: Update bank_users balance
       const user = await withRetry(async () => {
         const { data: user, error } = await supabase
           .from('bank_users')
-          .update({ balance: numAmount.toString() })
+          .update({ balance: newBalance.toFixed(2) })
           .eq('id', id)
           .select('*')
           .single();
@@ -232,18 +245,19 @@ export class SupabasePublicStorage implements IStorage {
         return user;
       });
       
-      // CRITICAL: Also update the primary account balance in bank_accounts table
+      // STEP 3: Also update the primary account balance in bank_accounts table (keep in sync)
       const accounts = await this.getUserAccounts(id);
       if (accounts && accounts.length > 0) {
         const primaryAccount = accounts[0];
+        const accCurrentBalance = parseFloat(String(primaryAccount.balance || '0')) || 0;
+        const accNewBalance = Math.max(0, accCurrentBalance + delta);
         await supabase
           .from('bank_accounts')
-          .update({ balance: numAmount.toString() })
+          .update({ balance: accNewBalance.toFixed(2) })
           .eq('id', primaryAccount.id)
           .select();
       }
       
-      console.log('Balance updated successfully for user', id, ':', numAmount);
       return mapUser(user);
     } catch (error) {
       console.error('updateUserBalance error:', error);
