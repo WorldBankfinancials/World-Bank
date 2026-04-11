@@ -75,20 +75,25 @@ interface ChatMessage {
 }
 
 export default function AdminPanel() {
-  const { user, userProfile, signOut } = useAuth();
+  const { user, userProfile, loading: authLoading, signOut } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Redirect non-admins
+  // Auth guard with loading state
   useEffect(() => {
+    if (authLoading) return; // Wait for auth to finish loading
     if (!user) { setLocation('/admin-login'); return; }
-    if (userProfile && userProfile.role !== 'admin') {
+    // Check stored profile first (set immediately after login)
+    const storedProfile = localStorage.getItem('userProfile');
+    const profile = storedProfile ? JSON.parse(storedProfile) : null;
+    const role = profile?.role || userProfile?.role;
+    if (role && role !== 'admin') {
       toast({ title: 'Access Denied', description: 'Admin role required.', variant: 'destructive' });
       setLocation('/login');
     }
-  }, [user, userProfile]);
+  }, [user, userProfile, authLoading]);
 
   // ─── Customer Management State ───────────────────────────────────────────
   const [customerSearch, setCustomerSearch] = useState('');

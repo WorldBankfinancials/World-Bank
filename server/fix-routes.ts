@@ -895,6 +895,33 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PATCH /api/admin/transactions/:id - Update transaction status
+  app.patch('/api/admin/transactions/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const txId = parseInt(req.params.id, 10);
+      const body = req.body as { status?: string; description?: string; amount?: string };
+      
+      const { supabase: supa } = await import('./supabase-public-storage');
+      const updates: Record<string, any> = {};
+      if (body.status) updates.status = body.status;
+      if (body.description) updates.description = body.description;
+      if (body.amount) updates.amount = body.amount;
+      updates.updated_at = new Date().toISOString();
+
+      const { data, error } = await supa
+        .from('transactions')
+        .update(updates)
+        .eq('id', txId)
+        .select()
+        .single();
+
+      if (error) throw new Error(error.message);
+      return res.json({ success: true, transaction: data, message: 'Transaction updated' });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to update transaction' });
+    }
+  });
+
   // Verify PIN endpoint - Used after password verification, needs email + pin
   app.post('/api/verify-pin', authRateLimiter, async (req: Request, res: Response) => {
     try {
@@ -1954,8 +1981,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/customers', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const customers = await storage.getAllUsers();
-      // Filter out admins, only return customers
-      const customerList = customers.filter((user: User) => user.role === 'customer');
+      // Return all users including admins to admin, add computed fields
+      const customerList = customers
+        .filter((user: User) => user.role !== 'admin' || req.query.includeAdmins === 'true')
+        .map((user: User) => ({
+          ...user,
+          fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown',
+          balance: parseFloat(String(user.balance || '0')) || 0
+        }));
       return res.json(customerList);
     } catch (error: any) {
       return res.status(500).json({ error: 'Failed to fetch customers' });

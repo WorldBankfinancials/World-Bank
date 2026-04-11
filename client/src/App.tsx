@@ -44,6 +44,7 @@ import Alerts from "@/pages/alerts";
 import CustomerManagement from "@/pages/customer-management";
 import FundManagement from "@/pages/fund-management";
 import AdminLiveChat from "@/pages/admin-live-chat";
+import AdminPanel from "@/pages/admin-panel";
 import CustomerServicePortal from "@/pages/customer-service-portal";
 import VerificationCenter from "@/pages/verification";
 import AccountPreferences from "@/pages/account-preferences";
@@ -74,6 +75,7 @@ function App() {
             <Route path="/register-multi" component={MultiStepRegister} />
                 <Route path="/admin-login" component={AdminLogin} />
                 <Route path="/admin-dashboard" component={AdminDashboard} />
+                <Route path="/admin-panel" component={AdminPanel} />
                 <Route path="/simple-admin" component={SimpleAdmin} />
                 <Route path="/admin-live-chat" component={AdminLiveChat} />
                 <Route path="/customer-service" component={CustomerServicePortal} />

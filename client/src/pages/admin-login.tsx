@@ -29,7 +29,7 @@ export default function AdminLogin() {
       if (result.error) {
         setError(result.error);
       } else {
-        setLocation("/admin-dashboard");
+        setLocation("/admin-panel");
       }
     } catch (err) {
       setError("Login failed. Please try again.");
@@ -96,9 +96,10 @@ export default function AdminLogin() {
           </form>
 
           <div className="mt-6 p-3 bg-blue-50 rounded-md">
-            <p className="text-sm text-blue-700 font-medium">Admin Credentials:</p>
-            <p className="text-sm text-blue-600">Username: admin</p>
-            <p className="text-sm text-blue-600">Password: admin123</p>
+            <p className="text-sm text-blue-700 font-medium flex items-center gap-1">
+              <Shield className="w-4 h-4" /> Secure Admin Access
+            </p>
+            <p className="text-sm text-blue-600 mt-1">Use your World Bank admin credentials. Admin role is granted by the system administrator.</p>
           </div>
         </CardContent>
       </Card>

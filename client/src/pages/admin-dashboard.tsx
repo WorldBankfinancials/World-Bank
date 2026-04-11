@@ -343,6 +343,18 @@ export default function AdminDashboard() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow border-2 border-blue-500 bg-blue-50" onClick={() => setLocation("/admin-panel")}>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <Shield className="w-8 h-8 text-blue-600" />
+                <div>
+                  <h3 className="font-semibold text-blue-700">Admin Control Center</h3>
+                  <p className="text-sm text-blue-600">Full banking management panel</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/customer-management")}>
             <CardContent className="p-4">
               <div className="flex items-center space-x-3">
