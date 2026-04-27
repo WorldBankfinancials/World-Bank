@@ -204,7 +204,7 @@ export default function InternationalTransfer() {
         const interval = setInterval(async () => {
           try {
             const { authenticatedFetch } = await import('@/lib/queryClient');
-            const statusResponse = await authenticatedFetch(`/api/international-transfers/${txnId}/status`);
+            const statusResponse = await authenticatedFetch(`/api/transfers/${txnId}/status`);
             if (statusResponse.ok) {
               const statusData = await statusResponse.json();
               if (statusData.status === 'approved' || statusData.status === 'completed') {

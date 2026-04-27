@@ -100,7 +100,7 @@ export default function Dashboard() {
     queryFn: async () => {
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch('/api/transactions');
+        const response = await authenticatedFetch('/api/transactions/recent');
         if (!response.ok) {
           return [];
         }

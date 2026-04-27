@@ -99,7 +99,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
 
   // Get user by Supabase UUID
-  app.get('/api/users/supabase/:supabaseId', async (req: Request, res: Response) => {
+  app.get('/api/users/supabase/:supabaseId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { supabaseId } = req.params;
 
@@ -2529,7 +2529,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/list-users', async (req: Request, res: Response) => {
+  app.get('/api/admin/list-users', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { data, error } = await supabase.auth.admin.listUsers();
       if (error) {
@@ -2657,7 +2657,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   });
 
   // ADMIN ONLY: Reset user password in Supabase Auth
-  app.post('/api/admin/reset-password', async (req: Request, res: Response) => {
+  app.post('/api/admin/reset-password', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { email, newPassword } = req.body;
       
@@ -2738,7 +2738,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   });
 
   // ADMIN ONLY: Delete user from Supabase Auth and local database
-  app.post('/api/admin/delete-user/:email', async (req: Request, res: Response) => {
+  app.post('/api/admin/delete-user/:email', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { email } = req.params;
       
