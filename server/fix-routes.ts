@@ -132,7 +132,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           error: 'Invalid registration data', 
-          details: validation.errors 
+          details: (validation as { success: false; errors: string[] }).errors 
         });
       }
 
@@ -1084,7 +1084,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           error: 'Invalid approval data', 
-          details: validation.errors 
+          details: (validation as { success: false; errors: string[] }).errors 
         });
       }
 
@@ -1234,7 +1234,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!validation.success) {
         return res.status(400).json({ 
           error: 'Invalid PIN format', 
-          details: validation.errors 
+          details: (validation as { success: false; errors: string[] }).errors 
         });
       }
 
@@ -2020,11 +2020,17 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/admin/customers/:id/verify - Verify/activate a customer account
+  // POST /api/admin/customers/:id/verify - Verify/unverify a customer account
   app.post('/api/admin/customers/:id/verify', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const updatedUser = await storage.updateUser(id, { isActive: true, isVerified: true });
+      const { verified = true, active } = req.body as { verified?: boolean; active?: boolean };
+      const updates: any = { isVerified: verified };
+      // When verifying, also activate the account. When unverifying, optionally deactivate.
+      if (typeof active !== 'undefined') updates.isActive = active;
+      else if (verified) updates.isActive = true;
+      
+      const updatedUser = await storage.updateUser(id, updates);
       if (!updatedUser) {
         return res.status(404).json({ error: 'Customer not found' });
       }
@@ -2032,15 +2038,15 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
-          action: 'verify_customer',
+          action: verified ? 'verify_customer' : 'unverify_customer',
           targetType: 'user',
           targetId: id,
-          details: { verified: true }
+          details: { verified, active: updates.isActive }
         });
       }
-      return res.json({ success: true, user: updatedUser });
+      return res.json({ success: true, user: updatedUser, message: verified ? 'Customer verified' : 'Customer unverified' });
     } catch (error: any) {
-      return res.status(500).json({ error: 'Failed to verify customer' });
+      return res.status(500).json({ error: 'Failed to update customer verification' });
     }
   });
 
@@ -2137,12 +2143,32 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/tickets/:id/respond', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = parseInt(req.params.id);
-      const { response: adminResponse, status } = req.body;
+      const { response: adminResponse, notes, status } = req.body;
+      const responseText = adminResponse || notes || '';
       const updates: any = {};
-      if (adminResponse) updates.adminResponse = adminResponse;
-      if (status) updates.status = status;
+      // Use adminNotes (TypeScript field -> admin_notes column in DB via Drizzle)
+      if (responseText) updates.adminNotes = responseText;
+      // Update status to 'responded' if not explicitly set
+      updates.status = status || 'responded';
+      
       const updatedTicket = await storage.updateSupportTicket(id, updates);
-      return res.json({ success: true, ticket: updatedTicket });
+
+      // Also send a message to the customer's chat session if userId is available
+      const ticket = await storage.getSupportTicket?.(id);
+      if (ticket && ticket.userId && responseText) {
+        try {
+          await storage.createMessage({
+            senderId: 0,
+            recipientId: ticket.userId,
+            senderRole: 'admin',
+            content: `[Support Reply] ${responseText}`,
+            sessionId: `support_${id}`,
+            isRead: false
+          });
+        } catch (_) {}
+      }
+      
+      return res.json({ success: true, ticket: updatedTicket, message: 'Reply sent successfully' });
     } catch (error: any) {
       return res.status(500).json({ error: 'Failed to respond to ticket' });
     }

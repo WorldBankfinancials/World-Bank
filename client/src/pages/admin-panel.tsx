@@ -304,12 +304,18 @@ export default function AdminPanel() {
 
   const uploadProfilePicMutation = useMutation({
     mutationFn: async (data: { id: number; file: File }) => {
+      // Convert file to base64 data URL
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(data.file);
+      });
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const formData = new FormData();
-      formData.append('profilePic', data.file);
       const r = await authenticatedFetch(`/api/admin/customers/${data.id}/profile-picture`, {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profilePhoto: base64 })
       });
       if (!r.ok) throw new Error('Failed to upload');
       return r.json();

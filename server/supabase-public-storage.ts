@@ -203,6 +203,10 @@ export class SupabasePublicStorage implements IStorage {
       if (updates.postalCode !== undefined) updateData.postal_code = updates.postalCode;
       if (updates.transferPin !== undefined) updateData.transfer_pin = updates.transferPin;
       if (updates.role !== undefined) updateData.role = updates.role;
+      if (updates.profession !== undefined) updateData.profession = updates.profession;
+      if (updates.dateOfBirth !== undefined) updateData.date_of_birth = updates.dateOfBirth;
+      if (updates.idType !== undefined) updateData.id_type = updates.idType;
+      if (updates.idNumber !== undefined) updateData.id_number = updates.idNumber;
       if (Object.keys(updateData).length === 0) return this.getUser(id);
       const { data: user, error } = await supabase
         .from('bank_users')
@@ -469,10 +473,24 @@ export class SupabasePublicStorage implements IStorage {
 
   async updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
     try {
-      const { data, error } = await supabase.from('support_tickets').update(updates as any).eq('id', id).select().single();
-      if (error) return undefined;
+      // Map camelCase TypeScript fields to snake_case DB columns
+      const dbUpdates: Record<string, any> = {};
+      const fieldMap: Record<string, string> = {
+        adminNotes: 'admin_notes',
+        userId: 'user_id',
+        adminResponse: 'admin_notes',
+        createdAt: 'created_at',
+        updatedAt: 'updated_at',
+      };
+      for (const [key, value] of Object.entries(updates)) {
+        const dbKey = fieldMap[key] || key;
+        dbUpdates[dbKey] = value;
+      }
+      const { data, error } = await supabase.from('support_tickets').update(dbUpdates).eq('id', id).select().single();
+      if (error) { console.error('updateSupportTicket error:', error.message); return undefined; }
       return data;
     } catch (error) {
+      console.error('updateSupportTicket catch error:', error);
       return undefined;
     }
   }

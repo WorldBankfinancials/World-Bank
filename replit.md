@@ -10,6 +10,26 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### April 27, 2026 - TypeScript & Security Fixes ✅
+
+**Three critical fixes applied across the codebase.**
+
+#### Issues Found & Fixed:
+
+**1. Content Security Policy Blocking Supabase Realtime (CRITICAL)**
+- **Problem:** CSP header in `server/index.ts` used `default-src 'self'` which blocked all Supabase WebSocket connections (`wss://icbsxmrmorkdgxtumamu.supabase.co`), breaking ALL realtime features (live chat, balance updates, transaction notifications).
+- **Fix:** Updated CSP to explicitly allow Supabase API (`https://*.supabase.co`), WebSocket (`wss://*.supabase.co`), Replit scripts, Google Fonts, DiceBear avatars, and localhost dev ports.
+
+**2. TypeScript Narrowing Errors in fix-routes.ts & validation-schemas.ts**
+- **Problem:** `validation.errors` was accessed after `if (!validation.success)` but TypeScript did not narrow the discriminated union without strict mode, causing 4 type errors.
+- **Fix:** Added explicit type assertion `(validation as { success: false; errors: string[] }).errors` at all 4 call sites to satisfy the type checker while preserving runtime behavior.
+
+**3. Extended `updateUser` Field Mapping**
+- **Problem:** `updateUser()` in `supabase-public-storage.ts` did not map `profession`, `dateOfBirth`, `idType`, or `idNumber` fields to their snake_case DB columns.
+- **Fix:** Added all 4 field mappings so admin edits to these customer fields persist correctly.
+
+---
+
 ### April 10, 2026 - Full System Audit & Critical Fixes ✅
 
 **Comprehensive scan of entire codebase — all systems verified and fixed.**
