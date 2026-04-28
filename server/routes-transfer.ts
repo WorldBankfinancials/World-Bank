@@ -1,6 +1,7 @@
 import { Express, Request, Response } from 'express';
 import { storage } from './storage-factory';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
+import * as bcrypt from 'bcryptjs';
 
 function generateReferenceNumber(): string {
   return `WB-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
@@ -50,10 +51,8 @@ export function setupTransferRoutes(app: Express) {
         return res.status(401).json({ message: "PIN not set on account" });
       }
 
-      const storedPin = String(userForPin.transferPin).trim();
-      const providedPin = String(transferPin).trim();
-
-      if (storedPin !== providedPin) {
+      const pinMatch = await bcrypt.compare(String(transferPin).trim(), String(userForPin.transferPin).trim());
+      if (!pinMatch) {
         return res.status(401).json({ message: "Incorrect PIN - transfer denied" });
       }
 
@@ -160,10 +159,8 @@ export function setupTransferRoutes(app: Express) {
         return res.status(401).json({ message: "PIN not set on account" });
       }
 
-      const storedPin = String(userForPin.transferPin).trim();
-      const providedPin = String(transferPin).trim();
-
-      if (storedPin !== providedPin) {
+      const intlPinMatch = await bcrypt.compare(String(transferPin).trim(), String(userForPin.transferPin).trim());
+      if (!intlPinMatch) {
         return res.status(401).json({ message: "Incorrect PIN - transfer denied" });
       }
 

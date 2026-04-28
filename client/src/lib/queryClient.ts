@@ -54,7 +54,8 @@ export async function authenticatedFetch(
       
       if (response.status === 401) {
         localStorage.clear();
-        window.location.href = '/login';
+        const isAdminPage = window.location.pathname.startsWith('/admin') || window.location.pathname.startsWith('/simple-admin');
+        window.location.href = isAdminPage ? '/admin-login' : '/login';
       }
       
       return response;
