@@ -435,6 +435,7 @@ export default function Login() {
                   setLoginPin(e.target.value);
                 }}
                 maxLength={4}
+                autoComplete="one-time-code"
                 className="wb-input text-center text-lg tracking-widest"
                 placeholder="••••"
                 onKeyPress={(e) => {

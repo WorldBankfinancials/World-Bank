@@ -72,7 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch(`/api/users/${authUser.id}`);
+      // Use /api/user which looks up by email from JWT (avoids UUID vs numeric ID mismatch)
+      const response = await authenticatedFetch(`/api/user`);
       
       if (!response.ok) {
         return;

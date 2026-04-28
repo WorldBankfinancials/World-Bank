@@ -51,20 +51,19 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
     });
 
 
-    // Subscribe to real-time chat messages for this user
+    // Subscribe to real-time chat messages for this user (uses correct 'messages' table + snake_case column)
     const chatChannel = supabase
-      .channel(`chat:${userId}`)
+      .channel(`chat_ws:${userId}`)
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
-          table: 'chat_messages',
-          filter: `receiverId=eq.${userId}`
+          table: 'messages',
+          filter: `recipient_id=eq.${userId}`
         },
         (payload) => {
-          if (payload.eventType === 'INSERT') {
-            // Broadcast new message to connected client
+          if (ws.readyState === ws.OPEN) {
             ws.send(JSON.stringify({
               type: 'chat_message',
               data: payload.new,

@@ -1634,8 +1634,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           session_id: finalSessionId,
           is_read: false
         })
-        .select();
+        .select()
+        .single();
 
+      if (error) {
+        return res.status(500).json({ error: 'Failed to save message', details: error.message });
+      }
+
+      return res.json({ success: true, message: data });
     } catch (error: any) {
       return res.status(500).json({ error: 'Failed to save message', details: error?.message || "Unknown error" });
     }
@@ -3363,13 +3369,25 @@ export async function registerLiveChatRoutes(app: Express) {
       const user = await (storage as any).getUserByEmail(req.user!.email);
       if (!user) return res.status(404).json({ error: 'User not found' });
 
+      // Find admin user ID (fallback to 1 if no admin found)
+      let adminUserId = 1;
+      try {
+        const { data: adminUsers } = await supabase
+          .from('bank_users')
+          .select('id')
+          .eq('role', 'admin')
+          .limit(1)
+          .single();
+        if (adminUsers?.id) adminUserId = adminUsers.id;
+      } catch (_) {}
+
       // Save to messages table
       const { data: savedMsg, error } = await supabase
         .from('messages')
         .insert({
           sender_id: user.id,
           sender_role: 'customer',
-          recipient_id: 0,
+          recipient_id: adminUserId,
           recipient_role: 'admin',
           content: message.trim(),
           session_id: `session_${user.id}`,

@@ -437,7 +437,7 @@ export default function AdminPanel() {
   const closeTicketMutation = useMutation({
     mutationFn: async (id: number) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const r = await authenticatedFetch(`/api/support-tickets/${id}`, {
+      const r = await authenticatedFetch(`/api/admin/support-tickets/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'closed' })
