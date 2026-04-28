@@ -1270,6 +1270,70 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User password change - PROTECTED with JWT auth and rate limiting
+  app.post('/api/user/change-password', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { currentPassword, newPassword, confirmNewPassword } = req.body;
+
+      if (!currentPassword || !newPassword || !confirmNewPassword) {
+        return res.status(400).json({ error: 'currentPassword, newPassword, and confirmNewPassword are required' });
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        return res.status(400).json({ error: 'New passwords do not match' });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ error: 'New password must be at least 8 characters' });
+      }
+
+      if (newPassword === currentPassword) {
+        return res.status(400).json({ error: 'New password must be different from current password' });
+      }
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+
+      // Verify current password by attempting sign-in
+      const { error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+        email: req.user!.email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        return res.status(401).json({ error: 'Current password is incorrect' });
+      }
+
+      // Get Supabase user ID
+      const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError || !users) {
+        return res.status(500).json({ error: 'Failed to retrieve user' });
+      }
+
+      const supabaseUser = users.users.find((u: any) => u.email === req.user!.email);
+      if (!supabaseUser) {
+        return res.status(404).json({ error: 'User not found in authentication system' });
+      }
+
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        supabaseUser.id,
+        { password: newPassword }
+      );
+
+      if (updateError) {
+        return res.status(500).json({ error: 'Failed to update password', details: updateError.message });
+      }
+
+      return res.json({ success: true, message: 'Password updated successfully' });
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Password change failed', details: error.message });
+    }
+  });
+
   // Note: Transfer endpoints moved to routes-transfer.ts
   // Using /api/transfers (plural) with email-based authentication
 
@@ -1836,6 +1900,19 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.post('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const { z } = await import('zod');
+      const supportTicketSchema = z.object({
+        subject: z.string().min(3, 'Subject must be at least 3 characters').max(200, 'Subject too long'),
+        description: z.string().min(10, 'Description must be at least 10 characters').max(5000, 'Description too long'),
+        priority: z.enum(['low', 'medium', 'high']).default('medium'),
+        category: z.string().min(1, 'Category is required').max(100).optional(),
+      });
+
+      const parsed = supportTicketSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid ticket data', details: parsed.error.errors });
+      }
+
       const user = await (storage).getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
@@ -1843,11 +1920,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const ticketData = {
         userId: user.id,
-        subject: req.body.subject,
-        description: req.body.description,
-        priority: req.body.priority || 'medium',
+        subject: parsed.data.subject,
+        description: parsed.data.description,
+        priority: parsed.data.priority,
         status: 'open',
-        category: req.body.category
+        category: parsed.data.category || null,
       };
 
       const ticket = await storage.createSupportTicket(ticketData);

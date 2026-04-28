@@ -720,6 +720,7 @@ export default function Transfer() {
                       className="w-full text-center text-2xl tracking-widest p-4 border border-gray-300 rounded-lg"
                       placeholder="****"
                       maxLength={4}
+                      autoComplete="one-time-code"
                       autoFocus
                     />
                     {pinError && (

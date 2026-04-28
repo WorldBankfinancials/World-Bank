@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { User } from "@shared/schema";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -5,16 +6,67 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Shield, Key, Smartphone, AlertTriangle } from "lucide-react";
-
+import { useToast } from "@/hooks/use-toast";
+import { Shield, Key, Smartphone, AlertTriangle, Loader2 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function SecuritySettings() {
   const { t } = useLanguage();
+  const { toast } = useToast();
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string; confirmNewPassword: string }) => {
+      return apiRequest('POST', '/api/user/change-password', data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Password updated",
+        description: "Your password has been changed successfully.",
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.error || error?.message || "Failed to update password";
+      toast({
+        title: "Update failed",
+        description: message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handlePasswordChange = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      toast({ title: "All fields required", description: "Please fill in all password fields.", variant: "destructive" });
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      toast({ title: "Passwords don't match", description: "New password and confirmation must match.", variant: "destructive" });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast({ title: "Password too short", description: "New password must be at least 8 characters.", variant: "destructive" });
+      return;
+    }
+
+    changePasswordMutation.mutate({ currentPassword, newPassword, confirmNewPassword });
+  };
 
   if (isLoading) {
     return (
@@ -40,25 +92,59 @@ export default function SecuritySettings() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Key className="w-5 h-5" />
-                <span>Password</span>
+                <span>Change Password</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <Input id="currentPassword" type="password" />
-              </div>
-              <div>
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input id="newPassword" type="password" />
-              </div>
-              <div>
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input id="confirmPassword" type="password" />
-              </div>
-              <Button className="bg-blue-600 text-white hover:bg-blue-700">
-                Update Password
-              </Button>
+            <CardContent>
+              <form onSubmit={handlePasswordChange} className="space-y-4">
+                <div>
+                  <Label htmlFor="currentPassword">Current Password</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    autoComplete="current-password"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password (min 8 characters)"
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    autoComplete="new-password"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="bg-blue-600 text-white hover:bg-blue-700"
+                  disabled={changePasswordMutation.isPending}
+                >
+                  {changePasswordMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Password"
+                  )}
+                </Button>
+              </form>
             </CardContent>
           </Card>
 
@@ -141,13 +227,6 @@ export default function SecuritySettings() {
               </Button>
             </CardContent>
           </Card>
-
-          <div className="flex justify-end space-x-3">
-            <Button variant="outline">Cancel</Button>
-            <Button className="bg-blue-600 text-white hover:bg-blue-700">
-              Save All Changes
-            </Button>
-          </div>
         </div>
       </div>
     </div>

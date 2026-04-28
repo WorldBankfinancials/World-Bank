@@ -613,6 +613,7 @@ export default function InternationalTransfer() {
                   value={transferPin}
                   onChange={(e) => setTransferPin(e.target.value.slice(0, 4))}
                   maxLength={4}
+                  autoComplete="one-time-code"
                   className="text-center text-2xl tracking-widest mt-1"
                 />
               </div>

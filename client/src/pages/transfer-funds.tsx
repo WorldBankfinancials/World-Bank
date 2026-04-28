@@ -621,6 +621,7 @@ export default function TransferFunds() {
                 type="password"
                 maxLength={4}
                 placeholder="••••"
+                autoComplete="one-time-code"
                 value={transferPin}
                 onChange={(e) => setTransferPin(e.target.value.slice(0, 4))}
                 className="text-center text-2xl tracking-widest mt-2 py-3 font-bold"

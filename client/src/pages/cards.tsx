@@ -453,6 +453,7 @@ export default function Cards() {
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 maxLength={4}
+                autoComplete="one-time-code"
               />
             </div>
             <div className="flex space-x-2">
@@ -503,6 +504,7 @@ export default function Cards() {
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 maxLength={4}
+                autoComplete="one-time-code"
               />
             </div>
             <div className="flex space-x-2">
@@ -562,6 +564,7 @@ export default function Cards() {
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 maxLength={4}
+                autoComplete="one-time-code"
               />
             </div>
             <div className="flex space-x-2">
