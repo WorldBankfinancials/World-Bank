@@ -262,6 +262,7 @@ export default function Login() {
                           onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
                           className="wb-input pl-12 h-14 text-base"
                           placeholder="Enter email address"
+                          autoComplete="username"
                           required={loginType === 'email'}
                         />
                       </div>
@@ -324,6 +325,7 @@ export default function Login() {
                         onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
                         className="wb-input pl-12 pr-12 h-14 text-base"
                         placeholder="Enter your password"
+                        autoComplete="current-password"
                         required
                       />
                       <button

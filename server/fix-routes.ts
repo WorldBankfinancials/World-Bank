@@ -2010,7 +2010,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!updatedUser) {
         return res.status(404).json({ error: 'Customer not found' });
       }
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await storage.getUserByEmail(req.user!.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -2040,7 +2040,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!updatedUser) {
         return res.status(404).json({ error: 'Customer not found' });
       }
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await storage.getUserByEmail(req.user!.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -2098,7 +2098,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { notes } = req.body;
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 0;
       const { approveTransfer } = await import('./transfer-approval');
       const transaction = await approveTransfer(id, adminId, notes);
@@ -2113,7 +2113,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { notes } = req.body;
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 0;
       const { rejectTransfer } = await import('./transfer-approval');
       const transaction = await rejectTransfer(id, adminId, notes || 'Rejected by admin');
@@ -2129,7 +2129,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const updates = req.body;
       const updatedTicket = await storage.updateSupportTicket(id, updates);
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await storage.getUserByEmail(req.user!.email);
       if (admin && updatedTicket) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -2205,7 +2205,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           await storage.updateUserBalance(account.userId, balanceChange);
         }
       }
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await storage.getUserByEmail(req.user!.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -2821,7 +2821,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           
           // Update account balance
           if (storage.updateAccount) {
-            await (storage.updateAccount as any)(transaction.fromAccountId, { balance: newBalance.toString() });
+            await storage.updateAccount(transaction.fromAccountId, { balance: newBalance.toString() });
           }
         }
       }
@@ -2915,7 +2915,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         const newBalance = (currentBalance - parseFloat(amount.toString())).toFixed(2);
         const balanceNum = parseFloat(newBalance);
         if (!isNaN(balanceNum) && senderAccountId && storage?.updateAccount) {
-          await (storage.updateAccount as any)(senderAccountId, { balance: balanceNum });
+          await storage.updateAccount(senderAccountId, { balance: balanceNum });
         }
       } catch (balanceError) {
         // Non-blocking balance update
@@ -2978,7 +2978,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // GET /api/payment-requests - Get pending payment requests for user
   app.get('/api/payment-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) {
         return res.json([]);
       }
@@ -3005,7 +3005,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!method || !amount || isNaN(parseFloat(String(amount))) || parseFloat(String(amount)) <= 0) {
         return res.status(400).json({ error: 'Method and valid amount are required' });
       }
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -3038,7 +3038,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // GET /api/transactions/recent - Recent transactions (alias for /api/transactions with limit)
   app.get('/api/transactions/recent', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) return res.json([]);
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.json([]);
@@ -3094,7 +3094,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // GET /api/card-transactions - Card transaction history
   app.get('/api/card-transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) {
         return res.json([]);
       }
@@ -3116,7 +3116,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // GET /api/wallet-balance - Digital wallet balance
   app.get('/api/wallet-balance', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) return res.status(404).json({ error: 'User not found' });
       return res.json({
         balance: parseFloat(String(user.balance || '0')),
@@ -3132,7 +3132,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // GET /api/wallet-transactions - Digital wallet transactions
   app.get('/api/wallet-transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) return res.json([]);
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.json([]);
@@ -3146,7 +3146,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // GET /api/mobile-payments - Mobile payment history
   app.get('/api/mobile-payments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) return res.json([]);
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.json([]);
@@ -3174,7 +3174,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // GET /api/user/activity-log - User security activity log
   app.get('/api/user/activity-log', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) return res.json([]);
       const accounts = await storage.getUserAccounts(user.id);
       const recentActivity: any[] = [];
@@ -3242,7 +3242,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { status, notes } = req.body;
-      const admin = await (storage as any).getUserByEmail(req.user!.email);
+      const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 0;
       const transaction = await storage.updateTransactionStatus(id, status, adminId, notes);
       return res.json({ success: true, transaction });
@@ -3366,7 +3366,7 @@ export async function registerLiveChatRoutes(app: Express) {
       if (!message || !message.trim()) {
         return res.status(400).json({ error: 'Message is required' });
       }
-      const user = await (storage as any).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) return res.status(404).json({ error: 'User not found' });
 
       // Find admin user ID (fallback to 1 if no admin found)
