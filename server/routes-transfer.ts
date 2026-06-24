@@ -80,9 +80,9 @@ export function setupTransferRoutes(app: Express) {
           return res.status(400).json({ message: `Insufficient funds. Your total balance is $${currentBalance.toFixed(2)} but you're trying to transfer $${numAmount.toFixed(2)}` });
         }
         
-        // Deduct amount from user balance
+        // Deduct amount from user balance (updateUserBalance takes a DELTA - negative to deduct)
         const newBalance = currentBalance - numAmount;
-        await storage.updateUserBalance(user.id, newBalance);
+        await storage.updateUserBalance(user.id, -numAmount);
         
         // Use existing userAccounts from above - already fetched
         if (!userAccounts || userAccounts.length === 0) {
@@ -187,9 +187,9 @@ export function setupTransferRoutes(app: Express) {
           return res.status(400).json({ message: `Insufficient funds. Your total balance is $${currentBalance.toFixed(2)} but you're trying to transfer $${numAmount.toFixed(2)}` });
         }
         
-        // Deduct amount from user balance
+        // Deduct amount from user balance (updateUserBalance takes a DELTA - negative to deduct)
         const newBalance = currentBalance - numAmount;
-        await storage.updateUserBalance(user.id, newBalance);
+        await storage.updateUserBalance(user.id, -numAmount);
         
         // Truncate all fields to match database constraints
         const recipientNameTrunc = String(recipientName).substring(0, 20);
@@ -362,13 +362,9 @@ export function setupTransferRoutes(app: Express) {
       // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
       // If reverseToAccount = true, credit back to user's account
       if (reverseToAccount && targetTxn.fromUserId) {
-        const customer = await storage.getUser(targetTxn.fromUserId);
-        if (customer) {
-          const numAmount = parseFloat(String(targetTxn.amount));
-          const currentBalance = parseFloat(String(customer.balance || '0'));
-          const reversedBalance = currentBalance + numAmount;
-          await storage.updateUserBalance(targetTxn.fromUserId, reversedBalance);
-        }
+        const numAmount = parseFloat(String(targetTxn.amount));
+        // updateUserBalance takes a DELTA — credit back the amount (positive delta)
+        await storage.updateUserBalance(targetTxn.fromUserId, +numAmount);
       }
       
       if (transaction) {
@@ -486,13 +482,9 @@ export function setupTransferRoutes(app: Express) {
       // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
       // If reverseToAccount = true, credit back to user's account
       if (reverseToAccount && targetTxn.fromUserId) {
-        const customer = await storage.getUser(targetTxn.fromUserId);
-        if (customer) {
-          const numAmount = parseFloat(String(targetTxn.amount));
-          const currentBalance = parseFloat(String(customer.balance || '0'));
-          const reversedBalance = currentBalance + numAmount;
-          await storage.updateUserBalance(targetTxn.fromUserId, reversedBalance);
-        }
+        const numAmount = parseFloat(String(targetTxn.amount));
+        // updateUserBalance takes a DELTA — credit back the amount (positive delta)
+        await storage.updateUserBalance(targetTxn.fromUserId, +numAmount);
       }
       
       if (transaction) {

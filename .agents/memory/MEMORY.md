@@ -1,0 +1,4 @@
+- [Balance delta bug pattern](balance-delta-bug.md) — updateUserBalance() takes a DELTA not absolute value; always pass ±amount, never newBalance.
+- [Transfer PIN verification](transfer-pin-bcrypt.md) — Transfer PINs are bcrypt-hashed; must use bcrypt.compare(), never plain string equality.
+- [Admin 401 redirect](admin-401-redirect.md) — Admin pages must redirect to /admin-login on 401, not /login; check pathname prefix.
+- [CSP for production WebSocket](csp-production-ws.md) — CSP connect-src must include wss://${req.headers.host} dynamically for deployed app WebSocket to work.

@@ -3103,7 +3103,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         referenceNumber: `DEP-${Date.now()}`,
         createdAt: new Date()
       });
-      await storage.updateUserBalance(user.id, newBalance);
+      // updateUserBalance takes a DELTA (positive to credit funds)
+      await storage.updateUserBalance(user.id, parsedAmount);
       return res.json({ success: true, transaction, amount: parsedAmount, newBalance });
     } catch (error: any) {
       return res.status(500).json({ error: 'Failed to add funds' });

@@ -24,16 +24,18 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   
   // Content Security Policy — allow Supabase API, WebSockets, and other required connections
   const supabaseHost = 'icbsxmrmorkdgxtumamu.supabase.co';
+  const requestHost = req.headers.host || '';
+  const productionWs = requestHost ? `wss://${requestHost} ws://${requestHost}` : '';
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
-    `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://*.supabase.co wss://*.supabase.co ws://localhost:* wss://localhost:* ws://0.0.0.0:* https://api.coingecko.com https://finnhub.io`,
-    `img-src 'self' data: blob: https://${supabaseHost} https://*.supabase.co https://*.amazonaws.com https://api.dicebear.com`,
+    `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://*.supabase.co wss://*.supabase.co ws://localhost:* wss://localhost:* ws://0.0.0.0:* ${productionWs} https://*.replit.app wss://*.replit.app https://*.replit.dev wss://*.replit.dev https://api.coingecko.com https://finnhub.io`,
+    `img-src 'self' data: blob: https://${supabaseHost} https://*.supabase.co https://*.amazonaws.com https://api.dicebear.com https://*.replit.app https://*.replit.dev`,
     "media-src 'self' blob: data:",
     "worker-src 'self' blob:",
-    "frame-src 'self'",
+    "frame-src 'self' https://*.replit.app https://*.replit.dev",
     "object-src 'none'",
   ].join('; '));
   
