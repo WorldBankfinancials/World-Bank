@@ -33,6 +33,8 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useRealtimeTransactions } from "@/hooks/useRealtimeTransactions";
 import { CustomerData } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 
 
 interface SupportTicket {
@@ -65,6 +67,19 @@ export default function AdminDashboard() {
   const [adminNotes, setAdminNotes] = useState<{ [key: number]: string }>({});
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const { user, userProfile, loading: authLoading } = useAuth();
+
+  // Role guard — redirect non-admins
+  useEffect(() => {
+    if (authLoading) return;
+    const storedProfile = localStorage.getItem('userProfile');
+    const profile = storedProfile ? JSON.parse(storedProfile) : null;
+    const role = profile?.role || userProfile?.role;
+    if (role && role !== 'admin') {
+      toast({ title: 'Access Denied', description: 'Admin role required.', variant: 'destructive' });
+      setLocation('/login');
+    }
+  }, [user, userProfile, authLoading]);
 
   // Real-time updates via Supabase Realtime
   useRealtimeTransactions();
@@ -254,6 +269,9 @@ export default function AdminDashboard() {
     createdAt: new Date(),
     updatedAt: null
   };
+
+  // Render guard — block non-admins from seeing admin content
+  if (userProfile && userProfile.role !== 'admin') return null;
 
   // Show loading state
   if (customersLoading || transfersLoading || ticketsLoading) {

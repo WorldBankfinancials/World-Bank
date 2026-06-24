@@ -2,3 +2,6 @@
 - [Transfer PIN verification](transfer-pin-bcrypt.md) — Transfer PINs are bcrypt-hashed; must use bcrypt.compare(), never plain string equality.
 - [Admin 401 redirect](admin-401-redirect.md) — Admin pages must redirect to /admin-login on 401, not /login; check pathname prefix.
 - [CSP for production WebSocket](csp-production-ws.md) — CSP connect-src must include wss://${req.headers.host} dynamically for deployed app WebSocket to work.
+- [Supabase storage snake_case](supabase-storage-snake-case.md) — all create* methods must explicitly map camelCase Drizzle fields to snake_case columns before Supabase REST insert.
+- [Admin role guard pattern](admin-role-guard.md) — every admin page needs both a useEffect redirect AND a render guard (return null) to block non-admins.
+- [Pending transfers filter](pending-transfers-filter.md) — admin endpoint must filter pending+processing+pending_approval and enrich with real user data via storage.getUser().

@@ -139,7 +139,15 @@ export class SupabasePublicStorage implements IStorage {
   }
 
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
-    return this.getUser(parseInt(supabaseUserId));
+    try {
+      // Supabase auth IDs are UUIDs — look up the auth user to get their email,
+      // then find the matching bank_users record by email
+      const { data: authData, error } = await supabase.auth.admin.getUserById(supabaseUserId);
+      if (error || !authData?.user?.email) return undefined;
+      return this.getUserByEmail(authData.user.email);
+    } catch (error) {
+      return undefined;
+    }
   }
 
   async getAllUsers(): Promise<User[]> {
@@ -328,9 +336,17 @@ export class SupabasePublicStorage implements IStorage {
     }
   }
 
-  async getAccountTransactions(accountId: number): Promise<Transaction[]> {
+  async getAccountTransactions(accountId: number, limit?: number): Promise<Transaction[]> {
     try {
-      const { data, error } = await supabase.from('transactions').select('*').or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`).order('created_at', { ascending: false });
+      let query = supabase
+        .from('transactions')
+        .select('*')
+        .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
+        .order('created_at', { ascending: false });
+      if (limit && limit > 0) {
+        query = query.limit(limit);
+      }
+      const { data, error } = await query;
       if (error) return [];
       return (data || []);
     } catch (error) {
@@ -419,7 +435,14 @@ export class SupabasePublicStorage implements IStorage {
 
   async createAdminAction(data: InsertAdminAction): Promise<AdminAction> {
     try {
-      const { data: action, error } = await supabase.from('admin_actions').insert(data as any).select().single();
+      const row = {
+        admin_id: (data as any).adminId ?? (data as any).admin_id,
+        action: data.action,
+        target_id: (data as any).targetId ?? (data as any).target_id,
+        target_type: (data as any).targetType ?? (data as any).target_type,
+        details: data.details,
+      };
+      const { data: action, error } = await supabase.from('admin_actions').insert(row).select().single();
       if (error || !action) throw error;
       return action;
     } catch (error) {
@@ -441,7 +464,15 @@ export class SupabasePublicStorage implements IStorage {
 
   async createSupportTicket(data: InsertSupportTicket): Promise<SupportTicket> {
     try {
-      const { data: ticket, error } = await supabase.from('support_tickets').insert(data as any).select().single();
+      const row: Record<string, any> = {
+        user_id: (data as any).userId ?? (data as any).user_id,
+        subject: data.subject,
+        description: data.description,
+        status: data.status || 'open',
+        priority: data.priority || 'medium',
+      };
+      if ((data as any).resolvedAt !== undefined) row.resolved_at = (data as any).resolvedAt;
+      const { data: ticket, error } = await supabase.from('support_tickets').insert(row).select().single();
       if (error || !ticket) throw error;
       return ticket;
     } catch (error) {
@@ -507,7 +538,15 @@ export class SupabasePublicStorage implements IStorage {
 
   async createCard(data: InsertCard): Promise<Card> {
     try {
-      const { data: card, error } = await supabase.from('cards').insert(data as any).select().single();
+      const row: Record<string, any> = {
+        account_id: (data as any).accountId ?? (data as any).account_id,
+        card_number: (data as any).cardNumber ?? (data as any).card_number,
+        card_type: (data as any).cardType ?? (data as any).card_type,
+        status: data.status || 'active',
+      };
+      if ((data as any).expiryMonth !== undefined) row.expiry_month = (data as any).expiryMonth;
+      if ((data as any).expiryYear !== undefined) row.expiry_year = (data as any).expiryYear;
+      const { data: card, error } = await supabase.from('cards').insert(row).select().single();
       if (error || !card) throw error;
       return card;
     } catch (error) {
@@ -549,7 +588,14 @@ export class SupabasePublicStorage implements IStorage {
 
   async createInvestment(data: InsertInvestment): Promise<Investment> {
     try {
-      const { data: investment, error } = await supabase.from('investments').insert(data as any).select().single();
+      const row = {
+        user_id: (data as any).userId ?? (data as any).user_id,
+        type: data.type,
+        amount: String(data.amount),
+        rate: data.rate !== undefined ? String(data.rate) : undefined,
+        status: data.status || 'active',
+      };
+      const { data: investment, error } = await supabase.from('investments').insert(row).select().single();
       if (error || !investment) throw error;
       return investment;
     } catch (error) {
@@ -579,7 +625,14 @@ export class SupabasePublicStorage implements IStorage {
 
   async getMessages(conversationId?: string): Promise<Message[]> {
     try {
-      const { data, error } = await supabase.from('messages').select('*');
+      let query = supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: true });
+      if (conversationId) {
+        query = query.eq('session_id', conversationId);
+      }
+      const { data, error } = await query;
       if (error) return [];
       return (data || []);
     } catch (error) {
@@ -589,7 +642,12 @@ export class SupabasePublicStorage implements IStorage {
 
   async getUserMessages(userId: number): Promise<Message[]> {
     try {
-      const { data, error } = await supabase.from('messages').select('*').eq('sender_id', userId);
+      // Return messages where user is EITHER sender OR recipient (full conversation)
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+        .order('created_at', { ascending: true });
       if (error) return [];
       return (data || []);
     } catch (error) {
@@ -599,7 +657,17 @@ export class SupabasePublicStorage implements IStorage {
 
   async createMessage(data: InsertMessage): Promise<Message> {
     try {
-      const { data: message, error } = await supabase.from('messages').insert(data as any).select().single();
+      // Explicitly map camelCase Drizzle fields to snake_case Supabase REST column names
+      const row = {
+        sender_id: data.senderId,
+        sender_role: data.senderRole || 'customer',
+        recipient_id: data.recipientId,
+        recipient_role: (data as any).recipientRole || 'admin',
+        content: data.content,
+        is_read: data.isRead ?? false,
+        session_id: data.sessionId,
+      };
+      const { data: message, error } = await supabase.from('messages').insert(row).select().single();
       if (error || !message) throw error;
       return message;
     } catch (error) {
@@ -639,7 +707,14 @@ export class SupabasePublicStorage implements IStorage {
 
   async createAlert(data: InsertAlert): Promise<Alert> {
     try {
-      const { data: alert, error } = await supabase.from('alerts').insert(data as any).select().single();
+      const row = {
+        user_id: (data as any).userId ?? (data as any).user_id,
+        title: data.title,
+        message: data.message,
+        type: data.type,
+        is_read: (data as any).isRead ?? (data as any).is_read ?? false,
+      };
+      const { data: alert, error } = await supabase.from('alerts').insert(row).select().single();
       if (error || !alert) throw error;
       return alert;
     } catch (error) {

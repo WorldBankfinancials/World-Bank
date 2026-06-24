@@ -2005,19 +2005,36 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/pending-transfers', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const allTransfers = await storage.getAllTransactions();
-      const transfers = allTransfers.filter((t: Transaction) => t.status === 'pending');
+      const transfers = allTransfers.filter((t: Transaction) => t.status === 'pending' || t.status === 'processing' || t.status === 'pending_approval');
       
-      // Format for admin dashboard
-      const formattedTransfers = transfers.map((t: Transaction) => ({
-        id: t.id,
-        amount: t.amount,
-        currency: t.currency || 'USD',
-        recipientName: t.recipientName || 'Unknown',
-        recipientBank: t.recipientBank || 'Unknown',
-        customerName: t.fromAccountId ? `Account ${t.fromAccountId}` : 'Unknown',
-        customerEmail: 'customer@worldbank.com', // Would need to join with users table
-        createdAt: t.createdAt,
-        status: t.status
+      // Enrich with real customer info from bank_users
+      const formattedTransfers = await Promise.all(transfers.map(async (t: Transaction) => {
+        let customerName = 'Unknown';
+        let customerEmail = '';
+        if (t.fromUserId) {
+          const customer = await storage.getUser(t.fromUserId);
+          if (customer) {
+            customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || 'Unknown';
+            customerEmail = customer.email || '';
+          }
+        }
+        return {
+          id: t.id,
+          amount: t.amount,
+          currency: t.currency || 'USD',
+          recipientName: t.recipientName || 'Unknown',
+          recipientBank: t.bankName || t.recipientBank || 'Unknown',
+          recipientAccount: t.recipientAccount || '',
+          recipientCountry: t.recipientCountry || '',
+          swiftCode: t.swiftCode || '',
+          customerName,
+          customerEmail,
+          fromUserId: t.fromUserId,
+          description: t.description || '',
+          createdAt: t.createdAt,
+          status: t.status,
+          type: t.type
+        };
       }));
 
       return res.json(formattedTransfers);

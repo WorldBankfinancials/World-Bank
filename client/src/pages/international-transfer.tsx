@@ -201,11 +201,13 @@ export default function InternationalTransfer() {
           console.error('Failed to refresh balance:', e);
         }
         
+        let pollFailures = 0;
         const interval = setInterval(async () => {
           try {
             const { authenticatedFetch } = await import('@/lib/queryClient');
             const statusResponse = await authenticatedFetch(`/api/transfers/${txnId}/status`);
             if (statusResponse.ok) {
+              pollFailures = 0;
               const statusData = await statusResponse.json();
               if (statusData.status === 'approved' || statusData.status === 'completed') {
                 setTransferStatus('success');
@@ -214,8 +216,15 @@ export default function InternationalTransfer() {
                 setTransferStatus('failed');
                 clearInterval(interval);
               }
+            } else {
+              if (++pollFailures >= 5) {
+                clearInterval(interval);
+              }
             }
           } catch (error) {
+            if (++pollFailures >= 5) {
+              clearInterval(interval);
+            }
           }
         }, 3000);
         

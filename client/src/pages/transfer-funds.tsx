@@ -158,11 +158,13 @@ export default function TransferFunds() {
         queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         
         // Poll for transfer status updates
+        let pollFailures = 0;
         const interval = setInterval(async () => {
           try {
             const { authenticatedFetch } = await import('@/lib/queryClient');
             const statusResponse = await authenticatedFetch(`/api/transfers/${txnId}/status`);
             if (statusResponse.ok) {
+              pollFailures = 0;
               const statusData = await statusResponse.json();
               if (statusData.status === 'approved' || statusData.status === 'completed') {
                 setTransferStatus('success');
@@ -171,9 +173,19 @@ export default function TransferFunds() {
                 setTransferStatus('failed');
                 clearInterval(interval);
               }
+            } else {
+              pollFailures++;
+              if (pollFailures >= 5) {
+                clearInterval(interval);
+                toast({ title: 'Status Update Error', description: 'Unable to get transfer status. Please check your transaction history.', variant: 'destructive' });
+              }
             }
           } catch (error) {
-            // Silent error - continue polling
+            pollFailures++;
+            if (pollFailures >= 5) {
+              clearInterval(interval);
+              toast({ title: 'Status Update Error', description: 'Unable to get transfer status. Please check your transaction history.', variant: 'destructive' });
+            }
           }
         }, 3000);
         
