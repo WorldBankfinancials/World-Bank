@@ -28,16 +28,19 @@ export default function SupportTicket() {
     setLoading(true);
 
     try {
-      // Create support ticket in Supabase
-      const ticketData = {
-        user_id: user?.id,
-        subject: formData.subject,
-        category: formData.category,
-        priority: formData.priority,
-        description: formData.description,
-        status: 'open',
-        created_at: new Date().toISOString()
-      };
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/support-tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: formData.subject,
+          category: formData.category,
+          priority: formData.priority,
+          description: formData.description,
+          status: 'open'
+        })
+      });
+      if (!response.ok) throw new Error('Failed to submit ticket');
 
       toast({
         title: 'Success',

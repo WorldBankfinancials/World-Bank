@@ -78,6 +78,50 @@ const mapUser = (user: Record<string, any>): User => {
   };
 };
 
+const mapTransaction = (row: Record<string, any>): Transaction => ({
+  id: row.id,
+  fromAccountId: row.from_account_id ?? null,
+  toAccountId: row.to_account_id ?? null,
+  fromUserId: row.from_user_id ?? null,
+  toUserId: row.to_user_id ?? null,
+  type: row.type || 'transfer',
+  transactionType: row.transaction_type ?? null,
+  amount: String(row.amount ?? '0'),
+  currency: row.currency || 'USD',
+  description: row.description ?? null,
+  status: row.status || 'pending',
+  referenceNumber: row.reference_number ?? null,
+  recipientName: row.recipient_name ?? null,
+  recipientAccount: row.recipient_account ?? null,
+  recipientBank: row.recipient_bank ?? null,
+  adminNotes: row.admin_notes ?? null,
+  approvedBy: row.approved_by ?? null,
+  approvedAt: row.approved_at ?? null,
+  createdAt: row.created_at ?? null,
+} as Transaction);
+
+const mapMessage = (row: Record<string, any>): Message => ({
+  id: row.id,
+  senderId: row.sender_id ?? null,
+  senderRole: row.sender_role || 'customer',
+  recipientId: row.recipient_id ?? null,
+  recipientRole: row.recipient_role ?? null,
+  content: row.content || '',
+  isRead: row.is_read ?? false,
+  sessionId: row.session_id ?? null,
+  createdAt: row.created_at ?? null,
+} as Message);
+
+const mapAdminAction = (row: Record<string, any>): AdminAction => ({
+  id: row.id,
+  adminId: row.admin_id ?? null,
+  action: row.action || '',
+  targetId: row.target_id ?? null,
+  targetType: row.target_type ?? null,
+  details: row.details ?? null,
+  createdAt: row.created_at ?? null,
+} as AdminAction);
+
 // Add retry logic with exponential backoff for network failures
 async function withRetry<T>(fn: () => Promise<T>, maxAttempts: number = 3): Promise<T> {
   let lastError: any;
@@ -416,7 +460,7 @@ export class SupabasePublicStorage implements IStorage {
         console.error('getPendingTransactions error:', error);
         return [];
       }
-      return (data || []);
+      return (data || []).map(mapTransaction);
     } catch (error) {
       console.error('getPendingTransactions exception:', error);
       return [];
@@ -427,7 +471,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('transactions').select('*');
       if (error) return [];
-      return (data || []);
+      return (data || []).map(mapTransaction);
     } catch (error) {
       return [];
     }
@@ -456,7 +500,7 @@ export class SupabasePublicStorage implements IStorage {
       if (adminId) query = query.eq('admin_id', adminId);
       const { data, error } = await query;
       if (error) return [];
-      return (data || []);
+      return (data || []).map(mapAdminAction);
     } catch (error) {
       return [];
     }
@@ -634,7 +678,7 @@ export class SupabasePublicStorage implements IStorage {
       }
       const { data, error } = await query;
       if (error) return [];
-      return (data || []);
+      return (data || []).map(mapMessage);
     } catch (error) {
       return [];
     }
@@ -642,14 +686,13 @@ export class SupabasePublicStorage implements IStorage {
 
   async getUserMessages(userId: number): Promise<Message[]> {
     try {
-      // Return messages where user is EITHER sender OR recipient (full conversation)
       const { data, error } = await supabase
         .from('messages')
         .select('*')
         .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
         .order('created_at', { ascending: true });
       if (error) return [];
-      return (data || []);
+      return (data || []).map(mapMessage);
     } catch (error) {
       return [];
     }

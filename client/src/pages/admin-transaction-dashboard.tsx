@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { DollarSign, RefreshCw, Search } from 'lucide-react';
 
 interface Transaction {
@@ -21,6 +21,7 @@ interface Transaction {
 
 export default function AdminTransactionDashboard() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   
   const { data: transactions = [] } = useQuery<Transaction[]>({
@@ -34,9 +35,7 @@ export default function AdminTransactionDashboard() {
 
   const handleRefresh = async () => {
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/admin/transactions');
-      if (!response.ok) throw new Error('Failed to fetch');
+      await queryClient.invalidateQueries({ queryKey: ['/api/admin/transactions'] });
     } catch (error) {
       toast({
         title: "Error",

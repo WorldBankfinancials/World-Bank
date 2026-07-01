@@ -112,6 +112,7 @@ export default function SimpleAdmin() {
   const [password, setPassword] = useState('');
   const [selectedTab, setSelectedTab] = useState("transfers");
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
+  const [supportTickets, setSupportTickets] = useState<any[]>([]);
   const [editingCustomer, setEditingCustomer] = useState<CustomerData | null>(null);
 
   // Real-time data from API
@@ -457,51 +458,44 @@ export default function SimpleAdmin() {
   };
 
   const handleEditCustomer = async (customer: Customer) => {
-    // Fetch complete user data from API to populate edit form
     try {
-      const token = getStorageItem('jwt_token');
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await authenticatedFetch(`/api/admin/customers/${customer.id}`);
       if (response.ok) {
-        const userData = await response.json();
+        const customerData = await response.json();
         setEditingCustomer(customer);
         setEditForm({
-          status: 'active',
-          fullName: userData.fullName || customer.fullName,
-          email: userData.email || customer.email,
-          phone: userData.phone || '+86 138 0013 8000',
-          profession: userData.profession || 'Marine Engineer',
-          address: userData.address || 'Beijing Shijingshan',
-          city: userData.city || 'Beijing',
-          country: userData.country || 'China',
-          postalCode: userData.postalCode || '100043',
-          dateOfBirth: userData.dateOfBirth || '1963-10-17',
-          nationality: userData.nationality || 'Chinese',
-          annualIncome: userData.annualIncome || '$85,000'
+          status: customerData.isActive ? 'active' : 'inactive',
+          fullName: customerData.fullName || customerData.firstName ? `${customerData.firstName} ${customerData.lastName}`.trim() : customer.fullName,
+          email: customerData.email || customer.email,
+          phone: customerData.phone || '',
+          profession: customerData.profession || '',
+          address: customerData.address || '',
+          city: customerData.city || '',
+          country: customerData.country || '',
+          postalCode: customerData.postalCode || '',
+          dateOfBirth: customerData.dateOfBirth || '',
+          nationality: customerData.nationality || '',
+          annualIncome: customerData.annualIncome || ''
         });
       } else {
-        throw new Error('Failed to fetch user data');
+        throw new Error('Not found');
       }
     } catch (error) {
-      // Use fallback data based on customer profile settings
       setEditingCustomer(customer);
       setEditForm({
         status: 'active',
-        fullName: customer.fullName || 'Customer',
+        fullName: customer.fullName || '',
         email: customer.email || '',
-        phone: '+86 138 0013 8000',
-        profession: 'Marine Engineer',
-        address: 'Beijing Shijingshan',
-        city: 'Beijing',
-        country: 'China',
-        postalCode: '100043',
-        dateOfBirth: '1963-10-17',
-        nationality: 'Chinese',
-        annualIncome: '$85,000'
+        phone: '',
+        profession: '',
+        address: '',
+        city: '',
+        country: '',
+        postalCode: '',
+        dateOfBirth: '',
+        nationality: '',
+        annualIncome: ''
       });
     }
   };
