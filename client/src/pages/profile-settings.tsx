@@ -218,9 +218,14 @@ export default function ProfileSettings() {
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
                   <p className="font-medium text-gray-900">Transfer PIN Settings</p>
-                  <p className="text-sm text-gray-500">Contact customer support to request PIN changes</p>
+                  <p className="text-sm text-gray-500">Change your 4-digit transfer PIN</p>
                 </div>
-                <Badge className="bg-gray-100 text-gray-600">Admin Only</Badge>
+                <button
+                  onClick={() => window.location.href = '/pin-settings'}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Change PIN
+                </button>
               </div>
 
               <div className="pt-4 border-t">

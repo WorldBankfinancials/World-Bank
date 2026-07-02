@@ -121,15 +121,15 @@ export default function Investment() {
                         <TrendingUp className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{account.account_type?.charAt(0).toUpperCase() + account.account_type?.slice(1)} Account</h3>
-                        <p className="text-sm text-gray-600">{account.account_number}</p>
+                        <h3 className="font-semibold text-gray-900">{(account.accountType || (account as any).account_type || 'Investment')?.charAt(0).toUpperCase() + (account.accountType || (account as any).account_type || 'Investment')?.slice(1)} Account</h3>
+                        <p className="text-sm text-gray-600">{account.accountNumber || (account as any).account_number || ''}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-xl font-bold text-gray-900">${account.balance?.toLocaleString()}</div>
                       <div className="text-sm text-green-600 flex items-center">
                         <ArrowUpRight className="w-3 h-3 mr-1" />
-                        +{account.interest_rate}%
+                        Active
                       </div>
                     </div>
                   </div>

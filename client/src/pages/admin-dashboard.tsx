@@ -110,12 +110,16 @@ export default function AdminDashboard() {
   const uploadProfilePicMutation = useMutation({
     mutationFn: async ({ userId, imageFile }: { userId: number | string; imageFile: File }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const formData = new FormData();
-      formData.append('profilePic', imageFile);
-      
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
+      });
       const response = await authenticatedFetch(`/api/admin/customers/${userId}/profile-picture`, {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profilePhoto: base64 }),
       });
       
       if (!response.ok) {

@@ -610,6 +610,21 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   // SECURITY: Admin endpoints - PROTECTED with role-based access control
 
+  // GET /api/admin/accounts - Get all accounts in the system (admin)
+  app.get('/api/admin/accounts', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const allAccounts: any[] = [];
+      for (const user of allUsers) {
+        const userAccounts = await storage.getUserAccounts(user.id);
+        userAccounts.forEach(acc => allAccounts.push({ ...acc, ownerEmail: user.email, ownerName: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() }));
+      }
+      return res.json(allAccounts);
+    } catch (error: any) {
+      return res.status(500).json({ error: 'Failed to get all accounts' });
+    }
+  });
+
   // POST /api/admin/accounts - Create a new account for a customer
   app.post('/api/admin/accounts', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -2257,8 +2272,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const ticket = await storage.getSupportTicket?.(id);
       if (ticket && ticket.userId && responseText) {
         try {
+          const adminUser = await storage.getUserByEmail(req.user!.email);
           await storage.createMessage({
-            senderId: 0,
+            senderId: adminUser?.id ?? 1,
             recipientId: ticket.userId,
             senderRole: 'admin',
             content: `[Support Reply] ${responseText}`,

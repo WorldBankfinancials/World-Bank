@@ -1,6 +1,3 @@
-- [Supabase snake_case mapping](supabase-storage-snake-case.md) — all DB reads/writes need explicit camelCase↔snake_case mapping; never pass raw Drizzle objects to Supabase
-- [Admin role guard](admin-role-guard.md) — admin pages need both ProtectedRoute (login check) AND in-page role check; App.tsx routes must be wrapped
-- [Supabase mappers](supabase-mappers.md) — mapUser, mapTransaction, mapMessage, mapAdminAction, mapCard, mapInvestment all exist in supabase-public-storage.ts; must use them in every get* method
-- [React render side effects](react-render-side-effects.md) — never call toast/navigate during render; always wrap in useEffect
-- [Realtime cleanup](realtime-cleanup.md) — always return channel.unsubscribe() from useEffect cleanup; use ref to prevent double-subscribe
-- [Registration field mapping](registration-field-mapping.md) — backend registrationSchema requires firstName+lastName separately; PIN must be exactly 4 digits; register-multi-step sends to /api/auth/register-complete
+- [Admin API field naming](admin-api-naming.md) — admin photo upload endpoint expects JSON `profilePhoto` not FormData; transaction creator expects `accountId` not `fromAccountId`
+- [Admin endpoints inventory](admin-endpoints.md) — key missing/wrong endpoints found and fixed; always check before adding new routes
+- [Snake vs camelCase](snake-camel.md) — mapTransaction/mapAccount return camelCase; any display layer using snake_case fields will show blank

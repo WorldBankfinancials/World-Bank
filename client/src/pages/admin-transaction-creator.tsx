@@ -72,7 +72,7 @@ export default function AdminTransactionCreator() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fromAccountId: accountId,
+          accountId,
           amount: parsedAmount,
           description,
           type: transactionType
@@ -81,6 +81,7 @@ export default function AdminTransactionCreator() {
 
       if (!response.ok) throw new Error('Failed to create transaction');
 
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/transactions'] });
       toast({
         title: "Success",
         description: `Transaction created successfully`,

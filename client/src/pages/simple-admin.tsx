@@ -460,7 +460,7 @@ export default function SimpleAdmin() {
   const handleEditCustomer = async (customer: Customer) => {
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch(`/api/admin/customers/${customer.id}`);
+      const response = await authenticatedFetch(`/api/users/${customer.id}`);
       if (response.ok) {
         const customerData = await response.json();
         setEditingCustomer(customer);
@@ -657,7 +657,7 @@ export default function SimpleAdmin() {
               'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-              avatarUrl: base64Image
+              profilePhoto: base64Image
             })
           });
 

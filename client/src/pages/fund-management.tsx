@@ -64,6 +64,7 @@ export default function FundManagement() {
 
       if (!response.ok) throw new Error('Failed to adjust balance');
 
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/customers'] });
       toast({
         title: "Success",
         description: `Balance ${type === 'add' ? 'added' : 'subtracted'} successfully`,

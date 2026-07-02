@@ -9,6 +9,22 @@ export default function TransferSuccess() {
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
 
+  const state = (window.history.state?.state || window.history.state || {}) as {
+    amount?: number | string;
+    currency?: string;
+    recipientName?: string;
+    recipientBank?: string;
+    recipientAccount?: string;
+    referenceNumber?: string;
+    fee?: number | string;
+    exchangeRate?: string;
+    receivedAmount?: number | string;
+    receivedCurrency?: string;
+  };
+
+  const referenceId = state.referenceNumber || `WB${Date.now().toString().slice(-8)}`;
+  const hasDetails = !!(state.amount || state.recipientName);
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md text-center">
@@ -33,24 +49,40 @@ export default function TransferSuccess() {
               <div className="space-y-2 text-sm text-left">
                 <div className="flex justify-between">
                   <span>{t('reference_id')}</span>
-                  <span className="font-mono">WB{Date.now().toString().slice(-8)}</span>
+                  <span className="font-mono">{referenceId}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>{t('amount_sent')}</span>
-                  <span className="font-medium">$1,000.00 USD</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t('amount_received')}</span>
-                  <span className="font-medium">¥7,230.00 CNY</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t('exchange_rate')}</span>
-                  <span>1 USD = 7.23 CNY</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t('transfer_fee')}</span>
-                  <span>$8.00</span>
-                </div>
+                {hasDetails && (
+                  <>
+                    {state.amount && (
+                      <div className="flex justify-between">
+                        <span>{t('amount_sent')}</span>
+                        <span className="font-medium">
+                          {parseFloat(String(state.amount)).toFixed(2)} {state.currency || 'USD'}
+                        </span>
+                      </div>
+                    )}
+                    {state.receivedAmount && (
+                      <div className="flex justify-between">
+                        <span>{t('amount_received')}</span>
+                        <span className="font-medium">
+                          {parseFloat(String(state.receivedAmount)).toFixed(2)} {state.receivedCurrency || state.currency || 'USD'}
+                        </span>
+                      </div>
+                    )}
+                    {state.exchangeRate && (
+                      <div className="flex justify-between">
+                        <span>{t('exchange_rate')}</span>
+                        <span>{state.exchangeRate}</span>
+                      </div>
+                    )}
+                    {state.fee !== undefined && (
+                      <div className="flex justify-between">
+                        <span>{t('transfer_fee')}</span>
+                        <span>${parseFloat(String(state.fee)).toFixed(2)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
                 <div className="flex justify-between">
                   <span>{t('completed_timestamp')}</span>
                   <span>{new Date().toLocaleString()}</span>
@@ -58,14 +90,16 @@ export default function TransferSuccess() {
               </div>
             </div>
 
-            <div className="border-t pt-4">
-              <h4 className="font-medium mb-2">Recipient Details</h4>
-              <div className="text-sm text-left text-gray-600">
-                <p>Zhang Wei</p>
-                <p>Bank of China</p>
-                <p>Account: ****8901</p>
+            {(state.recipientName || state.recipientBank || state.recipientAccount) && (
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-2">Recipient Details</h4>
+                <div className="text-sm text-left text-gray-600">
+                  {state.recipientName && <p>{state.recipientName}</p>}
+                  {state.recipientBank && <p>{state.recipientBank}</p>}
+                  {state.recipientAccount && <p>Account: {state.recipientAccount}</p>}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="space-y-3">

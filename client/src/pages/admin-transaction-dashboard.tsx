@@ -8,15 +8,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { DollarSign, RefreshCw, Search } from 'lucide-react';
 
 interface Transaction {
-  id: string;
-  amount: number;
+  id: string | number;
+  amount: number | string;
   description: string;
-  type: 'credit' | 'debit';
-  category: string;
-  status: 'completed' | 'pending' | 'failed';
-  created_at: string;
-  customer_name: string;
-  account_number: string;
+  type: string;
+  category?: string;
+  status: string;
+  createdAt?: string | null;
+  created_at?: string | null;
+  customerName?: string;
+  customer_name?: string;
+  fromAccountId?: number | null;
+  referenceNumber?: string | null;
 }
 
 export default function AdminTransactionDashboard() {
@@ -109,11 +112,11 @@ export default function AdminTransactionDashboard() {
                   ) : (
                     (transactions as Transaction[]).map((tx: Transaction) => (
                       <tr key={tx.id} className="border-b hover:bg-gray-50">
-                        <td className="p-3">{tx.customer_name}</td>
-                        <td className="p-3 font-medium">${tx.amount}</td>
+                        <td className="p-3">{tx.customerName || tx.customer_name || tx.referenceNumber || `#${tx.id}`}</td>
+                        <td className="p-3 font-medium">${parseFloat(String(tx.amount)).toFixed(2)}</td>
                         <td className="p-3"><Badge variant="outline">{tx.type}</Badge></td>
                         <td className="p-3"><Badge className={getStatusColor(tx.status)}>{tx.status}</Badge></td>
-                        <td className="p-3 text-sm text-gray-600">{new Date(tx.created_at).toLocaleDateString()}</td>
+                        <td className="p-3 text-sm text-gray-600">{tx.createdAt || tx.created_at ? new Date(tx.createdAt || tx.created_at || '').toLocaleDateString() : '—'}</td>
                       </tr>
                     ))
                   )}
