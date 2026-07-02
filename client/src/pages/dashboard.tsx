@@ -672,12 +672,12 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="max-h-96 overflow-y-auto">
               <div className="space-y-3">
-                {(notifications.length > 0 ? notifications : [
-                  { title: "Account Security", message: "New login detected on your account - November 30, 2:15 PM from Replit", type: "warning" },
-                  { title: "Transaction Completed", message: "Transfer of $5,000 to John Smith completed successfully", type: "success" },
-                  { title: "Low Balance Alert", message: "Your checking account balance is below $1,000", type: "warning" },
-                  { title: "Payment Received", message: "You received $2,500 from ABC Corporation", type: "success" }
-                ]).map((notif, idx) => (
+                {notifications.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="text-sm">No notifications at this time.</p>
+                  </div>
+                ) : null}
+                {notifications.map((notif, idx) => (
                   <div
                     key={`notif-${idx}`}
                     className={`p-4 rounded-lg border ${

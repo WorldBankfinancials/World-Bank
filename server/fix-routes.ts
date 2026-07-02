@@ -2515,7 +2515,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             balance: '0',
             isActive: true,
             isVerified: true,
-            transferPin: supabaseUser.user_metadata?.transfer_pin || '0192',
+            transferPin: supabaseUser.user_metadata?.transfer_pin || '',
             role: supabaseUser.app_metadata?.role || 'customer'
           });
           

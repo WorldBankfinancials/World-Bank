@@ -285,12 +285,12 @@ export async function createTicketFromChat(req: Request, res: Response) {
       .from('support_tickets')
       .insert([
         {
-          userId,
+          user_id: userId,
           subject,
           description,
           priority: priority || 'normal',
           status: 'open',
-          createdAt: new Date()
+          created_at: new Date()
         }
       ])
       .select()

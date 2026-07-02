@@ -122,6 +122,29 @@ const mapAdminAction = (row: Record<string, any>): AdminAction => ({
   createdAt: row.created_at ?? null,
 } as AdminAction);
 
+const mapCard = (row: Record<string, any>): Card => ({
+  id: row.id,
+  accountId: row.account_id ?? 0,
+  cardNumber: row.card_number || '',
+  cardType: row.card_type || 'debit',
+  status: row.status || 'active',
+  expiryMonth: row.expiry_month ?? null,
+  expiryYear: row.expiry_year ?? null,
+  createdAt: row.created_at ?? null,
+  updatedAt: row.updated_at ?? null,
+});
+
+const mapInvestment = (row: Record<string, any>): Investment => ({
+  id: row.id,
+  userId: row.user_id ?? 0,
+  type: row.type || '',
+  amount: String(row.amount ?? '0'),
+  rate: row.rate !== null && row.rate !== undefined ? String(row.rate) : null,
+  status: row.status || 'active',
+  createdAt: row.created_at ?? null,
+  updatedAt: row.updated_at ?? null,
+});
+
 // Add retry logic with exponential backoff for network failures
 async function withRetry<T>(fn: () => Promise<T>, maxAttempts: number = 3): Promise<T> {
   let lastError: any;
@@ -214,13 +237,34 @@ export class SupabasePublicStorage implements IStorage {
   async createUser(data: InsertUser): Promise<User> {
     try {
       const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
+      const row: Record<string, any> = {
+        full_name: fullName,
+        email: data.email,
+        balance: data.balance || '0',
+      };
+      if (data.firstName !== undefined) row.first_name = data.firstName;
+      if (data.lastName !== undefined) row.last_name = data.lastName;
+      if ((data as any).username !== undefined) row.username = (data as any).username;
+      if (data.phone !== undefined) row.phone = data.phone;
+      if (data.address !== undefined) row.address = data.address;
+      if (data.city !== undefined) row.city = data.city;
+      if (data.state !== undefined) row.state = data.state;
+      if (data.country !== undefined) row.country = data.country;
+      if (data.postalCode !== undefined) row.postal_code = data.postalCode;
+      if (data.profession !== undefined) row.profession = data.profession;
+      if (data.dateOfBirth !== undefined) row.date_of_birth = data.dateOfBirth;
+      if (data.idType !== undefined) row.id_type = data.idType;
+      if (data.idNumber !== undefined) row.id_number = data.idNumber;
+      if (data.transferPin !== undefined) row.transfer_pin = data.transferPin;
+      if (data.role !== undefined) row.role = data.role;
+      if ((data as any).isVerified !== undefined) row.is_verified = (data as any).isVerified;
+      if ((data as any).isActive !== undefined) row.is_active = (data as any).isActive;
+      if ((data as any).accountNumber !== undefined) row.account_number = (data as any).accountNumber;
+      if ((data as any).accountId !== undefined) row.account_id = (data as any).accountId;
+      if ((data as any).annualIncome !== undefined) row.annual_income = (data as any).annualIncome;
       const { data: user, error } = await supabase
         .from('bank_users')
-        .insert({
-          full_name: fullName,
-          email: data.email,
-          balance: data.balance || '0'
-        })
+        .insert(row)
         .select('*')
         .single();
       if (error) throw error;
@@ -574,7 +618,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('cards').select('*').eq('id', id).single();
       if (error) return undefined;
-      return data;
+      return data ? mapCard(data) : undefined;
     } catch (error) {
       return undefined;
     }
@@ -604,7 +648,7 @@ export class SupabasePublicStorage implements IStorage {
       if (!accounts.length) return [];
       const { data, error } = await supabase.from('cards').select('*').in('account_id', accounts.map(a => a.id));
       if (error) return [];
-      return (data || []);
+      return (data || []).map(mapCard);
     } catch (error) {
       return [];
     }
@@ -612,9 +656,16 @@ export class SupabasePublicStorage implements IStorage {
 
   async updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined> {
     try {
-      const { data, error } = await supabase.from('cards').update(updates as any).eq('id', id).select().single();
+      const dbUpdates: Record<string, any> = {};
+      if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
+      if (updates.cardNumber !== undefined) dbUpdates.card_number = updates.cardNumber;
+      if (updates.cardType !== undefined) dbUpdates.card_type = updates.cardType;
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.expiryMonth !== undefined) dbUpdates.expiry_month = updates.expiryMonth;
+      if (updates.expiryYear !== undefined) dbUpdates.expiry_year = updates.expiryYear;
+      const { data, error } = await supabase.from('cards').update(dbUpdates).eq('id', id).select().single();
       if (error) return undefined;
-      return data;
+      return data ? mapCard(data) : undefined;
     } catch (error) {
       return undefined;
     }
@@ -624,7 +675,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('investments').select('*').eq('id', id).single();
       if (error) return undefined;
-      return data;
+      return data ? mapInvestment(data) : undefined;
     } catch (error) {
       return undefined;
     }
@@ -651,7 +702,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const { data, error } = await supabase.from('investments').select('*').eq('user_id', userId);
       if (error) return [];
-      return (data || []);
+      return (data || []).map(mapInvestment);
     } catch (error) {
       return [];
     }
@@ -659,9 +710,18 @@ export class SupabasePublicStorage implements IStorage {
 
   async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> {
     try {
-      const { data, error } = await supabase.from('investments').update(updates as any).eq('id', id).select().single();
+      const dbUpdates: Record<string, any> = {};
+      if ((updates as any).userId !== undefined) dbUpdates.user_id = (updates as any).userId;
+      if (updates.type !== undefined) dbUpdates.type = updates.type;
+      if (updates.amount !== undefined) dbUpdates.amount = String(updates.amount);
+      if (updates.rate !== undefined) dbUpdates.rate = String(updates.rate);
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if ((updates as any).symbol !== undefined) dbUpdates.symbol = (updates as any).symbol;
+      if ((updates as any).shares !== undefined) dbUpdates.shares = (updates as any).shares;
+      if ((updates as any).assetType !== undefined) dbUpdates.asset_type = (updates as any).assetType;
+      const { data, error } = await supabase.from('investments').update(dbUpdates).eq('id', id).select().single();
       if (error) return undefined;
-      return data;
+      return data ? mapInvestment(data) : undefined;
     } catch (error) {
       return undefined;
     }

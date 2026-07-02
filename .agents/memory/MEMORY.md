@@ -1,5 +1,6 @@
-- [Supabase snake_case mapping](supabase-storage-snake-case.md) — all create* and get* methods must map snake_case DB columns to camelCase TS types.
-- [Admin role guard pattern](admin-role-guard.md) — admin pages need both useEffect redirect and render guard matching admin-panel.tsx pattern.
-- [Transaction/Message/AdminAction mappers](supabase-mappers.md) — mapTransaction, mapMessage, mapAdminAction added before withRetry in supabase-public-storage.ts.
-- [React render-phase side effects](react-render-side-effects.md) — never call toast() or other side effects directly in render body; always wrap in useEffect.
-- [Realtime subscription cleanup](realtime-cleanup.md) — always return channel.unsubscribe() in useEffect cleanup; subscribe to both from_ and to_ user filters for transactions.
+- [Supabase snake_case mapping](supabase-storage-snake-case.md) — all DB reads/writes need explicit camelCase↔snake_case mapping; never pass raw Drizzle objects to Supabase
+- [Admin role guard](admin-role-guard.md) — admin pages need both ProtectedRoute (login check) AND in-page role check; App.tsx routes must be wrapped
+- [Supabase mappers](supabase-mappers.md) — mapUser, mapTransaction, mapMessage, mapAdminAction, mapCard, mapInvestment all exist in supabase-public-storage.ts; must use them in every get* method
+- [React render side effects](react-render-side-effects.md) — never call toast/navigate during render; always wrap in useEffect
+- [Realtime cleanup](realtime-cleanup.md) — always return channel.unsubscribe() from useEffect cleanup; use ref to prevent double-subscribe
+- [Registration field mapping](registration-field-mapping.md) — backend registrationSchema requires firstName+lastName separately; PIN must be exactly 4 digits; register-multi-step sends to /api/auth/register-complete

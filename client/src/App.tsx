@@ -76,12 +76,24 @@ function App() {
                 <Route path="/register" component={Register} />
                 <Route path="/register-multi" component={MultiStepRegister} />
                 <Route path="/admin-login" component={AdminLogin} />
-                <Route path="/admin-dashboard" component={AdminDashboard} />
-                <Route path="/admin-panel" component={AdminPanel} />
-                <Route path="/simple-admin" component={SimpleAdmin} />
-                <Route path="/admin-live-chat" component={AdminLiveChat} />
-                <Route path="/admin-accounts" component={AdminAccounts} />
-                <Route path="/customer-service" component={CustomerServicePortal} />
+                <Route path="/admin-dashboard">
+                  <ProtectedRoute><AdminDashboard /></ProtectedRoute>
+                </Route>
+                <Route path="/admin-panel">
+                  <ProtectedRoute><AdminPanel /></ProtectedRoute>
+                </Route>
+                <Route path="/simple-admin">
+                  <ProtectedRoute><SimpleAdmin /></ProtectedRoute>
+                </Route>
+                <Route path="/admin-live-chat">
+                  <ProtectedRoute><AdminLiveChat /></ProtectedRoute>
+                </Route>
+                <Route path="/admin-accounts">
+                  <ProtectedRoute><AdminAccounts /></ProtectedRoute>
+                </Route>
+                <Route path="/customer-service">
+                  <ProtectedRoute><CustomerServicePortal /></ProtectedRoute>
+                </Route>
 
                 <Route path="/" nest>
                   <ProtectedRoute>

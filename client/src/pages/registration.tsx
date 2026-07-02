@@ -511,15 +511,15 @@ export default function Registration() {
             </div>
 
             <div>
-              <Label>Transfer PIN (6 digits) *</Label>
+              <Label>Transfer PIN (4 digits) *</Label>
               <div className="relative">
                 <Input
                   type={showPin ? "text" : "password"}
                   value={formData.transferPin}
                   onChange={(e) => handleInputChange('transferPin', e.target.value)}
-                  placeholder="Create 6-digit PIN"
+                  placeholder="Create 4-digit PIN"
                   className="mt-1 text-center text-xl letter-spacing-wide pr-10"
-                  maxLength={6}
+                  maxLength={4}
                   required
                 />
                 <button
@@ -538,9 +538,9 @@ export default function Registration() {
                 type={showPin ? "text" : "password"}
                 value={formData.confirmTransferPin}
                 onChange={(e) => handleInputChange('confirmTransferPin', e.target.value)}
-                placeholder="Confirm 6-digit PIN"
+                placeholder="Confirm 4-digit PIN"
                 className="mt-1 text-center text-xl letter-spacing-wide"
-                maxLength={6}
+                maxLength={4}
                 required
               />
               {formData.transferPin && formData.confirmTransferPin && formData.transferPin !== formData.confirmTransferPin && (

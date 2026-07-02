@@ -105,7 +105,8 @@ export default function MultiStepRegisterPage() {
       const response = await publicPost('/api/auth/register-complete', {
           email: completeData.email,
           password: completeData.password,
-          fullName: `${completeData.firstName} ${completeData.lastName}`,
+          firstName: completeData.firstName,
+          lastName: completeData.lastName,
           phone: completeData.phone,
           dateOfBirth: completeData.dateOfBirth,
           address: completeData.address,
