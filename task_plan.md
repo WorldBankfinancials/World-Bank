@@ -1,5 +1,5 @@
 # World Bank App — Architecture Reference
-## Last Updated: 2026-07-09 | Branch: main
+## Last Updated: 2026-07-09 | Branch: main | Commit: aef0ced
 
 ## Stack
 - **Frontend**: React 18 + Vite 5 + Wouter + TanStack Query v5 + shadcn/ui + Tailwind
@@ -14,12 +14,20 @@
 - Client: `@shared/*` → `../shared/*` (vite.config.ts alias + client/tsconfig.json)
 - Server: `@shared/*` → `./shared/*` (root tsconfig.json + tsconfig.server.json)
 
-### shared/schema.ts — exports:
-- Drizzle table definitions: `userProfiles`, `bankAccounts`, `transactions`, etc.
-- Canonical TypeScript types: `User`, `Account`, `Transaction`, `SupportTicket`,
-  `Card`, `Investment`, `Message`, `Alert`, `AdminAction` (no wb_ prefix)
-- Insert types: `InsertUser`, `InsertAccount`, `InsertTransaction`, etc.
-- Constants: `USER_ROLES`, `UserRole`, `TRANSACTION_TYPES`, etc.
+### shared/schema.ts — exports (verified, no duplicates):
+- Drizzle table definitions: `userProfiles`, `authUsers`, `bankAccounts`, `transactions`,
+  `adminActions`, `supportTickets`, `cards`, `investments`, `messages`, `alerts`
+- Drizzle Row types: `UserProfileRow`, `BankAccountRow`, `TransactionRow`, etc.
+- Drizzle insert schemas: `insertUserProfileSchema`, `insertBankAccountSchema`, etc.
+- Zod validation schemas: `transferPinSchema`, `transferSchema`, `verifyPinSchema`,
+  `transferFormSchema`
+- Zod types: `TransferForm`, `TransferPinInput`, `TransferInput`, `VerifyPinInput`
+- Canonical TypeScript interfaces: `User`, `InsertUser`, `Account`, `InsertAccount`,
+  `Transaction`, `InsertTransaction`, `SupportTicket`, `InsertSupportTicket`,
+  `Card`, `InsertCard`, `Investment`, `InsertInvestment`, `Message`, `InsertMessage`,
+  `Alert`, `InsertAlert`, `AdminAction`, `InsertAdminAction`
+- Constants: `USER_ROLES`, `UserRole`, `TRANSACTION_TYPES`, `TransactionType`,
+  `ACCOUNT_STATUSES`, `TRANSACTION_STATUSES`
 
 ### shared/types.ts — exports:
 - `AuthUser` (req.user type in Express routes)
@@ -95,6 +103,13 @@ npm run build:all    → build + build:server
 npm run check        → type-check all
 npm run check:server → type-check server only
 npm start            → node dist/server/index.js (after build:all)
+
+## Vercel Build
+- vercel.json buildCommand: "npm run build:all"
+- outputDirectory: dist/public
+- Client compiles via vite build → dist/public/
+- Server compiles via tsc -p tsconfig.server.json → dist/server/
+- API functions in api/**/*.ts run as Vercel serverless
 
 ## TypeScript Configs
 - tsconfig.json: root, noEmit:true, @shared/* → ./shared/*
