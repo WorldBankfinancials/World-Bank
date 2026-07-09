@@ -25,8 +25,7 @@
     "yoavbls.pretty-ts-errors",
     "chrmarti.ai-snippets",
     "dsznajder.es7-react-js-snippets",
-    "burkeholland.react-snippets",
-    "bradlc.vscode-tailwindcss"
+    "burkeholland.react-snippets"
   ],
   "unwantedRecommendations": [
     "ms-vscode.sublime-keybindings",

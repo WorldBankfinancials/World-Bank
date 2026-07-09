@@ -11,96 +11,32 @@
       "id": "world-bank-financial-indexes-sync",
       "name": "World Bank Financial Indexes Nightly Sync",
       "description": "Fetches global financial statistical indexes from the free official World Bank API and streams them into Supabase database tables",
-      "schedule": {
-        "type": "cron",
-        "expression": "0 2 * * *",
-        "timezone": "UTC"
-      },
-      "retry": {
-        "maxAttempts": 3,
-        "delaySeconds": 60,
-        "backoffMultiplier": 2
-      },
+      "schedule": { "type": "cron", "expression": "0 2 * * *", "timezone": "UTC" },
+      "retry": { "maxAttempts": 3, "delaySeconds": 60, "backoffMultiplier": 2 },
       "source": {
         "api": "World Bank Open Data API",
         "baseUrl": "https://api.worldbank.org/v2",
         "format": "json",
         "endpoints": [
-          {
-            "path": "/country/all/indicator/NY.GDP.MKTP.CD",
-            "description": "GDP (current US$) for all countries",
-            "params": { "format": "json", "per_page": "1000", "date": "2020:2025" }
-          },
-          {
-            "path": "/country/all/indicator/NY.GDP.PCAP.CD",
-            "description": "GDP per capita (current US$)",
-            "params": { "format": "json", "per_page": "1000", "date": "2020:2025" }
-          },
-          {
-            "path": "/country/all/indicator/FP.CPI.TOTL.ZG",
-            "description": "Inflation, consumer prices (annual %)",
-            "params": { "format": "json", "per_page": "1000", "date": "2020:2025" }
-          },
-          {
-            "path": "/country/all/indicator/FR.INR.RINR",
-            "description": "Real interest rate (%)",
-            "params": { "format": "json", "per_page": "1000", "date": "2020:2025" }
-          },
-          {
-            "path": "/country/all/indicator/PA.NUS.FCRF",
-            "description": "Official exchange rate (LCU per US$, period average)",
-            "params": { "format": "json", "per_page": "1000", "date": "2020:2025" }
-          },
-          {
-            "path": "/country/all/indicator/BX.KLT.DINV.CD.WD",
-            "description": "Foreign direct investment, net inflows (current US$)",
-            "params": { "format": "json", "per_page": "1000", "date": "2020:2025" }
-          },
-          {
-            "path": "/country/all/indicator/DT.DOD.DECT.CD",
-            "description": "External debt stocks, total (current US$)",
-            "params": { "format": "json", "per_page": "1000", "date": "2020:2025" }
-          }
+          { "path": "/country/all/indicator/NY.GDP.MKTP.CD", "description": "GDP (current US$)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } },
+          { "path": "/country/all/indicator/NY.GDP.PCAP.CD", "description": "GDP per capita (current US$)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } },
+          { "path": "/country/all/indicator/FP.CPI.TOTL.ZG", "description": "Inflation, consumer prices (annual %)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } },
+          { "path": "/country/all/indicator/FR.INR.RINR", "description": "Real interest rate (%)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } },
+          { "path": "/country/all/indicator/PA.NUS.FCRF", "description": "Official exchange rate (LCU per US$)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } },
+          { "path": "/country/all/indicator/BX.KLT.DINV.CD.WD", "description": "Foreign direct investment, net inflows (current US$)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } },
+          { "path": "/country/all/indicator/DT.DOD.DECT.CD", "description": "External debt stocks, total (current US$)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } }
         ]
       },
       "destination": {
         "type": "supabase",
         "urlEnv": "VITE_SUPABASE_URL",
         "keyEnv": "SUPABASE_SERVICE_ROLE_KEY",
-        "targetTable": "world_bank_financial_indexes",
-        "upsertKey": "indicator_country_year",
-        "schema": {
-          "columns": {
-            "id": "uuid DEFAULT gen_random_uuid() PRIMARY KEY",
-            "indicator_code": "TEXT NOT NULL",
-            "indicator_name": "TEXT NOT NULL",
-            "country_code": "TEXT NOT NULL",
-            "country_name": "TEXT NOT NULL",
-            "year": "INTEGER NOT NULL",
-            "value": "DECIMAL(20,4)",
-            "unit": "TEXT",
-            "source": "TEXT DEFAULT 'World Bank Open Data API'",
-            "fetched_at": "TIMESTAMP WITH TIME ZONE DEFAULT NOW()"
-          },
-          "constraints": [
-            "UNIQUE(indicator_code, country_code, year)"
-          ],
-          "indexes": [
-            "idx_wbfi_indicator_code ON world_bank_financial_indexes(indicator_code)",
-            "idx_wbfi_country_code ON world_bank_financial_indexes(country_code)",
-            "idx_wbfi_year ON world_bank_financial_indexes(year)"
-          ]
-        }
+        "targetTable": "wb_system_events",
+        "upsertKey": "indicator_country_year"
       },
       "validation": {
         "provider": "qodo",
-        "checks": [
-          "schema-structure-validation",
-          "null-value-detection",
-          "data-type-conformance",
-          "primary-key-uniqueness",
-          "foreign-key-integrity"
-        ],
+        "checks": ["schema-structure-validation", "null-value-detection", "data-type-conformance", "primary-key-uniqueness", "foreign-key-integrity"],
         "failOnError": true,
         "reportFormat": "json"
       },
@@ -110,10 +46,5 @@
       }
     }
   ],
-  "environment": {
-    "nodeVersion": ">=20.0.0",
-    "runtime": "node",
-    "memoryLimit": "512MB",
-    "timeoutSeconds": 300
-  }
+  "environment": { "nodeVersion": ">=20.0.0", "runtime": "node", "memoryLimit": "512MB", "timeoutSeconds": 300 }
 }

@@ -1,9 +1,9 @@
 # PROJECT.md — World Bank Digital Banking
-## Agent Operating Rules & Constraints
+## The Digital Constitution & Agent Operating Rules
 
 ### Primary Directive
 
-This application is built and maintained exclusively by AI agents for a non-technical product manager working on an iPhone browser. The product manager cannot write, edit, or debug code. All agents must handle 100% of terminal commands, code modifications, file creation, testing, and deployment autonomously.
+This application is built and maintained exclusively by AI agents for a non-technical product manager working on an iPhone browser. The product manager cannot write, edit, or debug code. All agents must handle 100% of terminal commands, code modifications, file creation, testing, linting, formatting, circuit breakers, retry queues, and workspace modifications autonomously as a modular monolith/monorepo running on React, Node/Express, and Supabase.
 
 ### Non-Negotiable Rules
 
@@ -13,6 +13,17 @@ This application is built and maintained exclusively by AI agents for a non-tech
 4. **NEVER ask the user to debug errors** — The agent reads errors, diagnoses root causes, and fixes them.
 5. **NEVER ask the user to install packages** — The agent handles all dependency management.
 6. **NEVER ask the user to configure environment variables** — The agent reads existing .env and manages connections.
+
+### The 6 Quality Gates
+
+Every code change must pass all 6 gates before being merged:
+
+1. **Type Gate** — `npx tsc --noEmit` passes with zero errors. No `any` types. All interfaces explicitly defined.
+2. **Lint Gate** — `npm run lint` passes with zero warnings. ESLint rules enforced: no unused vars, no console.log in production, no empty catch blocks.
+3. **Format Gate** — `npx prettier --check .` passes. All files formatted with 2-space indent, 100-char rulers, trailing newline.
+4. **Build Gate** — `npm run build` succeeds. Vite production build completes without errors. Bundle size within limits.
+5. **Security Gate** — No secrets in code. RLS enabled on all database tables. Input validation on all API endpoints. JWT signature verified.
+6. **Test Gate** — New features include tests. All existing tests pass. No test coverage regression.
 
 ### User Profile
 
@@ -33,6 +44,9 @@ This application is built and maintained exclusively by AI agents for a non-tech
 | Git operations | 100% | 0% |
 | Error debugging | 100% | 0% |
 | Testing | 100% | 0% |
+| Linting & formatting | 100% | 0% |
+| Circuit breakers | 100% | 0% |
+| Retry queues | 100% | 0% |
 | Layout review | 0% | 100% |
 | Feature approval | 0% | 100% |
 | Production release | 0% | 100% |
@@ -41,7 +55,7 @@ This application is built and maintained exclusively by AI agents for a non-tech
 
 - **`main` branch**: Production-ready code only. Initial setup phase authorized direct push.
 - **`development` branch**: All future work. Vercel auto-generates preview links for iPhone review.
-- **Workflow**: `development` → user reviews preview → user approves → merge to `main` → production deploy
+- **Workflow**: `development` -> user reviews preview -> user approves -> merge to `main` -> production deploy
 
 ### Communication Standards
 

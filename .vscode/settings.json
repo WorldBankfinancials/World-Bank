@@ -38,21 +38,10 @@
   "typescript.enablePromptUseWorkspaceTsdk": true,
   "typescript.preferences.importModuleSpecifier": "relative",
   "typescript.updateImportsOnFileMove": "always",
-  "eslint.workingDirectories": [
-    {
-      "mode": "auto"
-    }
-  ],
+  "eslint.workingDirectories": [{ "mode": "auto" }],
   "prettier.configPath": ".prettierrc.json",
-  "tailwindCSS.include": [
-    "client/src/**/*.{ts,tsx,js,jsx,css}",
-    "server/**/*.ts"
-  ],
-  "tailwindCSS.files.exclude": [
-    "node_modules",
-    "dist",
-    "build"
-  ],
+  "tailwindCSS.include": ["client/src/**/*.{ts,tsx,js,jsx,css}", "server/**/*.ts"],
+  "tailwindCSS.files.exclude": ["node_modules", "dist", "build"],
   "terminal.integrated.env.osx": {
     "NODE_ENV": "development",
     "VITE_SUPABASE_URL": "${env:VITE_SUPABASE_URL}",

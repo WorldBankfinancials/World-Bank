@@ -28,42 +28,17 @@
   "codebase_indexing": {
     "enabled": true,
     "include_patterns": [
-      "client/src/**/*.ts",
-      "client/src/**/*.tsx",
-      "server/**/*.ts",
-      "shared/**/*.ts",
-      "supabase/**/*.sql"
+      "client/src/**/*.ts", "client/src/**/*.tsx",
+      "server/**/*.ts", "shared/**/*.ts",
+      "supabase/**/*.sql", "infrastructure/**/*.sql"
     ],
-    "exclude_patterns": [
-      "node_modules/**",
-      "dist/**",
-      "build/**",
-      "*.lock",
-      "package-lock.json"
-    ],
+    "exclude_patterns": ["node_modules/**", "dist/**", "build/**", "*.lock", "package-lock.json"],
     "max_file_size_kb": 512
   },
   "safety": {
     "prevent_destructive_commands": true,
-    "blocked_commands": [
-      "rm -rf",
-      "git push --force",
-      "git reset --hard",
-      "DROP TABLE",
-      "DELETE FROM",
-      "npm publish"
-    ],
-    "require_confirmation_for": [
-      "git commit",
-      "git push",
-      "npm install",
-      "npx drizzle-kit push"
-    ]
+    "blocked_commands": ["rm -rf", "git push --force", "git reset --hard", "DROP TABLE", "DELETE FROM", "npm publish"],
+    "require_confirmation_for": ["git commit", "git push", "npm install", "npx drizzle-kit push"]
   },
-  "output": {
-    "format": "terminal",
-    "color": true,
-    "verbose": false,
-    "log_file": ".gemini-cli.log"
-  }
+  "output": { "format": "terminal", "color": true, "verbose": false, "log_file": ".gemini-cli.log" }
 }

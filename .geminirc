@@ -1,46 +1,38 @@
 # Gemini CLI Environment Configuration
 # World Bank Digital Banking Application
 
-# API Provider Configuration
 GEMINI_API_PROVIDER=openrouter
 GEMINI_MODEL=google/gemini-2.0-flash-exp:free
 GEMINI_FALLBACK_MODEL=deepseek/deepseek-chat:free
 GEMINI_TERTIARY_MODEL=deepseek/deepseek-r1:free
 
-# API Keys (loaded from environment)
 GEMINI_API_KEY=${GOOGLE_GEMINI_API_KEY}
 DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
 OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
 
-# OpenRouter Bridge
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 OPENROUTER_TIMEOUT=30000
 OPENROUTER_MAX_RETRIES=3
 OPENROUTER_STREAM=true
 
-# Execution Flags
 GEMINI_SANDBOX=true
 GEMINI_AUTO_APPROVE=false
 GEMINI_PARALLEL_TOOLS=true
 GEMINI_MAX_TOKENS=16000
 GEMINI_TEMPERATURE=0.3
 
-# Codebase Context
 GEMINI_INDEX_CODEBASE=true
-GEMINI_INCLUDE_PATTERNS=client/src/**/*.ts,client/src/**/*.tsx,server/**/*.ts,shared/**/*.ts,supabase/**/*.sql
+GEMINI_INCLUDE_PATTERNS=client/src/**/*.ts,client/src/**/*.tsx,server/**/*.ts,shared/**/*.ts,supabase/**/*.sql,infrastructure/**/*.sql
 GEMINI_EXCLUDE_PATTERNS=node_modules/**,dist/**,build/**,*.lock,package-lock.json
 
-# Safety Restrictions
 GEMINI_BLOCK_DESTRUCTIVE=true
 GEMINI_BLOCKED_COMMANDS=rm -rf,git push --force,git reset --hard,DROP TABLE,DELETE FROM,npm publish
 GEMINI_REQUIRE_CONFIRMATION=git commit,git push,npm install,npx drizzle-kit push
 
-# Terminal Output
 GEMINI_COLOR=true
 GEMINI_VERBOSE=false
 GEMINI_LOG_FILE=.gemini-cli.log
 
-# Project Context
 GEMINI_PROJECT_NAME=World Bank Digital Banking
 GEMINI_PROJECT_TYPE=fullstack-typescript
 GEMINI_DATABASE=supabase-postgresql

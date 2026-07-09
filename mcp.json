@@ -3,34 +3,41 @@
     "github": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}",
-        "GITHUB_OWNER": "WorldBankfinancials",
-        "GITHUB_REPO": "World-Bank"
-      },
+      "env": { "GITHUB_TOKEN": "${GITHUB_TOKEN}", "GITHUB_OWNER": "WorldBankfinancials", "GITHUB_REPO": "World-Bank" },
       "enabled": true,
-      "description": "GitHub MCP server for repository operations, issue management, pull requests, and code search across the World-Bank repository"
+      "description": "GitHub MCP server for repository operations, issue management, pull requests, and code search"
     },
     "supabase": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-supabase"],
-      "env": {
-        "SUPABASE_URL": "${VITE_SUPABASE_URL}",
-        "SUPABASE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}",
-        "SUPABASE_ANON_KEY": "${VITE_SUPABASE_ANON_KEY}"
-      },
+      "env": { "SUPABASE_URL": "${VITE_SUPABASE_URL}", "SUPABASE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}", "SUPABASE_ANON_KEY": "${VITE_SUPABASE_ANON_KEY}" },
       "enabled": true,
       "description": "Supabase MCP server for database context bridge, table introspection, query execution, and RLS policy management"
     },
     "filesystem": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem"],
-      "env": {
-        "ROOT_PATH": "."
-      },
+      "env": { "ROOT_PATH": "." },
       "enabled": true,
-      "description": "Filesystem MCP server for deep cross-file exploration, reading, and writing within the project directory"
+      "description": "Filesystem MCP server for deep cross-file exploration within the project directory"
     }
+  },
+  "eventBus": {
+    "adapters": {
+      "sendNotification": { "table": "wb_notifications", "event": "Notification.Created" },
+      "sendOTP": { "table": "wb_security_events", "event": "Security.OTPSent" },
+      "createChat": { "table": "wb_messages", "event": "Message.Created" },
+      "markDelivered": { "table": "wb_notifications", "event": "Notification.Delivered" },
+      "subscribeToEvents": { "channels": ["wb_transactions", "wb_notifications", "wb_security_events", "wb_system_events"] }
+    },
+    "universalEventLanguage": {
+      "vocabulary": ["User.Created", "User.Updated", "Transfer.Completed", "Transfer.Failed", "Transfer.Pending", "Security.AlertRaised", "Security.LoginSuccess", "Security.LoginFailed", "Notification.Created", "Notification.Delivered", "Message.Created", "Message.Read", "System.HealthCheck", "System.CronJob"],
+      "strictBoundaries": true
+    },
+    "wbieHubs": [
+      "identity-hub", "treasury-hub", "communications-hub", "security-hub", "operations-hub",
+      "compliance-hub", "analytics-hub", "integration-hub", "audit-hub", "notification-hub", "messaging-hub", "event-mesh"
+    ]
   },
   "globalEnv": {
     "GITHUB_TOKEN": "${GITHUB_TOKEN}",
@@ -42,9 +49,5 @@
     "DEEPSEEK_API_KEY": "${DEEPSEEK_API_KEY}",
     "TRIGGER_API_KEY": "${TRIGGER_API_KEY}"
   },
-  "defaults": {
-    "timeout": 30000,
-    "retryCount": 3,
-    "logLevel": "info"
-  }
+  "defaults": { "timeout": 30000, "retryCount": 3, "logLevel": "info" }
 }
