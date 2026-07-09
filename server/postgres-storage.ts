@@ -476,6 +476,7 @@ export class PostgresStorage implements IStorage {
       idNumber: data.id_number,
       transferPin: data.transfer_pin,
       lastLogin: data.last_login || null,
+      profilePhoto: data.profile_photo || null,
       role: data.role,
       isVerified: data.is_verified,
       isActive: data.is_active,
