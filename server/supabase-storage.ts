@@ -434,6 +434,7 @@ export class SupabaseStorage implements IStorage {
       idNumber: data.id_number || null,
       transferPin: data.transfer_pin || null,
       lastLogin: data.last_login || null,
+      profilePhoto: data.profile_photo || null,
       role: data.role || 'customer',
       isVerified: data.is_verified || false,
       isActive: data.is_active || false,
