@@ -28,6 +28,17 @@
   "exclude": [
     "client/**/*",
     "node_modules/**/*",
-    "dist/**/*"
+    "dist/**/*",
+    "server/supabase-storage.ts",
+    "server/supabase-storage-complete.ts",
+    "server/postgres-storage.ts",
+    "server/hybrid-postgres-storage.ts",
+    "server/unified-sync-storage.ts",
+    "server/objectStorage.ts",
+    "server/transfer-approval.ts",
+    "server/user-creation.ts",
+    "server/supabase-mapping.ts",
+    "server/vite.ts",
+    "vite.config.ts"
   ]
 }
