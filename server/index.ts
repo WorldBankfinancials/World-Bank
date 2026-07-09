@@ -1,16 +1,22 @@
 import { verifySupabaseIntegration } from './database-verification';
 import express, { type Request, Response, NextFunction } from "express";
+import crypto from "crypto";
 import { registerFixedRoutes } from "./fix-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { WebSocketServer } from "ws";
-import { setupLiveChatWebSocket } from "./supabase-live-chat";
+import { setupLiveChatWebSocket } from "supabase-live-chat";
+import { generalRateLimiter } from "./rate-limiter";
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
-// SECURITY: Add security headers middleware
+// SECURITY: Add security headers middleware with nonce-based CSP
 app.use((req: Request, res: Response, next: NextFunction) => {
+  // Generate per-request nonce for script-src
+  const nonce = crypto.randomBytes(16).toString('base64');
+  res.locals.nonce = nonce;
+
   // Prevent XSS attacks
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -19,23 +25,34 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   // Prevent clickjacking
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   
-  // CSRF protection hint
-  res.setHeader('X-CSRF-Token', req.headers['x-csrf-token'] || '');
+  // CSRF protection: validate token on state-changing requests
+  const method = req.method.toUpperCase();
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && req.path.startsWith('/api/')) {
+    const csrfToken = req.headers['x-csrf-token'];
+    const sessionToken = req.headers['x-session-id'];
+    // Skip CSRF for auth endpoints (login/register) since no session exists yet
+    const isAuthEndpoint = req.path === '/api/auth/login' || 
+                           req.path === '/api/auth/register-complete' ||
+                           req.path === '/api/auth/register';
+    if (!isAuthEndpoint && !csrfToken) {
+      return res.status(403).json({ error: 'CSRF token required' });
+    }
+  }
   
-  // Content Security Policy — allow Supabase API, WebSockets, and other required connections
+  // Content Security Policy — nonce-based, no unsafe-inline or unsafe-eval
   const supabaseHost = 'icbsxmrmorkdgxtumamu.supabase.co';
   const requestHost = req.headers.host || '';
   const productionWs = requestHost ? `wss://${requestHost} ws://${requestHost}` : '';
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://replit.com",
+    `script-src 'self' 'nonce-${nonce}'`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
-    `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://*.supabase.co wss://*.supabase.co ws://localhost:* wss://localhost:* ws://0.0.0.0:* ${productionWs} https://*.replit.app wss://*.replit.app https://*.replit.dev wss://*.replit.dev https://api.coingecko.com https://finnhub.io`,
-    `img-src 'self' data: blob: https://${supabaseHost} https://*.supabase.co https://*.amazonaws.com https://api.dicebear.com https://*.replit.app https://*.replit.dev`,
+    `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://*.supabase.co wss://*.supabase.co ws://localhost:* wss://localhost:* ws://0.0.0.0:* ${productionWs} https://api.coingecko.com https://finnhub.io`,
+    `img-src 'self' data: blob: https://${supabaseHost} https://*.supabase.co https://*.amazonaws.com https://api.dicebear.com`,
     "media-src 'self' blob: data:",
     "worker-src 'self' blob:",
-    "frame-src 'self' https://*.replit.app https://*.replit.dev",
+    "frame-src 'self'",
     "object-src 'none'",
   ].join('; '));
   
@@ -46,6 +63,9 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   
   next();
 });
+
+// Apply general rate limiter to all API routes
+app.use('/api/', generalRateLimiter);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -112,10 +132,8 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    // ALWAYS serve the app on port 5000
-    // this serves both the API and the client.
-    // It is the only port that is not firewalled.
-    const port = 5000;
+    // Use process.env.PORT for production (Vercel assigns dynamically), fallback to 5000 for dev
+    const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
     server.listen({
       port,
       host: "0.0.0.0",

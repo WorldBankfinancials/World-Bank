@@ -2482,7 +2482,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   const sessionCache = new Map<string, any>();
 
   // LOGIN - Supabase Auth + Auto-sync to bank_users table
-  app.post('/api/auth/login', async (req: Request, res: Response) => {
+  app.post('/api/auth/login', authRateLimiter, async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
       if (!email || !password) {
@@ -3551,4 +3551,3 @@ export async function registerLiveChatRoutes(app: Express) {
     }
   });
 }
-

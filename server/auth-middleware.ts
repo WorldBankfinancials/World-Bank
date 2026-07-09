@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { storage } from './storage-factory';
+import { createClient } from '@supabase/supabase-js';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -9,8 +10,43 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-// AUTHENTICATION MIDDLEWARE: Validates ONLY Supabase JWT tokens
-// Token format: Supabase JWT (sub = user_id, email = email)
+// Cached Supabase admin client (created once, reused)
+let supabaseAdmin: ReturnType<typeof createClient> | null = null;
+
+function getSupabaseAdmin() {
+  if (!supabaseAdmin) {
+    const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+      throw new Error('Missing Supabase environment variables');
+    }
+    supabaseAdmin = createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+  }
+  return supabaseAdmin;
+}
+
+// Verify a Supabase JWT by asking Supabase Auth to retrieve the user.
+// This validates the token signature server-side — a forged token will be rejected.
+async function verifySupabaseToken(token: string): Promise<{ userId: string; email: string } | null> {
+  try {
+    const supabase = getSupabaseAdmin();
+    // getUser(jwt) validates the JWT signature and returns the user if valid
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data?.user) {
+      return null;
+    }
+    return {
+      userId: data.user.id,
+      email: data.user.email || '',
+    };
+  } catch {
+    return null;
+  }
+}
+
+// AUTHENTICATION MIDDLEWARE: Validates Supabase JWT tokens with signature verification
 export async function requireAuth(
   req: AuthenticatedRequest,
   res: Response,
@@ -18,63 +54,34 @@ export async function requireAuth(
 ) {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Parse Supabase JWT ONLY
-    let email: string;
-    let userId: string | number;
-    
-    try {
-      // Parse JWT token - ONLY accept Supabase JWT format (3 parts: header.payload.signature)
-      const trimmedToken = token.trim();
-      const parts = trimmedToken.split('.');
-      
-      if (parts.length !== 3) {
-        throw new Error(`Invalid token format - expected 3 parts, got ${parts.length}`);
-      }
-      
-      // Decode JWT payload (second part) - add padding if needed
-      let payloadBase64 = parts[1];
-      // Add padding if needed
-      const paddingNeeded = 4 - (payloadBase64.length % 4);
-      if (paddingNeeded !== 4) {
-        payloadBase64 += '='.repeat(paddingNeeded);
-      }
-      
-      const decodedPayload = Buffer.from(payloadBase64, 'base64').toString('utf-8');
-      const payload = JSON.parse(decodedPayload);
-      
-      email = payload.email;
-      userId = payload.sub || payload.id;
-      
-      if (!email) {
-        throw new Error('Invalid token - no email in JWT');
-      }
-    } catch (parseError) {
-      return res.status(401).json({ error: 'Invalid authentication token' });
+    const token = authHeader.replace('Bearer ', '').trim();
+
+    // Step 1: Verify JWT signature via Supabase Auth
+    const verified = await verifySupabaseToken(token);
+    if (!verified) {
+      return res.status(401).json({ error: 'Invalid or expired authentication token' });
     }
 
-    // DUAL SOURCE 1: Verify account exists in Postgres database
+    const { userId, email } = verified;
+
+    if (!email) {
+      return res.status(401).json({ error: 'Invalid token - no email in JWT' });
+    }
+
+    // Step 2: Verify account exists in database
     let dbUser = await storage.getUserByEmail(email);
-    
+
     if (!dbUser) {
-      // Try to sync from Supabase Auth if not in database
+      // Sync from Supabase Auth if not in database
       try {
-        const { createClient } = await import('@supabase/supabase-js');
-        const supabase = createClient(
-          process.env.VITE_SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!,
-          { auth: { autoRefreshToken: false, persistSession: false } }
-        );
-        
-        const { data: supabaseUser } = await supabase.auth.admin.getUserById(String(userId));
+        const supabase = getSupabaseAdmin();
+        const { data: supabaseUser } = await supabase.auth.admin.getUserById(userId);
         if (supabaseUser?.user && supabaseUser.user.email === email) {
-          // User exists in Supabase Auth, create in database
           dbUser = await storage.createUser({
             username: email.split('@')[0],
             email: email,
@@ -93,38 +100,23 @@ export async function requireAuth(
           });
         }
       } catch (e) {
-        // Supabase sync failed
+        // Supabase sync failed — continue to dbUser check
       }
     }
-    
+
     if (!dbUser) {
-      return res.status(403).json({ 
-        error: 'Account not found. Please contact support.' 
+      return res.status(403).json({
+        error: 'Account not found. Please contact support.'
       });
     }
 
     if (!dbUser.isActive) {
-      return res.status(403).json({ 
-        error: 'Account not approved. Please contact support.' 
+      return res.status(403).json({
+        error: 'Account not approved. Please contact support.'
       });
     }
 
-    // DUAL SOURCE 2: Verify with Supabase Auth (optional but sync if available)
-    try {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-
-      const { data: supabaseUser } = await supabase.auth.admin.getUserById(String(userId));
-      if (supabaseUser?.user && supabaseUser.user.email === email) {
-      }
-    } catch (supabaseError) {
-    }
-
-    // Attach user to request (Postgres is primary, but both systems validated)
+    // Attach verified user to request
     req.user = {
       id: dbUser.id,
       email: dbUser.email || email,
@@ -133,19 +125,17 @@ export async function requireAuth(
 
     next();
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
     res.status(401).json({ error: 'Authentication failed' });
   }
 }
 
-// Require admin role (checks immutable app_metadata set only by server)
+// Require admin role — must be called after requireAuth
 export async function requireAdmin(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ) {
   await requireAuth(req, res, async () => {
-    // SECURITY: Only trust app_metadata.role which users cannot modify
     if (req.user?.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
     }
