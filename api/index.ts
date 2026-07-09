@@ -5,7 +5,7 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
-// Security headers
+// Security + CORS headers
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -23,44 +23,32 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      console.log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
+  res.on('finish', () => {
+    if (path.startsWith('/api')) {
+      console.log(`${req.method} ${path} ${res.statusCode} in ${Date.now() - start}ms`);
     }
   });
-
-  next();
-});
-
-// Register all API routes
-let routesRegistered = false;
-app.use(async (req: Request, res: Response, next: NextFunction) => {
-  if (!routesRegistered) {
-    try {
-      await registerFixedRoutes(app);
-      routesRegistered = true;
-    } catch (err) {
-      console.error('Failed to register routes:', err);
-    }
-  }
   next();
 });
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   const status = err.status || err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
+  const message = err.message || 'Internal Server Error';
   console.error(`[Error] ${status}: ${message}`);
   res.status(status).json({ message });
 });
 
-export default app;
+// Register all API routes eagerly at module init time.
+// Using a promise so the handler can await it before the first request is served.
+const routesReady = registerFixedRoutes(app).catch((err) => {
+  console.error('Failed to register routes:', err);
+});
+
+// Wrap the default export so Vercel awaits route registration before dispatch.
+const handler = async (req: Request, res: Response) => {
+  await routesReady;
+  app(req, res);
+};
+
+export default handler;
