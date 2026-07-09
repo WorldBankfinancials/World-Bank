@@ -78,8 +78,6 @@ export type VerifyPinInput   = z.infer<typeof verifyPinSchema>;
 
 // ============================================================
 // CORE TABLE: user_profiles
-// Maps to public.user_profiles in Supabase.
-// id = auth.uid() (set by trigger on auth.users insert)
 // ============================================================
 
 export const userProfiles = pgTable('user_profiles', {
@@ -121,11 +119,6 @@ export const userProfiles = pgTable('user_profiles', {
   passwordHash:         text('password_hash'),
 });
 
-// ============================================================
-// AUTH GATE TABLE: wb_users
-// Lightweight auth table: id = auth.uid(), role, status.
-// ============================================================
-
 export const authUsers = pgTable('wb_users', {
   id:                  uuid('id').primaryKey(),
   email:               text('email').notNull().unique(),
@@ -139,10 +132,6 @@ export const authUsers = pgTable('wb_users', {
   createdAt:           timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt:           timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
-
-// ============================================================
-// BANK ACCOUNTS: bank_accounts
-// ============================================================
 
 export const bankAccounts = pgTable('bank_accounts', {
   id:               uuid('id').primaryKey(),
@@ -163,11 +152,6 @@ export const bankAccounts = pgTable('bank_accounts', {
   createdAt:        timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt:        timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
-
-// ============================================================
-// TRANSACTIONS
-// DB column: transaction_type (NOT 'type'). reference_number is NOT NULL.
-// ============================================================
 
 export const transactions = pgTable('transactions', {
   id:               uuid('id').primaryKey(),
@@ -204,10 +188,6 @@ export const transactions = pgTable('transactions', {
   transferPurpose:  text('transfer_purpose'),
   adminNotes:       text('admin_notes'),
 });
-
-// ============================================================
-// SUPPORT TABLES
-// ============================================================
 
 export const adminActions = pgTable('admin_actions', {
   id:         uuid('id').primaryKey(),
@@ -291,7 +271,7 @@ export const alerts = pgTable('alerts', {
 });
 
 // ============================================================
-// INSERT SCHEMAS (drizzle-zod)
+// DRIZZLE-ZOD INSERT SCHEMAS
 // ============================================================
 
 export const insertUserProfileSchema   = createInsertSchema(userProfiles);
@@ -305,30 +285,22 @@ export const insertMessageSchema       = createInsertSchema(messages);
 export const insertAlertSchema         = createInsertSchema(alerts);
 
 // ============================================================
-// DRIZZLE INFERRED TYPES
+// DRIZZLE SELECT ROW TYPES (no Insert* here — canonical interfaces below)
 // ============================================================
 
-export type UserProfileRow     = typeof userProfiles.$inferSelect;
-export type InsertUserProfile  = typeof userProfiles.$inferInsert;
-export type BankAccountRow     = typeof bankAccounts.$inferSelect;
-export type InsertBankAccount  = typeof bankAccounts.$inferInsert;
-export type TransactionRow     = typeof transactions.$inferSelect;
-export type InsertTransaction  = typeof transactions.$inferInsert;
-export type AdminActionRow     = typeof adminActions.$inferSelect;
-export type InsertAdminAction  = typeof adminActions.$inferInsert;
-export type SupportTicketRow   = typeof supportTickets.$inferSelect;
-export type InsertSupportTicket = typeof supportTickets.$inferInsert;
-export type CardRow            = typeof cards.$inferSelect;
-export type InsertCard         = typeof cards.$inferInsert;
-export type InvestmentRow      = typeof investments.$inferSelect;
-export type InsertInvestment   = typeof investments.$inferInsert;
-export type MessageRow         = typeof messages.$inferSelect;
-export type InsertMessage      = typeof messages.$inferInsert;
-export type AlertRow           = typeof alerts.$inferSelect;
-export type InsertAlert        = typeof alerts.$inferInsert;
+export type UserProfileRow      = typeof userProfiles.$inferSelect;
+export type BankAccountRow      = typeof bankAccounts.$inferSelect;
+export type TransactionRow      = typeof transactions.$inferSelect;
+export type AdminActionRow      = typeof adminActions.$inferSelect;
+export type SupportTicketRow    = typeof supportTickets.$inferSelect;
+export type CardRow             = typeof cards.$inferSelect;
+export type InvestmentRow       = typeof investments.$inferSelect;
+export type MessageRow          = typeof messages.$inferSelect;
+export type AlertRow            = typeof alerts.$inferSelect;
 
 // ============================================================
 // CANONICAL APPLICATION TYPES
+// These are the interfaces imported by client and server code.
 // ============================================================
 
 export interface User {
@@ -476,6 +448,15 @@ export interface SupportTicket {
   updatedAt?: string | Date | null;
 }
 
+export interface InsertSupportTicket {
+  userId: string;
+  subject: string;
+  description: string;
+  status?: string;
+  priority?: string;
+  category?: string;
+}
+
 export interface Card {
   id: string;
   userId: string;
@@ -489,6 +470,17 @@ export interface Card {
   dailyLimit?: string | null;
   contactlessEnabled?: boolean;
   createdAt?: string | Date | null;
+}
+
+export interface InsertCard {
+  userId: string;
+  accountId: string;
+  type?: string;
+  status?: string;
+  cardNumber?: string;
+  cardHolder?: string;
+  expiryDate?: string;
+  dailyLimit?: string;
 }
 
 export interface Investment {
@@ -505,6 +497,18 @@ export interface Investment {
   status: string;
   createdAt?: string | Date | null;
   updatedAt?: string | Date | null;
+}
+
+export interface InsertInvestment {
+  userId: string;
+  type: string;
+  symbol: string;
+  assetType?: string;
+  shares?: string;
+  averagePrice?: string;
+  currentPrice?: string;
+  totalValue?: string;
+  status?: string;
 }
 
 export interface Message {
