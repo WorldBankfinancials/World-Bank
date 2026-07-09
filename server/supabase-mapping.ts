@@ -28,6 +28,8 @@ export interface SupabaseUser {
   is_active: boolean;
   is_verified: boolean;
   role: string;
+  last_login?: string | null;
+  profile_photo?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -86,6 +88,8 @@ export function mapSupabaseUserToUser(row: SupabaseUser): User {
     transferPin: row.transfer_pin || null,
     isActive: row.is_active,
     isVerified: row.is_verified,
+    lastLogin: row.last_login ? new Date(row.last_login) : null,
+    profilePhoto: row.profile_photo || null,
     role: row.role,
     balance: row.balance || '0.00',
     createdAt: new Date(row.created_at),
