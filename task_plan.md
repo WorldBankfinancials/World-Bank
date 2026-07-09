@@ -1,5 +1,5 @@
 # World Bank App — Architecture Reference
-## Last Updated: 2026-07-09 | Branch: main | Commit: aef0ced
+## Last Updated: 2026-07-09 | Branch: main | Commit: 5455324
 
 ## Stack
 - **Frontend**: React 18 + Vite 5 + Wouter + TanStack Query v5 + shadcn/ui + Tailwind
@@ -104,16 +104,28 @@ npm run check        → type-check all
 npm run check:server → type-check server only
 npm start            → node dist/server/index.js (after build:all)
 
-## Vercel Build
-- vercel.json buildCommand: "npm run build:all"
+## Vercel Build (IMPORTANT)
+- vercel.json buildCommand: "npm run build" (vite build ONLY)
 - outputDirectory: dist/public
 - Client compiles via vite build → dist/public/
-- Server compiles via tsc -p tsconfig.server.json → dist/server/
-- API functions in api/**/*.ts run as Vercel serverless
+- API functions in api/**/*.ts compiled by Vercel's own TypeScript compiler
+- build:server (tsc) is NOT run during Vercel build — legacy server files have
+  number→string UUID type mismatches that would fail tsc but don't affect
+  the runtime since Vercel uses tsx-like transpilation for api/ functions
+
+## Vercel Deployment Troubleshooting
+If Vercel builds an old commit (not latest main):
+- Redeploying from Vercel dashboard redeploys the SAME commit, not latest main
+- Must create a NEW deployment from the Vercel dashboard or push a new commit
+- Check the "Commit" field in the Vercel build log to verify which commit is built
 
 ## TypeScript Configs
 - tsconfig.json: root, noEmit:true, @shared/* → ./shared/*
 - tsconfig.server.json: server build, emits to dist/server/, CommonJS
+  Excludes legacy files: supabase-storage.ts, supabase-storage-complete.ts,
+  postgres-storage.ts, hybrid-postgres-storage.ts, unified-sync-storage.ts,
+  objectStorage.ts, transfer-approval.ts, user-creation.ts, supabase-mapping.ts,
+  vite.ts, vite.config.ts
 - client/tsconfig.json: jsx:react-jsx, @shared/* → ../shared/*
 
 ## Realtime Subscriptions
@@ -127,8 +139,14 @@ server/fix-routes.ts        — All API endpoints
 server/routes-transfer.ts   — Transfer endpoints
 server/auth-middleware.ts   — JWT verification + user_profiles lookup
 server/storage.ts           — IStorage interface
-server/supabase-public-storage.ts — Supabase REST implementation
+server/supabase-public-storage.ts — Supabase REST implementation (PRODUCTION)
 server/storage-factory.ts   — Singleton storage
 server/validation-schemas.ts — Zod validators
 server/validators.ts        — Low-level validators
 api/index.ts                — Vercel serverless entry
+
+## Production Import Chain (Vercel)
+api/index.ts → server/fix-routes.ts → server/storage-factory.ts
+  → server/supabase-public-storage.ts (only storage impl in prod)
+  → server/auth-middleware.ts, server/routes-transfer.ts, server/validators.ts
+  → shared/schema.ts, shared/types.ts
