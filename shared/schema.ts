@@ -10,9 +10,10 @@
  * Transactions table : transactions   (id uuid, uses transaction_type not type)
  * Supporting tables  : alerts, messages, cards, investments,
  *                      support_tickets, admin_actions  — all uuid PKs
- * Minimal auth table : wb_users (id uuid = auth.uid(), role, kyc_status)
+ * Auth gate table    : wb_users (id uuid = auth.uid(), role, kyc_status)
  *
  * All primary-key IDs are UUID strings throughout.
+ * No wb_ prefix on exported TypeScript types.
  */
 
 import {
@@ -49,19 +50,38 @@ export const verifyPinSchema = z.object({
   pin: z.string().min(4),
 });
 
+// ---- Transfer form schema (used by client/src/pages/transfer-funds.tsx) ----
+export const transferFormSchema = z.object({
+  amount:           z.number().min(0, 'Amount is required').max(1_000_000),
+  recipientName:    z.string().min(1, 'Recipient name is required').max(200),
+  recipientCountry: z.string().min(1, 'Country is required').max(100),
+  recipientAddress: z.string().max(300).optional().default(''),
+  recipientCity:    z.string().max(100).optional().default(''),
+  bankName:         z.string().max(200).optional().default(''),
+  bankAddress:      z.string().max(300).optional().default(''),
+  bankCity:         z.string().max(100).optional().default(''),
+  bankCountry:      z.string().max(100).optional().default(''),
+  swiftCode:        z.string().max(20).optional().default(''),
+  accountNumber:    z.string().max(50).optional().default(''),
+  routingNumber:    z.string().max(20).optional().default(''),
+  iban:             z.string().max(50).optional().default(''),
+  purpose:          z.string().max(200).optional().default(''),
+  description:      z.string().max(500).optional().default(''),
+  transferPin:      z.string().min(4, 'PIN is required').max(6),
+});
+
+export type TransferForm = z.infer<typeof transferFormSchema>;
+
 export type TransferPinInput = z.infer<typeof transferPinSchema>;
 export type TransferInput    = z.infer<typeof transferSchema>;
 export type VerifyPinInput   = z.infer<typeof verifyPinSchema>;
 
 // ============================================================
 // CORE TABLE: user_profiles
-// Maps to public.user_profiles in Supabase.
-// id = auth.uid() (set by trigger on auth.users insert)
 // ============================================================
 
 export const userProfiles = pgTable('user_profiles', {
   id:                   uuid('id').primaryKey(),
-  // Auth
   email:                text('email'),
   username:             text('username'),
   role:                 text('role').default('customer'),
@@ -70,11 +90,9 @@ export const userProfiles = pgTable('user_profiles', {
   transferPin:          text('transfer_pin'),
   kycStatus:            text('kyc_status').default('pending'),
   accountType:          text('account_type').default('personal'),
-  // Financial
   accountNumber:        text('account_number'),
-  accountId:            text('account_id'),   // bigint stored as text for safety
+  accountId:            text('account_id'),
   balance:              numeric('balance', { precision: 18, scale: 2 }).default('0'),
-  // Personal
   fullName:             text('full_name').notNull(),
   firstName:            text('first_name'),
   lastName:             text('last_name'),
@@ -86,30 +104,20 @@ export const userProfiles = pgTable('user_profiles', {
   state:                text('state'),
   postalCode:           text('postal_code'),
   country:              text('country'),
-  // Employment
   occupation:           text('occupation'),
   profession:           text('profession').default(''),
   employer:             text('employer'),
   annualIncome:         numeric('annual_income', { precision: 15, scale: 2 }),
-  // KYC
   identificationType:   text('identification_type'),
   identificationNumber: text('identification_number'),
   emailVerified:        boolean('email_verified').default(false),
   phoneVerified:        boolean('phone_verified').default(false),
   identityVerified:     boolean('identity_verified').default(false),
-  // Timestamps
   createdAt:            timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt:            timestamp('updated_at', { withTimezone: true }).defaultNow(),
-  // Profile
   preferredLanguage:    text('preferred_language').default('en'),
   passwordHash:         text('password_hash'),
 });
-
-// ============================================================
-// MINIMAL AUTH TABLE: wb_users
-// Lightweight table (id = auth.uid(), role, status only).
-// user_profiles is the rich table; wb_users is the auth gate.
-// ============================================================
 
 export const authUsers = pgTable('wb_users', {
   id:                  uuid('id').primaryKey(),
@@ -124,10 +132,6 @@ export const authUsers = pgTable('wb_users', {
   createdAt:           timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt:           timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
-
-// ============================================================
-// BANK ACCOUNTS: bank_accounts
-// ============================================================
 
 export const bankAccounts = pgTable('bank_accounts', {
   id:               uuid('id').primaryKey(),
@@ -148,12 +152,6 @@ export const bankAccounts = pgTable('bank_accounts', {
   createdAt:        timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt:        timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
-
-// ============================================================
-// TRANSACTIONS
-// Note: DB column is transaction_type (not type)
-// reference_number is NOT NULL
-// ============================================================
 
 export const transactions = pgTable('transactions', {
   id:               uuid('id').primaryKey(),
@@ -181,7 +179,6 @@ export const transactions = pgTable('transactions', {
   createdAt:        timestamp('created_at', { withTimezone: true }).defaultNow(),
   processedAt:      timestamp('processed_at', { withTimezone: true }),
   completedAt:      timestamp('completed_at', { withTimezone: true }),
-  // International transfer fields
   recipientName:    text('recipient_name'),
   recipientAccount: text('recipient_account'),
   recipientCountry: text('recipient_country'),
@@ -191,10 +188,6 @@ export const transactions = pgTable('transactions', {
   transferPurpose:  text('transfer_purpose'),
   adminNotes:       text('admin_notes'),
 });
-
-// ============================================================
-// SUPPORT TABLES
-// ============================================================
 
 export const adminActions = pgTable('admin_actions', {
   id:         uuid('id').primaryKey(),
@@ -277,23 +270,15 @@ export const alerts = pgTable('alerts', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
-// ============================================================
-// INSERT SCHEMAS (Zod, generated by drizzle-zod)
-// ============================================================
-
-export const insertUserProfileSchema  = createInsertSchema(userProfiles);
-export const insertBankAccountSchema  = createInsertSchema(bankAccounts);
-export const insertTransactionSchema  = createInsertSchema(transactions);
-export const insertAdminActionSchema  = createInsertSchema(adminActions);
+export const insertUserProfileSchema   = createInsertSchema(userProfiles);
+export const insertBankAccountSchema   = createInsertSchema(bankAccounts);
+export const insertTransactionSchema   = createInsertSchema(transactions);
+export const insertAdminActionSchema   = createInsertSchema(adminActions);
 export const insertSupportTicketSchema = createInsertSchema(supportTickets);
-export const insertCardSchema         = createInsertSchema(cards);
-export const insertInvestmentSchema   = createInsertSchema(investments);
-export const insertMessageSchema      = createInsertSchema(messages);
-export const insertAlertSchema        = createInsertSchema(alerts);
-
-// ============================================================
-// DRIZZLE INFERRED TYPES  (used for Drizzle ORM / migrations)
-// ============================================================
+export const insertCardSchema          = createInsertSchema(cards);
+export const insertInvestmentSchema    = createInsertSchema(investments);
+export const insertMessageSchema       = createInsertSchema(messages);
+export const insertAlertSchema         = createInsertSchema(alerts);
 
 export type UserProfileRow     = typeof userProfiles.$inferSelect;
 export type InsertUserProfile  = typeof userProfiles.$inferInsert;
@@ -314,25 +299,17 @@ export type InsertMessage      = typeof messages.$inferInsert;
 export type AlertRow           = typeof alerts.$inferSelect;
 export type InsertAlert        = typeof alerts.$inferInsert;
 
-// ============================================================
-// CANONICAL APPLICATION TYPES
-// Clean interfaces used by routes, components, and API layer.
-// Not tied to Drizzle — import these in components and routes.
-// ============================================================
-
-/** Canonical User — maps to user_profiles table. id = auth.uid() UUID. */
 export interface User {
-  id: string;                    // UUID = auth.uid()
+  id: string;
   email: string;
-  role: UserRole;                // 'customer' | 'admin' | 'support' | 'compliance'
+  role: UserRole;
   isActive: boolean;
   isVerified: boolean;
-  kycStatus?: string;            // 'pending' | 'approved' | 'rejected'
-  accountStatus?: string;        // 'active' | 'suspended' | 'closed'
+  kycStatus?: string;
+  accountStatus?: string;
   transferPin?: string | null;
   accountNumber?: string | null;
-  balance?: string | null;       // string decimal (no float precision risk)
-  // Profile
+  balance?: string | null;
   fullName?: string | null;
   firstName?: string | null;
   lastName?: string | null;
@@ -341,7 +318,6 @@ export interface User {
   occupation?: string | null;
   profilePhoto?: string | null;
   avatarUrl?: string | null;
-  // KYC / Contact
   username?: string | null;
   dateOfBirth?: string | null;
   address?: string | Record<string, any> | null;
@@ -352,7 +328,6 @@ export interface User {
   annualIncome?: string | null;
   idType?: string | null;
   idNumber?: string | null;
-  // Timestamps
   lastLogin?: string | Date | null;
   createdAt?: string | Date | null;
   updatedAt?: string | Date | null;
@@ -381,19 +356,17 @@ export interface InsertUser {
   idType?: string;
   idNumber?: string;
   username?: string;
-  // password is NOT stored here — handled by Supabase Auth
 }
 
-/** Canonical Account — maps to bank_accounts table. */
 export interface Account {
-  id: string;              // UUID
-  userId: string;          // UUID FK → auth.users / user_profiles
+  id: string;
+  userId: string;
   accountNumber: string;
-  accountType: string;     // 'checking' | 'savings' | 'investment'
-  balance: string;         // string decimal
+  accountType: string;
+  balance: string;
   availableBalance?: string;
   currency: string;
-  status: string;          // 'active' | 'frozen' | 'closed' | 'pending'
+  status: string;
   isPrimary?: boolean;
   routingNumber?: string;
   iban?: string;
@@ -413,16 +386,14 @@ export interface InsertAccount {
   isPrimary?: boolean;
 }
 
-/** Canonical Transaction — maps to transactions table. */
 export interface Transaction {
-  id: string;               // UUID
+  id: string;
   fromAccountId?: string | null;
   toAccountId?: string | null;
   fromUserId?: string | null;
-  transactionType: string;  // DB column name is transaction_type
-  /** Alias for transactionType — for compat with code that uses .type */
+  transactionType: string;
   type?: string;
-  amount: string;           // string decimal
+  amount: string;
   currency: string;
   status: string;
   description?: string | null;
@@ -565,10 +536,6 @@ export interface InsertAdminAction {
   targetId?: string;
   details?: Record<string, any>;
 }
-
-// ============================================================
-// CONSTANTS
-// ============================================================
 
 export const USER_ROLES = ['customer', 'admin', 'support', 'compliance'] as const;
 export type UserRole = typeof USER_ROLES[number];
