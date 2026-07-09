@@ -1,167 +1,144 @@
-# Task Plan — World Bank Digital Banking Application
-## Active Progress Roadmap
+# World Bank App — Task Plan & Architecture Reference
 
-Last Updated: 2026-07-09
+## Last Updated: 2026-07-09
 
----
+## Architecture
 
-## Phase 0: Infrastructure Configuration (COMPLETE)
+### Stack
+- **Frontend**: React 18 + Vite + Wouter + TanStack Query + shadcn/ui + Tailwind
+- **Backend**: Node.js + Express (dev: tsx, prod: Vercel serverless via api/index.ts)
+- **Database**: Supabase Postgres (REST API via @supabase/supabase-js service role)
+- **Auth**: Supabase Auth (JWT) — verified server-side in auth-middleware.ts
+- **Realtime**: Supabase Realtime channels (client hooks in client/src/hooks/)
+- **Chat**: Supabase Realtime + messages table + WebSocket in dev (server/supabase-live-chat.ts)
 
-### Completed
-- [x] GitHub repository cloned (WorldBankfinancials/World-Bank, main branch, commit 2bb3cfb)
-- [x] Deep read-only architecture scan completed (4 sub-agents, full codebase analysis)
-- [x] Supabase database verified (7 tables, 1 migration, RLS enabled on all tables)
-- [x] .vscode/settings.json created (format-on-save, search exclusions, TS config)
-- [x] .vscode/extensions.json created (Copilot, Supabase, Tailwind, ESLint, Prettier)
-- [x] .claudecode/settings.json.local created (OpenRouter bridge, Gemini/DeepSeek routing)
-- [x] .aider.conf.yml created (auto-commit, file restrictions, safe dev framework)
-- [x] gemini-cli.config.json created (free-tier model routing, sandbox, safety blocks)
-- [x] .geminirc created (environment flags, execution shortcuts)
-- [x] trigger.config.json created (nightly World Bank API sync to Supabase, Qodo validation)
-- [x] CLAUDE.md created (architecture map, port maps, Code Rabbit audit rules)
-- [x] PROJECT.md created (agent behavioral rules, user constraints)
-- [x] task_plan.md created (this file)
-- [x] mcp.json created (GitHub + Supabase MCP server context bridge)
-- [x] All files pushed to GitHub main branch
+### Shared Folder
+- `shared/schema.ts` is imported by BOTH client and server
+- Client imports via `@shared/*` alias → `../shared/*` (configured in client/tsconfig.json + vite.config.ts)
+- Server imports via `@shared/*` alias → `./shared/*` (configured in root tsconfig.json + tsconfig.server.json)
+- **Primary tables**: wb_users, wb_accounts, wb_transactions, wb_profiles
+- **Legacy tables** (still active): bank_accounts, transactions, messages, alerts, cards, investments, support_tickets, admin_actions
+- All primary key IDs are **UUID strings** (not integers)
 
----
+### Key Files
+| File | Purpose |
+|------|---------|
+| `shared/schema.ts` | Drizzle schema + Zod validators + User/Account/Transaction types |
+| `server/storage.ts` | IStorage interface (all IDs: string UUID) |
+| `server/supabase-public-storage.ts` | Supabase REST implementation of IStorage |
+| `server/storage-factory.ts` | Singleton IStorage instance |
+| `server/auth-middleware.ts` | requireAuth + requireAdmin middleware |
+| `server/fix-routes.ts` | All 78 API endpoints |
+| `server/index.ts` | Dev server entry (tsx) |
+| `api/index.ts` | Vercel serverless entry |
+| `client/src/lib/supabase.ts` | Supabase client singleton |
+| `client/src/lib/queryClient.ts` | React Query + authenticatedFetch |
+| `client/src/contexts/AuthContext.tsx` | Auth state, calls /api/auth/login |
 
-## Phase 1: Critical Security Fixes (COMPLETE — PR #27)
+### TypeScript Config
+- `tsconfig.json` — root, covers all files, noEmit:true
+- `tsconfig.server.json` — server build only, emits to dist/server/, CommonJS
+- `client/tsconfig.json` — client only, no tsconfig.node.json reference
+- All configs have `@shared/*` path aliases pointing to `./shared/` or `../shared/`
 
-### Fixed
-- [x] **JWT signature verification** — auth-middleware.ts now validates tokens via Supabase Auth getUser() instead of decoding without verification. Forged tokens are rejected.
-- [x] **Admin routes protected** — Created AdminRoute component that checks user.role === 'admin'. All 6 admin routes wrapped in AdminRoute instead of ProtectedRoute.
-- [x] **RBAC enforced** — AdminRoute redirects non-admin users to /dashboard. Server-side requireAdmin middleware checks role from verified JWT.
-- [x] **PIN hashing** — Transfer PINs already hashed with bcrypt (verified in routes-transfer.ts lines 55, 163).
-- [x] **Service role key removed from .env.example** — Replaced with placeholder. Real key only via Vercel Dashboard.
+### Build Scripts
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Dev server (tsx server/index.ts) |
+| `npm run build` | Vite build → dist/public/ |
+| `npm run build:server` | tsc -p tsconfig.server.json → dist/server/ |
+| `npm run build:all` | Frontend + server build |
+| `npm run check` | Type check all files |
+| `npm run check:server` | Type check server only |
+| `npm start` | node dist/server/index.js (after build:all) |
 
-### Hardened
-- [x] **CSP hardened** — Removed unsafe-inline and unsafe-eval from script-src. Switched to nonce-based CSP with per-request crypto nonce.
-- [x] **CSRF protection** — State-changing requests (POST/PUT/PATCH/DELETE) to /api/ must include X-CSRF-Token header. Auth endpoints exempt.
-- [x] **Rate limiter wired** — generalRateLimiter on all /api/ routes, authRateLimiter on login, transactionRateLimiter on all transfer/transaction endpoints.
-- [x] **Port fix** — server/index.ts now uses process.env.PORT with fallback to 5000.
+## Database Schema (Supabase)
 
-### PR: https://github.com/WorldBankfinancials/World-Bank/pull/27
+### Primary Tables (wb_*)
+#### wb_users
+- id: uuid PK (= auth.uid())
+- email: text unique NOT NULL
+- role: text ('customer' | 'admin' | 'support' | 'compliance')
+- status: text ('pending' | 'active' | 'suspended' | 'closed')
+- is_active: boolean
+- is_verified: boolean
+- balance: numeric(18,2)
+- transfer_pin: text (bcrypt hashed)
+- account_number: text
+- first_name, last_name, full_name: text
+- phone_number: text
+- occupation: text
+- avatar_url: text
+- last_login: timestamptz
+- created_at, updated_at: timestamptz
 
----
+#### wb_accounts
+- id: uuid PK
+- user_id: uuid FK → auth.users
+- account_number: text unique
+- account_type: text ('checking' | 'savings' | 'investment')
+- balance: numeric(18,2)
+- currency: text default 'USD'
+- status: text ('active' | 'frozen' | 'closed' | 'pending')
 
-## Phase 1.5: Supabase Database Integration (COMPLETE)
+#### wb_transactions
+- id: uuid PK
+- user_id: uuid FK → wb_users
+- from_account_id, to_account_id: uuid
+- type, status, amount, currency, description, reference_number: text/numeric
 
-### Migrations Applied
-- [x] **Migration 002**: Fixed RLS policies on all 7 existing tables + added 3 new tables
-  - bank_accounts: Added INSERT and DELETE policies (users can now create/delete accounts)
-  - transactions: Added INSERT and UPDATE policies (transfers can now be created/updated)
-  - cards: Added INSERT, UPDATE, DELETE policies (cards can now be managed)
-  - alerts: Added INSERT and DELETE policies (alerts can now be created/removed)
-  - messages: Tightened SELECT policy from USING(true) to sender-only access
-  - transaction_approvals: Added 3 admin-only policies (was locked with zero policies)
-  - user_profiles: Added DELETE policy
-  - NEW TABLE: admin_actions (admin operation logging, admin-only access)
-  - NEW TABLE: support_tickets (customer support, user + admin access)
-  - NEW TABLE: investments (user investment portfolio, owner-scoped)
-  - Added performance indexes on all foreign key columns
+#### wb_profiles
+- Extended KYC data linked to wb_users.id
 
-- [x] **Migration 003**: Added missing columns to user_profiles
-  - email, username, password_hash, account_number, account_id, balance
-  - profession, is_active, is_verified, transfer_pin, role
-  - Added indexes on email and role columns
+### Legacy Tables (still active)
+- bank_accounts — used for account balances in storage layer
+- transactions — used for all transaction writes
+- messages — chat messages
+- alerts — user notifications
+- cards, investments, support_tickets, admin_actions
 
-- [x] **Migration 004**: Added missing transfer columns to transactions
-  - from_user_id, recipient_name, recipient_account, recipient_country
-  - bank_name, swift_code, account_number, transfer_purpose
-  - Added indexes on from_user_id and status
+### RLS Summary
+- All wb_* tables have RLS enabled
+- Users: SELECT/UPDATE own rows via auth.uid() = id
+- Admins: SELECT/UPDATE all rows via role check in wb_users
+- Admin actions table: admin-only INSERT/SELECT
 
-### Final Database State
-| Table | Columns | RLS Policies | Purpose |
-|-------|---------|---------------|---------|
-| user_profiles | 36 | 4 (CRUD) | User accounts, KYC, auth |
-| bank_accounts | 17 | 4 (CRUD) | User bank accounts |
-| transactions | 34 | 3 (SELECT/INSERT/UPDATE) | Transfers and transactions |
-| cards | 15 | 4 (CRUD) | Debit/credit cards |
-| alerts | 14 | 4 (CRUD) | User notifications |
-| messages | 12 | 4 (CRUD) | Chat messages |
-| transaction_approvals | 8 | 3 (admin-only) | Admin approval workflow |
-| admin_actions | 7 | 2 (admin-only) | Admin action logging |
-| support_tickets | 8 | 5 (user + admin) | Support ticket system |
-| investments | 10 | 4 (CRUD) | Investment portfolio |
+## Auth Flow
+1. User POSTs to /api/auth/login with email + password
+2. Server calls supabaseAdmin.auth.signInWithPassword()
+3. Server gets Supabase JWT access_token
+4. Server syncs/creates wb_users row for the user
+5. Server returns { token, refreshToken, user } to client
+6. Client stores token in localStorage
+7. All API calls include Authorization: Bearer <token>
+8. requireAuth middleware verifies JWT via supabase.auth.getUser(token)
+9. Attaches req.user = { id (UUID), email, role } to request
+10. requireAdmin additionally checks role === 'admin'
 
-**Total: 10 tables, 37 RLS policies, all with proper ownership checks**
+## Session / Token Flow
+- Token: Supabase JWT stored in localStorage as 'token'
+- Refresh: localStorage 'refresh_token'
+- queryClient.ts reads token from localStorage for all authenticated fetches
+- On 401: localStorage cleared, redirect to /login
+- Role-based routing: AdminRoute component checks AuthContext user.role
 
----
+## Realtime Subscriptions (client hooks)
+- useRealtimeAlerts.ts — alerts table changes
+- useRealtimeChat.ts — messages table changes
+- useRealtimeTransactions.ts — transactions table changes
+- useSupabaseRealtimeDashboard.ts — dashboard aggregates
+- usePresence.ts — user online status
 
-## Phase 2: Architecture Reconciliation (NEXT)
-
-### Schema Conflicts
-- [ ] Reconcile Drizzle schema.ts (serial int PKs) with migration schema (UUID PKs)
-- [ ] Remove or update server/RLS-POLICIES.sql (references bank_* tables not in migration)
-- [ ] Remove or update sql/rls-policies.sql (uses auth.uid()::int which crashes at runtime)
-- [ ] Align supabase-mapping.ts types with actual migration schema (UUID, not number)
-
-### Storage Layer
-- [ ] storage-factory.ts hardcodes SupabasePublicStorage — config.ts selection logic is dead code
-- [ ] All storage implementations silently swallow errors — return undefined/[] on every failure
-- [ ] Column name inconsistency: supabase_user_id (postgres-storage) vs supabase_id (hybrid-postgres-storage)
-
-### Auth System Consolidation
-- [ ] Three parallel authenticated-fetch implementations (api.ts, queryClient.ts, supabase.ts)
-- [ ] Inconsistent 401 handling: apiFetch clears token, authenticatedFetch clears all + redirects
-- [ ] AuthContext uses localStorage tokens; supabase.ts uses Supabase sessions — unclear which is active
-
----
-
-## Phase 3: Code Quality & Bug Fixes
-
-### Broken Functionality
-- [ ] **log() function empty** — server/vite.ts log function does nothing
-- [ ] **serveStatic path broken** — resolves to server/public instead of dist/public
-- [ ] **Route/component swap** — /transfer maps to InternationalTransfer, /international-transfer maps to Transfer
-- [ ] **Duplicate /about route** — declared both publicly and in protected switch
-
-### Dead Code & Orphaned Files
-- [ ] 5+ orphaned page files not imported in App.tsx
-- [ ] supabase-public-storage.ts.bak backup file should be removed
-- [ ] logConfiguration() in config.ts is empty function
-- [ ] Drizzle db instance in supabase-storage.ts created but never used
-
----
-
-## Phase 4: Missing Infrastructure
-
-### Testing
-- [ ] No test framework installed (no Jest, Vitest, Testing Library, Playwright)
-- [ ] No test files exist
-
-### Environment Variable Standardization
-- [ ] Standardize on VITE_SUPABASE_URL vs SUPABASE_URL (currently both used)
-- [ ] Standardize on DATABASE_URL vs SUPABASE_DATABASE_URL (Drizzle uses different name)
-
----
-
-## Phase 5: Feature Roadmap (Future)
-
-- [ ] World Bank financial data integration
-- [ ] Multi-language expansion (currently en/zh only)
-- [ ] Biometric authentication for mobile
-- [ ] Push notifications
-- [ ] Statement export (PDF/CSV)
-- [ ] Card management (freeze/unfreeze, limits)
-- [ ] Investment portfolio tracking
-- [ ] International transfer tracking with real-time status
-
----
-
-## Application State Summary
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| GitHub repo | Working | main + development branches, PR #27 open |
-| Supabase DB | Live | 10 tables, 37 RLS policies, 4 migrations, all empty |
-| Express server | Partially working | Dynamic port, CSP hardened, rate limited |
-| React client | Working | 53 pages, 16 components, mobile-first, admin routes protected |
-| Auth system | Fixed | JWT verified via Supabase, RBAC enforced |
-| Transfer routes | Working | PIN hashed with bcrypt, rate limited |
-| Realtime chat | Configured | WebSocket at /ws/chat, Supabase realtime |
-| CI/CD | Configured | GitHub Actions (ci.yml, codeql.yml) |
-| Vercel deploy | Configured | vercel-build script, dynamic port |
-| Testing | Missing | No test framework installed |
-| Monitoring | Missing | No Sentry, no error tracking |
+## Completed Fixes (2026-07-09)
+- [x] shared/schema.ts: UUID IDs, wb_users/wb_accounts/wb_transactions tables
+- [x] server/storage.ts: IStorage interface uses string IDs throughout
+- [x] server/supabase-public-storage.ts: queries wb_users, maps correct columns
+- [x] server/auth-middleware.ts: uses wb_users, string UUIDs, clean sync
+- [x] server/storage-factory.ts: clean singleton
+- [x] tsconfig.json: fixed, @shared/* alias, jsx, strict
+- [x] tsconfig.server.json: NEW — server build config, emits to dist/server/
+- [x] client/tsconfig.json: removed missing tsconfig.node.json reference
+- [x] package.json: added build:server, build:all, check:server scripts
+- [x] api/index.ts: eager route registration, no race condition
+- [x] server/vite.ts: safe for Vercel (no top-level vite import)
+- [x] AuthContext.tsx: restored original /api/auth/login flow
