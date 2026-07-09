@@ -1,0 +1,69 @@
+{
+  "model": "gemini-2.0-flash-exp",
+  "api_key_env": "GOOGLE_GEMINI_API_KEY",
+  "fallback_api_key_env": "DEEPSEEK_API_KEY",
+  "fallback_model": "deepseek-chat",
+  "fallback_base_url": "https://api.deepseek.com/v1",
+  "openrouter_base_url": "https://openrouter.ai/api/v1",
+  "openrouter_api_key_env": "OPENROUTER_API_KEY",
+  "openrouter_models": {
+    "primary": "google/gemini-2.0-flash-exp:free",
+    "secondary": "deepseek/deepseek-chat:free",
+    "tertiary": "deepseek/deepseek-r1:free"
+  },
+  "execution": {
+    "timeout_ms": 60000,
+    "max_retries": 3,
+    "retry_delay_ms": 2000,
+    "parallel_tools": true,
+    "auto_approve": false,
+    "sandbox_mode": true
+  },
+  "terminal": {
+    "shell": "bash",
+    "working_directory": ".",
+    "env_file": ".env",
+    "load_profile": false
+  },
+  "codebase_indexing": {
+    "enabled": true,
+    "include_patterns": [
+      "client/src/**/*.ts",
+      "client/src/**/*.tsx",
+      "server/**/*.ts",
+      "shared/**/*.ts",
+      "supabase/**/*.sql"
+    ],
+    "exclude_patterns": [
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "*.lock",
+      "package-lock.json"
+    ],
+    "max_file_size_kb": 512
+  },
+  "safety": {
+    "prevent_destructive_commands": true,
+    "blocked_commands": [
+      "rm -rf",
+      "git push --force",
+      "git reset --hard",
+      "DROP TABLE",
+      "DELETE FROM",
+      "npm publish"
+    ],
+    "require_confirmation_for": [
+      "git commit",
+      "git push",
+      "npm install",
+      "npx drizzle-kit push"
+    ]
+  },
+  "output": {
+    "format": "terminal",
+    "color": true,
+    "verbose": false,
+    "log_file": ".gemini-cli.log"
+  }
+}

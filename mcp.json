@@ -1,0 +1,50 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}",
+        "GITHUB_OWNER": "WorldBankfinancials",
+        "GITHUB_REPO": "World-Bank"
+      },
+      "enabled": true,
+      "description": "GitHub MCP server for repository operations, issue management, pull requests, and code search across the World-Bank repository"
+    },
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-supabase"],
+      "env": {
+        "SUPABASE_URL": "${VITE_SUPABASE_URL}",
+        "SUPABASE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}",
+        "SUPABASE_ANON_KEY": "${VITE_SUPABASE_ANON_KEY}"
+      },
+      "enabled": true,
+      "description": "Supabase MCP server for database context bridge, table introspection, query execution, and RLS policy management"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem"],
+      "env": {
+        "ROOT_PATH": "."
+      },
+      "enabled": true,
+      "description": "Filesystem MCP server for deep cross-file exploration, reading, and writing within the project directory"
+    }
+  },
+  "globalEnv": {
+    "GITHUB_TOKEN": "${GITHUB_TOKEN}",
+    "VITE_SUPABASE_URL": "${VITE_SUPABASE_URL}",
+    "VITE_SUPABASE_ANON_KEY": "${VITE_SUPABASE_ANON_KEY}",
+    "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}",
+    "OPENROUTER_API_KEY": "${OPENROUTER_API_KEY}",
+    "GOOGLE_GEMINI_API_KEY": "${GOOGLE_GEMINI_API_KEY}",
+    "DEEPSEEK_API_KEY": "${DEEPSEEK_API_KEY}",
+    "TRIGGER_API_KEY": "${TRIGGER_API_KEY}"
+  },
+  "defaults": {
+    "timeout": 30000,
+    "retryCount": 3,
+    "logLevel": "info"
+  }
+}

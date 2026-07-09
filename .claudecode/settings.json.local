@@ -1,0 +1,85 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "MultiEdit",
+      "Glob",
+      "Grep",
+      "Bash(npm run build)",
+      "Bash(npm run check)",
+      "Bash(npm run lint)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(git status)",
+      "Bash(git diff)",
+      "Bash(git log)",
+      "Bash(git branch)",
+      "Bash(git checkout development)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ],
+    "deny": [
+      "Bash(git push *)",
+      "Bash(git reset --hard *)",
+      "Bash(rm -rf *)",
+      "Bash(npm publish *)",
+      "Bash(supabase *)"
+    ]
+  },
+  "env": {
+    "OPENROUTER_API_KEY": "${OPENROUTER_API_KEY}",
+    "GOOGLE_GEMINI_API_KEY": "${GOOGLE_GEMINI_API_KEY}",
+    "DEEPSEEK_API_KEY": "${DEEPSEEK_API_KEY}",
+    "OPENROUTER_MODEL": "google/gemini-2.0-flash-exp:free",
+    "OPENROUTER_FALLBACK_MODEL": "deepseek/deepseek-chat:free",
+    "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
+    "CLAUDE_CODE_USE_OPENROUTER": "true",
+    "CLAUDE_CODE_MAX_TOKENS": "16000",
+    "CLAUDE_CODE_TEMPERATURE": "0.3"
+  },
+  "router": {
+    "provider": "openrouter",
+    "models": {
+      "primary": "google/gemini-2.0-flash-exp:free",
+      "fallback": "deepseek/deepseek-chat:free",
+      "secondary_fallback": "deepseek/deepseek-r1:free"
+    },
+    "strategy": "round-robin",
+    "retryCount": 3,
+    "timeout": 30000
+  },
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-supabase"],
+      "env": {
+        "SUPABASE_URL": "${VITE_SUPABASE_URL}",
+        "SUPABASE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}"
+      }
+    }
+  },
+  "codebase": {
+    "root": ".",
+    "include": [
+      "client/src/**",
+      "server/**",
+      "shared/**",
+      "supabase/**"
+    ],
+    "exclude": [
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "*.lock",
+      "package-lock.json"
+    ]
+  }
+}
