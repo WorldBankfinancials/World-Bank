@@ -4,12 +4,23 @@ import crypto from "crypto";
 import { registerFixedRoutes } from "./fix-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { WebSocketServer } from "ws";
-import { setupLiveChatWebSocket } from "supabase-live-chat";
+import { setupLiveChatWebSocket } from "./supabase-live-chat";
 import { generalRateLimiter } from "./rate-limiter";
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+
+// CORS for API access
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Client-Info, Apikey');
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
 
 // SECURITY: Add security headers middleware with nonce-based CSP
 app.use((req: Request, res: Response, next: NextFunction) => {
