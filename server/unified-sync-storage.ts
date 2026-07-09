@@ -464,7 +464,7 @@ export class UnifiedSyncStorage implements IStorage {
         .from('admin_actions')
         .insert([{
           admin_id: action.adminId || 0,
-          action_type: action.actionType || 'unknown',
+          action: action.action || 'unknown',
           target_id: action.targetId || 0,
           details: action.details || '',
           created_at: new Date().toISOString()
@@ -509,6 +509,7 @@ export class UnifiedSyncStorage implements IStorage {
       idNumber: dbRow.id_number,
       transferPin: dbRow.transfer_pin,
       lastLogin: dbRow.last_login,
+      profilePhoto: dbRow.profile_photo || null,
       isActive: dbRow.is_active,
       isVerified: dbRow.is_verified,
       role: dbRow.role,
