@@ -21,7 +21,8 @@
     "**/.git": true,
     "**/coverage": true,
     "**/package-lock.json": true,
-    "**/yarn.lock": true
+    "**/yarn.lock": true,
+    "**/.supabase": true
   },
   "files.exclude": {
     "**/node_modules": true,
@@ -53,14 +54,20 @@
     "build"
   ],
   "terminal.integrated.env.osx": {
-    "NODE_ENV": "development"
+    "NODE_ENV": "development",
+    "VITE_SUPABASE_URL": "${env:VITE_SUPABASE_URL}",
+    "VITE_SUPABASE_ANON_KEY": "${env:VITE_SUPABASE_ANON_KEY}"
   },
   "terminal.integrated.env.linux": {
-    "NODE_ENV": "development"
+    "NODE_ENV": "development",
+    "VITE_SUPABASE_URL": "${env:VITE_SUPABASE_URL}",
+    "VITE_SUPABASE_ANON_KEY": "${env:VITE_SUPABASE_ANON_KEY}"
   },
   "workbench.colorTheme": "Default Dark Modern",
   "workbench.iconTheme": "material-icon-theme",
   "github.copilot.editor.enableAutoCompletions": true,
   "remote.autoForwardPorts": true,
-  "remote.autoForwardPortsSource": "output"
+  "remote.autoForwardPortsSource": "output",
+  "supabase.projectUrl": "${env:VITE_SUPABASE_URL}",
+  "supabase.anonKey": "${env:VITE_SUPABASE_ANON_KEY}"
 }

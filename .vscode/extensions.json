@@ -23,7 +23,10 @@
     "bierner.lit-html",
     "runem.lit-plugin",
     "yoavbls.pretty-ts-errors",
-    "chrmarti.ai-snippets"
+    "chrmarti.ai-snippets",
+    "dsznajder.es7-react-js-snippets",
+    "burkeholland.react-snippets",
+    "bradlc.vscode-tailwindcss"
   ],
   "unwantedRecommendations": [
     "ms-vscode.sublime-keybindings",
