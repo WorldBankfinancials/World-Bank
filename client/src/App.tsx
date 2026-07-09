@@ -58,6 +58,7 @@ import SupportTicket from "@/pages/support-ticket";
 import AdminAccounts from "@/pages/admin-accounts";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminRoute } from "@/components/AdminRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -77,22 +78,22 @@ function App() {
                 <Route path="/register-multi" component={MultiStepRegister} />
                 <Route path="/admin-login" component={AdminLogin} />
                 <Route path="/admin-dashboard">
-                  <ProtectedRoute><AdminDashboard /></ProtectedRoute>
+                  <AdminRoute><AdminDashboard /></AdminRoute>
                 </Route>
                 <Route path="/admin-panel">
-                  <ProtectedRoute><AdminPanel /></ProtectedRoute>
+                  <AdminRoute><AdminPanel /></AdminRoute>
                 </Route>
                 <Route path="/simple-admin">
-                  <ProtectedRoute><SimpleAdmin /></ProtectedRoute>
+                  <AdminRoute><SimpleAdmin /></AdminRoute>
                 </Route>
                 <Route path="/admin-live-chat">
-                  <ProtectedRoute><AdminLiveChat /></ProtectedRoute>
+                  <AdminRoute><AdminLiveChat /></AdminRoute>
                 </Route>
                 <Route path="/admin-accounts">
-                  <ProtectedRoute><AdminAccounts /></ProtectedRoute>
+                  <AdminRoute><AdminAccounts /></AdminRoute>
                 </Route>
                 <Route path="/customer-service">
-                  <ProtectedRoute><CustomerServicePortal /></ProtectedRoute>
+                  <AdminRoute><CustomerServicePortal /></AdminRoute>
                 </Route>
 
                 <Route path="/" nest>
@@ -154,7 +155,7 @@ function App() {
       </TooltipProvider>
       <Toaster />
     </QueryClientProvider>
-    </ErrorBoundary>
+  </ErrorBoundary>
   );
 }
 
