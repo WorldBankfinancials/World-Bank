@@ -617,7 +617,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const allAccounts: any[] = [];
       for (const user of allUsers) {
         const userAccounts = await storage.getUserAccounts(user.id);
-        userAccounts.forEach(acc => allAccounts.push({ ...acc, ownerEmail: user.email, ownerName: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() }));
+        userAccounts.forEach(acc => allAccounts.push({ ...acc, ownerEmail: user.email, ownerName: (user as any).fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() }));
       }
       return res.json(allAccounts);
     } catch (error: any) {
@@ -635,11 +635,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const account = await storage.createAccount({
         userId: parseInt(userId),
         accountType,
-        accountName: accountName || `${accountType.charAt(0).toUpperCase() + accountType.slice(1)} Account`,
+        accountNumber: accountNumber || `${accountType.charAt(0).toUpperCase() + accountType.slice(1)}-${Date.now()}`,
         balance: balance || '0.00',
         currency: currency || 'USD',
-        accountNumber: accountNumber || `WB${Date.now()}`,
-        isActive: isActive !== false
+        status: isActive !== false ? 'active' : 'frozen'
       });
       return res.json({ success: true, account });
     } catch (error: any) {
@@ -2026,8 +2025,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const formattedTransfers = await Promise.all(transfers.map(async (t: Transaction) => {
         let customerName = 'Unknown';
         let customerEmail = '';
-        if (t.fromUserId) {
-          const customer = await storage.getUser(t.fromUserId);
+        if ((t as any).fromUserId) {
+          const customer = await storage.getUser((t as any).fromUserId);
           if (customer) {
             customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || 'Unknown';
             customerEmail = customer.email || '';
@@ -2038,13 +2037,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           amount: t.amount,
           currency: t.currency || 'USD',
           recipientName: t.recipientName || 'Unknown',
-          recipientBank: t.bankName || t.recipientBank || 'Unknown',
+          recipientBank: (t as any).bankName || (t as any).recipientBank || 'Unknown',
           recipientAccount: t.recipientAccount || '',
-          recipientCountry: t.recipientCountry || '',
-          swiftCode: t.swiftCode || '',
+          recipientCountry: (t as any).recipientCountry || '',
+          swiftCode: (t as any).swiftCode || '',
           customerName,
           customerEmail,
-          fromUserId: t.fromUserId,
+          fromUserId: (t as any).fromUserId,
           description: t.description || '',
           createdAt: t.createdAt,
           status: t.status,
@@ -3025,7 +3024,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         const newBalance = (currentBalance - parseFloat(amount.toString())).toFixed(2);
         const balanceNum = parseFloat(newBalance);
         if (!isNaN(balanceNum) && senderAccountId && storage?.updateAccount) {
-          await storage.updateAccount(senderAccountId, { balance: balanceNum });
+          await storage.updateAccount(senderAccountId, { balance: String(balanceNum) });
         }
       } catch (balanceError) {
         // Non-blocking balance update
@@ -3551,4 +3550,3 @@ export async function registerLiveChatRoutes(app: Express) {
     }
   });
 }
-
