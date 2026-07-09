@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { supabase } from '@/lib/supabase';
 
 interface UserProfile {
   id: string;
@@ -33,58 +34,104 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+async function loadProfileFromSupabase(userId: string): Promise<UserProfile | null> {
+  try {
+    const [wbUser, wbProfile, wbAccount] = await Promise.all([
+      supabase.from('wb_users').select('*').eq('id', userId).maybeSingle(),
+      supabase.from('wb_profiles').select('*').eq('user_id', userId).maybeSingle(),
+      supabase.from('wb_accounts').select('account_number, balance, account_type, id')
+        .eq('user_id', userId).eq('status', 'active').limit(1).maybeSingle(),
+    ]);
+
+    const u = wbUser.data;
+    const p = wbProfile.data;
+    const a = wbAccount.data;
+
+    if (!u && !p) return null;
+
+    return {
+      id: userId,
+      email: u?.email || '',
+      fullName: p?.full_name || `${p?.first_name || ''} ${p?.last_name || ''}`.trim() || u?.email?.split('@')[0] || '',
+      username: u?.email?.split('@')[0] || '',
+      phone: p?.phone_number || '',
+      role: u?.role || 'customer',
+      balance: a?.balance ?? '0',
+      isVerified: u?.kyc_status === 'approved',
+      isActive: u?.account_status === 'active',
+      profession: p?.occupation || '',
+      accountId: a?.id || '',
+      accountNumber: a?.account_number || '****1234',
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth session on mount
   useEffect(() => {
-    // Check for existing session from localStorage (set by login)
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    const storedProfile = localStorage.getItem('userProfile');
+    // Restore session from Supabase (handles token refresh automatically)
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const u: User = {
+          id: session.user.id,
+          email: session.user.email || '',
+          role: session.user.app_metadata?.role || 'customer',
+        };
+        setUser(u);
 
-    if (storedToken && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        if (parsedUser?.id && parsedUser?.email) {
-          setUser(parsedUser);
-          // CRITICAL: Load cached profile immediately - NO FETCH
-          if (storedProfile) {
-            try {
-              const parsedProfile = JSON.parse(storedProfile);
-              setUserProfile(parsedProfile);
-            } catch (e) {}
-          }
+        // Load cached profile immediately while fetching fresh
+        const cached = localStorage.getItem('userProfile');
+        if (cached) {
+          try { setUserProfile(JSON.parse(cached)); } catch {}
         }
-      } catch (e) {
+
+        // Store token for authenticatedFetch usage elsewhere in the app
+        localStorage.setItem('token', session.access_token);
+        localStorage.setItem('user', JSON.stringify(u));
+
+        const profile = await loadProfileFromSupabase(session.user.id);
+        if (profile) {
+          setUserProfile(profile);
+          localStorage.setItem('userProfile', JSON.stringify(profile));
+        }
+      }
+      setLoading(false);
+    });
+
+    // Keep session in sync across tabs / token refreshes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const u: User = {
+          id: session.user.id,
+          email: session.user.email || '',
+          role: session.user.app_metadata?.role || 'customer',
+        };
+        setUser(u);
+        localStorage.setItem('token', session.access_token);
+        localStorage.setItem('user', JSON.stringify(u));
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        localStorage.setItem('token', session.access_token);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setUserProfile(null);
         localStorage.clear();
       }
-    }
+    });
 
-    setLoading(false);
+    return () => subscription.unsubscribe();
   }, []);
 
   const fetchUserData = useCallback(async (authUser: User) => {
-    if (!authUser?.id) {
-      return;
-    }
-    try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      // Use /api/user which looks up by email from JWT (avoids UUID vs numeric ID mismatch)
-      const response = await authenticatedFetch(`/api/user`);
-      
-      if (!response.ok) {
-        return;
-      }
-
-      const profile = await response.json();
-      if (profile && typeof profile === 'object') {
-        setUserProfile(profile);
-      }
-    } catch (error: any) {
-      // Silently fail - profile already loaded from localStorage
+    if (!authUser?.id) return;
+    const profile = await loadProfileFromSupabase(authUser.id);
+    if (profile) {
+      setUserProfile(profile);
+      localStorage.setItem('userProfile', JSON.stringify(profile));
     }
   }, []);
 
@@ -92,108 +139,90 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
 
-      // Login endpoint - intentionally unauthenticated to create initial session
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Login failed' }));
+      if (error) {
         setLoading(false);
-        return { error: errorData.error || `Login failed (${response.status})` };
+        return { error: error.message || 'Invalid email or password' };
       }
 
-      const data = await response.json();
-
-      if (!data || data.error) {
+      if (!data.session || !data.user) {
         setLoading(false);
-        return { error: data?.error || 'Login failed' };
+        return { error: 'Login failed — no session returned' };
       }
 
-      // CRITICAL: Validate token is Supabase JWT (3 parts: header.payload.signature)
-      if (!data.token || !data.token.includes('.')) {
-        setLoading(false);
-        return { error: 'Invalid authentication token format' };
-      }
+      const u: User = {
+        id: data.user.id,
+        email: data.user.email || email,
+        role: data.user.app_metadata?.role || 'customer',
+      };
+      setUser(u);
+      localStorage.setItem('token', data.session.access_token);
+      localStorage.setItem('refresh_token', data.session.refresh_token || '');
+      localStorage.setItem('user', JSON.stringify(u));
 
-      if (data.token && data.user) {
-        // Store Supabase JWT token for API calls
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('refresh_token', data.refreshToken || '');
-        
-        const userObj: User = { 
-          id: data.user.id, 
-          email: data.user.email,
-          role: data.user.role 
-        };
-        setUser(userObj);
-        
-        // CRITICAL: Cache full profile immediately to avoid fetch timeout
-        const cacheProfile: UserProfile = {
+      // Load profile from Supabase tables
+      const profile = await loadProfileFromSupabase(data.user.id);
+      if (profile) {
+        setUserProfile(profile);
+        localStorage.setItem('userProfile', JSON.stringify(profile));
+      } else {
+        // Fallback from Supabase auth metadata if wb_profiles not populated yet
+        const fallback: UserProfile = {
           id: data.user.id,
-          email: data.user.email,
-          fullName: data.user.fullName || data.user.email.split('@')[0],
-          phone: data.user.phone || '',
-          role: data.user.role || 'customer',
-          balance: data.user.balance || '0',
-          isVerified: true,
+          email: data.user.email || email,
+          fullName: data.user.user_metadata?.full_name || email.split('@')[0],
+          phone: data.user.user_metadata?.phone || '',
+          role: data.user.app_metadata?.role || 'customer',
+          balance: '0',
+          isVerified: false,
           isActive: true,
-          profession: data.user.profession || '',
-          accountId: data.user.accountId || '',
-          accountNumber: data.user.accountNumber || '****1234'
+          accountNumber: '****1234',
         };
-        setUserProfile(cacheProfile);
-        localStorage.setItem('userProfile', JSON.stringify(cacheProfile));
-        
-        setLoading(false);
-        return {};
+        setUserProfile(fallback);
+        localStorage.setItem('userProfile', JSON.stringify(fallback));
       }
 
       setLoading(false);
-      return { error: 'Authentication failed - invalid response' };
+      return {};
     } catch (error: any) {
       setLoading(false);
-      return { error: error?.message || 'Network error' };
+      return { error: error?.message || 'Network error during login' };
     }
   };
 
   const signUp = async (email: string, password: string, metadata?: any): Promise<{ error?: string }> => {
     try {
-      // Register endpoint - intentionally unauthenticated to create account
-      const response = await fetch('/api/auth/register-complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email, 
-          password,
-          firstName: metadata?.firstName || email.split('@')[0],
-          lastName: metadata?.lastName || 'User',
-          phone: metadata?.phone || '',
-          dateOfBirth: metadata?.dateOfBirth || '',
-          address: metadata?.address || '',
-          city: metadata?.city || '',
-          state: metadata?.state || '',
-          country: metadata?.country || '',
-          postalCode: metadata?.postalCode || '',
-          profession: metadata?.profession || '',
-          annualIncome: metadata?.annualIncome || '',
-          idType: metadata?.idType || '',
-          idNumber: metadata?.idNumber || '',
-          transferPin: metadata?.transferPin || '0192'
-        })
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: `${metadata?.firstName || ''} ${metadata?.lastName || ''}`.trim() || email.split('@')[0],
+            first_name: metadata?.firstName || '',
+            last_name: metadata?.lastName || '',
+            phone: metadata?.phone || '',
+          },
+        },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Signup failed' }));
-        return { error: errorData?.error || `Signup failed (${response.status})` };
-      }
+      if (error) return { error: error.message };
+      if (!data.user) return { error: 'Registration failed' };
 
-      const data = await response.json();
-      if (data?.error) {
-        return { error: data.error };
+      // Insert profile row in wb_profiles
+      if (metadata?.firstName || metadata?.lastName) {
+        await supabase.from('wb_profiles').upsert({
+          user_id: data.user.id,
+          full_name: `${metadata.firstName || ''} ${metadata.lastName || ''}`.trim(),
+          first_name: metadata.firstName || '',
+          last_name: metadata.lastName || '',
+          phone_number: metadata.phone || '',
+          occupation: metadata.profession || '',
+          city: metadata.city || '',
+          state: metadata.state || '',
+          country: metadata.country || '',
+          postal_code: metadata.postalCode || '',
+        });
       }
 
       return {};
@@ -204,37 +233,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      // ✅ CRITICAL: Notify backend to terminate session
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        await authenticatedFetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        }).catch(() => {}); // Don't fail if endpoint unavailable
-      } catch (e) {}
-      
-      // Clear ALL stored credentials IMMEDIATELY
+      await supabase.auth.signOut();
+    } finally {
       localStorage.clear();
       sessionStorage.clear();
-      
-      // Clear state
       setUser(null);
       setUserProfile(null);
-      
-      // Clear query cache
       try {
         const { queryClient } = await import('@/lib/queryClient');
         queryClient.clear();
-      } catch (e) {}
-      
-      // Force navigation to login with hard refresh
-      window.location.replace('/login');
-    } catch (error) {
-      // Even on error, clear everything and logout
-      localStorage.clear();
-      sessionStorage.clear();
-      setUser(null);
-      setUserProfile(null);
+      } catch {}
       window.location.replace('/login');
     }
   };
