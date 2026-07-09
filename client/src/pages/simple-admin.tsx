@@ -634,7 +634,7 @@ export default function SimpleAdmin() {
             
             uploadCompressedImage(compressedImage);
           };
-          img.src = base64Image;
+          img.src = typeof base64Image === 'string' ? base64Image : '';
         } catch (uploadError: any) {
           setUploadingPhoto(false);
           toast({
