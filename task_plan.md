@@ -1,144 +1,109 @@
-# World Bank App — Task Plan & Architecture Reference
-
+# World Bank App — Architecture Reference
 ## Last Updated: 2026-07-09
 
-## Architecture
+## Stack
+- **Frontend**: React 18 + Vite 5 + Wouter + TanStack Query v5 + shadcn/ui + Tailwind
+- **Backend**: Node.js + Express 4 (dev: `tsx server/index.ts`, prod: Vercel serverless)
+- **Database**: Supabase Postgres (REST via @supabase/supabase-js service role key)
+- **Auth**: Supabase Auth JWT — verified server-side in auth-middleware.ts
+- **Realtime**: Supabase Realtime channels (client/src/hooks/)
+- **Chat**: Supabase Realtime + messages table (server/supabase-live-chat.ts)
 
-### Stack
-- **Frontend**: React 18 + Vite + Wouter + TanStack Query + shadcn/ui + Tailwind
-- **Backend**: Node.js + Express (dev: tsx, prod: Vercel serverless via api/index.ts)
-- **Database**: Supabase Postgres (REST API via @supabase/supabase-js service role)
-- **Auth**: Supabase Auth (JWT) — verified server-side in auth-middleware.ts
-- **Realtime**: Supabase Realtime channels (client hooks in client/src/hooks/)
-- **Chat**: Supabase Realtime + messages table + WebSocket in dev (server/supabase-live-chat.ts)
+## Shared Folder Pattern
+`shared/` is imported by BOTH client and server:
+- Client: `@shared/*` → `../shared/*` (vite alias + client/tsconfig.json)
+- Server: `@shared/*` → `./shared/*` (root tsconfig.json + tsconfig.server.json)
 
-### Shared Folder
-- `shared/schema.ts` is imported by BOTH client and server
-- Client imports via `@shared/*` alias → `../shared/*` (configured in client/tsconfig.json + vite.config.ts)
-- Server imports via `@shared/*` alias → `./shared/*` (configured in root tsconfig.json + tsconfig.server.json)
-- **Primary tables**: wb_users, wb_accounts, wb_transactions, wb_profiles
-- **Legacy tables** (still active): bank_accounts, transactions, messages, alerts, cards, investments, support_tickets, admin_actions
-- All primary key IDs are **UUID strings** (not integers)
+### shared/schema.ts
+Drizzle schema + Zod validators + ALL canonical TypeScript types.
+Exports: `User`, `Account`, `Transaction`, `SupportTicket`, `Card`, `Investment`,
+`Message`, `Alert`, `AdminAction`, plus Insert variants and Drizzle row types.
 
-### Key Files
-| File | Purpose |
-|------|---------|
-| `shared/schema.ts` | Drizzle schema + Zod validators + User/Account/Transaction types |
-| `server/storage.ts` | IStorage interface (all IDs: string UUID) |
-| `server/supabase-public-storage.ts` | Supabase REST implementation of IStorage |
-| `server/storage-factory.ts` | Singleton IStorage instance |
-| `server/auth-middleware.ts` | requireAuth + requireAdmin middleware |
-| `server/fix-routes.ts` | All 78 API endpoints |
-| `server/index.ts` | Dev server entry (tsx) |
-| `api/index.ts` | Vercel serverless entry |
-| `client/src/lib/supabase.ts` | Supabase client singleton |
-| `client/src/lib/queryClient.ts` | React Query + authenticatedFetch |
-| `client/src/contexts/AuthContext.tsx` | Auth state, calls /api/auth/login |
+### shared/types.ts
+Additional shared types: `AuthUser`, `SessionToken`, `StoredProfile`,
+`ApiSuccess`, `ApiError`, `RealtimeBalanceUpdate`, `ROLE_PERMISSIONS`,
+`hasPermission`, `isAdminRole`, `isStaffRole`.
 
-### TypeScript Config
-- `tsconfig.json` — root, covers all files, noEmit:true
-- `tsconfig.server.json` — server build only, emits to dist/server/, CommonJS
-- `client/tsconfig.json` — client only, no tsconfig.node.json reference
-- All configs have `@shared/*` path aliases pointing to `./shared/` or `../shared/`
+## Real Database Tables (verified 2026-07-09)
 
-### Build Scripts
-| Script | Purpose |
-|--------|---------|
-| `npm run dev` | Dev server (tsx server/index.ts) |
-| `npm run build` | Vite build → dist/public/ |
-| `npm run build:server` | tsc -p tsconfig.server.json → dist/server/ |
-| `npm run build:all` | Frontend + server build |
-| `npm run check` | Type check all files |
-| `npm run check:server` | Type check server only |
-| `npm start` | node dist/server/index.js (after build:all) |
+### user_profiles (PRIMARY USER TABLE)
+id: uuid PK (= auth.uid(), set by trigger)
+email, username, role ('customer'|'admin'|'support'|'compliance')
+is_active: boolean, is_verified: boolean
+balance: numeric, account_number: text, transfer_pin: text (bcrypt hashed)
+full_name, first_name, last_name: text
+phone_number, occupation, profession: text
+date_of_birth, city, state, country, postal_code: text
+identification_type, identification_number: text
+kyc_status: text, account_type: text
+created_at, updated_at: timestamptz
 
-## Database Schema (Supabase)
+### bank_accounts
+id: uuid PK, user_id: uuid FK
+account_number: text NOT NULL, account_type: text NOT NULL
+balance: numeric, available_balance: numeric
+currency: text default 'USD', status: text default 'active'
+routing_number, iban, swift_code, account_nickname: text
+is_primary: boolean
+created_at, updated_at: timestamptz
 
-### Primary Tables (wb_*)
-#### wb_users
-- id: uuid PK (= auth.uid())
-- email: text unique NOT NULL
-- role: text ('customer' | 'admin' | 'support' | 'compliance')
-- status: text ('pending' | 'active' | 'suspended' | 'closed')
-- is_active: boolean
-- is_verified: boolean
-- balance: numeric(18,2)
-- transfer_pin: text (bcrypt hashed)
-- account_number: text
-- first_name, last_name, full_name: text
-- phone_number: text
-- occupation: text
-- avatar_url: text
-- last_login: timestamptz
-- created_at, updated_at: timestamptz
+### transactions
+id: uuid PK
+from_account_id, to_account_id, from_user_id: uuid
+amount: numeric NOT NULL, currency: text NOT NULL
+transaction_type: text NOT NULL  (NOT 'type')
+reference_number: text NOT NULL
+status: text default 'pending'
+description, recipient_name, recipient_account,
+recipient_country, bank_name, swift_code, transfer_purpose: text
+requires_approval: boolean, approved_by: uuid, approved_at: timestamptz
+created_at, processed_at, completed_at: timestamptz
 
-#### wb_accounts
-- id: uuid PK
-- user_id: uuid FK → auth.users
-- account_number: text unique
-- account_type: text ('checking' | 'savings' | 'investment')
-- balance: numeric(18,2)
-- currency: text default 'USD'
-- status: text ('active' | 'frozen' | 'closed' | 'pending')
+### wb_users (minimal auth gate)
+id: uuid PK (= auth.uid())
+email: text NOT NULL UNIQUE
+role: text NOT NULL default 'customer'
+kyc_status: text, account_status: text
+transfer_pin_hash: text
+last_login_at, locked_until: timestamptz
+failed_login_attempts: integer
 
-#### wb_transactions
-- id: uuid PK
-- user_id: uuid FK → wb_users
-- from_account_id, to_account_id: uuid
-- type, status, amount, currency, description, reference_number: text/numeric
-
-#### wb_profiles
-- Extended KYC data linked to wb_users.id
-
-### Legacy Tables (still active)
-- bank_accounts — used for account balances in storage layer
-- transactions — used for all transaction writes
-- messages — chat messages
-- alerts — user notifications
-- cards, investments, support_tickets, admin_actions
-
-### RLS Summary
-- All wb_* tables have RLS enabled
-- Users: SELECT/UPDATE own rows via auth.uid() = id
-- Admins: SELECT/UPDATE all rows via role check in wb_users
-- Admin actions table: admin-only INSERT/SELECT
+### Other tables (all UUID PKs)
+alerts, messages, cards, investments, support_tickets, admin_actions
+user_profiles table (above)
+wb_audit_logs, wb_messages, wb_notifications, wb_security_events, wb_system_events
+wb_profiles, wb_accounts, wb_transactions, transaction_approvals
 
 ## Auth Flow
-1. User POSTs to /api/auth/login with email + password
-2. Server calls supabaseAdmin.auth.signInWithPassword()
-3. Server gets Supabase JWT access_token
-4. Server syncs/creates wb_users row for the user
-5. Server returns { token, refreshToken, user } to client
-6. Client stores token in localStorage
-7. All API calls include Authorization: Bearer <token>
-8. requireAuth middleware verifies JWT via supabase.auth.getUser(token)
-9. Attaches req.user = { id (UUID), email, role } to request
-10. requireAdmin additionally checks role === 'admin'
+1. POST /api/auth/login → supabaseAdmin.auth.signInWithPassword()
+2. Returns { token (JWT), refreshToken, user (from user_profiles) }
+3. Client stores token in localStorage('token')
+4. All API calls: Authorization: Bearer <token>
+5. requireAuth: verifies JWT via supabase.auth.getUser(token) server-side
+6. Looks up user_profiles by email
+7. Auto-creates user_profiles row if missing (sync from Supabase Auth metadata)
+8. Attaches req.user = { id (UUID), email, role }
+9. requireAdmin: additionally checks role === 'admin'
 
-## Session / Token Flow
-- Token: Supabase JWT stored in localStorage as 'token'
-- Refresh: localStorage 'refresh_token'
-- queryClient.ts reads token from localStorage for all authenticated fetches
-- On 401: localStorage cleared, redirect to /login
-- Role-based routing: AdminRoute component checks AuthContext user.role
+## TypeScript Config
+- tsconfig.json: root, noEmit:true, covers all files
+- tsconfig.server.json: server build, emits to dist/server/, CommonJS
+- client/tsconfig.json: client only, jsx:react-jsx
+- All three have @shared/* path alias
 
-## Realtime Subscriptions (client hooks)
-- useRealtimeAlerts.ts — alerts table changes
-- useRealtimeChat.ts — messages table changes
-- useRealtimeTransactions.ts — transactions table changes
-- useSupabaseRealtimeDashboard.ts — dashboard aggregates
-- usePresence.ts — user online status
+## Build Scripts
+| npm run dev          | tsx server/index.ts (dev) |
+| npm run build        | vite build → dist/public/ |
+| npm run build:server | tsc -p tsconfig.server.json → dist/server/ |
+| npm run build:all    | build + build:server |
+| npm run check        | type-check all files |
+| npm run check:server | type-check server only |
+| npm start            | node dist/server/index.js |
 
-## Completed Fixes (2026-07-09)
-- [x] shared/schema.ts: UUID IDs, wb_users/wb_accounts/wb_transactions tables
-- [x] server/storage.ts: IStorage interface uses string IDs throughout
-- [x] server/supabase-public-storage.ts: queries wb_users, maps correct columns
-- [x] server/auth-middleware.ts: uses wb_users, string UUIDs, clean sync
-- [x] server/storage-factory.ts: clean singleton
-- [x] tsconfig.json: fixed, @shared/* alias, jsx, strict
-- [x] tsconfig.server.json: NEW — server build config, emits to dist/server/
-- [x] client/tsconfig.json: removed missing tsconfig.node.json reference
-- [x] package.json: added build:server, build:all, check:server scripts
-- [x] api/index.ts: eager route registration, no race condition
-- [x] server/vite.ts: safe for Vercel (no top-level vite import)
-- [x] AuthContext.tsx: restored original /api/auth/login flow
+## Role-Based Access
+Roles: customer, admin, support, compliance
+- customer: read/write own data, transfer own funds
+- support: read all users, read all tickets
+- compliance: read all, write transactions
+- admin: full access
+Middleware: requireAuth (all authenticated routes), requireAdmin (admin-only routes)
