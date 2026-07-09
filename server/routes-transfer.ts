@@ -1,6 +1,7 @@
 import { Express, Request, Response } from 'express';
 import { storage } from './storage-factory';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
+import { transactionRateLimiter } from './rate-limiter';
 import * as bcrypt from 'bcryptjs';
 
 function generateReferenceNumber(): string {
@@ -9,7 +10,7 @@ function generateReferenceNumber(): string {
 
 export function setupTransferRoutes(app: Express) {
   // Regular Transfer API - PROTECTED: requires authentication
-  app.post('/api/transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/transfers', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const {
         amount,
@@ -128,7 +129,7 @@ export function setupTransferRoutes(app: Express) {
   });
 
   // International Transfer API - PROTECTED: requires authentication
-  app.post('/api/international-transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/international-transfers', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const {
         amount,
@@ -238,7 +239,7 @@ export function setupTransferRoutes(app: Express) {
   });
 
   // Enhanced Transfer API with proper workflow - PROTECTED: requires authentication
-  app.post('/api/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/transactions', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
       const user = await storage.getUserByEmail(req.user!.email);
