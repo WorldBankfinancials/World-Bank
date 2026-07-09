@@ -58,7 +58,6 @@ import SupportTicket from "@/pages/support-ticket";
 import AdminAccounts from "@/pages/admin-accounts";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { AdminRoute } from "@/components/AdminRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import BottomNavigation from "@/components/BottomNavigation";
@@ -78,22 +77,22 @@ function App() {
                 <Route path="/register-multi" component={MultiStepRegister} />
                 <Route path="/admin-login" component={AdminLogin} />
                 <Route path="/admin-dashboard">
-                  <AdminRoute><AdminDashboard /></AdminRoute>
+                  <ProtectedRoute><AdminDashboard /></ProtectedRoute>
                 </Route>
                 <Route path="/admin-panel">
-                  <AdminRoute><AdminPanel /></AdminRoute>
+                  <ProtectedRoute><AdminPanel /></ProtectedRoute>
                 </Route>
                 <Route path="/simple-admin">
-                  <AdminRoute><SimpleAdmin /></AdminRoute>
+                  <ProtectedRoute><SimpleAdmin /></ProtectedRoute>
                 </Route>
                 <Route path="/admin-live-chat">
-                  <AdminRoute><AdminLiveChat /></AdminRoute>
+                  <ProtectedRoute><AdminLiveChat /></ProtectedRoute>
                 </Route>
                 <Route path="/admin-accounts">
-                  <AdminRoute><AdminAccounts /></AdminRoute>
+                  <ProtectedRoute><AdminAccounts onBack={() => window.history.back()} /></ProtectedRoute>
                 </Route>
                 <Route path="/customer-service">
-                  <AdminRoute><CustomerServicePortal /></AdminRoute>
+                  <ProtectedRoute><CustomerServicePortal /></ProtectedRoute>
                 </Route>
 
                 <Route path="/" nest>
@@ -155,7 +154,7 @@ function App() {
       </TooltipProvider>
       <Toaster />
     </QueryClientProvider>
-  </ErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
