@@ -95,7 +95,7 @@ export default function Login() {
       // Check role: admin users go directly to admin panel (no PIN required)
       const storedProfile = localStorage.getItem('userProfile');
       const profile = storedProfile ? JSON.parse(storedProfile) : null;
-      const userRole = profile?.role || result?.role;
+      const userRole = profile?.role || (result as any)?.role;
       
       if (userRole === 'admin') {
         toast({
