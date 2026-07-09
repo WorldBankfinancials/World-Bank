@@ -50,6 +50,28 @@ export const verifyPinSchema = z.object({
   pin: z.string().min(4),
 });
 
+// ---- Transfer form schema (used by client/src/pages/transfer-funds.tsx) ----
+export const transferFormSchema = z.object({
+  amount:           z.number().min(0, 'Amount is required').max(1_000_000),
+  recipientName:    z.string().min(1, 'Recipient name is required').max(200),
+  recipientCountry: z.string().min(1, 'Country is required').max(100),
+  recipientAddress: z.string().max(300).optional().default(''),
+  recipientCity:    z.string().max(100).optional().default(''),
+  bankName:         z.string().max(200).optional().default(''),
+  bankAddress:      z.string().max(300).optional().default(''),
+  bankCity:         z.string().max(100).optional().default(''),
+  bankCountry:      z.string().max(100).optional().default(''),
+  swiftCode:        z.string().max(20).optional().default(''),
+  accountNumber:    z.string().max(50).optional().default(''),
+  routingNumber:    z.string().max(20).optional().default(''),
+  iban:             z.string().max(50).optional().default(''),
+  purpose:          z.string().max(200).optional().default(''),
+  description:      z.string().max(500).optional().default(''),
+  transferPin:      z.string().min(4, 'PIN is required').max(6),
+});
+
+export type TransferForm = z.infer<typeof transferFormSchema>;
+
 export type TransferPinInput = z.infer<typeof transferPinSchema>;
 export type TransferInput    = z.infer<typeof transferSchema>;
 export type VerifyPinInput   = z.infer<typeof verifyPinSchema>;
@@ -62,7 +84,6 @@ export type VerifyPinInput   = z.infer<typeof verifyPinSchema>;
 
 export const userProfiles = pgTable('user_profiles', {
   id:                   uuid('id').primaryKey(),
-  // Auth
   email:                text('email'),
   username:             text('username'),
   role:                 text('role').default('customer'),
@@ -71,11 +92,9 @@ export const userProfiles = pgTable('user_profiles', {
   transferPin:          text('transfer_pin'),
   kycStatus:            text('kyc_status').default('pending'),
   accountType:          text('account_type').default('personal'),
-  // Financial
   accountNumber:        text('account_number'),
   accountId:            text('account_id'),
   balance:              numeric('balance', { precision: 18, scale: 2 }).default('0'),
-  // Personal
   fullName:             text('full_name').notNull(),
   firstName:            text('first_name'),
   lastName:             text('last_name'),
@@ -87,18 +106,15 @@ export const userProfiles = pgTable('user_profiles', {
   state:                text('state'),
   postalCode:           text('postal_code'),
   country:              text('country'),
-  // Employment
   occupation:           text('occupation'),
   profession:           text('profession').default(''),
   employer:             text('employer'),
   annualIncome:         numeric('annual_income', { precision: 15, scale: 2 }),
-  // KYC
   identificationType:   text('identification_type'),
   identificationNumber: text('identification_number'),
   emailVerified:        boolean('email_verified').default(false),
   phoneVerified:        boolean('phone_verified').default(false),
   identityVerified:     boolean('identity_verified').default(false),
-  // Timestamps
   createdAt:            timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt:            timestamp('updated_at', { withTimezone: true }).defaultNow(),
   preferredLanguage:    text('preferred_language').default('en'),
@@ -108,7 +124,6 @@ export const userProfiles = pgTable('user_profiles', {
 // ============================================================
 // AUTH GATE TABLE: wb_users
 // Lightweight auth table: id = auth.uid(), role, status.
-// user_profiles holds the rich KYC/financial data.
 // ============================================================
 
 export const authUsers = pgTable('wb_users', {
@@ -151,8 +166,7 @@ export const bankAccounts = pgTable('bank_accounts', {
 
 // ============================================================
 // TRANSACTIONS
-// DB column: transaction_type (NOT 'type').
-// reference_number is NOT NULL.
+// DB column: transaction_type (NOT 'type'). reference_number is NOT NULL.
 // ============================================================
 
 export const transactions = pgTable('transactions', {
@@ -315,13 +329,10 @@ export type InsertAlert        = typeof alerts.$inferInsert;
 
 // ============================================================
 // CANONICAL APPLICATION TYPES
-// Clean interfaces used by routes, components, and API layer.
-// Not tied to Drizzle — import these in components and routes.
 // ============================================================
 
-/** Canonical User — maps to user_profiles table. id = auth.uid() UUID. */
 export interface User {
-  id: string;                    // UUID = auth.uid()
+  id: string;
   email: string;
   role: UserRole;
   isActive: boolean;
@@ -379,7 +390,6 @@ export interface InsertUser {
   username?: string;
 }
 
-/** Canonical Account — maps to bank_accounts table. */
 export interface Account {
   id: string;
   userId: string;
@@ -408,17 +418,13 @@ export interface InsertAccount {
   isPrimary?: boolean;
 }
 
-/** Canonical Transaction — maps to transactions table.
- * DB column name is transaction_type (not type).
- * The 'type' field is an alias for compat with older code.
- */
 export interface Transaction {
   id: string;
   fromAccountId?: string | null;
   toAccountId?: string | null;
   fromUserId?: string | null;
   transactionType: string;
-  type?: string;         // alias for transactionType
+  type?: string;
   amount: string;
   currency: string;
   status: string;
