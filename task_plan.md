@@ -1,110 +1,119 @@
-# Task Plan — Digital Operations Center Log
-## World Bank Digital Banking Application
+# World Bank App — Architecture Reference
+## Last Updated: 2026-07-09 | Branch: main
 
-Last Updated: 2026-07-09
+## Stack
+- **Frontend**: React 18 + Vite 5 + Wouter + TanStack Query v5 + shadcn/ui + Tailwind
+- **Backend**: Node.js + Express 4 (dev: `tsx server/index.ts`, prod: Vercel serverless)
+- **Database**: Supabase Postgres (REST via @supabase/supabase-js service role key)
+- **Auth**: Supabase Auth JWT — verified server-side in server/auth-middleware.ts
+- **Realtime**: Supabase Realtime channels (client/src/hooks/)
+- **Chat**: Supabase Realtime + messages table + WebSocket (server/supabase-live-chat.ts)
 
----
+## Shared Folder Pattern
+`shared/` is imported by BOTH client and server:
+- Client: `@shared/*` → `../shared/*` (vite.config.ts alias + client/tsconfig.json)
+- Server: `@shared/*` → `./shared/*` (root tsconfig.json + tsconfig.server.json)
 
-## System Health Registers
+### shared/schema.ts — exports:
+- Drizzle table definitions: `userProfiles`, `bankAccounts`, `transactions`, etc.
+- Canonical TypeScript types: `User`, `Account`, `Transaction`, `SupportTicket`,
+  `Card`, `Investment`, `Message`, `Alert`, `AdminAction` (no wb_ prefix)
+- Insert types: `InsertUser`, `InsertAccount`, `InsertTransaction`, etc.
+- Constants: `USER_ROLES`, `UserRole`, `TRANSACTION_TYPES`, etc.
 
-| System | Status | Details |
-|-------|--------|---------|
-| GitHub repo | Operational | main + development branches, CI/CD active |
-| Supabase DB | Operational | 19 tables, 74 RLS policies, 5 migrations applied |
-| Express server | Operational | Dynamic port, CSP hardened, rate limited |
-| React client | Operational | 53 pages, 16 components, mobile-first |
-| Auth system | Operational | JWT verified via Supabase, RBAC enforced |
-| Transfer routes | Operational | PIN hashed with bcrypt, rate limited |
-| Realtime chat | Configured | WebSocket + Supabase realtime |
-| CI/CD | Operational | GitHub Actions (ci.yml, codeql.yml) |
-| Vercel deploy | Operational | vercel-build script, dynamic port |
-| Testing | Missing | No test framework installed |
-| Monitoring | Partial | wb_system_events table ready, no active monitoring |
+### shared/types.ts — exports:
+- `AuthUser` (req.user type in Express routes)
+- `SessionToken`, `StoredProfile` (localStorage)
+- `ApiSuccess`, `ApiError`, `ApiResponse`
+- `RealtimeBalanceUpdate`, `RealtimeChatMessage`, `RealtimeTransactionUpdate`
+- `ROLE_PERMISSIONS`, `hasPermission`, `isAdminRole`, `isStaffRole`
 
-## Background Automation Queues
+## Real Database Tables (Supabase Postgres)
 
-| Job | Schedule | Status | Target Table |
-|-----|---------|--------|-------------|
-| World Bank Financial Indexes Sync | Nightly 02:00 UTC | Configured | wb_system_events |
-| Balance Reconciliation | Manual | Configured | wb_accounts |
-| Expired Transaction Cleanup | Manual | Configured | wb_transactions |
-| Monthly Statement Generation | Monthly | Configured | wb_notifications |
+### user_profiles (PRIMARY USER TABLE)
+id: uuid PK (= auth.uid(), set by trigger)
+email, username, role ('customer'|'admin'|'support'|'compliance')
+is_active, is_verified: boolean
+balance: numeric, account_number: text, transfer_pin: text (bcrypt hashed)
+full_name, first_name, last_name: text
+phone_number, occupation, profession: text
+date_of_birth, city, state, country, postal_code: text
+identification_type, identification_number, kyc_status, account_type: text
+created_at, updated_at: timestamptz
 
-## Active Provider Free Quotas
+### bank_accounts
+id: uuid PK, user_id: uuid FK
+account_number: text NOT NULL, account_type: text NOT NULL
+balance, available_balance: numeric
+currency: 'USD', status: 'active'
+routing_number, iban, swift_code, account_nickname: text
+is_primary: boolean
 
-| Provider | Service | Free Tier Limit | Status |
-|----------|---------|---------------|--------|
-| Google Gemini | AI model (gemini-2.0-flash-exp) | 15 RPM, 1500/day | Active via OpenRouter |
-| DeepSeek | AI model (deepseek-chat) | Unlimited (free tier) | Active via OpenRouter |
-| OpenRouter | AI model router | 20 RPM | Active |
-| World Bank API | Financial data | Unlimited (open data) | Configured |
-| Supabase | Database + Auth | 500MB DB, 50K MAU | Active |
-| Vercel | Hosting | 100GB bandwidth, 100 deploy-hours | Active |
-| GitHub | Repository + Actions | 2000 Actions min/month | Active |
+### transactions
+id: uuid PK
+from_account_id, to_account_id, from_user_id: uuid
+amount: numeric NOT NULL, currency: text NOT NULL
+transaction_type: text NOT NULL  ← NOTE: NOT 'type'
+reference_number: text NOT NULL
+status: 'pending', 'processing', 'completed', 'failed'
+description, recipient_name, recipient_account, recipient_country,
+bank_name, swift_code, transfer_purpose: text
+requires_approval: boolean, approved_by: uuid
+created_at, processed_at, completed_at: timestamptz
 
-## Engineering Reference Handbook (8 Volumes)
+### wb_users (minimal auth gate, secondary)
+id: uuid PK (= auth.uid())
+email: text NOT NULL UNIQUE
+role: 'customer'|'admin'|'support'|'compliance'
+kyc_status, account_status: text
+transfer_pin_hash: text
+last_login_at, locked_until: timestamptz
+failed_login_attempts: integer
 
-| Volume | Title | Status |
-|--------|-------|--------|
-| 1 | Architecture & Design Principles | Documented in CLAUDE.md |
-| 2 | Database Schema & RLS Policies | 5 migrations applied, 19 tables operational |
-| 3 | API Reference & Endpoint Catalog | ~78 endpoints mapped |
-| 4 | Frontend Component Library | 53 pages, 16 components, shadcn/ui |
-| 5 | Security & Authentication | JWT verified, RBAC, bcrypt, CSRF, CSP |
-| 6 | Deployment & CI/CD | Vercel + GitHub Actions + Trigger.dev |
-| 7 | Testing & Quality Assurance | 6 Quality Gates defined, test framework missing |
-| 8 | Operations & Monitoring | wb_system_events ready, active monitoring pending |
+### Other tables (all UUID PKs)
+alerts, messages, cards, investments, support_tickets, admin_actions
+wb_audit_logs, wb_messages, wb_notifications, wb_security_events
+wb_system_events, wb_profiles, wb_accounts, wb_transactions
+transaction_approvals
 
-## Organism Domain Tracking
+## Auth Flow
+1. POST /api/auth/login → supabaseAdmin.auth.signInWithPassword()
+2. Returns { token (Supabase JWT), refreshToken, user (from user_profiles) }
+3. Client stores token in localStorage('token')
+4. All API calls: Authorization: Bearer <token>
+5. requireAuth: verifies JWT via supabase.auth.getUser(token) server-side
+6. Looks up user_profiles by email
+7. Auto-creates user_profiles row if missing
+8. req.user = { id (UUID string), email, role }
+9. requireAdmin: checks role === 'admin'
 
-| Organ | Domain | Phase | Status |
-|-------|--------|-------|--------|
-| Brain | Decision Engine | Level 3 | Operational — 78 endpoints, transfer approval workflow |
-| Heart | Core Database | Level 4 | Operational — 19 tables, 74 RLS policies, 5 migrations |
-| Nervous System | Realtime Layer | Level 2 | Configured — WebSocket + Supabase Realtime |
-| Eyes | Monitoring | Level 1 | Foundation — wb_system_events table ready, no active monitoring |
-| Immune System | Security Layer | Level 3 | Operational — JWT, RBAC, bcrypt, CSRF, CSP |
-| Lungs | Background Jobs | Level 2 | Configured — Trigger.dev config written, not yet deployed |
-| DNA | Schema | Level 4 | Operational — 5 Sovereign Ministries, 9 wb_ tables created |
+## Build Scripts
+npm run dev          → tsx server/index.ts
+npm run build        → vite build → dist/public/
+npm run build:server → tsc -p tsconfig.server.json → dist/server/
+npm run build:all    → build + build:server
+npm run check        → type-check all
+npm run check:server → type-check server only
+npm start            → node dist/server/index.js (after build:all)
 
-## Architectural Maturity Phases (Levels 1-8)
+## TypeScript Configs
+- tsconfig.json: root, noEmit:true, @shared/* → ./shared/*
+- tsconfig.server.json: server build, emits to dist/server/, CommonJS
+- client/tsconfig.json: jsx:react-jsx, @shared/* → ../shared/*
 
-| Level | Name | Status |
-|-------|------|--------|
-| 1 | Foundation | Complete — repo, Supabase, Vercel, CI/CD |
-| 2 | Infrastructure | Complete — 10 config files, MCP servers, agent bridges |
-| 3 | Schema | Complete — 19 tables, 74 RLS policies, 5 migrations |
-| 4 | Security | Complete — JWT verification, RBAC, bcrypt, CSRF, CSP |
-| 5 | Integration | In Progress — World Bank API pipeline configured |
-| 6 | Quality | Pending — test framework needed, 6 Quality Gates defined |
-| 7 | Optimization | Pending — performance tuning, bundle optimization |
-| 8 | Scale | Pending — multi-region, caching, CDN |
+## Realtime Subscriptions
+- useRealtimeAlerts: alerts table, filter user_id=eq.{userId} (userId: string UUID)
+- useRealtimeChat: messages table, filter recipient_id=eq.{userId}
+- supabase-live-chat.ts: server WebSocket + Supabase channel for messages
 
----
-
-## Completed Checkpoints
-
-- [x] Phase 0: Infrastructure configuration (10 config files pushed to main)
-- [x] Phase 1: Critical security fixes (JWT verification, RBAC, admin route protection)
-- [x] Phase 1.5: Supabase database integration (4 migrations, 10 legacy tables)
-- [x] Phase 2: High-grade core banking schema (5 Sovereign Ministries, 9 wb_ tables)
-- [x] 10-Layer Strategic Architecture documented
-- [x] Digital Constitution (10 principles) documented
-- [x] Grand Master Organism Architecture mapped
-- [x] 6 Quality Gates defined
-- [x] Universal Event Language vocabulary established
-- [x] 12 WBIE hubs declared
-- [x] Monorepo directory layout defined
-
-## Next Tasks
-
-- [ ] Deploy Trigger.dev background job for World Bank API nightly sync
-- [ ] Install test framework (Vitest + Testing Library + Playwright)
-- [ ] Implement active monitoring using wb_system_events table
-- [ ] Reconcile Drizzle schema.ts with migration schema (serial vs UUID)
-- [ ] Remove 5 dead storage implementations (~94KB dead code)
-- [ ] Consolidate triple auth system into single implementation
-- [ ] Fix route/component swap (/transfer vs /international-transfer)
-- [ ] Fix empty log() function in vite.ts
-- [ ] Fix broken serveStatic path resolution
-- [ ] Standardize environment variable names
+## Key Server Files
+server/index.ts             — Express app, WebSocket, Vite dev
+server/fix-routes.ts        — All API endpoints
+server/routes-transfer.ts   — Transfer endpoints
+server/auth-middleware.ts   — JWT verification + user_profiles lookup
+server/storage.ts           — IStorage interface
+server/supabase-public-storage.ts — Supabase REST implementation
+server/storage-factory.ts   — Singleton storage
+server/validation-schemas.ts — Zod validators
+server/validators.ts        — Low-level validators
+api/index.ts                — Vercel serverless entry

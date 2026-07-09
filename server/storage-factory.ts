@@ -1,13 +1,15 @@
-import { config } from './config';
+/**
+ * server/storage-factory.ts
+ * Singleton IStorage instance backed by Supabase REST.
+ */
 import { SupabasePublicStorage } from './supabase-public-storage';
 import type { IStorage } from './storage';
 
-// SUPABASE REST API MODE: HTTP-based, works in Replit's restricted network
+let _instance: IStorage | null = null;
+
 export function createStorage(): IStorage {
-  // Use Supabase REST API which works in Replit (HTTP-based, not direct Postgres)
-  const instance = new SupabasePublicStorage();
-  return instance;
+  if (!_instance) _instance = new SupabasePublicStorage();
+  return _instance;
 }
 
-// Export singleton storage instance
-export const storage = createStorage();
+export const storage: IStorage = createStorage();

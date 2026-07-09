@@ -1,61 +1,40 @@
 /**
- * Safe validation utilities for server-side input
+ * server/validators.ts
+ * Input validators. IDs are UUID strings — do NOT parseInt.
  */
 
-export function validateId(value: unknown): number {
-  if (typeof value !== 'string' && typeof value !== 'number') {
-    throw new Error('ID must be a string or number');
+/** Validate and return a UUID string ID. */
+export function validateId(value: unknown): string {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error('Invalid ID: must be a non-empty string');
   }
-  const parsed = parseInt(String(value), 10);
-  if (isNaN(parsed) || parsed <= 0) {
-    throw new Error('Invalid ID format');
-  }
-  return parsed;
+  return value.trim();
 }
 
 export function validateAmount(value: unknown): number {
-  if (typeof value !== 'string' && typeof value !== 'number') {
-    throw new Error('Amount must be a string or number');
-  }
-  const parsed = parseFloat(String(value));
-  if (isNaN(parsed) || parsed <= 0) {
-    throw new Error('Amount must be a positive number');
-  }
-  if (parsed > 1000000) {
-    throw new Error('Amount exceeds maximum transfer limit');
-  }
-  return parsed;
+  const n = parseFloat(String(value));
+  if (isNaN(n) || n <= 0) throw new Error('Invalid amount: must be a positive number');
+  if (n > 1_000_000) throw new Error('Amount exceeds maximum allowed value');
+  return n;
 }
 
 export function validateEmail(value: unknown): string {
-  if (typeof value !== 'string') {
-    throw new Error('Email must be a string');
-  }
-  const trimmed = value.trim();
-  if (!trimmed.includes('@') || trimmed.length < 5) {
-    throw new Error('Invalid email format');
-  }
-  return trimmed;
+  if (typeof value !== 'string') throw new Error('Invalid email');
+  const email = value.trim().toLowerCase();
+  if (!email.includes('@') || email.length < 5) throw new Error('Invalid email format');
+  return email;
 }
 
 export function validatePin(value: unknown): string {
-  if (typeof value !== 'string') {
-    throw new Error('PIN must be a string');
-  }
-  const trimmed = value.trim();
-  if (!/^\d{4}$/.test(trimmed)) {
-    throw new Error('PIN must be 4 digits');
-  }
-  return trimmed;
+  if (typeof value !== 'string') throw new Error('Invalid PIN');
+  if (!/^\d{4,6}$/.test(value)) throw new Error('PIN must be 4-6 digits');
+  return value;
 }
 
-export function validateString(value: unknown, minLength = 1, maxLength = 1000): string {
-  if (typeof value !== 'string') {
-    throw new Error('Value must be a string');
-  }
-  const trimmed = value.trim();
-  if (trimmed.length < minLength || trimmed.length > maxLength) {
-    throw new Error(`String length must be between ${minLength} and ${maxLength}`);
-  }
-  return trimmed;
+export function validateString(value: unknown, min = 1, max = 500): string {
+  if (typeof value !== 'string') throw new Error('Invalid string value');
+  const s = value.trim();
+  if (s.length < min) throw new Error(`Must be at least ${min} characters`);
+  if (s.length > max) throw new Error(`Must be at most ${max} characters`);
+  return s;
 }
