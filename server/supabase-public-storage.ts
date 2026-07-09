@@ -37,44 +37,42 @@ export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   db: { schema: 'public' }
 });
 
-
 const mapUser = (user: Record<string, any>): User => {
-  // Ensure balance is always a valid number string
-  let balance = '0';
+  let balance = '0.00';
   if (user.balance !== null && user.balance !== undefined) {
-    const balNum = parseFloat(String(user.balance));
-    balance = isNaN(balNum) ? '0' : balNum.toString();
+    const n = parseFloat(String(user.balance));
+    balance = isNaN(n) ? '0.00' : n.toFixed(2);
   }
-  
   return {
-    id: user.id,
-    username: user.username || '',
-    password: user.password || '',
-    firstName: user.first_name || '',
-    lastName: user.last_name || '',
+    id: String(user.id),
     email: user.email || '',
-    phone: user.phone || '',
-    accountNumber: user.account_number || '',
-    accountId: user.account_id || 0,
-    profession: user.profession || '',
-    dateOfBirth: user.date_of_birth || '',
-    address: user.address || '',
-    city: user.city || '',
-    state: user.state || '',
-    country: user.country || '',
-    postalCode: user.postal_code || '',
-    annualIncome: user.annual_income || '',
-    idType: user.id_type || '',
-    idNumber: user.id_number || '',
-    transferPin: user.transfer_pin || '',
-    lastLogin: user.last_login || null,
-    profilePhoto: user.profile_photo || null,
     role: user.role || 'customer',
-    isVerified: user.is_verified || false,
-    isActive: user.is_active || false,
-    balance: balance,
-    createdAt: user.created_at,
-    updatedAt: user.updated_at
+    status: user.status || 'pending',
+    isActive: user.is_active ?? false,
+    isVerified: user.is_verified ?? false,
+    transferPin: user.transfer_pin || null,
+    accountNumber: user.account_number || null,
+    balance,
+    lastLogin: user.last_login || null,
+    createdAt: user.created_at || null,
+    updatedAt: user.updated_at || null,
+    firstName: user.first_name || null,
+    lastName:  user.last_name  || null,
+    fullName:  user.full_name  || `${user.first_name || ''} ${user.last_name || ''}`.trim() || null,
+    phone:     user.phone_number || user.phone || null,
+    profession: user.occupation || user.profession || null,
+    profilePhoto: user.avatar_url || user.profile_photo || null,
+    avatarUrl:    user.avatar_url || null,
+    username:    user.username    || null,
+    dateOfBirth: user.date_of_birth || null,
+    address:     user.address     || null,
+    city:        user.city        || null,
+    state:       user.state       || null,
+    country:     user.country     || null,
+    postalCode:  user.postal_code || null,
+    annualIncome: user.annual_income ? String(user.annual_income) : null,
+    idType:   user.identification_type   || user.id_type   || null,
+    idNumber: user.identification_number || user.id_number || null,
   };
 };
 
@@ -82,10 +80,7 @@ const mapTransaction = (row: Record<string, any>): Transaction => ({
   id: row.id,
   fromAccountId: row.from_account_id ?? null,
   toAccountId: row.to_account_id ?? null,
-  fromUserId: row.from_user_id ?? null,
-  toUserId: row.to_user_id ?? null,
   type: row.type || 'transfer',
-  transactionType: row.transaction_type ?? null,
   amount: String(row.amount ?? '0'),
   currency: row.currency || 'USD',
   description: row.description ?? null,
@@ -94,10 +89,12 @@ const mapTransaction = (row: Record<string, any>): Transaction => ({
   recipientName: row.recipient_name ?? null,
   recipientAccount: row.recipient_account ?? null,
   recipientBank: row.recipient_bank ?? null,
+  recipientCountry: row.recipient_country ?? null,
   adminNotes: row.admin_notes ?? null,
-  approvedBy: row.approved_by ?? null,
-  approvedAt: row.approved_at ?? null,
+  transactionType: row.transaction_type ?? null,
+  swiftCode: row.swift_code ?? null,
   createdAt: row.created_at ?? null,
+  updatedAt: row.updated_at ?? null,
 } as unknown as Transaction);
 
 const mapMessage = (row: Record<string, any>): Message => ({
@@ -124,791 +121,541 @@ const mapAdminAction = (row: Record<string, any>): AdminAction => ({
 
 const mapCard = (row: Record<string, any>): Card => ({
   id: row.id,
-  accountId: row.account_id ?? 0,
-  cardNumber: row.card_number || '',
-  cardType: row.card_type || 'debit',
+  userId: row.user_id ?? null,
+  accountId: row.account_id ?? null,
+  cardNumber: row.card_number || null,
+  cardHolder: row.card_holder || null,
+  expiryDate: row.expiry_date || null,
+  cvv: row.cvv || null,
+  type: row.type || row.card_type || 'debit',
   status: row.status || 'active',
-  expiryMonth: row.expiry_month ?? null,
-  expiryYear: row.expiry_year ?? null,
+  isLocked: row.is_locked ?? false,
+  dailyLimit: row.daily_limit ?? null,
+  contactlessEnabled: row.contactless_enabled ?? true,
   createdAt: row.created_at ?? null,
-  updatedAt: row.updated_at ?? null,
-});
+} as unknown as Card);
 
 const mapInvestment = (row: Record<string, any>): Investment => ({
   id: row.id,
-  userId: row.user_id ?? 0,
+  userId: row.user_id ?? null,
   type: row.type || '',
-  amount: String(row.amount ?? '0'),
-  rate: row.rate !== null && row.rate !== undefined ? String(row.rate) : null,
+  symbol: row.symbol || '',
+  assetType: row.asset_type || null,
+  shares: row.shares ?? null,
+  averagePrice: row.average_price ?? null,
+  currentPrice: row.current_price ?? null,
+  totalValue: row.total_value ?? null,
+  gainLoss: row.gain_loss ?? null,
   status: row.status || 'active',
   createdAt: row.created_at ?? null,
   updatedAt: row.updated_at ?? null,
-});
+} as unknown as Investment);
 
-// Add retry logic with exponential backoff for network failures
-async function withRetry<T>(fn: () => Promise<T>, maxAttempts: number = 3): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
   let lastError: any;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error;
-      if (attempt < maxAttempts) {
-        const delayMs = Math.pow(2, attempt) * 100; // 200ms, 400ms, 800ms
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-      }
+      if (attempt < maxAttempts) await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 100));
     }
   }
   throw lastError;
 }
 
 export class SupabasePublicStorage implements IStorage {
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     try {
-      const user = await withRetry(async () => {
-        const { data: user, error } = await supabase
-          .from('bank_users')
-          .select('*')
-          .eq('id', id)
-          .single();
-        if (error) throw new Error(`Supabase error: ${error.message}`);
-        return user;
-      });
-      if (!user) return undefined;
-      return mapUser(user);
-    } catch (error) {
-      console.error('getUser error:', error);
-      return undefined;
-    }
+      const { data, error } = await supabase.from('wb_users').select('*').eq('id', id).single();
+      if (error || !data) return undefined;
+      return mapUser(data);
+    } catch { return undefined; }
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
-      const user = await withRetry(async () => {
-        const { data: user, error } = await supabase
-          .from('bank_users')
-          .select('*')
-          .eq('email', email);
-        if (error) throw new Error(`Supabase error: ${error.message}`);
-        if (!user || user.length === 0) return null;
-        return user[0];
-      });
-      if (!user) return undefined;
-      return mapUser(user);
-    } catch (error) {
-      console.error('getUserByEmail error:', error);
-      return undefined;
-    }
+      const { data, error } = await supabase.from('wb_users').select('*').eq('email', email).maybeSingle();
+      if (error || !data) return undefined;
+      return mapUser(data);
+    } catch { return undefined; }
   }
 
-  async getUserByPhone(phone: string): Promise<User | undefined> {
-    return undefined;
-  }
+  async getUserByPhone(_phone: string): Promise<User | undefined> { return undefined; }
 
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
     try {
-      // Supabase auth IDs are UUIDs — look up the auth user to get their email,
-      // then find the matching bank_users record by email
-      const { data: authData, error } = await supabase.auth.admin.getUserById(supabaseUserId);
-      if (error || !authData?.user?.email) return undefined;
+      const { data: authData } = await supabase.auth.admin.getUserById(supabaseUserId);
+      if (!authData?.user?.email) return undefined;
       return this.getUserByEmail(authData.user.email);
-    } catch (error) {
-      return undefined;
-    }
+    } catch { return undefined; }
   }
 
   async getAllUsers(): Promise<User[]> {
     try {
-      const { data: users, error } = await supabase
-        .from('bank_users')
-        .select('*');
-      if (error || !users) return [];
-      return users.map(user => mapUser(user));
-    } catch (error) {
-      console.error('getAllUsers error:', error);
-      return [];
-    }
+      const { data, error } = await supabase.from('wb_users').select('*').order('created_at', { ascending: false });
+      if (error || !data) return [];
+      return data.map(mapUser);
+    } catch { return []; }
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return undefined;
-  }
+  async getUserByUsername(_username: string): Promise<User | undefined> { return undefined; }
 
   async createUser(data: InsertUser): Promise<User> {
-    try {
-      const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
-      const row: Record<string, any> = {
-        full_name: fullName,
-        email: data.email,
-        balance: data.balance || '0',
-      };
-      if (data.firstName !== undefined) row.first_name = data.firstName;
-      if (data.lastName !== undefined) row.last_name = data.lastName;
-      if ((data as any).username !== undefined) row.username = (data as any).username;
-      if (data.phone !== undefined) row.phone = data.phone;
-      if (data.address !== undefined) row.address = data.address;
-      if (data.city !== undefined) row.city = data.city;
-      if (data.state !== undefined) row.state = data.state;
-      if (data.country !== undefined) row.country = data.country;
-      if (data.postalCode !== undefined) row.postal_code = data.postalCode;
-      if (data.profession !== undefined) row.profession = data.profession;
-      if (data.dateOfBirth !== undefined) row.date_of_birth = data.dateOfBirth;
-      if (data.idType !== undefined) row.id_type = data.idType;
-      if (data.idNumber !== undefined) row.id_number = data.idNumber;
-      if (data.transferPin !== undefined) row.transfer_pin = data.transferPin;
-      if (data.role !== undefined) row.role = data.role;
-      if ((data as any).isVerified !== undefined) row.is_verified = (data as any).isVerified;
-      if ((data as any).isActive !== undefined) row.is_active = (data as any).isActive;
-      if ((data as any).accountNumber !== undefined) row.account_number = (data as any).accountNumber;
-      if ((data as any).accountId !== undefined) row.account_id = (data as any).accountId;
-      if ((data as any).annualIncome !== undefined) row.annual_income = (data as any).annualIncome;
-      const { data: user, error } = await supabase
-        .from('bank_users')
-        .insert(row)
-        .select('*')
-        .single();
-      if (error) throw error;
-      if (!user) throw new Error('Failed to create user');
-      return mapUser(user);
-    } catch (error) {
-      throw error;
-    }
+    const fullName = `${data.firstName || ''} ${data.lastName || ''}`.trim();
+    const row: Record<string, any> = {
+      email: data.email,
+      full_name: fullName || data.email,
+      balance: data.balance || '0.00',
+      role: data.role || 'customer',
+      is_active: data.isActive ?? false,
+      is_verified: data.isVerified ?? false,
+    };
+    if (data.firstName)     row.first_name    = data.firstName;
+    if (data.lastName)      row.last_name     = data.lastName;
+    if (data.phone)         row.phone_number  = data.phone;
+    if (data.profession)    row.occupation    = data.profession;
+    if (data.transferPin)   row.transfer_pin  = data.transferPin;
+    if (data.accountNumber) row.account_number = data.accountNumber;
+    if (data.dateOfBirth)   row.date_of_birth = data.dateOfBirth;
+    if (data.city)          row.city          = data.city;
+    if (data.state)         row.state         = data.state;
+    if (data.country)       row.country       = data.country;
+    if (data.postalCode)    row.postal_code   = data.postalCode;
+    const { data: user, error } = await supabase.from('wb_users').insert(row).select('*').single();
+    if (error || !user) throw error || new Error('Failed to create user in wb_users');
+    return mapUser(user);
   }
 
-  async updateUser(id: number, updates: Partial<User> & { [key: string]: any }): Promise<User | undefined> {
+  async updateUser(id: string, updates: Partial<User> & Record<string, any>): Promise<User | undefined> {
     try {
-      const updateData: any = {};
+      const d: any = { updated_at: new Date().toISOString() };
       if (updates.firstName !== undefined || updates.lastName !== undefined) {
-        const existing = await this.getUser(id);
-        const first = updates.firstName ?? existing?.firstName ?? '';
-        const last = updates.lastName ?? existing?.lastName ?? '';
-        updateData.full_name = `${first} ${last}`.trim();
-        if (updates.firstName !== undefined) updateData.first_name = updates.firstName;
-        if (updates.lastName !== undefined) updateData.last_name = updates.lastName;
+        const ex = await this.getUser(id);
+        d.full_name = `${updates.firstName ?? ex?.firstName ?? ''} ${updates.lastName ?? ex?.lastName ?? ''}`.trim();
+        if (updates.firstName !== undefined) d.first_name = updates.firstName;
+        if (updates.lastName  !== undefined) d.last_name  = updates.lastName;
       }
-      if (updates.email !== undefined) updateData.email = updates.email;
-      if (updates.balance !== undefined) updateData.balance = updates.balance;
-      if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
-      if (updates.isVerified !== undefined) updateData.is_verified = updates.isVerified;
-      if (updates.profilePhoto !== undefined) updateData.profile_photo = updates.profilePhoto;
-      if (updates.phone !== undefined) updateData.phone = updates.phone;
-      if (updates.address !== undefined) updateData.address = updates.address;
-      if (updates.city !== undefined) updateData.city = updates.city;
-      if (updates.state !== undefined) updateData.state = updates.state;
-      if (updates.country !== undefined) updateData.country = updates.country;
-      if (updates.postalCode !== undefined) updateData.postal_code = updates.postalCode;
-      if (updates.transferPin !== undefined) updateData.transfer_pin = updates.transferPin;
-      if (updates.role !== undefined) updateData.role = updates.role;
-      if (updates.profession !== undefined) updateData.profession = updates.profession;
-      if (updates.dateOfBirth !== undefined) updateData.date_of_birth = updates.dateOfBirth;
-      if (updates.idType !== undefined) updateData.id_type = updates.idType;
-      if (updates.idNumber !== undefined) updateData.id_number = updates.idNumber;
-      if (Object.keys(updateData).length === 0) return this.getUser(id);
-      const { data: user, error } = await supabase
-        .from('bank_users')
-        .update(updateData)
-        .eq('id', id)
-        .select('*')
-        .single();
+      if (updates.email       !== undefined) d.email         = updates.email;
+      if (updates.balance     !== undefined) d.balance       = updates.balance;
+      if (updates.isActive    !== undefined) d.is_active     = updates.isActive;
+      if (updates.isVerified  !== undefined) d.is_verified   = updates.isVerified;
+      if (updates.phone       !== undefined) d.phone_number  = updates.phone;
+      if (updates.city        !== undefined) d.city          = updates.city;
+      if (updates.state       !== undefined) d.state         = updates.state;
+      if (updates.country     !== undefined) d.country       = updates.country;
+      if (updates.postalCode  !== undefined) d.postal_code   = updates.postalCode;
+      if (updates.transferPin !== undefined) d.transfer_pin  = updates.transferPin;
+      if (updates.role        !== undefined) d.role          = updates.role;
+      if (updates.profession  !== undefined) d.occupation    = updates.profession;
+      if (updates.dateOfBirth !== undefined) d.date_of_birth = updates.dateOfBirth;
+      if (updates.profilePhoto !== undefined) d.avatar_url   = updates.profilePhoto;
+      if (updates.avatarUrl   !== undefined) d.avatar_url    = updates.avatarUrl;
+      if (updates.lastLogin   !== undefined) d.last_login    = updates.lastLogin;
+      if (updates.accountNumber !== undefined) d.account_number = updates.accountNumber;
+      if (updates.status      !== undefined) d.status        = updates.status;
+      const { data: user, error } = await supabase.from('wb_users').update(d).eq('id', id).select('*').single();
       if (error || !user) return undefined;
       return mapUser(user);
-    } catch (error) {
-      return undefined;
-    }
+    } catch { return undefined; }
   }
 
-  async updateUserBalance(id: number, amountDelta: number): Promise<User | undefined> {
+  async updateUserBalance(id: string, delta: number): Promise<User | undefined> {
     try {
-      const delta = parseFloat(String(amountDelta));
-      
-      // STEP 1: Get current balance
-      const { data: currentUser, error: fetchError } = await supabase
-        .from('bank_users')
-        .select('balance')
-        .eq('id', id)
-        .single();
-      if (fetchError) throw new Error(`Fetch error: ${fetchError.message}`);
-      
-      const currentBalance = parseFloat(String(currentUser?.balance || '0')) || 0;
-      const newBalance = Math.max(0, currentBalance + delta); // Prevent negative balance
-      
-      // STEP 2: Update bank_users balance
-      const user = await withRetry(async () => {
-        const { data: user, error } = await supabase
-          .from('bank_users')
-          .update({ balance: newBalance.toFixed(2) })
-          .eq('id', id)
-          .select('*')
-          .single();
-        if (error) throw new Error(`Supabase error: ${error.message}`);
-        if (!user) throw new Error('No user returned');
-        return user;
-      });
-      
-      // STEP 3: Also update the primary account balance in bank_accounts table (keep in sync)
+      const { data: cur } = await supabase.from('wb_users').select('balance').eq('id', id).single();
+      const current = parseFloat(String(cur?.balance || '0')) || 0;
+      const newBal  = Math.max(0, current + delta).toFixed(2);
+      const { data: user, error } = await supabase.from('wb_users')
+        .update({ balance: newBal, updated_at: new Date().toISOString() }).eq('id', id).select('*').single();
+      if (error || !user) return undefined;
+      // Keep bank_accounts in sync
       const accounts = await this.getUserAccounts(id);
-      if (accounts && accounts.length > 0) {
-        const primaryAccount = accounts[0];
-        const accCurrentBalance = parseFloat(String(primaryAccount.balance || '0')) || 0;
-        const accNewBalance = Math.max(0, accCurrentBalance + delta);
-        await supabase
-          .from('bank_accounts')
-          .update({ balance: accNewBalance.toFixed(2) })
-          .eq('id', primaryAccount.id)
-          .select();
+      if (accounts.length > 0) {
+        const accBal = Math.max(0, parseFloat(String(accounts[0].balance || '0')) + delta).toFixed(2);
+        await supabase.from('bank_accounts').update({ balance: accBal }).eq('id', accounts[0].id);
       }
-      
       return mapUser(user);
-    } catch (error) {
-      console.error('updateUserBalance error:', error);
-      return undefined;
-    }
+    } catch { return undefined; }
   }
 
-  async getUserAccounts(userId: number): Promise<Account[]> {
+  async getUserAccounts(userId: string): Promise<Account[]> {
     try {
-      const accounts = await withRetry(async () => {
-        const { data: accounts, error } = await supabase
-          .from('bank_accounts')
-          .select('*')
-          .eq('user_id', userId)
-          .order('id');
-        if (error) throw new Error(`Supabase error: ${error.message}`);
-        return accounts || [];
-      });
-      return accounts.map(acc => ({ id: acc.id, userId: acc.user_id, accountNumber: acc.account_number, accountType: acc.account_type, balance: acc.balance?.toString() || '0', currency: acc.currency, status: acc.status || 'active', createdAt: acc.created_at, updatedAt: acc.updated_at } as any));
-    } catch (error) {
-      console.error('getUserAccounts error:', error);
-      return [];
-    }
+      const { data, error } = await supabase.from('bank_accounts').select('*').eq('user_id', userId).order('created_at');
+      if (error || !data) return [];
+      return data.map(a => ({ id: a.id, userId: a.user_id, accountNumber: a.account_number, accountType: a.account_type, balance: String(a.balance ?? '0'), currency: a.currency || 'USD', status: a.status || 'active', isActive: a.is_active ?? true, createdAt: a.created_at, updatedAt: a.updated_at } as unknown as Account));
+    } catch { return []; }
   }
 
-  async getAccount(id: number): Promise<Account | undefined> {
+  async getAccount(id: string): Promise<Account | undefined> {
     try {
-      const { data: account, error } = await supabase
-        .from('bank_accounts')
-        .select('*')
-        .eq('id', id)
-        .single();
-      if (error || !account) return undefined;
-      return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at };
-    } catch (error) {
-      return undefined;
-    }
+      const { data, error } = await supabase.from('bank_accounts').select('*').eq('id', id).single();
+      if (error || !data) return undefined;
+      return { id: data.id, userId: data.user_id, accountNumber: data.account_number, accountType: data.account_type, balance: String(data.balance ?? '0'), currency: data.currency || 'USD', status: data.status || 'active', createdAt: data.created_at, updatedAt: data.updated_at } as unknown as Account;
+    } catch { return undefined; }
   }
 
   async createAccount(data: InsertAccount): Promise<Account> {
-    try {
-      const { data: account, error } = await supabase
-        .from('bank_accounts')
-        .insert({ user_id: data.userId, account_number: data.accountNumber, account_type: data.accountType, balance: data.balance, currency: data.currency || 'USD', status: data.status || 'active' })
-        .select()
-        .single();
-      if (error || !account) throw error;
-      return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at };
-    } catch (error) {
-      throw error;
-    }
+    const row = { user_id: (data as any).userId, account_number: (data as any).accountNumber, account_type: (data as any).accountType || 'checking', balance: (data as any).balance || '0.00', currency: (data as any).currency || 'USD', status: (data as any).status || 'active' };
+    const { data: acc, error } = await supabase.from('bank_accounts').insert(row).select().single();
+    if (error || !acc) throw error || new Error('Failed to create account');
+    return { id: acc.id, userId: acc.user_id, accountNumber: acc.account_number, accountType: acc.account_type, balance: String(acc.balance ?? '0'), currency: acc.currency || 'USD', status: acc.status || 'active', createdAt: acc.created_at, updatedAt: acc.updated_at } as unknown as Account;
   }
 
-  async updateAccount(id: number, updates: Partial<Account>): Promise<Account | undefined> {
+  async updateAccount(id: string, updates: Partial<Account>): Promise<Account | undefined> {
     try {
-      const updateData: any = {};
-      if (updates.balance !== undefined) updateData.balance = updates.balance;
-      if (updates.status !== undefined) updateData.status = updates.status;
-      const { data: account, error } = await supabase.from('bank_accounts').update(updateData).eq('id', id).select().single();
-      if (error || !account) return undefined;
-      return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at };
-    } catch (error) {
-      return undefined;
-    }
+      const d: any = {};
+      if ((updates as any).balance  !== undefined) d.balance = (updates as any).balance;
+      if ((updates as any).status   !== undefined) d.status  = (updates as any).status;
+      if ((updates as any).isActive !== undefined) d.is_active = (updates as any).isActive;
+      const { data, error } = await supabase.from('bank_accounts').update(d).eq('id', id).select().single();
+      if (error || !data) return undefined;
+      return { id: data.id, userId: data.user_id, accountNumber: data.account_number, accountType: data.account_type, balance: String(data.balance ?? '0'), currency: data.currency || 'USD', status: data.status || 'active', createdAt: data.created_at, updatedAt: data.updated_at } as unknown as Account;
+    } catch { return undefined; }
   }
 
-  async getAccountTransactions(accountId: number, limit?: number): Promise<Transaction[]> {
+  async getAccountTransactions(accountId: string, limit?: number): Promise<Transaction[]> {
     try {
-      let query = supabase
-        .from('transactions')
-        .select('*')
+      let q = supabase.from('transactions').select('*')
         .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
         .order('created_at', { ascending: false });
-      if (limit && limit > 0) {
-        query = query.limit(limit);
-      }
-      const { data, error } = await query;
+      if (limit && limit > 0) q = q.limit(limit);
+      const { data, error } = await q;
       if (error) return [];
-      return (data || []);
-    } catch (error) {
-      return [];
-    }
-  }
-
-  async createTransaction(data: InsertTransaction): Promise<Transaction> {
-    try {
-      const transaction = await withRetry(async () => {
-        // Map camelCase fields to snake_case for database
-        const dbData: any = {
-          from_user_id: data.fromUserId,
-          from_account_id: data.fromAccountId,
-          to_account_id: data.toAccountId,
-          amount: String(data.amount),
-          currency: data.currency || 'USD',
-          type: data.type || 'transfer',
-          transaction_type: data.transactionType || 'transfer',
-          status: data.status || 'processing',
-          description: data.description,
-          recipient_name: data.recipientName,
-          recipient_account: data.recipientAccount,
-          recipient_country: data.recipientCountry,
-          bank_name: data.bankName,
-          swift_code: data.swiftCode,
-          transfer_purpose: data.transferPurpose,
-          reference_number: data.referenceNumber
-        };
-        // Remove undefined fields
-        Object.keys(dbData).forEach(key => dbData[key] === undefined && delete dbData[key]);
-        
-        const { data: transaction, error } = await supabase.from('transactions').insert(dbData).select().single();
-        if (error) throw new Error(`Supabase error: ${error.message}`);
-        if (!transaction) throw new Error('Failed to create transaction');
-        return transaction;
-      });
-      return transaction;
-    } catch (error) {
-      console.error('createTransaction error:', error);
-      throw error;
-    }
-  }
-
-  async updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<Transaction | undefined> {
-    try {
-      const updateData: any = { status };
-      if (notes) updateData.admin_notes = notes;
-      if (adminId) updateData.admin_id = adminId;
-      updateData.updated_at = new Date().toISOString();
-      const { data, error } = await supabase.from('transactions').update(updateData).eq('id', id).select('*').single();
-      if (error) {
-        console.error('updateTransactionStatus error:', error);
-        return undefined;
-      }
-      return data;
-    } catch (error) {
-      console.error('updateTransactionStatus exception:', error);
-      return undefined;
-    }
-  }
-
-  async getPendingTransactions(): Promise<Transaction[]> {
-    try {
-      const { data, error } = await supabase.from('transactions').select('*').eq('status', 'processing');
-      if (error) {
-        console.error('getPendingTransactions error:', error);
-        return [];
-      }
       return (data || []).map(mapTransaction);
-    } catch (error) {
-      console.error('getPendingTransactions exception:', error);
-      return [];
-    }
+    } catch { return []; }
   }
 
   async getAllTransactions(): Promise<Transaction[]> {
     try {
-      const { data, error } = await supabase.from('transactions').select('*');
+      const { data, error } = await supabase.from('transactions').select('*').order('created_at', { ascending: false });
       if (error) return [];
       return (data || []).map(mapTransaction);
-    } catch (error) {
-      return [];
-    }
+    } catch { return []; }
+  }
+
+  async createTransaction(data: InsertTransaction): Promise<Transaction> {
+    const row: any = {
+      from_account_id: (data as any).fromAccountId,
+      to_account_id:   (data as any).toAccountId,
+      amount:          String(data.amount),
+      type:            data.type || 'transfer',
+      transaction_type: (data as any).transactionType || data.type || 'transfer',
+      currency:        data.currency || 'USD',
+      status:          data.status   || 'pending',
+      description:     data.description,
+      recipient_name:  (data as any).recipientName,
+      recipient_account: (data as any).recipientAccount,
+      recipient_bank:  (data as any).recipientBank,
+      recipient_country: (data as any).recipientCountry,
+      reference_number: (data as any).referenceNumber,
+      admin_notes:     (data as any).adminNotes,
+      swift_code:      (data as any).swiftCode,
+    };
+    Object.keys(row).forEach(k => row[k] === undefined && delete row[k]);
+    const { data: tx, error } = await supabase.from('transactions').insert(row).select().single();
+    if (error || !tx) throw error || new Error('Failed to create transaction');
+    return mapTransaction(tx);
+  }
+
+  async updateTransactionStatus(id: string, status: string, adminId: string, notes?: string): Promise<Transaction | undefined> {
+    try {
+      const d: any = { status, updated_at: new Date().toISOString() };
+      if (notes)   d.admin_notes = notes;
+      if (adminId) d.admin_id    = adminId;
+      const { data, error } = await supabase.from('transactions').update(d).eq('id', id).select('*').single();
+      if (error) return undefined;
+      return mapTransaction(data);
+    } catch { return undefined; }
+  }
+
+  async getPendingTransactions(): Promise<Transaction[]> {
+    try {
+      const { data, error } = await supabase.from('transactions').select('*').in('status', ['pending', 'processing']);
+      if (error) return [];
+      return (data || []).map(mapTransaction);
+    } catch { return []; }
   }
 
   async createAdminAction(data: InsertAdminAction): Promise<AdminAction> {
-    try {
-      const row = {
-        admin_id: (data as any).adminId ?? (data as any).admin_id,
-        action: data.action,
-        target_id: (data as any).targetId ?? (data as any).target_id,
-        target_type: (data as any).targetType ?? (data as any).target_type,
-        details: data.details,
-      };
-      const { data: action, error } = await supabase.from('admin_actions').insert(row).select().single();
-      if (error || !action) throw error;
-      return action;
-    } catch (error) {
-      throw error;
-    }
+    const row = {
+      admin_id:    (data as any).adminId   ?? (data as any).admin_id,
+      action:      data.action,
+      target_id:   (data as any).targetId  ?? (data as any).target_id,
+      target_type: (data as any).targetType ?? (data as any).target_type,
+      details:     data.details,
+    };
+    const { data: action, error } = await supabase.from('admin_actions').insert(row).select().single();
+    if (error || !action) throw error || new Error('Failed to create admin action');
+    return mapAdminAction(action);
   }
 
-  async getAdminActions(adminId?: number): Promise<AdminAction[]> {
+  async getAdminActions(adminId?: string): Promise<AdminAction[]> {
     try {
-      let query = supabase.from('admin_actions').select('*');
-      if (adminId) query = query.eq('admin_id', adminId);
-      const { data, error } = await query;
+      let q = supabase.from('admin_actions').select('*').order('created_at', { ascending: false });
+      if (adminId) q = q.eq('admin_id', adminId);
+      const { data, error } = await q;
       if (error) return [];
       return (data || []).map(mapAdminAction);
-    } catch (error) {
-      return [];
-    }
+    } catch { return []; }
   }
 
   async createSupportTicket(data: InsertSupportTicket): Promise<SupportTicket> {
-    try {
-      const row: Record<string, any> = {
-        user_id: (data as any).userId ?? (data as any).user_id,
-        subject: data.subject,
-        description: data.description,
-        status: data.status || 'open',
-        priority: data.priority || 'medium',
-      };
-      if ((data as any).resolvedAt !== undefined) row.resolved_at = (data as any).resolvedAt;
-      const { data: ticket, error } = await supabase.from('support_tickets').insert(row).select().single();
-      if (error || !ticket) throw error;
-      return ticket;
-    } catch (error) {
-      throw error;
-    }
+    const row: any = {
+      user_id:     (data as any).userId ?? (data as any).user_id,
+      subject:     data.subject,
+      description: data.description,
+      status:      data.status   || 'open',
+      priority:    data.priority || 'medium',
+    };
+    if ((data as any).category) row.category = (data as any).category;
+    const { data: ticket, error } = await supabase.from('support_tickets').insert(row).select().single();
+    if (error || !ticket) throw error || new Error('Failed to create ticket');
+    return ticket;
   }
 
-  async getSupportTicket(id: number): Promise<SupportTicket | undefined> {
+  async getSupportTicket(id: string): Promise<SupportTicket | undefined> {
     try {
       const { data, error } = await supabase.from('support_tickets').select('*').eq('id', id).single();
-      if (error) return undefined;
-      return data;
-    } catch (error) {
-      return undefined;
-    }
+      return error ? undefined : data;
+    } catch { return undefined; }
   }
 
-  async getSupportTickets(userId?: number): Promise<SupportTicket[]> {
+  async getSupportTickets(userId?: string): Promise<SupportTicket[]> {
     try {
-      let query = supabase.from('support_tickets').select('*');
-      if (userId) query = query.eq('user_id', userId);
-      const { data, error } = await query;
-      if (error) return [];
-      return (data || []);
-    } catch (error) {
-      return [];
-    }
+      let q = supabase.from('support_tickets').select('*').order('created_at', { ascending: false });
+      if (userId) q = q.eq('user_id', userId);
+      const { data, error } = await q;
+      return error ? [] : (data || []);
+    } catch { return []; }
   }
 
-  async updateSupportTicket(id: number, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
+  async updateSupportTicket(id: string, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
     try {
-      // Map camelCase TypeScript fields to snake_case DB columns
-      const dbUpdates: Record<string, any> = {};
-      const fieldMap: Record<string, string> = {
-        adminNotes: 'admin_notes',
-        userId: 'user_id',
-        adminResponse: 'admin_notes',
-        createdAt: 'created_at',
-        updatedAt: 'updated_at',
-      };
-      for (const [key, value] of Object.entries(updates)) {
-        const dbKey = fieldMap[key] || key;
-        dbUpdates[dbKey] = value;
-      }
-      const { data, error } = await supabase.from('support_tickets').update(dbUpdates).eq('id', id).select().single();
-      if (error) { console.error('updateSupportTicket error:', error.message); return undefined; }
-      return data;
-    } catch (error) {
-      console.error('updateSupportTicket catch error:', error);
-      return undefined;
-    }
+      const fieldMap: Record<string, string> = { adminNotes: 'admin_notes', userId: 'user_id', createdAt: 'created_at', updatedAt: 'updated_at', adminResponse: 'admin_notes' };
+      const d: any = { updated_at: new Date().toISOString() };
+      for (const [k, v] of Object.entries(updates)) d[fieldMap[k] || k] = v;
+      const { data, error } = await supabase.from('support_tickets').update(d).eq('id', id).select().single();
+      return error ? undefined : data;
+    } catch { return undefined; }
   }
 
-  async getCard(id: number): Promise<Card | undefined> {
-    try {
-      const { data, error } = await supabase.from('cards').select('*').eq('id', id).single();
-      if (error) return undefined;
-      return data ? mapCard(data) : undefined;
-    } catch (error) {
-      return undefined;
-    }
-  }
-
-  async createCard(data: InsertCard): Promise<Card> {
-    try {
-      const row: Record<string, any> = {
-        account_id: (data as any).accountId ?? (data as any).account_id,
-        card_number: (data as any).cardNumber ?? (data as any).card_number,
-        card_type: (data as any).cardType ?? (data as any).card_type,
-        status: data.status || 'active',
-      };
-      if ((data as any).expiryMonth !== undefined) row.expiry_month = (data as any).expiryMonth;
-      if ((data as any).expiryYear !== undefined) row.expiry_year = (data as any).expiryYear;
-      const { data: card, error } = await supabase.from('cards').insert(row).select().single();
-      if (error || !card) throw error;
-      return card;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async getUserCards(userId: number): Promise<Card[]> {
+  async getUserCards(userId: string): Promise<Card[]> {
     try {
       const accounts = await this.getUserAccounts(userId);
       if (!accounts.length) return [];
       const { data, error } = await supabase.from('cards').select('*').in('account_id', accounts.map(a => a.id));
-      if (error) return [];
-      return (data || []).map(mapCard);
-    } catch (error) {
-      return [];
-    }
+      return error ? [] : (data || []).map(mapCard);
+    } catch { return []; }
   }
 
-  async updateCard(id: number, updates: Partial<Card>): Promise<Card | undefined> {
+  async getCard(id: string): Promise<Card | undefined> {
     try {
-      const dbUpdates: Record<string, any> = {};
-      if (updates.accountId !== undefined) dbUpdates.account_id = updates.accountId;
-      if (updates.cardNumber !== undefined) dbUpdates.card_number = updates.cardNumber;
-      if (updates.cardType !== undefined) dbUpdates.card_type = updates.cardType;
-      if (updates.status !== undefined) dbUpdates.status = updates.status;
-      if (updates.expiryMonth !== undefined) dbUpdates.expiry_month = updates.expiryMonth;
-      if (updates.expiryYear !== undefined) dbUpdates.expiry_year = updates.expiryYear;
-      const { data, error } = await supabase.from('cards').update(dbUpdates).eq('id', id).select().single();
-      if (error) return undefined;
-      return data ? mapCard(data) : undefined;
-    } catch (error) {
-      return undefined;
-    }
+      const { data, error } = await supabase.from('cards').select('*').eq('id', id).single();
+      return error ? undefined : mapCard(data);
+    } catch { return undefined; }
   }
 
-  async getInvestment(id: number): Promise<Investment | undefined> {
+  async createCard(data: InsertCard): Promise<Card> {
+    const row: any = {
+      account_id:  (data as any).accountId  ?? (data as any).account_id,
+      user_id:     (data as any).userId     ?? (data as any).user_id,
+      card_number: (data as any).cardNumber ?? (data as any).card_number,
+      card_holder: (data as any).cardHolder ?? (data as any).card_holder,
+      type:        (data as any).type       || 'debit',
+      status:      data.status              || 'active',
+      expiry_date: (data as any).expiryDate,
+    };
+    Object.keys(row).forEach(k => row[k] === undefined && delete row[k]);
+    const { data: card, error } = await supabase.from('cards').insert(row).select().single();
+    if (error || !card) throw error || new Error('Failed to create card');
+    return mapCard(card);
+  }
+
+  async updateCard(id: string, updates: Partial<Card>): Promise<Card | undefined> {
+    try {
+      const d: any = {};
+      if ((updates as any).isLocked !== undefined) d.is_locked = (updates as any).isLocked;
+      if ((updates as any).status   !== undefined) d.status    = (updates as any).status;
+      if ((updates as any).dailyLimit !== undefined) d.daily_limit = (updates as any).dailyLimit;
+      if ((updates as any).contactlessEnabled !== undefined) d.contactless_enabled = (updates as any).contactlessEnabled;
+      const { data, error } = await supabase.from('cards').update(d).eq('id', id).select().single();
+      return error ? undefined : mapCard(data);
+    } catch { return undefined; }
+  }
+
+  async getUserInvestments(userId: string): Promise<Investment[]> {
+    try {
+      const { data, error } = await supabase.from('investments').select('*').eq('user_id', userId);
+      return error ? [] : (data || []).map(mapInvestment);
+    } catch { return []; }
+  }
+
+  async getInvestment(id: string): Promise<Investment | undefined> {
     try {
       const { data, error } = await supabase.from('investments').select('*').eq('id', id).single();
-      if (error) return undefined;
-      return data ? mapInvestment(data) : undefined;
-    } catch (error) {
-      return undefined;
-    }
+      return error ? undefined : mapInvestment(data);
+    } catch { return undefined; }
   }
 
   async createInvestment(data: InsertInvestment): Promise<Investment> {
-    try {
-      const row = {
-        user_id: (data as any).userId ?? (data as any).user_id,
-        type: data.type,
-        amount: String(data.amount),
-        rate: data.rate !== undefined ? String(data.rate) : undefined,
-        status: data.status || 'active',
-      };
-      const { data: investment, error } = await supabase.from('investments').insert(row).select().single();
-      if (error || !investment) throw error;
-      return investment;
-    } catch (error) {
-      throw error;
-    }
+    const row: any = {
+      user_id: (data as any).userId ?? (data as any).user_id,
+      type:    data.type,
+      symbol:  (data as any).symbol  || '',
+      status:  data.status || 'active',
+    };
+    if ((data as any).shares)       row.shares        = (data as any).shares;
+    if ((data as any).averagePrice) row.average_price = (data as any).averagePrice;
+    if ((data as any).currentPrice) row.current_price = (data as any).currentPrice;
+    if ((data as any).assetType)    row.asset_type    = (data as any).assetType;
+    const { data: inv, error } = await supabase.from('investments').insert(row).select().single();
+    if (error || !inv) throw error || new Error('Failed to create investment');
+    return mapInvestment(inv);
   }
 
-  async getUserInvestments(userId: number): Promise<Investment[]> {
+  async updateInvestment(id: string, updates: Partial<Investment>): Promise<Investment | undefined> {
     try {
-      const { data, error } = await supabase.from('investments').select('*').eq('user_id', userId);
-      if (error) return [];
-      return (data || []).map(mapInvestment);
-    } catch (error) {
-      return [];
-    }
-  }
-
-  async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> {
-    try {
-      const dbUpdates: Record<string, any> = {};
-      if ((updates as any).userId !== undefined) dbUpdates.user_id = (updates as any).userId;
-      if (updates.type !== undefined) dbUpdates.type = updates.type;
-      if (updates.amount !== undefined) dbUpdates.amount = String(updates.amount);
-      if (updates.rate !== undefined) dbUpdates.rate = String(updates.rate);
-      if (updates.status !== undefined) dbUpdates.status = updates.status;
-      if ((updates as any).symbol !== undefined) dbUpdates.symbol = (updates as any).symbol;
-      if ((updates as any).shares !== undefined) dbUpdates.shares = (updates as any).shares;
-      if ((updates as any).assetType !== undefined) dbUpdates.asset_type = (updates as any).assetType;
-      const { data, error } = await supabase.from('investments').update(dbUpdates).eq('id', id).select().single();
-      if (error) return undefined;
-      return data ? mapInvestment(data) : undefined;
-    } catch (error) {
-      return undefined;
-    }
+      const d: any = {};
+      if ((updates as any).currentPrice !== undefined) d.current_price = (updates as any).currentPrice;
+      if ((updates as any).totalValue   !== undefined) d.total_value   = (updates as any).totalValue;
+      if ((updates as any).gainLoss     !== undefined) d.gain_loss     = (updates as any).gainLoss;
+      if (updates.status !== undefined) d.status = updates.status;
+      const { data, error } = await supabase.from('investments').update(d).eq('id', id).select().single();
+      return error ? undefined : mapInvestment(data);
+    } catch { return undefined; }
   }
 
   async getMessages(conversationId?: string): Promise<Message[]> {
     try {
-      let query = supabase
-        .from('messages')
-        .select('*')
-        .order('created_at', { ascending: true });
-      if (conversationId) {
-        query = query.eq('session_id', conversationId);
-      }
-      const { data, error } = await query;
-      if (error) return [];
-      return (data || []).map(mapMessage);
-    } catch (error) {
-      return [];
-    }
+      let q = supabase.from('messages').select('*').order('created_at', { ascending: true });
+      if (conversationId) q = q.eq('session_id', conversationId);
+      const { data, error } = await q;
+      return error ? [] : (data || []).map(mapMessage);
+    } catch { return []; }
   }
 
-  async getUserMessages(userId: number): Promise<Message[]> {
+  async getUserMessages(userId: string): Promise<Message[]> {
     try {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
+      const { data, error } = await supabase.from('messages').select('*')
         .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
         .order('created_at', { ascending: true });
-      if (error) return [];
-      return (data || []).map(mapMessage);
-    } catch (error) {
-      return [];
-    }
+      return error ? [] : (data || []).map(mapMessage);
+    } catch { return []; }
   }
 
   async createMessage(data: InsertMessage): Promise<Message> {
-    try {
-      // Explicitly map camelCase Drizzle fields to snake_case Supabase REST column names
-      const row = {
-        sender_id: data.senderId,
-        sender_role: data.senderRole || 'customer',
-        recipient_id: data.recipientId,
-        recipient_role: (data as any).recipientRole || 'admin',
-        content: data.content,
-        is_read: data.isRead ?? false,
-        session_id: data.sessionId,
-      };
-      const { data: message, error } = await supabase.from('messages').insert(row).select().single();
-      if (error || !message) throw error;
-      return message;
-    } catch (error) {
-      throw error;
-    }
+    const row = {
+      sender_id:    (data as any).senderId,
+      sender_role:  (data as any).senderRole  || 'customer',
+      recipient_id: (data as any).recipientId,
+      recipient_role: (data as any).recipientRole || 'admin',
+      content:      data.content,
+      is_read:      (data as any).isRead ?? false,
+      session_id:   (data as any).sessionId,
+    };
+    const { data: msg, error } = await supabase.from('messages').insert(row).select().single();
+    if (error || !msg) throw error || new Error('Failed to create message');
+    return mapMessage(msg);
   }
 
-  async markMessageAsRead(id: number): Promise<Message | undefined> {
+  async markMessageAsRead(id: string): Promise<Message | undefined> {
     try {
       const { data, error } = await supabase.from('messages').update({ is_read: true }).eq('id', id).select().single();
-      if (error) return undefined;
-      return data;
-    } catch (error) {
-      return undefined;
-    }
+      return error ? undefined : mapMessage(data);
+    } catch { return undefined; }
   }
 
-  async getUserAlerts(userId: number): Promise<Alert[]> {
+  async getUserAlerts(userId: string): Promise<Alert[]> {
     try {
-      const { data, error } = await supabase.from('alerts').select('*').eq('user_id', userId);
-      if (error) return [];
-      return (data || []);
-    } catch (error) {
-      return [];
-    }
+      const { data, error } = await supabase.from('alerts').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+      return error ? [] : (data || []);
+    } catch { return []; }
   }
 
-  async getUnreadAlerts(userId: number): Promise<Alert[]> {
+  async getUnreadAlerts(userId: string): Promise<Alert[]> {
     try {
       const { data, error } = await supabase.from('alerts').select('*').eq('user_id', userId).eq('is_read', false);
-      if (error) return [];
-      return (data || []);
-    } catch (error) {
-      return [];
-    }
+      return error ? [] : (data || []);
+    } catch { return []; }
   }
 
   async createAlert(data: InsertAlert): Promise<Alert> {
-    try {
-      const row = {
-        user_id: (data as any).userId ?? (data as any).user_id,
-        title: data.title,
-        message: data.message,
-        type: data.type,
-        is_read: (data as any).isRead ?? (data as any).is_read ?? false,
-      };
-      const { data: alert, error } = await supabase.from('alerts').insert(row).select().single();
-      if (error || !alert) throw error;
-      return alert;
-    } catch (error) {
-      throw error;
-    }
+    const row = {
+      user_id: (data as any).userId ?? (data as any).user_id,
+      title:   data.title,
+      message: data.message,
+      type:    data.type,
+      is_read: (data as any).isRead ?? false,
+    };
+    const { data: alert, error } = await supabase.from('alerts').insert(row).select().single();
+    if (error || !alert) throw error || new Error('Failed to create alert');
+    return alert;
   }
 
-  async markAlertAsRead(id: number): Promise<Alert | undefined> {
+  async markAlertAsRead(id: string): Promise<Alert | undefined> {
     try {
       const { data, error } = await supabase.from('alerts').update({ is_read: true }).eq('id', id).select().single();
-      if (error) return undefined;
-      return data;
-    } catch (error) {
-      return undefined;
-    }
+      return error ? undefined : data;
+    } catch { return undefined; }
   }
 
-  async deleteAlert(id: number): Promise<void> {
-    try {
-      await supabase.from('alerts').delete().eq('id', id);
-    } catch (error) {
-    }
+  async deleteAlert(id: string): Promise<void> {
+    try { await supabase.from('alerts').delete().eq('id', id); } catch {}
   }
 
   async getBranches(): Promise<any[]> {
     return [
-      { id: 1, name: 'World Bank - New York HQ', address: '1818 H Street NW, Washington, DC 20433', city: 'Washington', state: 'DC', country: 'USA', phone: '+1-202-473-1000', hours: 'Mon-Fri 9AM-5PM', lat: 38.8986, lng: -77.0430 },
-      { id: 2, name: 'World Bank - London Office', address: '1 New Change, London EC4M 9AF', city: 'London', state: '', country: 'UK', phone: '+44-20-7246-8585', hours: 'Mon-Fri 9AM-5PM', lat: 51.5131, lng: -0.0971 },
-      { id: 3, name: 'World Bank - Singapore', address: '9 Raffles Place, Republic Plaza', city: 'Singapore', state: '', country: 'Singapore', phone: '+65-6324-4060', hours: 'Mon-Fri 9AM-5PM', lat: 1.2847, lng: 103.8514 },
-      { id: 4, name: 'World Bank - Tokyo Office', address: 'Fukoku Seimei Building, 2-2-2 Uchisaiwaicho', city: 'Tokyo', state: '', country: 'Japan', phone: '+81-3-3597-6650', hours: 'Mon-Fri 9AM-5PM', lat: 35.6762, lng: 139.6503 },
+      { id: 1, name: 'World Bank - Washington DC HQ', address: '1818 H Street NW', city: 'Washington', state: 'DC', country: 'USA', phone: '+1-202-473-1000', hours: 'Mon-Fri 9AM-5PM' },
+      { id: 2, name: 'World Bank - London Office', address: '1 New Change, EC4M 9AF', city: 'London', country: 'UK', phone: '+44-20-7246-8585', hours: 'Mon-Fri 9AM-5PM' },
+      { id: 3, name: 'World Bank - Singapore', address: '9 Raffles Place', city: 'Singapore', country: 'Singapore', phone: '+65-6324-4060', hours: 'Mon-Fri 9AM-5PM' },
+      { id: 4, name: 'World Bank - Tokyo Office', address: 'Fukoku Seimei Building, 2-2-2 Uchisaiwaicho', city: 'Tokyo', country: 'Japan', phone: '+81-3-3597-6650', hours: 'Mon-Fri 9AM-5PM' },
     ];
   }
 
   async getAtms(): Promise<any[]> {
     return [
-      { id: 1, name: 'World Bank ATM - Times Square', address: '1560 Broadway, New York, NY 10036', city: 'New York', country: 'USA', available: true, lat: 40.7580, lng: -73.9855 },
-      { id: 2, name: 'World Bank ATM - Grand Central', address: '87 E 42nd St, New York, NY 10017', city: 'New York', country: 'USA', available: true, lat: 40.7527, lng: -73.9772 },
-      { id: 3, name: 'World Bank ATM - LAX Airport', address: '1 World Way, Los Angeles, CA 90045', city: 'Los Angeles', country: 'USA', available: true, lat: 33.9425, lng: -118.4081 },
-      { id: 4, name: 'World Bank ATM - Heathrow', address: 'Heathrow Airport, London TW6 1EW', city: 'London', country: 'UK', available: true, lat: 51.4700, lng: -0.4543 },
+      { id: 1, name: 'World Bank ATM - Times Square', address: '1560 Broadway', city: 'New York', country: 'USA', available: true },
+      { id: 2, name: 'World Bank ATM - Grand Central', address: '87 E 42nd St', city: 'New York', country: 'USA', available: true },
+      { id: 3, name: 'World Bank ATM - LAX Airport', address: '1 World Way', city: 'Los Angeles', country: 'USA', available: true },
+      { id: 4, name: 'World Bank ATM - Heathrow', address: 'Heathrow Airport TW6 1EW', city: 'London', country: 'UK', available: true },
     ];
   }
 
   async getExchangeRates(): Promise<any[]> {
     return [
-      { id: 1, baseCurrency: 'USD', targetCurrency: 'EUR', rate: '0.9215', updatedAt: new Date() },
-      { id: 2, baseCurrency: 'USD', targetCurrency: 'GBP', rate: '0.7891', updatedAt: new Date() },
-      { id: 3, baseCurrency: 'USD', targetCurrency: 'JPY', rate: '149.25', updatedAt: new Date() },
-      { id: 4, baseCurrency: 'USD', targetCurrency: 'CNY', rate: '7.2341', updatedAt: new Date() },
-      { id: 5, baseCurrency: 'USD', targetCurrency: 'CAD', rate: '1.3652', updatedAt: new Date() },
-      { id: 6, baseCurrency: 'USD', targetCurrency: 'AUD', rate: '1.5234', updatedAt: new Date() },
-      { id: 7, baseCurrency: 'USD', targetCurrency: 'CHF', rate: '0.8912', updatedAt: new Date() },
-      { id: 8, baseCurrency: 'USD', targetCurrency: 'SGD', rate: '1.3412', updatedAt: new Date() },
-      { id: 9, baseCurrency: 'USD', targetCurrency: 'HKD', rate: '7.8234', updatedAt: new Date() },
-      { id: 10, baseCurrency: 'USD', targetCurrency: 'INR', rate: '83.42', updatedAt: new Date() },
+      { id: 1, baseCurrency: 'USD', targetCurrency: 'EUR', rate: '0.9215' },
+      { id: 2, baseCurrency: 'USD', targetCurrency: 'GBP', rate: '0.7891' },
+      { id: 3, baseCurrency: 'USD', targetCurrency: 'JPY', rate: '149.25' },
+      { id: 4, baseCurrency: 'USD', targetCurrency: 'CNY', rate: '7.2341' },
+      { id: 5, baseCurrency: 'USD', targetCurrency: 'CAD', rate: '1.3652' },
+      { id: 6, baseCurrency: 'USD', targetCurrency: 'AUD', rate: '1.5234' },
+      { id: 7, baseCurrency: 'USD', targetCurrency: 'CHF', rate: '0.8912' },
+      { id: 8, baseCurrency: 'USD', targetCurrency: 'SGD', rate: '1.3412' },
+      { id: 9, baseCurrency: 'USD', targetCurrency: 'HKD', rate: '7.8234' },
     ];
   }
 
-  async getStatementsByUserId(userId: number): Promise<any[]> {
-    try {
-      const accounts = await this.getUserAccounts(userId);
-      if (!accounts || accounts.length === 0) return [];
-      const statements: any[] = [];
-      const months = ['January', 'February', 'March'];
-      const year = new Date().getFullYear();
-      months.forEach((month, i) => {
-        statements.push({
-          id: i + 1,
-          userId,
-          month,
-          year,
-          title: `${month} ${year} Statement`,
-          generatedAt: new Date(year, i + 1, 1).toISOString(),
-          downloadUrl: `/api/statements/${userId}/${year}/${i + 1}`
-        });
-      });
-      return statements;
-    } catch (error) {
-      return [];
-    }
+  async getStatementsByUserId(userId: string): Promise<any[]> {
+    const months = ['January', 'February', 'March'];
+    const year = new Date().getFullYear();
+    return months.map((month, i) => ({
+      id: i + 1,
+      userId,
+      month,
+      year,
+      title: `${month} ${year} Statement`,
+      generatedAt: new Date(year, i + 1, 1).toISOString(),
+      downloadUrl: `/api/statements/${userId}/${year}/${i + 1}`
+    }));
   }
 
   async getMarketRates(): Promise<any[]> {
     return [
-      { symbol: 'SPY', name: 'S&P 500 ETF', price: 524.35, change: 2.14, changePercent: 0.41, type: 'index' },
-      { symbol: 'QQQ', name: 'NASDAQ ETF', price: 448.22, change: -1.83, changePercent: -0.41, type: 'index' },
-      { symbol: 'DIA', name: 'Dow Jones ETF', price: 389.14, change: 1.67, changePercent: 0.43, type: 'index' },
-      { symbol: 'GLD', name: 'Gold ETF', price: 192.45, change: 0.54, changePercent: 0.28, type: 'commodity' },
-      { symbol: 'TLT', name: '20+ Year Treasury', price: 92.31, change: -0.22, changePercent: -0.24, type: 'bond' },
-      { symbol: 'AAPL', name: 'Apple Inc.', price: 189.30, change: 1.45, changePercent: 0.77, type: 'stock' },
-      { symbol: 'MSFT', name: 'Microsoft Corp.', price: 415.62, change: 3.21, changePercent: 0.78, type: 'stock' },
-      { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 174.14, change: -0.89, changePercent: -0.51, type: 'stock' },
+      { symbol: 'SPY', name: 'S&P 500 ETF', price: 524.35, change: 2.14, changePercent: 0.41, asset_type: 'stocks', change_direction: 'up', change_percent: 0.41 },
+      { symbol: 'QQQ', name: 'NASDAQ ETF', price: 448.22, change: -1.83, changePercent: -0.41, asset_type: 'stocks', change_direction: 'down', change_percent: -0.41 },
+      { symbol: 'TLT', name: '20+ Year Treasury', price: 92.31, change: -0.22, changePercent: -0.24, asset_type: 'bonds', change_direction: 'down', change_percent: -0.24 },
+      { symbol: 'GLD', name: 'Gold ETF', price: 192.45, change: 0.54, changePercent: 0.28, asset_type: 'crypto', change_direction: 'up', change_percent: 0.28 },
+      { symbol: 'UUP', name: 'USD Index ETF', price: 27.85, change: 0.12, changePercent: 0.43, asset_type: 'forex', change_direction: 'up', change_percent: 0.43 },
     ];
   }
 }
