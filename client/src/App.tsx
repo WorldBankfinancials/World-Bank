@@ -89,7 +89,7 @@ function App() {
                   <ProtectedRoute><AdminLiveChat /></ProtectedRoute>
                 </Route>
                 <Route path="/admin-accounts">
-                  <ProtectedRoute><AdminAccounts /></ProtectedRoute>
+                  <ProtectedRoute><AdminAccounts onBack={() => window.history.back()} /></ProtectedRoute>
                 </Route>
                 <Route path="/customer-service">
                   <ProtectedRoute><CustomerServicePortal /></ProtectedRoute>
