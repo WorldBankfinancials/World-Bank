@@ -1,11 +1,7 @@
 /**
- * api/index.ts  — Vercel serverless entry point
+ * api/index.ts — Vercel serverless entry point
  *
- * Matches the security posture of server/index.ts:
- * - CORS + security headers
- * - CSRF protection on state-changing endpoints
- * - Rate limiting (general)
- * - Request logging
+ * Production-ready: matches security posture of server/index.ts.
  */
 import express, { type Request, Response, NextFunction } from 'express';
 import { registerFixedRoutes } from '../server/fix-routes';
@@ -13,11 +9,9 @@ import { generalRateLimiter } from '../server/rate-limiter';
 
 const app = express();
 
-// ---- Body parsing ----
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// ---- Security headers ----
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -27,7 +21,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// ---- CORS ----
 app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin;
   const allowed = [
@@ -46,10 +39,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// ---- General rate limiting ----
 app.use('/api/', generalRateLimiter);
 
-// ---- CSRF protection for state-changing requests ----
 const CSRF_EXEMPT = [
   '/api/auth/login',
   '/api/auth/logout',
@@ -74,7 +65,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// ---- Request logging ----
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   res.on('finish', () => {
@@ -85,19 +75,16 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// ---- Global error handler ----
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   const status = err.status || err.statusCode || 500;
   const message = process.env.NODE_ENV === 'production' ? 'Internal server error' : (err.message || 'Internal server error');
   res.status(status).json({ error: message });
 });
 
-// ---- Register all routes ----
 const routesReady = registerFixedRoutes(app).catch(err => {
   console.error('[api] Failed to register routes:', err);
 });
 
-// Vercel serverless handler
 const handler = async (req: Request, res: Response) => {
   await routesReady;
   (app as any)(req, res);
