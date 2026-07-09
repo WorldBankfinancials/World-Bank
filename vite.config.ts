@@ -41,6 +41,7 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     rollupOptions: {
+      external: [],
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
@@ -59,8 +60,8 @@ export default defineConfig({
       clientPort: 443,
     },
     fs: {
-      strict: true,
-      deny: ["**/.*"],
+      strict: false,
+      allow: ['..'],
     },
   },
 });
