@@ -280,24 +280,15 @@ export const insertInvestmentSchema    = createInsertSchema(investments);
 export const insertMessageSchema       = createInsertSchema(messages);
 export const insertAlertSchema         = createInsertSchema(alerts);
 
-export type UserProfileRow     = typeof userProfiles.$inferSelect;
-export type InsertUserProfile  = typeof userProfiles.$inferInsert;
-export type BankAccountRow     = typeof bankAccounts.$inferSelect;
-export type InsertBankAccount  = typeof bankAccounts.$inferInsert;
-export type TransactionRow     = typeof transactions.$inferSelect;
-export type InsertTransaction  = typeof transactions.$inferInsert;
-export type AdminActionRow     = typeof adminActions.$inferSelect;
-export type InsertAdminAction  = typeof adminActions.$inferInsert;
-export type SupportTicketRow   = typeof supportTickets.$inferSelect;
-export type InsertSupportTicket = typeof supportTickets.$inferInsert;
-export type CardRow            = typeof cards.$inferSelect;
-export type InsertCard         = typeof cards.$inferInsert;
-export type InvestmentRow      = typeof investments.$inferSelect;
-export type InsertInvestment   = typeof investments.$inferInsert;
-export type MessageRow         = typeof messages.$inferSelect;
-export type InsertMessage      = typeof messages.$inferInsert;
-export type AlertRow           = typeof alerts.$inferSelect;
-export type InsertAlert        = typeof alerts.$inferInsert;
+export type UserProfileRow      = typeof userProfiles.$inferSelect;
+export type BankAccountRow      = typeof bankAccounts.$inferSelect;
+export type TransactionRow      = typeof transactions.$inferSelect;
+export type AdminActionRow      = typeof adminActions.$inferSelect;
+export type SupportTicketRow    = typeof supportTickets.$inferSelect;
+export type CardRow             = typeof cards.$inferSelect;
+export type InvestmentRow       = typeof investments.$inferSelect;
+export type MessageRow          = typeof messages.$inferSelect;
+export type AlertRow            = typeof alerts.$inferSelect;
 
 export interface User {
   id: string;
@@ -444,6 +435,15 @@ export interface SupportTicket {
   updatedAt?: string | Date | null;
 }
 
+export interface InsertSupportTicket {
+  userId: string;
+  subject: string;
+  description: string;
+  status?: string;
+  priority?: string;
+  category?: string;
+}
+
 export interface Card {
   id: string;
   userId: string;
@@ -457,6 +457,17 @@ export interface Card {
   dailyLimit?: string | null;
   contactlessEnabled?: boolean;
   createdAt?: string | Date | null;
+}
+
+export interface InsertCard {
+  userId: string;
+  accountId: string;
+  type?: string;
+  status?: string;
+  cardNumber?: string;
+  cardHolder?: string;
+  expiryDate?: string;
+  dailyLimit?: string;
 }
 
 export interface Investment {
@@ -473,6 +484,18 @@ export interface Investment {
   status: string;
   createdAt?: string | Date | null;
   updatedAt?: string | Date | null;
+}
+
+export interface InsertInvestment {
+  userId: string;
+  type: string;
+  symbol: string;
+  assetType?: string;
+  shares?: string;
+  averagePrice?: string;
+  currentPrice?: string;
+  totalValue?: string;
+  status?: string;
 }
 
 export interface Message {
