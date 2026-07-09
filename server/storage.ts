@@ -1,31 +1,22 @@
 /**
  * server/storage.ts
- * IStorage interface — all methods use string IDs (UUID) to match the Supabase DB.
- * Imported by server code only.
+ * IStorage interface — all IDs are string (UUID) matching the Supabase DB.
+ * Implemented by SupabasePublicStorage in supabase-public-storage.ts.
  */
 import type {
-  User,
-  InsertUser,
-  Account,
-  InsertAccount,
-  Transaction,
-  InsertTransaction,
-  AdminAction,
-  InsertAdminAction,
-  SupportTicket,
-  InsertSupportTicket,
-  Card,
-  InsertCard,
-  Investment,
-  InsertInvestment,
-  Message,
-  InsertMessage,
-  Alert,
-  InsertAlert,
+  User, InsertUser,
+  Account, InsertAccount,
+  Transaction, InsertTransaction,
+  AdminAction, InsertAdminAction,
+  SupportTicket, InsertSupportTicket,
+  Card, InsertCard,
+  Investment, InsertInvestment,
+  Message, InsertMessage,
+  Alert, InsertAlert,
 } from '@shared/schema';
 
 export interface IStorage {
-  // ---- Users ----
+  // ---- Users (user_profiles table) ----
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -35,7 +26,7 @@ export interface IStorage {
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   updateUserBalance(id: string, delta: number): Promise<User | undefined>;
 
-  // ---- Accounts ----
+  // ---- Accounts (bank_accounts table) ----
   getUserAccounts(userId: string): Promise<Account[]>;
   getAccount(id: string): Promise<Account | undefined>;
   createAccount(account: InsertAccount): Promise<Account>;
