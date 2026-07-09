@@ -98,7 +98,7 @@ const mapTransaction = (row: Record<string, any>): Transaction => ({
   approvedBy: row.approved_by ?? null,
   approvedAt: row.approved_at ?? null,
   createdAt: row.created_at ?? null,
-} as Transaction);
+} as unknown as Transaction);
 
 const mapMessage = (row: Record<string, any>): Message => ({
   id: row.id,
