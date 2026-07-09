@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "allowImportingTsExtensions": false,
+    "outDir": "./dist/server",
+    "rootDir": ".",
+    "noEmit": false,
+    "declaration": false,
+    "emitDecoratorMetadata": false,
+    "paths": {
+      "@shared/*": ["./shared/*"]
+    }
+  },
+  "include": [
+    "server/**/*",
+    "api/**/*",
+    "shared/**/*"
+  ],
+  "exclude": [
+    "client/**/*",
+    "node_modules/**/*",
+    "dist/**/*"
+  ]
+}
