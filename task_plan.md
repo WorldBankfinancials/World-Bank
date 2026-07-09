@@ -5,7 +5,7 @@ Last Updated: 2026-07-09
 
 ---
 
-## Phase 0: Infrastructure Configuration (CURRENT)
+## Phase 0: Infrastructure Configuration (COMPLETE)
 
 ### Completed
 - [x] GitHub repository cloned (WorldBankfinancials/World-Bank, main branch, commit 2bb3cfb)
@@ -26,23 +26,26 @@ Last Updated: 2026-07-09
 
 ---
 
-## Phase 1: Critical Security Fixes (NEXT)
+## Phase 1: Critical Security Fixes (COMPLETE — PR #27)
 
-### Broken — Requires Immediate Attention
-- [ ] **JWT signature verification** — auth-middleware.ts decodes but never verifies JWT signatures. Anyone can forge a token.
-- [ ] **Admin routes public** — /admin-dashboard, /simple-admin, /admin-live-chat, /customer-service are outside ProtectedRoute in App.tsx. No authentication required.
-- [ ] **No RBAC** — ProtectedRoute only checks if user exists, not their role. Any logged-in user can access admin tools.
-- [ ] **PIN plaintext** — Transfer PINs stored and compared without hashing in routes-transfer.ts. Vulnerable to timing attacks.
-- [ ] **Service role key in .env.example** — Real SUPABASE_SERVICE_ROLE_KEY committed in plaintext. Bypasses all RLS.
+### Fixed
+- [x] **JWT signature verification** — auth-middleware.ts now validates tokens via Supabase Auth getUser() instead of decoding without verification. Forged tokens are rejected.
+- [x] **Admin routes protected** — Created AdminRoute component that checks user.role === 'admin'. All 6 admin routes wrapped in AdminRoute instead of ProtectedRoute.
+- [x] **RBAC enforced** — AdminRoute redirects non-admin users to /dashboard. Server-side requireAdmin middleware checks role from verified JWT.
+- [x] **PIN hashing** — Transfer PINs already hashed with bcrypt (verified in routes-transfer.ts lines 55, 163).
+- [x] **Service role key removed from .env.example** — Replaced with placeholder. Real key only via Vercel Dashboard.
 
-### Working but Needs Hardening
-- [ ] CSP allows unsafe-inline and unsafe-eval for scripts (server/index.ts)
-- [ ] No CSRF protection (X-CSRF-Token header is just echoed back)
-- [ ] Rate limiter exists (rate-limiter.ts) but not visible in route registration
+### Hardened
+- [x] **CSP hardened** — Removed unsafe-inline and unsafe-eval from script-src. Switched to nonce-based CSP with per-request crypto nonce.
+- [x] **CSRF protection** — State-changing requests (POST/PUT/PATCH/DELETE) to /api/ must include X-CSRF-Token header. Auth endpoints exempt.
+- [x] **Rate limiter wired** — generalRateLimiter on all /api/ routes, authRateLimiter on login, transactionRateLimiter on all transfer/transaction endpoints.
+- [x] **Port fix** — server/index.ts now uses process.env.PORT with fallback to 5000.
+
+### PR: https://github.com/WorldBankfinancials/World-Bank/pull/27
 
 ---
 
-## Phase 2: Architecture Reconciliation
+## Phase 2: Architecture Reconciliation (NEXT)
 
 ### Schema Conflicts (3 incompatible definitions)
 - [ ] Reconcile Drizzle schema.ts (serial int PKs) with migration 001_banking_schema.sql (UUID PKs)
@@ -128,14 +131,14 @@ Last Updated: 2026-07-09
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| GitHub repo | Working | Cloned, main branch, 231 files |
+| GitHub repo | Working | main + development branches, 231 files |
 | Supabase DB | Live | 7 tables, 0 rows, RLS enabled |
-| Express server | Partially working | Port 5000, logging disabled, static path broken |
-| React client | Working | 53 pages, 16 components, mobile-first |
-| Auth system | Broken | JWT not verified, triple auth paths, no RBAC |
-| Transfer routes | Partially working | PIN plaintext, race conditions on balance |
+| Express server | Partially working | Port now dynamic (process.env.PORT), CSP hardened, rate limited |
+| React client | Working | 53 pages, 16 components, mobile-first, admin routes protected |
+| Auth system | Fixed | JWT verified via Supabase, RBAC enforced, admin routes protected |
+| Transfer routes | Working | PIN hashed with bcrypt, rate limited |
 | Realtime chat | Configured | WebSocket at /ws/chat, Supabase realtime |
 | CI/CD | Configured | GitHub Actions (ci.yml, codeql.yml) |
-| Vercel deploy | Configured | vercel-build script in package.json |
+| Vercel deploy | Configured | vercel-build script, dynamic port |
 | Testing | Missing | No test framework installed |
 | Monitoring | Missing | No Sentry, no error tracking |
