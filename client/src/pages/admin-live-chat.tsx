@@ -117,7 +117,7 @@ export default function AdminLiveChat() {
           const sessionId = newMsg.session_id || `session_${newMsg.sender_id}`;
 
           // Mark session as having a new message
-          setNewMessageSessionIds(prev => new Set([...prev, sessionId]));
+          setNewMessageSessionIds(prev => new Set(Array.from(prev).concat(sessionId)));
 
           // If this message belongs to the currently selected session, add it to UI
           if (selectedSession && sessionId === `session_${selectedSession.customerId}`) {
