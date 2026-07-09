@@ -45,18 +45,60 @@ Last Updated: 2026-07-09
 
 ---
 
+## Phase 1.5: Supabase Database Integration (COMPLETE)
+
+### Migrations Applied
+- [x] **Migration 002**: Fixed RLS policies on all 7 existing tables + added 3 new tables
+  - bank_accounts: Added INSERT and DELETE policies (users can now create/delete accounts)
+  - transactions: Added INSERT and UPDATE policies (transfers can now be created/updated)
+  - cards: Added INSERT, UPDATE, DELETE policies (cards can now be managed)
+  - alerts: Added INSERT and DELETE policies (alerts can now be created/removed)
+  - messages: Tightened SELECT policy from USING(true) to sender-only access
+  - transaction_approvals: Added 3 admin-only policies (was locked with zero policies)
+  - user_profiles: Added DELETE policy
+  - NEW TABLE: admin_actions (admin operation logging, admin-only access)
+  - NEW TABLE: support_tickets (customer support, user + admin access)
+  - NEW TABLE: investments (user investment portfolio, owner-scoped)
+  - Added performance indexes on all foreign key columns
+
+- [x] **Migration 003**: Added missing columns to user_profiles
+  - email, username, password_hash, account_number, account_id, balance
+  - profession, is_active, is_verified, transfer_pin, role
+  - Added indexes on email and role columns
+
+- [x] **Migration 004**: Added missing transfer columns to transactions
+  - from_user_id, recipient_name, recipient_account, recipient_country
+  - bank_name, swift_code, account_number, transfer_purpose
+  - Added indexes on from_user_id and status
+
+### Final Database State
+| Table | Columns | RLS Policies | Purpose |
+|-------|---------|---------------|---------|
+| user_profiles | 36 | 4 (CRUD) | User accounts, KYC, auth |
+| bank_accounts | 17 | 4 (CRUD) | User bank accounts |
+| transactions | 34 | 3 (SELECT/INSERT/UPDATE) | Transfers and transactions |
+| cards | 15 | 4 (CRUD) | Debit/credit cards |
+| alerts | 14 | 4 (CRUD) | User notifications |
+| messages | 12 | 4 (CRUD) | Chat messages |
+| transaction_approvals | 8 | 3 (admin-only) | Admin approval workflow |
+| admin_actions | 7 | 2 (admin-only) | Admin action logging |
+| support_tickets | 8 | 5 (user + admin) | Support ticket system |
+| investments | 10 | 4 (CRUD) | Investment portfolio |
+
+**Total: 10 tables, 37 RLS policies, all with proper ownership checks**
+
+---
+
 ## Phase 2: Architecture Reconciliation (NEXT)
 
-### Schema Conflicts (3 incompatible definitions)
-- [ ] Reconcile Drizzle schema.ts (serial int PKs) with migration 001_banking_schema.sql (UUID PKs)
+### Schema Conflicts
+- [ ] Reconcile Drizzle schema.ts (serial int PKs) with migration schema (UUID PKs)
 - [ ] Remove or update server/RLS-POLICIES.sql (references bank_* tables not in migration)
 - [ ] Remove or update sql/rls-policies.sql (uses auth.uid()::int which crashes at runtime)
 - [ ] Align supabase-mapping.ts types with actual migration schema (UUID, not number)
-- [ ] Add missing tables to migration: documents, admin_actions, support_tickets, investments
 
 ### Storage Layer
 - [ ] storage-factory.ts hardcodes SupabasePublicStorage — config.ts selection logic is dead code
-- [ ] ARCHITECTURE.md claims CompleteSupabaseStorage is active but factory uses SupabasePublicStorage
 - [ ] All storage implementations silently swallow errors — return undefined/[] on every failure
 - [ ] Column name inconsistency: supabase_user_id (postgres-storage) vs supabase_id (hybrid-postgres-storage)
 
@@ -64,31 +106,22 @@ Last Updated: 2026-07-09
 - [ ] Three parallel authenticated-fetch implementations (api.ts, queryClient.ts, supabase.ts)
 - [ ] Inconsistent 401 handling: apiFetch clears token, authenticatedFetch clears all + redirects
 - [ ] AuthContext uses localStorage tokens; supabase.ts uses Supabase sessions — unclear which is active
-- [ ] auth-middleware.ts uses VITE_SUPABASE_URL (client env var) on server
 
 ---
 
 ## Phase 3: Code Quality & Bug Fixes
 
 ### Broken Functionality
-- [ ] **log() function empty** — server/vite.ts log function does nothing, all server logging disabled
+- [ ] **log() function empty** — server/vite.ts log function does nothing
 - [ ] **serveStatic path broken** — resolves to server/public instead of dist/public
 - [ ] **Route/component swap** — /transfer maps to InternationalTransfer, /international-transfer maps to Transfer
 - [ ] **Duplicate /about route** — declared both publicly and in protected switch
-- [ ] **Error handler re-throws** — server/index.ts throws after sending response
 
 ### Dead Code & Orphaned Files
-- [ ] 5+ orphaned page files not imported in App.tsx (admin-accounts, enhanced-admin, registration, support-ticket, transfer-process)
+- [ ] 5+ orphaned page files not imported in App.tsx
 - [ ] supabase-public-storage.ts.bak backup file should be removed
 - [ ] logConfiguration() in config.ts is empty function
-- [ ] getAuthSource() always returns 'supabase' — 'backend' path is unreachable
 - [ ] Drizzle db instance in supabase-storage.ts created but never used
-
-### Performance
-- [ ] getAllTransactions() called and filtered in-memory for admin operations instead of querying by ID
-- [ ] Radix UI packages excluded from optimizeDeps — slow dev startup
-- [ ] drizzle-orm in client dependencies — shouldn't be in browser bundle
-- [ ] next-themes dependency in a Vite app (designed for Next.js)
 
 ---
 
@@ -97,26 +130,16 @@ Last Updated: 2026-07-09
 ### Testing
 - [ ] No test framework installed (no Jest, Vitest, Testing Library, Playwright)
 - [ ] No test files exist
-- [ ] Banking application requires comprehensive test coverage
-
-### RLS Policy Gaps (Migration)
-- [ ] transaction_approvals has RLS enabled but NO policies — all access denied
-- [ ] messages SELECT policy uses USING(true) — all users can read all messages
-- [ ] No INSERT policy on bank_accounts — users cannot create accounts
-- [ ] No INSERT/UPDATE policy on transactions — transactions cannot be created/updated
-- [ ] No INSERT policy on cards — cards cannot be created
-- [ ] No DELETE policies on most tables
 
 ### Environment Variable Standardization
 - [ ] Standardize on VITE_SUPABASE_URL vs SUPABASE_URL (currently both used)
 - [ ] Standardize on DATABASE_URL vs SUPABASE_DATABASE_URL (Drizzle uses different name)
-- [ ] VITE_SUPABASE_ANON_KEY defined in .env.example but never used by server
 
 ---
 
 ## Phase 5: Feature Roadmap (Future)
 
-- [ ] World Bank financial data integration (trigger.config.json configured, needs implementation)
+- [ ] World Bank financial data integration
 - [ ] Multi-language expansion (currently en/zh only)
 - [ ] Biometric authentication for mobile
 - [ ] Push notifications
@@ -131,11 +154,11 @@ Last Updated: 2026-07-09
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| GitHub repo | Working | main + development branches, 231 files |
-| Supabase DB | Live | 7 tables, 0 rows, RLS enabled |
-| Express server | Partially working | Port now dynamic (process.env.PORT), CSP hardened, rate limited |
+| GitHub repo | Working | main + development branches, PR #27 open |
+| Supabase DB | Live | 10 tables, 37 RLS policies, 4 migrations, all empty |
+| Express server | Partially working | Dynamic port, CSP hardened, rate limited |
 | React client | Working | 53 pages, 16 components, mobile-first, admin routes protected |
-| Auth system | Fixed | JWT verified via Supabase, RBAC enforced, admin routes protected |
+| Auth system | Fixed | JWT verified via Supabase, RBAC enforced |
 | Transfer routes | Working | PIN hashed with bcrypt, rate limited |
 | Realtime chat | Configured | WebSocket at /ws/chat, Supabase realtime |
 | CI/CD | Configured | GitHub Actions (ci.yml, codeql.yml) |
