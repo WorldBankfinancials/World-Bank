@@ -436,7 +436,7 @@ export class SupabasePublicStorage implements IStorage {
       }
       const { data, error } = await query;
       if (error) return [];
-      return (data || []);
+      return (data || []).map(mapTransaction);
     } catch (error) {
       return [];
     }

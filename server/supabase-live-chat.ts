@@ -32,12 +32,23 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
 
     // Parse user info from connection
     const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const token = url.searchParams.get('token') || '';
     const userId = url.searchParams.get('userId') || '';
     const userRole = (url.searchParams.get('role') || 'customer') as 'admin' | 'customer';
     const userEmail = url.searchParams.get('email') || '';
 
-    if (!userId) {
-      ws.close(1008, 'User ID required');
+    if (!token || !userId) {
+      ws.close(1008, 'Authentication required');
+      return;
+    }
+    try {
+      const { data, error } = await supabase.auth.getUser(token);
+      if (error || !data?.user || data.user.id !== userId) {
+        ws.close(1008, 'Invalid authentication token');
+        return;
+      }
+    } catch {
+      ws.close(1008, 'Authentication failed');
       return;
     }
 

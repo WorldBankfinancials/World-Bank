@@ -2,10 +2,7 @@ import { Express, Request, Response } from 'express';
 import { storage } from './storage-factory';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
 import * as bcrypt from 'bcryptjs';
-
-function generateReferenceNumber(): string {
-  return `WB-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-}
+import { generateTransactionId, generateReferenceNumber } from './crypto-utils';
 
 export function setupTransferRoutes(app: Express) {
   // Regular Transfer API - PROTECTED: requires authentication
@@ -57,7 +54,7 @@ export function setupTransferRoutes(app: Express) {
       }
 
       // Create transaction with PENDING status - awaiting admin review
-      const transactionId = `WB-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const transactionId = generateTransactionId();
 
       // Save transaction to database with pending status
       try {
@@ -169,7 +166,7 @@ export function setupTransferRoutes(app: Express) {
         return res.status(400).json({ message: "Missing required international transfer details" });
       }
 
-      const transactionId = `INT-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const transactionId = generateTransactionId('INT');
 
       // Create transaction with pending status
       try {
@@ -302,7 +299,7 @@ export function setupTransferRoutes(app: Express) {
       
       // SECURITY: Get admin user from authenticated JWT
       const admin = await storage.getUserByEmail(req.user!.email);
-      const adminId = admin?.id || 1;
+      const adminId = admin?.id; if (!adminId) { return res.status(403).json({ message: 'Admin authentication required' }); }
 
       // Get transaction to verify amount - look for processing transfers
       const pendingTransactions = await storage.getPendingTransactions();
@@ -344,7 +341,7 @@ export function setupTransferRoutes(app: Express) {
       
       // SECURITY: Get admin user from authenticated JWT
       const admin = await storage.getUserByEmail(req.user!.email);
-      const adminId = admin?.id || 1;
+      const adminId = admin?.id; if (!adminId) { return res.status(403).json({ message: 'Admin authentication required' }); }
 
       // Get transaction details - look for processing transfers
       const pendingTransactions = await storage.getPendingTransactions();
@@ -422,7 +419,7 @@ export function setupTransferRoutes(app: Express) {
       
       // SECURITY: Get admin user from authenticated JWT
       const admin = await storage.getUserByEmail(req.user!.email);
-      const adminId = admin?.id || 1;
+      const adminId = admin?.id; if (!adminId) { return res.status(403).json({ message: 'Admin authentication required' }); }
 
       // Get transaction to verify it exists - look for processing transfers
       const pendingTransactions = await storage.getPendingTransactions();
@@ -464,7 +461,7 @@ export function setupTransferRoutes(app: Express) {
       
       // SECURITY: Get admin user from authenticated JWT
       const admin = await storage.getUserByEmail(req.user!.email);
-      const adminId = admin?.id || 1;
+      const adminId = admin?.id; if (!adminId) { return res.status(403).json({ message: 'Admin authentication required' }); }
 
       // Get transaction details - look for processing transfers
       const pendingTransactions = await storage.getPendingTransactions();
