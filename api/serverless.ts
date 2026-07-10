@@ -1,6 +1,12 @@
 import { processScheduledTransactions, sendTransactionAlert, generateMonthlyStatements, reconcileBalances } from '../server/serverless';
 
 export default async (req: any, res: any) => {
+  const secret = process.env.SERVERLESS_SECRET;
+  const authHeader = req.headers.authorization || '';
+  const providedToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!secret || !providedToken || providedToken !== secret) {
+    return res.status(401).json({ error: 'Unauthorized: valid Bearer token required' });
+  }
   const { action } = req.query;
 
   switch (action) {

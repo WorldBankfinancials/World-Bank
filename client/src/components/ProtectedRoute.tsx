@@ -59,3 +59,21 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   return <>{children}</>;
 }
+
+
+export function AdminRoute({ children }: ProtectedRouteProps) {
+  let authContext;
+  try { authContext = useAuth(); } catch { return null; }
+  const { user, userProfile, loading } = authContext;
+  const [, setLocation] = useLocation();
+  const role = userProfile?.role || user?.role;
+  useEffect(() => {
+    if (!loading) {
+      if (!user) setLocation('/admin-login');
+      else if (role !== 'admin') setLocation('/dashboard');
+    }
+  }, [user, role, loading, setLocation]);
+  if (loading) return null;
+  if (!user || role !== 'admin') return null;
+  return <>{children}</>;
+}

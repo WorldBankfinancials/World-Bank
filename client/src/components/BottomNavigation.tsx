@@ -18,7 +18,7 @@ export default function BottomNavigation() {
     <div className="wb-nav fixed bottom-0 left-0 right-0 z-50">
       <div className="flex justify-around items-center py-2">
         {navigationItems.map((item) => {
-          const isActive = location === item.href;
+          const isActive = location === item.href || location.startsWith(item.href + "/");
           return (
             <Link key={item.href} href={item.href}>
               <div className={`wb-nav-item flex flex-col items-center ${isActive ? 'active' : 'text-gray-500'}`}>
