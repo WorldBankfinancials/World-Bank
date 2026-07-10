@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await fetch('/api/auth/register-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, firstName: metadata?.firstName || email.split('@')[0], lastName: metadata?.lastName || 'User', phone: metadata?.phone || '', dateOfBirth: metadata?.dateOfBirth || '', address: metadata?.address || '', city: metadata?.city || '', state: metadata?.state || '', country: metadata?.country || '', postalCode: metadata?.postalCode || '', profession: metadata?.profession || '', annualIncome: metadata?.annualIncome || '', idType: metadata?.idType || '', idNumber: metadata?.idNumber || '', transferPin: metadata?.transferPin || '0192' })
+        body: JSON.stringify({ email, password, firstName: metadata?.firstName || email.split('@')[0], lastName: metadata?.lastName || 'User', phone: metadata?.phone || '', dateOfBirth: metadata?.dateOfBirth || '', address: metadata?.address || '', city: metadata?.city || '', state: metadata?.state || '', country: metadata?.country || '', postalCode: metadata?.postalCode || '', profession: metadata?.profession || '', annualIncome: metadata?.annualIncome || '', idType: metadata?.idType || '', idNumber: metadata?.idNumber || '', transferPin: metadata?.transferPin || '' })
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Signup failed' }));
@@ -126,14 +126,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { authenticatedFetch } = await import('@/lib/queryClient');
         await authenticatedFetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(() => {});
       } catch (e) {}
-      localStorage.clear();
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('userProfile');
+      localStorage.removeItem('refresh_token');
       sessionStorage.clear();
       setUser(null);
       setUserProfile(null);
       try { const { queryClient } = await import('@/lib/queryClient'); queryClient.clear(); } catch (e) {}
       window.location.replace('/login');
     } catch (error) {
-      localStorage.clear();
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('userProfile');
+      localStorage.removeItem('refresh_token');
       sessionStorage.clear();
       setUser(null);
       setUserProfile(null);
