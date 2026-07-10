@@ -37,7 +37,6 @@ export const transferSchema = z.object({
   idempotencyKey:   z.string().optional(),
 });
 
-// accountId is a UUID string
 export const balanceUpdateSchema = z.object({
   accountId:   z.string().min(1, 'accountId required'),
   amount:      z.number().positive('Amount must be positive'),
@@ -61,10 +60,9 @@ export const registrationSchema = z.object({
   annualIncome: z.string().max(50).optional(),
   idType:      z.string().max(50).optional(),
   idNumber:    z.string().max(100).optional(),
-  transferPin: z.string().regex(/^\d{4,6}$/, 'PIN must be 4-6 digits').default('0192'),
+  transferPin: z.string().regex(/^\d{4,6}$/, 'PIN must be 4-6 digits'),
 });
 
-// registrationId is a UUID string
 export const approvalSchema = z.object({
   registrationId: z.string().min(1),
   initialBalance: z.number().min(0).optional().default(0),

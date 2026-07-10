@@ -62,33 +62,9 @@ export async function requireAuth(
     let user = await storage.getUserByEmail(email);
 
     if (!user) {
-      try {
-        const { data: authData } = await getAdminClient().auth.admin.getUserById(userId);
-        const meta    = authData?.user?.user_metadata   ?? {};
-        const appMeta = authData?.user?.app_metadata    ?? {};
-        const firstName = meta.first_name || email.split('@')[0];
-        const lastName  = meta.last_name  || 'User';
-        user = await storage.createUser({
-          email,
-          fullName:  `${firstName} ${lastName}`.trim(),
-          firstName,
-          lastName,
-          phone:     meta.phone || '',
-          role:      appMeta.role || 'customer',
-          isActive:  true,
-          isVerified: true,
-          balance:   '0.00',
-          accountNumber: `WB${Math.floor(10_000_000 + Math.random() * 90_000_000)}`,
-        });
-      } catch (syncErr) {
-        console.error('[auth] user sync failed:', syncErr);
-        res.status(403).json({ error: 'Account not found. Contact support.' });
-        return;
-      }
-    }
-
-    if (!user) {
-      res.status(403).json({ error: 'Account not found. Contact support.' });
+      // SECURITY: Do NOT auto-create users. If a Supabase Auth user has no local profile,
+      // they must complete the registration flow (/api/auth/register-complete).
+      res.status(403).json({ error: 'Account not found. Please complete registration or contact support.' });
       return;
     }
 
