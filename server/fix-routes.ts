@@ -27,6 +27,17 @@ import { errorHandler, notFoundHandler, asyncHandler, createApiError } from './e
 import { runStartupChecks } from './startup-checks';
 import * as bcrypt from 'bcryptjs';
 
+// SECURITY: Strip sensitive fields from user objects before returning to client
+function sanitizeUser(user: any): any {
+  if (!user) return user;
+  const { password, transferPin, transfer_pin, password_hash, idNumber, identification_number, ...safe } = user;
+  return safe;
+}
+
+function sanitizeUsers(users: any[]): any[] {
+  return (users || []).map(sanitizeUser);
+}
+
 // Type definitions for transactions
 interface Transaction {
   id: string | number;
@@ -112,7 +123,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      return res.json(user);
+      return res.json(sanitizeUser(user));
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to get user' });
     }
@@ -169,7 +180,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       supabaseUserId = authData.user.id;
 
-      // STEP 2: Create local database profile - USING VALIDATED DATA ONLY
+      // STEP 2: Create local database profile
+      const adminPin = generateTransferPin();
+      const adminPinHash = await bcrypt.hash(adminPin, 12); - USING VALIDATED DATA ONLY
       try {
         const newUser = await storage.createUser({
           username: validatedData.email.split('@')[0],
@@ -491,7 +504,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
       
-      return res.json(user);
+      return res.json(sanitizeUser(user));
     } catch (error: any) {
       return res.status(500).json({ error: 'Failed to get user', details: error.message });
     }
@@ -512,7 +525,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const cards = await storage.getUserCards(user.id);
       
       return res.json({
-        ...user,
+        ...sanitizeUser(user),
         accounts,
         cards
       });
@@ -521,7 +534,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get user by ID - PROTECTED with JWT authentication
+  // Get user by ID - PROTECTED: can only fetch own profile (admins can fetch any)
   app.get('/api/users/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = validateId(req.params.id);
@@ -529,7 +542,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-      return res.json(user);
+      // SECURITY: Only allow users to fetch their own record unless they are admin
+      const requestingUser = await storage.getUserByEmail(req.user!.email);
+      const isAdmin = requestingUser?.role === 'admin';
+      const isOwner = requestingUser && String(requestingUser.id) === String(userId);
+      if (!isAdmin && !isOwner) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      return res.json(sanitizeUser(user));
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to get user' });
     }
@@ -543,7 +563,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      return res.json(user);
+      return res.json(sanitizeUser(user));
     } catch (error: any) {
       return res.status(500).json({ error: 'Failed to get user profile' });
     }
@@ -937,7 +957,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   });
 
   // Verify PIN endpoint - Used after password verification, needs email + pin
-  app.post('/api/verify-pin', authRateLimiter, async (req: Request, res: Response) => {
+  app.post('/api/verify-pin', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const body = req.body as { email?: string; username?: string; pin: string };
       const identifier = body.email || body.username;
@@ -979,12 +999,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       
       let pinMatch = false;
       
-      // Try bcrypt comparison if it's hashed
+      // SECURITY: Only accept bcrypt-hashed PINs — no plaintext fallback
       if (user.transferPin && user.transferPin.startsWith('$2')) {
         pinMatch = await bcrypt.compare(body.pin, user.transferPin);
-      } else if (user.transferPin === body.pin) {
-        // Fallback for plaintext (legacy compatibility)
-        pinMatch = true;
       }
       
       if (!pinMatch) {
@@ -1348,7 +1365,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Note: Transfer endpoints moved to routes-transfer.ts
+  // Note: Transfer endpoints Moved to routes-transfer.ts
   // Using /api/transfers (plural) with email-based authentication
 
   // Setup transfer routes
@@ -2099,7 +2116,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const customerList = customers
         .filter((user: User) => user.role !== 'admin' || req.query.includeAdmins === 'true')
         .map((user: User) => ({
-          ...user,
+          ...sanitizeUser(user),
           fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown',
           balance: parseFloat(String(user.balance || '0')) || 0
         }));
@@ -2128,7 +2145,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           details: updates
         });
       }
-      return res.json(updatedUser);
+      return res.json(sanitizeUser(updatedUser));
     } catch (error: any) {
       return res.status(500).json({ error: 'Failed to update customer' });
     }
@@ -2402,9 +2419,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         email,
         password,
         email_confirm: true,
-        user_metadata: {
+        app_metadata: {
           role: 'admin'
-        }
+        },
+        user_metadata: {}
       });
 
       if (authError || !authData.user) {
@@ -2415,6 +2433,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
 
       // STEP 2: Create local database profile
+      const adminPin = generateTransferPin();
+      const adminPinHash = await bcrypt.hash(adminPin, 12);
       try {
         const [firstName, ...lastNameParts] = fullName.split(' ');
         const lastName = lastNameParts.join(' ') || 'Admin';
@@ -2427,7 +2447,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           accountNumber: `ADMIN-${generateAccountNumber()}`,
           accountId: Date.now(),
           password: 'supabase_auth',
-          transferPin: generateTransferPin(),
+          transferPin: adminPinHash,
           role: 'admin',
           isVerified: true,
           isActive: true,
@@ -2581,7 +2601,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
         lastName: supabaseUser.user_metadata?.last_name || 'User',
         phone: supabaseUser.user_metadata?.phone || '',
-        transferPin: supabaseUser.user_metadata?.transfer_pin || '0192',
+        transferPin: supabaseUser.user_metadata?.transfer_pin || '',
         isActive: true,
         balance: '0',
         lastLogin: Date.now()
@@ -3195,7 +3215,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/users', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const users = await storage.getAllUsers();
-      return res.json(users);
+      return res.json(sanitizeUsers(users));
     } catch (error: any) {
       return res.status(500).json({ error: 'Failed to fetch users' });
     }
