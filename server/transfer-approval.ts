@@ -1,116 +1,109 @@
-import { storage } from "./storage-factory";
+import { storage } from './storage-factory';
+import { createClient } from '@supabase/supabase-js';
 
-export interface TransferApprovalData {
-  transactionId: string;
-  amount: number;
-  currency: string;
-  type: string;
-  description: string;
-  status: 'pending_approval' | 'approved' | 'rejected';
-  adminNotes?: string;
-  userId: number;
-}
+const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-export async function createTransferForApproval(data: TransferApprovalData) {
-  try {
-    // Get user accounts
-    const accounts = await storage.getUserAccounts(data.userId);
-    if (accounts.length === 0) {
-      throw new Error("No account found for user");
-    }
+const TERMINAL_STATUSES = ['completed', 'failed', 'reversed'];
+// Use consistent status values matching routes-transfer.ts
+const PENDING_STATUS = 'processing';
+const APPROVED_STATUS = 'completed';
+const REJECTED_STATUS = 'failed';
 
-    const fromAccount = accounts[0];
+export async function approveTransfer(transactionId: string, adminId: string, notes?: string) {
+  const supabase = createClient(supabaseUrl, serviceRoleKey);
+  
+  const { data: transaction, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('id', transactionId)
+    .single();
 
-    // Create transaction record
-    const transaction = await storage.createTransaction({
-      fromAccountId: fromAccount.id,
-      type: data.type,
-      amount: data.amount.toString(),
-      description: data.description,
-      status: 'pending_approval',
-      currency: data.currency,
-      referenceNumber: `TXN-${Date.now()}`
-    });
-
-    return transaction;
-  } catch (error) {
-    throw error;
+  if (error || !transaction) {
+    throw new Error('Transaction not found');
   }
-}
 
-export async function approveTransfer(transactionId: number, adminId: number, notes?: string) {
-  try {
-    // Update transaction status
-    const transaction = await storage.updateTransactionStatus(transactionId, 'approved', adminId, notes);
-    
-    if (transaction) {
-      // Log admin action
-      await storage.createAdminAction({
-        adminId: adminId,
-        action: 'approve_transfer',
-        targetType: 'transaction',
-        targetId: transactionId,
-        details: notes ? { notes } : {}
-      });
-    }
-
-    return transaction;
-  } catch (error) {
-    throw error;
+  if (TERMINAL_STATUSES.includes(transaction.status)) {
+    throw new Error(`Transaction already in terminal state: ${transaction.status}`);
   }
+
+  const { error: updateError } = await supabase
+    .from('transactions')
+    .update({ 
+      status: APPROVED_STATUS,
+      admin_notes: notes || '',
+      approved_by: adminId,
+      approved_at: new Date().toISOString(),
+    })
+    .eq('id', transactionId);
+
+  if (updateError) throw new Error('Failed to approve transfer');
+
+  await storage.createAdminAction({
+    adminId,
+    action: 'approve_transfer',
+    targetType: 'transaction',
+    targetId: transactionId,
+    details: { notes, previousStatus: transaction.status, newStatus: APPROVED_STATUS },
+  });
+
+  return { success: true, status: APPROVED_STATUS };
 }
 
-export async function rejectTransfer(transactionId: number, adminId: number, notes: string) {
-  try {
-    // Update transaction status
-    const transaction = await storage.updateTransactionStatus(transactionId, 'rejected', adminId, notes);
-    
-    if (transaction) {
-      // Log admin action
-      await storage.createAdminAction({
-        adminId: adminId,
-        action: 'reject_transfer',
-        targetType: 'transaction',
-        targetId: transactionId,
-        details: { notes }
-      });
+export async function rejectTransfer(transactionId: string, adminId: string, notes: string) {
+  const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-      // Create automatic support ticket for rejected transfer
-      await createSupportTicketForRejection(transaction, notes);
-    }
+  const { data: transaction, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('id', transactionId)
+    .single();
 
-    return transaction;
-  } catch (error) {
-    throw error;
+  if (error || !transaction) {
+    throw new Error('Transaction not found');
   }
+
+  if (TERMINAL_STATUSES.includes(transaction.status)) {
+    throw new Error(`Transaction already in terminal state: ${transaction.status}`);
+  }
+
+  const { error: updateError } = await supabase
+    .from('transactions')
+    .update({ 
+      status: REJECTED_STATUS,
+      admin_notes: notes,
+      approved_by: adminId,
+      approved_at: new Date().toISOString(),
+    })
+    .eq('id', transactionId);
+
+  if (updateError) throw new Error('Failed to reject transfer');
+
+  await createSupportTicketForRejection(transaction, adminId, notes);
+
+  await storage.createAdminAction({
+    adminId,
+    action: 'reject_transfer',
+    targetType: 'transaction',
+    targetId: transactionId,
+    details: { notes, previousStatus: transaction.status, newStatus: REJECTED_STATUS },
+  });
+
+  return { success: true, status: REJECTED_STATUS };
 }
 
-async function createSupportTicketForRejection(transaction: any, rejectionReason: string) {
+async function createSupportTicketForRejection(transaction: any, adminId: string, reason: string) {
   try {
-    // Get account details to find user
-    const account = await storage.getAccount(transaction.accountId);
-    if (!account) {
-      return;
-    }
-
-    // Create support ticket
-    const ticket = await storage.createSupportTicket({
-      userId: account.userId,
-      subject: `Transfer Rejection - Transaction #${transaction.id}`,
-      description: `Your transfer has been rejected.\n\nTransaction Details:\n- Amount: $${transaction.amount}\n- Reason for rejection: ${rejectionReason}\n\nPlease contact support for assistance.`,
+    await storage.createSupportTicket({
+      userId: transaction.from_user_id || transaction.user_id,
+      subject: 'Transfer Request Rejected',
+      description: `Your transfer of ${transaction.amount} ${transaction.currency} has been rejected. Reason: ${reason}`,
       status: 'open',
-      priority: 'high'
+      priority: 'high',
+      category: 'transfer',
+      adminNotes: reason,
     });
-
-    return ticket;
-  } catch (error) {
-  }
-}
-
-export async function getPendingTransfers() {
-  try {
-    return await storage.getPendingTransactions();
-  } catch (error) {
-    throw error;
+  } catch (err) {
+    console.error('[transfer-approval] Failed to create support ticket:', err);
   }
 }
