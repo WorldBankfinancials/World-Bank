@@ -17,14 +17,17 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@/*":       ["./client/src/*"],
-      "@shared/*": ["./shared/*"]
+      "@/*":              ["./apps/web/src/*"],
+      "@shared/*":        ["./packages/shared/*"],
+      "@packages/shared/*": ["./packages/shared/*"],
+      "@server/*":        ["./services/api-server/*"]
     }
   },
   "include": [
-    "client/src/**/*",
-    "shared/**/*",
-    "server/**/*",
-    "api/**/*"
+    "apps/web/src/**/*",
+    "packages/shared/**/*",
+    "services/api-server/**/*",
+    "modules/**/*",
+    "domains/**/*"
   ]
 }
