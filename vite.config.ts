@@ -18,9 +18,10 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      "@": path.resolve(import.meta.dirname, "apps", "web", "src"),
+      "@shared": path.resolve(import.meta.dirname, "packages", "shared"),
+      "@packages/shared": path.resolve(import.meta.dirname, "packages", "shared"),
+      "@assets": path.resolve(import.meta.dirname, "assets"),
     },
   },
   optimizeDeps: {
@@ -36,9 +37,9 @@ export default defineConfig({
     ],
     include: ['react', 'react-dom']
   },
-  root: path.resolve(import.meta.dirname, "client"),
+  root: path.resolve(import.meta.dirname, "apps", "web"),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: path.resolve(import.meta.dirname, "dist", "public"),
     emptyOutDir: true,
     rollupOptions: {
       external: [],
