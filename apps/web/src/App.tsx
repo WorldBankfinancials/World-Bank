@@ -115,7 +115,7 @@ function App() {
                 </Route>
                 <Route path="/transfer-processing">
                   <ProtectedRoute>
-                    <TransferProcessing {...({} as any)} />
+                    <TransferProcessing />
                   </ProtectedRoute>
                 </Route>
                 <Route path="/transfer-pending">
@@ -170,8 +170,6 @@ function App() {
                         <Route path="/transaction-router" component={TransactionRouter} />
                         <Route path="/investment" component={Investment} />
                         <Route path="/exchange" component={Exchange} />
-                        <Route path="/about" component={About} />
-
                         <Route component={NotFound} />
                       </Switch>
                     </div>

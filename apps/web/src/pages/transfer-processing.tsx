@@ -11,7 +11,7 @@ export default function TransferProcessing() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    let timeout: NodeJS.Timeout | null = null;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {

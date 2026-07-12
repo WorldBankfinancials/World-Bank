@@ -27,6 +27,21 @@ export function useRealtimeChat(
     // Subscribe to chat messages for this user
     const channel = supabase.channel(`chat:${userId}`);
 
+    const handleMessage = (payload: any) => {
+      if (onMessageReceived && payload.new) {
+        onMessageReceived({
+          id: payload.new.id,
+          senderId: payload.new.sender_id,
+          senderName: payload.new.sender_name,
+          senderRole: payload.new.sender_role,
+          message: payload.new.message,
+          conversationId: payload.new.conversation_id,
+          isRead: payload.new.is_read,
+          timestamp: payload.new.created_at
+        });
+      }
+    };
+
     channel
       .on(
         'postgres_changes',
@@ -36,20 +51,17 @@ export function useRealtimeChat(
           table: 'messages',
           filter: `sender_id=eq.${userId}`
         },
-        (payload) => {
-          if (onMessageReceived && payload.new) {
-            onMessageReceived({
-              id: payload.new.id,
-              senderId: payload.new.sender_id,
-              senderName: payload.new.sender_name,
-              senderRole: payload.new.sender_role,
-              message: payload.new.message,
-              conversationId: payload.new.conversation_id,
-              isRead: payload.new.is_read,
-              timestamp: payload.new.created_at
-            });
-          }
-        }
+        handleMessage
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `recipient_id=eq.${userId}`
+        },
+        handleMessage
       )
       .subscribe();
 

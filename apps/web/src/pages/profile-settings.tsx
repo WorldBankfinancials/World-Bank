@@ -1,4 +1,3 @@
-import type { User as UserType } from "@/lib/schema";
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Button } from "@/components/ui/button";

@@ -1,4 +1,4 @@
-import type { User } from "@/lib/schema";
+import type { User } from "@packages/shared/schema";
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Button } from "@/components/ui/button";
@@ -170,7 +170,7 @@ export default function AddMoney() {
                     selectedMethod === method.id
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  }`
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">

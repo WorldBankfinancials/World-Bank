@@ -1,22 +1,12 @@
 /**
  * Supabase Realtime client utilities
+ * Re-uses the unified Supabase client to avoid creating a second client instance.
  */
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-
-let realtimeClient: ReturnType<typeof createClient> | null = null;
+import { supabase } from './supabase';
 
 export function getRealtimeClient() {
-  if (!realtimeClient) {
-    realtimeClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false },
-      realtime: { params: { eventsPerSecond: 10 } },
-    });
-  }
-  return realtimeClient;
+  return supabase;
 }
 
 export function subscribeToAlerts(userId: string, callback: (payload: any) => void) {
