@@ -1,5 +1,5 @@
 import { useLocation } from 'wouter';
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import BottomNavigation from "@/components/BottomNavigation";
@@ -58,9 +58,19 @@ export default function TransferFunds() {
   const [showStatusScreen, setShowStatusScreen] = useState(false);
   const [transferStatus, setTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
   const [transferId, setTransferId] = useState("");
-  const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [idempotencyKey] = useState(() => `transfer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, []);
   
   const form = useForm<TransferForm>({
     resolver: zodResolver(transferFormSchema),
@@ -177,7 +187,7 @@ export default function TransferFunds() {
           }
         }, 3000);
         
-        setPollInterval(interval);
+        pollIntervalRef.current = interval;
       } else {
         const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
         toast({
@@ -314,7 +324,7 @@ export default function TransferFunds() {
                     className="flex-1"
                     onClick={() => {
                       setShowStatusScreen(false);
-                      if (pollInterval) clearInterval(pollInterval);
+                      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
                     }}
                   >
                     Back
