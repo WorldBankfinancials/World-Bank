@@ -1,8 +1,3 @@
-/**
- * scheduler-service
- *
- * Service entry point for the scheduler-service microservice.
- */
-
+export * from '../../packages/shared';
 export const serviceName = 'scheduler-service';
 export default { serviceName };

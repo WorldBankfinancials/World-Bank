@@ -1,8 +1,3 @@
-/**
- * search-service
- *
- * Service entry point for the search-service microservice.
- */
-
+export * from '../../packages/shared';
 export const serviceName = 'search-service';
 export default { serviceName };
