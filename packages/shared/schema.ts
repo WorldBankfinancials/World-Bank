@@ -9,7 +9,7 @@
  * Accounts table     : bank_accounts  (id uuid)
  * Transactions table : transactions   (id uuid, uses transaction_type not type)
  * Supporting tables  : alerts, messages, cards, investments,
- *                      support_tickets, admin_actions  — all uuid PKs
+ *                      support_tickets, admin_actions — all uuid PKs
  * Auth gate table    : wb_users (id uuid = auth.uid(), role, kyc_status)
  *
  * All primary-key IDs are UUID strings throughout.
@@ -343,6 +343,8 @@ export interface User {
   lastLogin?: string | Date | null;
   createdAt?: string | Date | null;
   updatedAt?: string | Date | null;
+  status?: string;
+  employer?: string | null;
 }
 
 export interface InsertUser {
@@ -384,6 +386,8 @@ export interface InsertUser {
   password?: string;
   profilePhoto?: string | null;
   avatarUrl?: string | null;
+  employer?: string;
+  status?: string;
 }
 
 export interface Account {
@@ -514,7 +518,7 @@ export interface InsertSupportTicket {
   description: string;
   status?: string;
   priority?: string;
-  category?: string;
+  category?: string | null;
   adminNotes?: string;
   assignedTo?: string;
 }
@@ -535,6 +539,12 @@ export interface Card {
   isLocked?: boolean;
   dailyLimit?: string | null;
   contactlessEnabled?: boolean;
+  cardholderName?: string | null;
+  brand?: string | null;
+  pinSet?: boolean;
+  monthlyLimit?: string | null;
+  isContactless?: boolean;
+  updatedAt?: string | Date | null;
   createdAt?: string | Date | null;
 }
 
@@ -553,13 +563,18 @@ export interface InsertCard {
   dailyLimit?: string;
   isLocked?: boolean;
   contactlessEnabled?: boolean;
+  cardholderName?: string;
+  brand?: string;
+  pinSet?: boolean;
+  monthlyLimit?: string;
+  isContactless?: boolean;
 }
 
 export interface Investment {
   id: string;
   userId: string;
   type: string;
-  symbol: string;
+  symbol?: string;
   assetType?: string | null;
   shares?: string | null;
   averagePrice?: string | null;
@@ -576,7 +591,7 @@ export interface Investment {
 export interface InsertInvestment {
   userId: string | number;
   type: string;
-  symbol: string;
+  symbol?: string;
   assetType?: string;
   shares?: string;
   averagePrice?: string;
