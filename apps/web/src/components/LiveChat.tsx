@@ -230,7 +230,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
                       msg.sender === 'user'
                         ? 'bg-blue-600 text-white rounded-br-none shadow'
                         : 'bg-white text-gray-900 border border-gray-300 rounded-bl-none shadow'
-                    }`
+                    }`}
                   >
                     <p className="mb-1 leading-relaxed">{msg.text}</p>
                     <p className={`text-xs ${msg.sender === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>

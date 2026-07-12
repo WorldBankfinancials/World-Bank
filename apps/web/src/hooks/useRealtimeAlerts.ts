@@ -23,7 +23,7 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
           event: '*',
           schema: 'public',
           table: 'alerts',
-          filter: `userId=eq.${userId}`
+          filter: `user_id=eq.${userId}`
         },
         (payload) => {
           handleAlertReceived(payload.new);

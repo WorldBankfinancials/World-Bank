@@ -70,7 +70,7 @@ export function useSupabaseRealtimeAccounts(
     fetchAccountsData();
 
     // Try Supabase Realtime with async/await pattern to prevent blocking
-    let pollInterval: NodeJS.Timeout | null = null;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
     let channel: any = null;
     let realtimeConnected = false;
 
@@ -78,7 +78,7 @@ export function useSupabaseRealtimeAccounts(
       try {
         // Create channel with non-blocking subscribe
         channel = supabase
-          .channel('bank_accounts_realtime', {
+          .channel('accounts_realtime', {
             config: {
               broadcast: { ack: false },
               presence: { key: 'accounts' }
@@ -86,7 +86,7 @@ export function useSupabaseRealtimeAccounts(
           })
           .on(
             'postgres_changes',
-            { event: '*', schema: 'public', table: 'bank_accounts' },
+            { event: '*', schema: 'public', table: 'accounts' },
             () => fetchAccountsData()
           )
           .subscribe((status: string) => {
@@ -181,14 +181,14 @@ export function useSupabaseRealtimeTransactions(
 
     fetchTransactionsData();
 
-    let pollInterval: NodeJS.Timeout | null = null;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
     let channel: any = null;
     let realtimeConnected = false;
 
     const setupRealtime = async () => {
       try {
         channel = supabase
-          .channel('bank_transactions_realtime', {
+          .channel('transactions_realtime', {
             config: {
               broadcast: { ack: false },
               presence: { key: 'transactions' }
@@ -281,14 +281,14 @@ export function useSupabaseRealtimeUserBalance(
 
     fetchUserData();
 
-    let pollInterval: NodeJS.Timeout | null = null;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
     let channel: any = null;
     let realtimeConnected = false;
 
     const setupRealtime = async () => {
       try {
         channel = supabase
-          .channel('bank_users_realtime', {
+          .channel('users_realtime', {
             config: {
               broadcast: { ack: false },
               presence: { key: 'user' }
@@ -296,7 +296,7 @@ export function useSupabaseRealtimeUserBalance(
           })
           .on(
             'postgres_changes',
-            { event: '*', schema: 'public', table: 'bank_users' },
+            { event: '*', schema: 'public', table: 'users' },
             () => fetchUserData()
           )
           .subscribe((status: string) => {

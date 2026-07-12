@@ -35,7 +35,7 @@ export default function Footer() {
           </div>
           
           <div>
-            <h3 className="font-semibold wb-dark mb-3">{t('connect')}</h3>
+            <h3 className="font-semibold text-slate-700 mb-3">{t('connect')}</h3>
             <div className="flex space-x-4">
               <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="wb-text hover:text-blue-600" aria-label="Facebook">
                 <Facebook className="w-5 h-5" />
