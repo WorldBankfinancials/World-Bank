@@ -84,14 +84,39 @@ export default function Receive() {
     // Copied to clipboard notification
   };
 
-  const handleRequestMoney = () => {
+  const handleRequestMoney = async () => {
     if (!requestAmount) {
-      
+      toast({ title: 'Error', description: 'Please enter an amount', variant: 'destructive' });
       return;
     }
-    
-    setRequestAmount("");
-    setMessage("");
+
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const { queryClient } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/payment-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: Number(requestAmount),
+          currency: 'USD',
+          description: message || '',
+          recipientName: accountDetails.name,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create payment request');
+      }
+
+      toast({ title: 'Success', description: 'Payment request sent successfully' });
+      // Invalidate the payment-requests query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['/api/payment-requests'] });
+      // Clear the form
+      setRequestAmount("");
+      setMessage("");
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to send payment request', variant: 'destructive' });
+    }
   };
 
   return (

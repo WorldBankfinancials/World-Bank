@@ -98,9 +98,15 @@ export default function AddMoney() {
 
       if (!response.ok) throw new Error('Failed to add money');
 
+      // Invalidate wallet balance and related queries to refresh the UI
+      const { queryClient } = await import('@/lib/queryClient');
+      queryClient.invalidateQueries({ queryKey: ['/api/wallet-balance'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+
       toast({
         title: t('success'),
-        description: `${t('add_money_success')} $${amount} ${t('add_money_via')} ${selectedMethod}`,
+        description: `${t('add_money_success')} ${amount} ${t('add_money_via')} ${selectedMethod}`,
       });
       setAmount("");
       setSelectedMethod("");
