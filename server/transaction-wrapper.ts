@@ -43,7 +43,8 @@ export class BankingTransaction {
           const result = await step.execute();
           this.executedSteps.push(step);
           this.results.push(result);
-        } catch (stepError: any) {
+        } catch (stepError: unknown) {
+          const stepErrorMsg = stepError instanceof Error ? stepError.message : 'Internal server error';
           
           // ROLLBACK all executed steps in reverse order
           const rollbackFailures = await this.rollback();
@@ -51,13 +52,13 @@ export class BankingTransaction {
           if (rollbackFailures.length > 0) {
             return {
               success: false,
-              error: `Transaction failed at step "${step.name}": ${stepError.message}. CRITICAL: Rollback had ${rollbackFailures.length} failures - manual intervention required: ${rollbackFailures.join('; ')}`
+              error: `Transaction failed at step "${step.name}": ${stepErrorMsg}. CRITICAL: Rollback had ${rollbackFailures.length} failures - manual intervention required: ${rollbackFailures.join('; ')}`
             };
           }
           
           return {
             success: false,
-            error: `Transaction failed at step "${step.name}": ${stepError.message}`
+            error: `Transaction failed at step "${step.name}": ${stepErrorMsg}`
           };
         }
       }
@@ -67,19 +68,20 @@ export class BankingTransaction {
         data: this.results[this.results.length - 1] as T
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : 'Internal server error';
       const rollbackFailures = await this.rollback();
       
       if (rollbackFailures.length > 0) {
         return {
           success: false,
-          error: `Transaction failed: ${error.message}. CRITICAL: Rollback had ${rollbackFailures.length} failures: ${rollbackFailures.join('; ')}`
+          error: `Transaction failed: ${errorMsg}. CRITICAL: Rollback had ${rollbackFailures.length} failures: ${rollbackFailures.join('; ')}`
         };
       }
       
       return {
         success: false,
-        error: `Transaction failed: ${error.message}`
+        error: `Transaction failed: ${errorMsg}`
       };
     }
   }
@@ -96,8 +98,8 @@ export class BankingTransaction {
       if (step.rollback) {
         try {
           await step.rollback();
-        } catch (rollbackError: any) {
-          const errorMsg = `Rollback failed for "${step.name}": ${rollbackError.message}`;
+        } catch (rollbackError: unknown) {
+          const errorMsg = `Rollback failed for "${step.name}": ${rollbackError instanceof Error ? rollbackError.message : 'Internal server error'}`;
           rollbackFailures.push(errorMsg);
           
           // Continue rolling back other steps even if one fails
@@ -152,7 +154,7 @@ export async function atomicBalanceUpdate(
       previousBalance: result.previous_balance?.toString()
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Fallback to direct SQL update if RPC not available
     return await fallbackAtomicUpdate(accountId, amountChange, description);
   }
@@ -206,8 +208,8 @@ async function fallbackAtomicUpdate(
 
     return { success: true, newBalance: newBalance.toString() };
 
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return { success: false, error: (error instanceof Error ? error.message : 'Internal server error') };
   }
 }
 

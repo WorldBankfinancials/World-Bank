@@ -207,10 +207,10 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
             timestamp: new Date().toISOString()
           }));
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         ws.send(JSON.stringify({
           type: 'error',
-          message: error.message
+          message: (error instanceof Error ? error.message : 'Internal server error')
         }));
       }
     });
@@ -255,8 +255,8 @@ export async function getChatHistory(req: Request, res: Response) {
     if (error) throw error;
 
     res.json({ success: true, messages, total: messages?.length || 0 });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 
@@ -276,8 +276,8 @@ export async function getActiveSessions(req: Request, res: Response) {
       }));
 
     res.json({ success: true, sessions });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 
@@ -310,8 +310,8 @@ export async function createTicketFromChat(req: Request, res: Response) {
     if (error) throw error;
 
     res.json({ success: true, ticket });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 

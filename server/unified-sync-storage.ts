@@ -212,7 +212,7 @@ export class UnifiedSyncStorage implements IStorage {
       const newUser = this.mapDatabaseToUser(data);
       
       return newUser;
-    } catch (error: any) {
+    } catch (error: unknown) {
       
       throw error;
     }
@@ -339,7 +339,7 @@ export class UnifiedSyncStorage implements IStorage {
       if (!data) throw new Error('No data returned');
       memCache.delete(`accounts:user:${account.userId}`);
       return this.mapDatabaseToAccount(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       
       throw error;
     }
@@ -453,7 +453,7 @@ export class UnifiedSyncStorage implements IStorage {
       }
       if (!data) throw new Error('No data returned');
       return this.mapDatabaseToTransaction(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw error;
     }
   }
@@ -478,7 +478,7 @@ export class UnifiedSyncStorage implements IStorage {
       }
       if (!data) throw new Error('No data returned');
       return data as AdminAction;
-    } catch (error: any) {
+    } catch (error: unknown) {
       
       throw error;
     }
@@ -607,7 +607,7 @@ export class UnifiedSyncStorage implements IStorage {
 
       if (error || !data) throw error;
       return data as Card;
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw error;
     }
   }
@@ -682,7 +682,7 @@ export class UnifiedSyncStorage implements IStorage {
 
       if (error || !data) throw error;
       return data as Alert;
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw error;
     }
   }
@@ -750,7 +750,7 @@ export class UnifiedSyncStorage implements IStorage {
 
       if (error || !data) throw error;
       return data as Investment;
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw error;
     }
   }
@@ -825,7 +825,7 @@ export class UnifiedSyncStorage implements IStorage {
 
       if (error || !data) throw error;
       return data as Message;
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw error;
     }
   }
@@ -886,7 +886,7 @@ export class UnifiedSyncStorage implements IStorage {
 
       if (error || !data) throw error;
       return data as SupportTicket;
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw error;
     }
   }
