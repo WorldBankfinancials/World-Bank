@@ -120,10 +120,10 @@ export default function Transfer() {
 
       // Show PIN verification modal - let backend validate balance
       setShowPinVerification(true);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: error?.message || 'An error occurred',
+        description: error instanceof Error ? error.message : 'An error occurred',
         variant: 'destructive'
       });
     }
