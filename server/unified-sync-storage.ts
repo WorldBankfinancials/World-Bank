@@ -41,13 +41,12 @@ export class UnifiedSyncStorage implements IStorage {
 
     try {
       const { data, error } = await supabase
-        .from('bank_users')
+        .from('users')
         .select('*')
         .eq('id', id)
         .single();
       
       if (error) {
-        
         return undefined;
       }
       if (!data) return undefined;
@@ -55,7 +54,6 @@ export class UnifiedSyncStorage implements IStorage {
       this.setCache(cacheKey, user);
       return user;
     } catch (error) {
-      
       return undefined;
     }
   }
@@ -67,25 +65,21 @@ export class UnifiedSyncStorage implements IStorage {
 
     try {
       const { data, error } = await supabase
-        .from('bank_users')
+        .from('users')
         .select('*')
         .eq('email', email)
         .single();
       
       if (error) {
-        
         return undefined;
       }
       if (!data) {
-        
         return undefined;
       }
       const user = this.mapDatabaseToUser(data);
       this.setCache(cacheKey, user);
-      
       return user;
     } catch (error) {
-      
       return undefined;
     }
   }
@@ -93,19 +87,17 @@ export class UnifiedSyncStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     try {
       const { data, error } = await supabase
-        .from('bank_users')
+        .from('users')
         .select('*')
         .eq('username', username)
         .single();
       
       if (error) {
-        
         return undefined;
       }
       if (!data) return undefined;
       return this.mapDatabaseToUser(data);
     } catch (error) {
-      
       return undefined;
     }
   }
@@ -113,19 +105,17 @@ export class UnifiedSyncStorage implements IStorage {
   async getUserByPhone(phone: string): Promise<User | undefined> {
     try {
       const { data, error } = await supabase
-        .from('bank_users')
+        .from('users')
         .select('*')
         .eq('phone', phone)
         .single();
       
       if (error) {
-        
         return undefined;
       }
       if (!data) return undefined;
       return this.mapDatabaseToUser(data);
     } catch (error) {
-      
       return undefined;
     }
   }
@@ -133,19 +123,17 @@ export class UnifiedSyncStorage implements IStorage {
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
     try {
       const { data, error } = await supabase
-        .from('bank_users')
+        .from('users')
         .select('*')
         .eq('supabase_id', supabaseUserId)
         .single();
       
       if (error) {
-        
         return undefined;
       }
       if (!data) return undefined;
       return this.mapDatabaseToUser(data);
     } catch (error) {
-      
       return undefined;
     }
   }
@@ -153,18 +141,16 @@ export class UnifiedSyncStorage implements IStorage {
   async getAllUsers(): Promise<User[]> {
     try {
       const { data, error } = await supabase
-        .from('bank_users')
+        .from('users')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) {
-        
         return [];
       }
       if (!data) return [];
       return data.map(row => this.mapDatabaseToUser(row));
     } catch (error) {
-      
       return [];
     }
   }
@@ -198,22 +184,19 @@ export class UnifiedSyncStorage implements IStorage {
       };
 
       const { data, error } = await supabase
-        .from('bank_users')
+        .from('users')
         .insert([dbRow])
         .select()
         .single();
 
       if (error) {
-        
         throw error;
       }
       if (!data) throw new Error('No data returned from insert');
       
       const newUser = this.mapDatabaseToUser(data);
-      
       return newUser;
     } catch (error: unknown) {
-      
       throw error;
     }
   }
@@ -230,14 +213,13 @@ export class UnifiedSyncStorage implements IStorage {
       if (user.isVerified !== undefined) dbUpdate.is_verified = user.isVerified;
 
       const { data, error } = await supabase
-        .from('bank_users')
+        .from('users')
         .update(dbUpdate)
         .eq('id', id)
         .select()
         .single();
 
       if (error) {
-        
         return undefined;
       }
       if (!data) return undefined;
@@ -246,7 +228,6 @@ export class UnifiedSyncStorage implements IStorage {
       memCache.delete(`user:email:${updated.email}`);
       return updated;
     } catch (error) {
-      
       return undefined;
     }
   }
@@ -254,7 +235,7 @@ export class UnifiedSyncStorage implements IStorage {
   async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
     try {
       const { data, error } = await supabase
-        .from('bank_users')
+        .from('users')
         .update({ balance: amount.toString() })
         .eq('id', id)
         .select()
@@ -280,7 +261,7 @@ export class UnifiedSyncStorage implements IStorage {
 
     try {
       const { data, error } = await supabase
-        .from('bank_accounts')
+        .from('accounts')
         .select('*')
         .eq('user_id', userId);
 
@@ -290,7 +271,6 @@ export class UnifiedSyncStorage implements IStorage {
       if (!data) return [];
       const accounts = data.map(row => this.mapDatabaseToAccount(row)).filter(acc => acc.id && acc.id > 0);
       this.setCache(cacheKey, accounts);
-      
       return accounts;
     } catch (error) {
       return [];
@@ -300,19 +280,17 @@ export class UnifiedSyncStorage implements IStorage {
   async getAccount(id: number): Promise<Account | undefined> {
     try {
       const { data, error } = await supabase
-        .from('bank_accounts')
+        .from('accounts')
         .select('*')
         .eq('id', id)
         .single();
 
       if (error) {
-        
         return undefined;
       }
       if (!data) return undefined;
       return this.mapDatabaseToAccount(data);
     } catch (error) {
-      
       return undefined;
     }
   }
@@ -320,7 +298,7 @@ export class UnifiedSyncStorage implements IStorage {
   async createAccount(account: InsertAccount): Promise<Account> {
     try {
       const { data, error } = await supabase
-        .from('bank_accounts')
+        .from('accounts')
         .insert([{
           user_id: account.userId || 0,
           account_number: account.accountNumber || '',
@@ -333,14 +311,12 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        
         throw error;
       }
       if (!data) throw new Error('No data returned');
       memCache.delete(`accounts:user:${account.userId}`);
       return this.mapDatabaseToAccount(data);
     } catch (error: unknown) {
-      
       throw error;
     }
   }
@@ -348,20 +324,18 @@ export class UnifiedSyncStorage implements IStorage {
   async updateAccount(id: number, updates: Partial<Account>): Promise<Account | undefined> {
     try {
       const { data, error } = await supabase
-        .from('bank_accounts')
+        .from('accounts')
         .update(updates)
         .eq('id', id)
         .select()
         .single();
 
       if (error) {
-        
         return undefined;
       }
       if (!data) return undefined;
       return this.mapDatabaseToAccount(data);
     } catch (error) {
-      
       return undefined;
     }
   }
@@ -375,13 +349,11 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        
         return undefined;
       }
       if (!data) return undefined;
       return this.mapDatabaseToTransaction(data);
     } catch (error) {
-      
       return undefined;
     }
   }
@@ -396,14 +368,11 @@ export class UnifiedSyncStorage implements IStorage {
         .limit(100);
 
       if (error) {
-        
         return [];
       }
       if (!data) return [];
-      
       return data.map(row => this.mapDatabaseToTransaction(row));
     } catch (error) {
-      
       return [];
     }
   }
@@ -417,13 +386,11 @@ export class UnifiedSyncStorage implements IStorage {
         .limit(500);
 
       if (error) {
-        
         return [];
       }
       if (!data) return [];
       return data.map(row => this.mapDatabaseToTransaction(row));
     } catch (error) {
-      
       return [];
     }
   }
@@ -473,13 +440,11 @@ export class UnifiedSyncStorage implements IStorage {
         .single();
 
       if (error) {
-        
         throw error;
       }
       if (!data) throw new Error('No data returned');
       return data as AdminAction;
     } catch (error: unknown) {
-      
       throw error;
     }
   }

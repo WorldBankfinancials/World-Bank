@@ -48,7 +48,7 @@ export class PostgresStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     try {
       const result = await getConnection()`
-        SELECT * FROM public.bank_users WHERE id = ${id}
+        SELECT * FROM public.users WHERE id = ${id}
       `;
       
       if (result.length === 0) return undefined;
@@ -62,7 +62,7 @@ export class PostgresStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     try {
       const result = await getConnection()`
-        SELECT * FROM public.bank_users WHERE username = ${username}
+        SELECT * FROM public.users WHERE username = ${username}
       `;
       
       if (result.length === 0) return undefined;
@@ -76,7 +76,7 @@ export class PostgresStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
       const result = await getConnection()`
-        SELECT * FROM public.bank_users WHERE email = ${email}
+        SELECT * FROM public.users WHERE email = ${email}
       `;
       
       if (result.length === 0) {
@@ -92,7 +92,7 @@ export class PostgresStorage implements IStorage {
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
     try {
       const result = await getConnection()`
-        SELECT * FROM public.bank_users WHERE supabase_user_id = ${supabaseUserId}::uuid
+        SELECT * FROM public.users WHERE supabase_user_id = ${supabaseUserId}::uuid
       `;
       
       if (result.length === 0) {
@@ -108,7 +108,7 @@ export class PostgresStorage implements IStorage {
   async getUserByPhone(phone: string): Promise<User | undefined> {
     try {
       const result = await getConnection()`
-        SELECT * FROM public.bank_users WHERE phone = ${phone}
+        SELECT * FROM public.users WHERE phone = ${phone}
       `;
       
       if (result.length === 0) return undefined;
@@ -122,7 +122,7 @@ export class PostgresStorage implements IStorage {
   async getAllUsers(): Promise<User[]> {
     try {
       const result = await getConnection()`
-        SELECT * FROM public.bank_users ORDER BY created_at DESC
+        SELECT * FROM public.users ORDER BY created_at DESC
       `;
       
       return result.map((user: any) => this.mapDbUser(user));
@@ -155,7 +155,7 @@ export class PostgresStorage implements IStorage {
       const accountIdVal = user.accountId || null;
       
       const result = await getConnection()`
-        INSERT INTO public.bank_users (
+        INSERT INTO public.users (
           username, password, first_name, last_name, email, phone,
           account_number, account_id, profession, date_of_birth,
           address, city, state, country, postal_code,
@@ -195,7 +195,7 @@ export class PostgresStorage implements IStorage {
       const balanceVal = updates.balance ?? null;
       
       const result = await getConnection()`
-        UPDATE public.bank_users 
+        UPDATE public.users 
         SET 
           username = COALESCE(${usernameVal}, username),
           first_name = COALESCE(${firstNameVal}, first_name),
@@ -229,7 +229,7 @@ export class PostgresStorage implements IStorage {
     try {
       const numAmount = parseFloat(String(amount));
       const result = await getConnection()`
-        UPDATE public.bank_users 
+        UPDATE public.users 
         SET balance = ${numAmount}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
         RETURNING *
@@ -250,7 +250,7 @@ export class PostgresStorage implements IStorage {
   async getUserAccounts(userId: number): Promise<Account[]> {
     try {
       const result = await getConnection()`
-        SELECT * FROM public.bank_accounts WHERE user_id = ${userId}
+        SELECT * FROM public.accounts WHERE user_id = ${userId}
       `;
       
       if (result.length === 0) {
@@ -266,7 +266,7 @@ export class PostgresStorage implements IStorage {
   async getAccount(id: number): Promise<Account | undefined> {
     try {
       const result = await getConnection()`
-        SELECT * FROM public.bank_accounts WHERE id = ${id}
+        SELECT * FROM public.accounts WHERE id = ${id}
       `;
       
       if (result.length === 0) return undefined;
@@ -286,7 +286,7 @@ export class PostgresStorage implements IStorage {
       const currency = account.currency || 'USD';
       const status = account.status || 'active';
       const result = await getConnection()`
-        INSERT INTO public.bank_accounts (
+        INSERT INTO public.accounts (
           user_id, account_number, account_type, balance, currency, status
         ) VALUES (
           ${userId}, ${accountNumber}, ${accountType}, 
@@ -410,7 +410,7 @@ export class PostgresStorage implements IStorage {
       const accountTypeVal = updates.accountType || null;
       
       const result = await getConnection()`
-        UPDATE public.bank_accounts 
+        UPDATE public.accounts 
         SET 
           balance = COALESCE(${balanceVal}, balance),
           status = COALESCE(${statusVal}, status),

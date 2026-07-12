@@ -17,7 +17,7 @@ export class CompleteSupabaseStorage implements IStorage {
   // ==================== USER OPERATIONS ====================
   async getUser(id: number): Promise<User | undefined> {
     const { data, error } = await supabase
-      .from('bank_users')
+      .from('users')
       .select('*')
       .eq('id', id)
       .single();
@@ -26,7 +26,7 @@ export class CompleteSupabaseStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const { data, error } = await supabase
-      .from('bank_users')
+      .from('users')
       .select('*')
       .eq('username', username)
       .single();
@@ -35,7 +35,7 @@ export class CompleteSupabaseStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     const { data, error } = await supabase
-      .from('bank_users')
+      .from('users')
       .select('*')
       .eq('email', email)
       .single();
@@ -47,7 +47,7 @@ export class CompleteSupabaseStorage implements IStorage {
 
   async getUserByPhone(phone: string): Promise<User | undefined> {
     const { data, error } = await supabase
-      .from('bank_users')
+      .from('users')
       .select('*')
       .eq('phone', phone)
       .single();
@@ -56,7 +56,7 @@ export class CompleteSupabaseStorage implements IStorage {
 
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
     const { data, error } = await supabase
-      .from('bank_users')
+      .from('users')
       .select('*')
       .eq('supabase_id', supabaseUserId)
       .single();
@@ -65,7 +65,7 @@ export class CompleteSupabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     const { data, error } = await supabase
-      .from('bank_users')
+      .from('users')
       .select('*')
       .order('created_at', { ascending: false });
     return error ? [] : (data ? data.map(mapSupabaseUserToUser) : []);
@@ -74,7 +74,7 @@ export class CompleteSupabaseStorage implements IStorage {
   async createUser(user: InsertUser): Promise<User> {
     const insertData = mapUserToSupabaseInsert(user as any);
     const { data, error } = await supabase
-      .from('bank_users')
+      .from('users')
       .insert([insertData])
       .select()
       .single();
@@ -85,7 +85,7 @@ export class CompleteSupabaseStorage implements IStorage {
   async updateUser(id: number, user: Partial<User>): Promise<User | undefined> {
     const updateData = mapUserToSupabaseInsert(user);
     const { data, error } = await supabase
-      .from('bank_users')
+      .from('users')
       .update(updateData)
       .eq('id', id)
       .select()
@@ -95,7 +95,7 @@ export class CompleteSupabaseStorage implements IStorage {
 
   async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
     const { data, error } = await supabase
-      .from('bank_users')
+      .from('users')
       .update({ balance: amount.toString() })
       .eq('id', id)
       .select()
@@ -106,7 +106,7 @@ export class CompleteSupabaseStorage implements IStorage {
   // ==================== ACCOUNT OPERATIONS ====================
   async getUserAccounts(userId: number): Promise<Account[]> {
     const { data, error } = await supabase
-      .from('bank_accounts')
+      .from('accounts')
       .select('*')
       .eq('user_id', userId);
     return error ? [] : (data ? data.map(mapSupabaseAccountToAccount) : []);
@@ -114,7 +114,7 @@ export class CompleteSupabaseStorage implements IStorage {
 
   async getAccount(id: number): Promise<Account | undefined> {
     const { data, error } = await supabase
-      .from('bank_accounts')
+      .from('accounts')
       .select('*')
       .eq('id', id)
       .single();
@@ -124,7 +124,7 @@ export class CompleteSupabaseStorage implements IStorage {
   async createAccount(account: InsertAccount): Promise<Account> {
     const insertData = mapAccountToSupabaseInsert(account);
     const { data, error } = await supabase
-      .from('bank_accounts')
+      .from('accounts')
       .insert([insertData])
       .select()
       .single();
@@ -135,7 +135,7 @@ export class CompleteSupabaseStorage implements IStorage {
   async updateAccount(id: number, updates: Partial<Account>): Promise<Account | undefined> {
     const updateData = mapAccountToSupabaseInsert(updates);
     const { data, error } = await supabase
-      .from('bank_accounts')
+      .from('accounts')
       .update(updateData)
       .eq('id', id)
       .select()
