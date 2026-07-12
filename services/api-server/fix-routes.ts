@@ -1,5 +1,6 @@
 import type { User } from '@packages/shared/schema';
 import { generateAccountNumber, generateTransferPin, generateTransactionId, generateReferenceNumber } from './crypto-utils';
+import { randomUUID } from 'crypto';
 import { validateId, validateAmount } from './validators';
 import { Express, Request, Response, NextFunction } from 'express';
 import { Server, createServer } from 'http';
@@ -185,9 +186,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           idType: validatedData.idType,
           idNumber: validatedData.idNumber,
           accountNumber: `${generateAccountNumber()}`,
-          accountId: Date.now(),
-          
-          transferPin: hashedPin,
+                    transferPin: hashedPin,
           role: 'customer',
           isVerified: false,
           isActive: false,
@@ -437,8 +436,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         idType: userData.idType,
         idNumber: userData.idNumber,
         accountNumber: userData.accountNumber || `${generateAccountNumber()}`,
-        accountId: Date.now(),
-        
+                
         transferPin: hashedNewUserPin,
         role: 'customer',
         isVerified: false,
@@ -688,7 +686,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const account = await storage.createAccount({
         userId: parseInt(userId),
         accountType,
-        accountNumber: accountNumber || `${accountType.charAt(0).toUpperCase() + accountType.slice(1)}-${Date.now()}`,
+        accountNumber: accountNumber || `${generateAccountNumber()}`,
         balance: balance || '0.00',
         currency: currency || 'USD',
         status: isActive !== false ? 'active' : 'frozen'
@@ -2461,9 +2459,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           email: email,
           phoneNumber: '+1-000-000-0000',
           accountNumber: `ADMIN-${generateAccountNumber()}`,
-          accountId: Date.now(),
-          
-          transferPin: generateTransferPin(),
+                    transferPin: generateTransferPin(),
           role: 'admin',
           isVerified: true,
           isActive: true,
@@ -2562,8 +2558,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             phoneNumber: supabaseUser.user_metadata?.phone || '',
             profession: 'Not provided',
             accountNumber: `${generateAccountNumber()}`,
-            accountId: Date.now(),
-            balance: '0',
+                        balance: '0',
             isActive: true,
             isVerified: true,
             transferPin: supabaseUser.user_metadata?.transfer_pin || '',
@@ -2640,8 +2635,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         phoneNumber: supabaseUser.user_metadata?.phone || '',
         role: supabaseUser.app_metadata?.role || 'customer',
         profession: 'Customer',
-        accountId: (dbUser as any)?.accountId || Date.now(),
-        accountNumber: (dbUser as any)?.accountNumber || '****1234',
+        accountId: (dbUser as any)?.accountId || randomUUID(),
+        accountNumber: (dbUser as any)?.accountNumber || `${generateAccountNumber()}`,
         isVerified: true,
         isActive: true
       };
