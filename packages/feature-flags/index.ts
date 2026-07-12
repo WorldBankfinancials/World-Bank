@@ -1,8 +1,4 @@
-/**
- * feature-flags
- *
- * Shared package for the banking platform.
- */
-
 export const packageName = 'feature-flags';
-export default { packageName };
+const flags: Record<string, boolean> = {};
+export function setFlag(name: string, value: boolean): void { flags[name] = value; }
+export function isFeatureEnabled(name: string): boolean { return flags[name] ?? false; }
