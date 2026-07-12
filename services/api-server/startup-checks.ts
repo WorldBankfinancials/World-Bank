@@ -26,7 +26,7 @@ export async function verifyAtomicBalanceFunction(): Promise<boolean> {
     // The function exists (even if it returns empty for fake ID)
     return true;
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     return false;
   }
 }

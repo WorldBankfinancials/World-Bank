@@ -347,7 +347,7 @@ export class SupabasePublicStorage implements IStorage {
       await withRetry(async () => {
         const { error } = await supabase
           .from('bank_users')
-          .update({ balance: newBalance.toFixed(2) })
+          .update({ balance: newBalance.toFixed(2), available_balance: newBalance.toFixed(2), updated_at: new Date().toISOString() })
           .eq('id', id);
         if (error) throw new Error(`Supabase error: ${error.message}`);
       });
