@@ -10,10 +10,10 @@
  * Transactions table : transactions   (id uuid, uses transaction_type not type)
  * Supporting tables  : alerts, messages, cards, investments,
  *                      support_tickets, admin_actions  — all uuid PKs
- * Auth gate table    : wb_users (id uuid = auth.uid(), role, kyc_status)
+ * Auth gate table    : users (id uuid = auth.uid(), role, kyc_status)
  *
  * All primary-key IDs are UUID strings throughout.
- * No wb_ prefix on exported TypeScript types.
+ * No prefix on exported TypeScript types.
  */
 
 import {
@@ -119,7 +119,7 @@ export const userProfiles = pgTable('user_profiles', {
   passwordHash:         text('password_hash'),
 });
 
-export const authUsers = pgTable('wb_users', {
+export const authUsers = pgTable('users', {
   id:                  uuid('id').primaryKey(),
   email:               text('email').notNull().unique(),
   role:                text('role').notNull().default('customer'),

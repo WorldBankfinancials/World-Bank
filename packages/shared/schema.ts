@@ -596,14 +596,6 @@ export interface Message {
   messageType?: string;
   isRead?: boolean;
   createdAt?: string | Date | null;
-  is_read?: boolean;
-  created_at?: string | Date | null;
-  sender_id?: string;
-  recipient_id?: string;
-  session_id?: string;
-  sender_role?: string;
-  recipient_role?: string;
-  message_type?: string;
 }
 
 export interface InsertMessage {
@@ -626,8 +618,6 @@ export interface Alert {
   isRead?: boolean;
   status?: string;
   createdAt?: string | Date | null;
-  is_read?: boolean;
-  created_at?: string | Date | null;
 }
 
 export interface InsertAlert {

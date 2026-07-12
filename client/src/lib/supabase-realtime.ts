@@ -31,7 +31,7 @@ export function subscribeToTransactions(userId: string, callback: (payload: any)
   const client = getRealtimeClient();
   return client
     .channel(`transactions:${userId}`)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions', filter: `user_id=eq.${userId}` }, callback)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions', filter: `from_user_id=eq.${userId}` }, callback)
     .subscribe();
 }
 

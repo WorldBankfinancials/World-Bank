@@ -35,7 +35,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       return res.status(403).json({ error: 'CSRF token required' });
     }
   }
-  const supabaseHost = 'icbsxmrmorkdgxtumamu.supabase.co';
+  const supabaseHost = process.env.SUPABASE_URL?.replace('https://', '') || process.env.VITE_SUPABASE_URL?.replace('https://', '') || 'localhost';
   const requestHost = req.headers.host || '';
   const productionWs = requestHost ? `wss://${requestHost} ws://${requestHost}` : '';
   res.setHeader('Content-Security-Policy', [
