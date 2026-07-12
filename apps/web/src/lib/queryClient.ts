@@ -61,8 +61,8 @@ export async function authenticatedFetch(
     } finally {
       clearTimeout(timeoutId);
     }
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('Request timeout after 10s');
     }
     throw error;
@@ -95,9 +95,9 @@ export async function apiRequest(
     clearTimeout(timeoutId);
     await throwIfResNotOk(res);
     return res;
-  } catch (error: any) {
+  } catch (error) {
     clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('Request timeout after 10s');
     }
     throw error;
@@ -134,9 +134,9 @@ export const getQueryFn: <T>(options: {
 
       await throwIfResNotOk(res);
       return await res.json();
-    } catch (error: any) {
+    } catch (error) {
       clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout after 10s');
       }
       throw error;
