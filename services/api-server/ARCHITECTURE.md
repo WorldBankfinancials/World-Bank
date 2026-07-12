@@ -33,7 +33,7 @@
 
 ## Frontend Architecture
 - **Framework**: React 18 + TypeScript
-- **Routing**: WOUTER SPA router
+- **Routing**: Wouter SPA router
 - **State Management**: TanStack Query + AuthContext
 - **Storage**: Encrypted localStorage with prefixing
 - **Pages**: 54 fully functional pages with protected routes

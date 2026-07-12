@@ -2,7 +2,4 @@ packages:
   - "apps/*"
   - "services/*"
   - "packages/*"
-  - "domains/*"
-  - "modules/*"
   - "platform/*"
-  - "integrations/*
