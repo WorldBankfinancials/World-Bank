@@ -11,24 +11,6 @@ import { useRealtimeTransactions } from "@/hooks/useRealtimeTransactions";
 import type { User } from '@packages/shared/schema';
 import { useToast } from "@/hooks/use-toast";
 
-// Error Boundary for Dashboard
-function ErrorFallback({ error }: { error: Error }) {
-  const handleRetry = () => {
-    window.location.reload();
-  };
-  
-  return (
-    <div className="min-h-screen bg-red-50 p-4 flex flex-col items-center justify-center">
-      <div className="text-red-600 font-semibold">Dashboard Error</div>
-      <div className="text-red-500 text-sm mt-2">{error.message}</div>
-      <button className="mt-4 px-4 py-2 bg-red-600 text-white rounded" onClick={handleRetry}>
-        Reload Page
-      </button>
-    </div>
-  );
-}
-
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { 
+import {
   Eye,
   EyeOff,
   ArrowUpRight,
@@ -117,7 +99,7 @@ export default function Dashboard() {
           date: txn.createdAt || new Date().toISOString(),
           created_at: txn.createdAt || new Date().toISOString()
         })) : [];
-      } catch (error: any) {
+      } catch (error) {
         return [];
       }
     }
