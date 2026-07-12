@@ -71,7 +71,7 @@ export async function registerRoutes(app: Express) {
         timestamp: new Date().toISOString(),
         uptime: process.uptime()
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Health check failed' });
     }
   });
@@ -86,7 +86,7 @@ export async function registerRoutes(app: Express) {
         return res.status(404).json({ error: 'User not found' });
       }
       return res.json(sanitizeUser(user));
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch user profile' });
     }
   });
@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express) {
       const updates = req.body;
       const updatedUser = await storage.updateUser(user.id, updates);
       return res.json(sanitizeUser(updatedUser));
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to update user profile' });
     }
   });
@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express) {
       }
       const accounts = await storage.getUserAccounts(user.id);
       return res.json(accounts);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch accounts' });
     }
   });
@@ -129,7 +129,7 @@ export async function registerRoutes(app: Express) {
       }
       const accounts = await storage.getUserAccounts(user.id);
       return res.json(accounts);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch accounts' });
     }
   });
@@ -152,7 +152,7 @@ export async function registerRoutes(app: Express) {
       }
       allTxns.sort((a: Transaction, b: Transaction) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
       return res.json(allTxns);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch transactions' });
     }
   });
@@ -166,7 +166,7 @@ export async function registerRoutes(app: Express) {
         return res.status(404).json({ error: 'Transaction not found' });
       }
       return res.json(transaction);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch transaction' });
     }
   });
@@ -187,7 +187,7 @@ export async function registerRoutes(app: Express) {
       const pinHash = await bcrypt.hash(String(pin), 12);
       await storage.updateUser(user.id, { transferPin: pinHash });
       return res.json({ success: true, message: 'PIN set successfully' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to set PIN' });
     }
   });
@@ -208,7 +208,7 @@ export async function registerRoutes(app: Express) {
         return res.status(401).json({ success: false, message: 'Invalid PIN' });
       }
       return res.json({ success: true, message: 'PIN verified' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ success: false, message: 'PIN verification failed' });
     }
   });
@@ -231,7 +231,7 @@ export async function registerRoutes(app: Express) {
       const pinHash = await bcrypt.hash(String(newPin), 12);
       await storage.updateUser(user.id, { transferPin: pinHash });
       return res.json({ success: true, message: 'PIN changed successfully' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to change PIN' });
     }
   });
@@ -247,7 +247,7 @@ export async function registerRoutes(app: Express) {
         ratesObject[rate.targetCurrency || rate.target_currency] = parseFloat(rate.rate);
       });
       return res.json(ratesObject);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch exchange rates' });
     }
   });
@@ -264,7 +264,7 @@ export async function registerRoutes(app: Express) {
           balance: parseFloat(String(user.balance || '0')) || 0
         }));
       return res.json(customerList);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch customers' });
     }
   });
@@ -289,7 +289,7 @@ export async function registerRoutes(app: Express) {
         });
       }
       return res.json(sanitizeUser(updatedUser));
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to update customer' });
     }
   });
@@ -317,7 +317,7 @@ export async function registerRoutes(app: Express) {
         });
       }
       return res.json({ success: true, user: updatedUser, message: verified ? 'Customer verified' : 'Customer unverified' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to update customer verification' });
     }
   });
@@ -339,7 +339,7 @@ export async function registerRoutes(app: Express) {
         pendingTransactions: pendingTransactions.length,
         openSupportTickets: openTickets.length,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch stats' });
     }
   });
@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express) {
         });
       }
       return res.json(updatedTicket);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to update support ticket' });
     }
   });
@@ -377,7 +377,7 @@ export async function registerRoutes(app: Express) {
       updates.status = status || 'responded';
       const updatedTicket = await storage.updateSupportTicket(id, updates);
       return res.json({ success: true, ticket: updatedTicket, message: 'Reply sent successfully' });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to respond to ticket' });
     }
   });
@@ -475,8 +475,8 @@ export async function registerRoutes(app: Express) {
         refreshToken: data.session?.refresh_token,
         user: dbUser
       });
-    } catch (error: any) {
-      return res.status(500).json({ error: 'Login failed', details: error?.message || "Unknown error" });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Login failed', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
     }
   });
 
@@ -491,7 +491,7 @@ export async function registerRoutes(app: Express) {
       });
       await supabaseClient.auth.signOut().catch(() => {});
       return res.json({ message: "Logged out successfully", status: "ok" });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.json({ message: "Logged out successfully", status: "ok" });
     }
   });
@@ -552,7 +552,7 @@ export async function registerRoutes(app: Express) {
         refreshToken: data.session?.refresh_token,
         user: { id: data.user.id, email: data.user.email, role }
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Login failed' });
     }
   });
@@ -573,7 +573,7 @@ export async function registerRoutes(app: Express) {
       }
       const paymentRequests = allTxns.filter((t: Transaction) => t.type === 'payment_request' || (t.description?.toLowerCase()?.includes('payment request')));
       return res.json(paymentRequests);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.json([]);
     }
   });
@@ -627,7 +627,7 @@ export async function registerRoutes(app: Express) {
       });
       await storage.updateUserBalance(user.id, parsedAmount);
       return res.json({ success: true, transaction, amount: parsedAmount });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to add funds' });
     }
   });
@@ -647,7 +647,7 @@ export async function registerRoutes(app: Express) {
       }
       allTxns.sort((a: Transaction, b: Transaction) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
       return res.json(allTxns.slice(0, 10));
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.json([]);
     }
   });
@@ -672,7 +672,7 @@ export async function registerRoutes(app: Express) {
       const customers = await storage.getAllUsers();
       const customerList = customers.filter((user: User) => user.role === 'customer');
       return res.json(customerList);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch customers list' });
     }
   });
@@ -681,7 +681,7 @@ export async function registerRoutes(app: Express) {
     try {
       const users = await storage.getAllUsers();
       return res.json(sanitizeUsers(users));
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch users' });
     }
   });
@@ -698,7 +698,7 @@ export async function registerRoutes(app: Express) {
         allTxns.push(...txns);
       }
       return res.json(allTxns.slice(0, 30));
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.json([]);
     }
   });
@@ -713,7 +713,7 @@ export async function registerRoutes(app: Express) {
         available: parseFloat(String(user.balance || '0')),
         pending: 0
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch wallet balance' });
     }
   });
@@ -726,7 +726,7 @@ export async function registerRoutes(app: Express) {
       if (!accounts || accounts.length === 0) return res.json([]);
       const txns = await storage.getAccountTransactions(accounts[0].id, 20);
       return res.json(txns);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.json([]);
     }
   });
@@ -740,7 +740,7 @@ export async function registerRoutes(app: Express) {
       const txns = await storage.getAccountTransactions(accounts[0].id, 20);
       const mobilePayments = txns.filter((t: Transaction) => t.type === 'mobile_pay' || t.description?.toLowerCase().includes('mobile'));
       return res.json(mobilePayments);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.json([]);
     }
   });
@@ -785,7 +785,7 @@ export async function registerRoutes(app: Express) {
         status: 'success'
       });
       return res.json(recentActivity);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.json([]);
     }
   });
@@ -817,7 +817,7 @@ export async function registerRoutes(app: Express) {
         recipientName: t.recipientName,
         createdAt: t.createdAt
       })));
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch transaction routes' });
     }
   });
@@ -830,7 +830,7 @@ export async function registerRoutes(app: Express) {
       const adminId = admin?.id || 0;
       const transaction = await storage.updateTransactionStatus(id, status, adminId, notes);
       return res.json({ success: true, transaction });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to update transaction route' });
     }
   });
@@ -847,7 +847,7 @@ export async function registerRoutes(app: Express) {
         createdAt: new Date()
       });
       return res.json({ success: true, transaction });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to create transaction route' });
     }
   });
@@ -921,8 +921,8 @@ export async function registerRoutes(app: Express) {
         await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
         throw dbError;
       }
-    } catch (error: any) {
-      return res.status(500).json({ error: 'Admin user creation failed', details: error?.message || "Unknown error" });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Admin user creation failed', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
     }
   });
 
@@ -961,8 +961,8 @@ export async function registerRoutes(app: Express) {
         await storage.updateUser(targetUser.id, { role });
       }
       return res.json({ success: true, message: `User role updated to ${role}` });
-    } catch (error: any) {
-      return res.status(500).json({ error: 'Failed to set user role', details: error.message });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to set user role', details: (error instanceof Error ? error.message : 'Internal server error') });
     }
   });
 
@@ -994,8 +994,8 @@ export async function registerRoutes(app: Express) {
         return res.status(500).json({ error: 'Failed to reset password', details: updateError.message });
       }
       return res.json({ success: true, message: `Password reset successfully for ${email}.`, email });
-    } catch (error: any) {
-      return res.status(500).json({ error: 'Failed to reset password', details: error?.message || "Unknown error" });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to reset password', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
     }
   });
 
@@ -1024,8 +1024,8 @@ export async function registerRoutes(app: Express) {
         return res.status(500).json({ error: 'Failed to delete from authentication system' });
       }
       return res.json({ success: true, message: `User ${email} deleted successfully`, deleted_email: email });
-    } catch (error: any) {
-      return res.status(500).json({ error: 'Failed to delete user', details: error?.message || "Unknown error" });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to delete user', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
     }
   });
 
@@ -1073,8 +1073,8 @@ export async function registerRoutes(app: Express) {
         reversalTransactionId: reversalTxn.id,
         amountRefunded: transaction.amount
       });
-    } catch (error: any) {
-      return res.status(500).json({ error: 'Failed to reverse transaction', details: error?.message || "Unknown error" });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to reverse transaction', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
     }
   });
 
@@ -1087,7 +1087,7 @@ export async function registerRoutes(app: Express) {
       }
       const statements = await storage.getStatementsByUserId(userId);
       return res.json(statements);
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch statements' });
     }
   });
@@ -1109,7 +1109,7 @@ export async function registerRoutes(app: Express) {
         url: `/uploads/${fileId}`,
         message: 'File uploaded successfully'
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to upload file' });
     }
   });
@@ -1119,7 +1119,7 @@ export async function registerRoutes(app: Express) {
     try {
       const { data, error } = await supabase.auth.admin.listUsers();
       if (error) {
-        return res.status(500).json({ error: 'Failed to list users', details: error?.message || "Unknown error" });
+        return res.status(500).json({ error: 'Failed to list users', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
       }
       return res.json({
         total: data.users.length,
@@ -1130,8 +1130,8 @@ export async function registerRoutes(app: Express) {
           verified: u.email_confirmed_at ? 'yes' : 'no'
         }))
       });
-    } catch (error: any) {
-      return res.status(500).json({ error: 'Failed to list users', details: error?.message || "Unknown error" });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to list users', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
     }
   });
 
@@ -1148,8 +1148,8 @@ export async function registerRoutes(app: Express) {
         return res.status(404).json({ error: 'User not found' });
       }
       return res.json({ success: true, message: 'Profile photo updated successfully', user: updatedUser });
-    } catch (error: any) {
-      return res.status(500).json({ error: 'Failed to upload profile photo', details: error?.message || "Unknown error" });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to upload profile photo', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
     }
   });
 
@@ -1220,7 +1220,7 @@ export async function registerLiveChatRoutes(app: Express) {
       });
 
       return res.json({ success: true, messageId: savedMsg?.id });
-    } catch (error: any) {
+    } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to send message' });
     }
   });
@@ -1235,8 +1235,8 @@ export async function registerLiveChatRoutes(app: Express) {
         payload: { message, timestamp: new Date() }
       });
       return res.json({ success: true });
-    } catch (error: any) {
-      return res.status(500).json({ error: error?.message || "Unknown error" });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
     }
   });
 }
