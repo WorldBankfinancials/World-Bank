@@ -84,7 +84,7 @@ interface Alert {
 
 // Initialize Supabase client
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL || '',
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || ''
 );
 
@@ -98,7 +98,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Runtime config endpoint - serves Supabase credentials to frontend
   app.get('/api/config', (req: Request, res: Response) => {
     return res.json({
-      supabaseUrl: process.env.VITE_SUPABASE_URL,
+      supabaseUrl: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
       supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY,
     });
   });
@@ -155,7 +155,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // Create Supabase service client
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
@@ -201,8 +201,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           idType: validatedData.idType,
           idNumber: validatedData.idNumber,
           accountNumber: `${generateAccountNumber()}`,
-          accountId: Date.now(),
-          password: 'supabase_auth',
+          accountId: randomUUID(),
+          password: randomUUID(),
           transferPin: hashedPin,
           role: 'customer',
           isVerified: false,
@@ -286,7 +286,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // Check Supabase Auth as secondary confirmation
       const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(
-        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
@@ -339,7 +339,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // Create Supabase admin client
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
@@ -412,7 +412,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // Check if user exists in Supabase Auth (redundant if /api/auth/check-email is used correctly, but good as a safeguard)
       const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(
-        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
@@ -453,8 +453,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         idType: userData.idType,
         idNumber: userData.idNumber,
         accountNumber: userData.accountNumber || `${generateAccountNumber()}`,
-        accountId: Date.now(),
-        password: 'supabase_auth',
+        accountId: randomUUID(),
+        password: randomUUID(),
         transferPin: hashedNewUserPin,
         role: 'customer',
         isVerified: false,
@@ -669,7 +669,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // PATCH /api/admin/accounts/:id - Update an account
   app.patch('/api/admin/accounts/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const updates = req.body;
       const updatedAccount = await (storage as any).updateAccount(id, updates);
       if (!updatedAccount) {
@@ -684,7 +684,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // DELETE /api/admin/accounts/:id - Deactivate an account
   app.delete('/api/admin/accounts/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const updatedAccount = await (storage as any).updateAccount(id, { isActive: false });
       if (!updatedAccount) {
         return res.status(404).json({ error: 'Account not found' });
@@ -758,7 +758,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Individual account balance update endpoint - REQUIRES ADMIN ROLE
   app.post('/api/admin/accounts/:accountId/balance', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const accountId = parseInt(req.params.accountId, 10);
+      const accountId = req.params.accountId;
       const body = req.body as { amount: string; description: string; type: 'credit' | 'debit' };
 
       const amountNum = validateAmount(body.amount);
@@ -809,7 +809,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Balance update endpoint - REQUIRES ADMIN ROLE
   app.post('/api/admin/customers/:id/balance', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const customerId = parseInt(req.params.id, 10);
+      const customerId = req.params.id;
       const body = req.body as { amount: string | number; description: string; type?: string };
 
       const amountNum = parseFloat(String(body.amount));
@@ -886,7 +886,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Customer update endpoint - REQUIRES ADMIN ROLE
   app.patch('/api/admin/customers/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const customerId = parseInt(req.params.id, 10);
+      const customerId = req.params.id;
       const updates = req.body as Record<string, any>;
 
 
@@ -932,7 +932,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // PATCH /api/admin/transactions/:id - Update transaction status
   app.patch('/api/admin/transactions/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const txId = parseInt(req.params.id, 10);
+      const txId = req.params.id;
       const body = req.body as { status?: string; description?: string; amount?: string };
       
       const { supabase: supa } = await import('./supabase-public-storage');
@@ -1324,7 +1324,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
@@ -1387,7 +1387,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.get('/api/cards/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const cardId = parseInt(req.params.id);
+      const cardId = req.params.id;
 
       // SECURITY: Verify card belongs to authenticated user
       const user = await (storage).getUserByEmail(req.user!.email);
@@ -1488,7 +1488,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.get('/api/investments/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
 
       // SECURITY: Verify investment belongs to authenticated user
       const user = await (storage).getUserByEmail(req.user!.email);
@@ -1783,7 +1783,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/messages/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
 
       // SECURITY: Only allow marking own messages as read
       const user = await (storage).getUserByEmail(req.user!.email);
@@ -1863,7 +1863,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/alerts/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
 
       // SECURITY: Only allow deleting own alerts
       const user = await (storage).getUserByEmail(req.user!.email);
@@ -1888,7 +1888,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/alerts/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
 
       // SECURITY: Only allow marking own alerts as read
       const user = await (storage).getUserByEmail(req.user!.email);
@@ -1967,7 +1967,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/support-tickets/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const updates = req.body;
 
       const ticket = await storage.getSupportTicket(id);
@@ -2129,7 +2129,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // PUT /api/admin/customers/:id - Update customer (alias for PATCH, supports both methods)
   app.put('/api/admin/customers/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const updates = req.body;
       const updatedUser = await storage.updateUser(id, updates);
       if (!updatedUser) {
@@ -2154,7 +2154,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // POST /api/admin/customers/:id/verify - Verify/unverify a customer account
   app.post('/api/admin/customers/:id/verify', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const { verified = true, active } = req.body as { verified?: boolean; active?: boolean };
       const updates: any = { isVerified: verified };
       // When verifying, also activate the account. When unverifying, optionally deactivate.
@@ -2184,7 +2184,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // POST /api/admin/customers/:id/profile-picture - Update customer profile picture
   app.post('/api/admin/customers/:id/profile-picture', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const { profilePhoto } = req.body;
       if (!profilePhoto) {
         return res.status(400).json({ error: 'profilePhoto is required' });
@@ -2221,7 +2221,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // POST /api/admin/transfers/:id/approve - Approve a pending transfer
   app.post('/api/admin/transfers/:id/approve', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const { notes } = req.body;
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 0;
@@ -2236,7 +2236,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // POST /api/admin/transfers/:id/reject - Reject a pending transfer
   app.post('/api/admin/transfers/:id/reject', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const { notes } = req.body;
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 0;
@@ -2251,7 +2251,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // PATCH /api/admin/support-tickets/:id - Update a support ticket (admin path)
   app.patch('/api/admin/support-tickets/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const updates = req.body;
       const updatedTicket = await storage.updateSupportTicket(id, updates);
       const admin = await storage.getUserByEmail(req.user!.email);
@@ -2273,7 +2273,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // POST /api/admin/tickets/:id/respond - Respond to a support ticket
   app.post('/api/admin/tickets/:id/respond', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const { response: adminResponse, notes, status } = req.body;
       const responseText = adminResponse || notes || '';
       const updates: any = {};
@@ -2409,7 +2409,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // Create Supabase admin client
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
@@ -2445,8 +2445,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           email: email,
           phone: '+1-000-000-0000',
           accountNumber: `ADMIN-${generateAccountNumber()}`,
-          accountId: Date.now(),
-          password: 'supabase_auth',
+          accountId: randomUUID(),
+          password: randomUUID(),
           transferPin: adminPinHash,
           role: 'admin',
           isVerified: true,
@@ -2511,7 +2511,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // STEP 1: Authenticate via Supabase Auth
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
@@ -2540,13 +2540,13 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           dbUser = await storage.createUser({
             username: email.split('@')[0],
             email: email,
-            password: 'supabase_auth',
+            password: randomUUID(),
             firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
             lastName: supabaseUser.user_metadata?.last_name || 'User',
             phone: supabaseUser.user_metadata?.phone || '',
             profession: 'Not provided',
             accountNumber: `${generateAccountNumber()}`,
-            accountId: Date.now(),
+            accountId: randomUUID(),
             balance: '0',
             isActive: true,
             isVerified: true,
@@ -2615,7 +2615,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // STEP 5: Return full user profile for immediate caching
       const fullProfile: any = dbUser || {
-        id: supabaseUser.id || Date.now(),
+        id: supabaseUser.id || randomUUID(),
         email: supabaseUser.email || '',
         password: '',
         firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
@@ -2624,7 +2624,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         phone: supabaseUser.user_metadata?.phone || '',
         role: supabaseUser.app_metadata?.role || 'customer',
         profession: 'Customer',
-        accountId: (dbUser as any)?.accountId || Date.now(),
+        accountId: (dbUser as any)?.accountId || randomUUID(),
         accountNumber: (dbUser as any)?.accountNumber || '****1234',
         isVerified: true,
         isActive: true
@@ -2699,7 +2699,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // Use Supabase Auth for admin authentication
       const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(
-        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
@@ -2755,7 +2755,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
@@ -2803,7 +2803,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
@@ -2884,7 +2884,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
@@ -3370,7 +3370,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/admin/transaction-routes/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = req.params.id;
       const { status, notes } = req.body;
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id || 0;
@@ -3453,7 +3453,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
       const response: any = {
-        id: transfer.id || Date.now(),
+        id: transfer.id || randomUUID(),
         transactionId: transfer.referenceNumber || '',
         status: 'processing'
       };
