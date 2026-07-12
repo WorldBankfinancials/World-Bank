@@ -5,12 +5,11 @@
  * Imported by BOTH client (via @packages/shared/schema) and server (via @packages/shared/schema).
  *
  * Database: Supabase Postgres
- * Primary user table : user_profiles  (id uuid = auth.uid())
- * Accounts table     : bank_accounts  (id uuid)
+ * Primary user table : users          (id uuid = auth.uid())
+ * Accounts table     : accounts       (id uuid)
  * Transactions table : transactions   (id uuid, uses transaction_type not type)
  * Supporting tables  : alerts, messages, cards, investments,
- *                      support_tickets, admin_actions — all uuid PKs
- * Auth gate table    : wb_users (id uuid = auth.uid(), role, kyc_status)
+ *                      support_tickets, admin_actions  — all uuid PKs
  *
  * All primary-key IDs are UUID strings throughout.
  */
@@ -75,10 +74,10 @@ export type TransferInput    = z.infer<typeof transferSchema>;
 export type VerifyPinInput   = z.infer<typeof verifyPinSchema>;
 
 // ============================================================
-// CORE TABLE: user_profiles
+// CORE TABLE: users
 // ============================================================
 
-export const userProfiles = pgTable('user_profiles', {
+export const userProfiles = pgTable('users', {
   id:                   uuid('id').primaryKey(),
   email:                text('email'),
   username:             text('username'),
@@ -89,7 +88,6 @@ export const userProfiles = pgTable('user_profiles', {
   kycStatus:            text('kyc_status').default('pending'),
   accountType:          text('account_type').default('personal'),
   accountNumber:        text('account_number'),
-  accountId:            text('account_id'),
   balance:              numeric('balance', { precision: 18, scale: 2 }).default('0'),
   fullName:             text('full_name').notNull(),
   firstName:            text('first_name'),
@@ -117,21 +115,7 @@ export const userProfiles = pgTable('user_profiles', {
   passwordHash:         text('password_hash'),
 });
 
-export const authUsers = pgTable('wb_users', {
-  id:                  uuid('id').primaryKey(),
-  email:               text('email').notNull().unique(),
-  role:                text('role').notNull().default('customer'),
-  kycStatus:           text('kyc_status').notNull().default('pending'),
-  accountStatus:       text('account_status').notNull().default('active'),
-  transferPinHash:     text('transfer_pin_hash'),
-  lastLoginAt:         timestamp('last_login_at', { withTimezone: true }),
-  failedLoginAttempts: integer('failed_login_attempts').default(0),
-  lockedUntil:         timestamp('locked_until', { withTimezone: true }),
-  createdAt:           timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt:           timestamp('updated_at', { withTimezone: true }).defaultNow(),
-});
-
-export const bankAccounts = pgTable('bank_accounts', {
+export const bankAccounts = pgTable('accounts', {
   id:               uuid('id').primaryKey(),
   userId:           uuid('user_id').notNull(),
   accountNumber:    text('account_number').notNull(),
@@ -310,7 +294,6 @@ export interface User {
   accountStatus?: string;
   transferPin?: string | null;
   accountNumber?: string | null;
-  accountId?: string | number | null;
   balance?: string | null;
   fullName?: string | null;
   firstName?: string | null;
@@ -359,7 +342,6 @@ export interface InsertUser {
   isVerified?: boolean;
   transferPin?: string;
   accountNumber?: string;
-  accountId?: string | number | null;
   balance?: string;
   occupation?: string;
   profession?: string;
