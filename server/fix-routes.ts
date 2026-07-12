@@ -8,6 +8,7 @@ import { setupTransferRoutes } from './routes-transfer';
 import { log } from './vite';
 import { config, logConfiguration } from './config';
 import { createClient } from '@supabase/supabase-js';
+import { supabase } from './supabase-public-storage';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
 import { 
   authRateLimiter, 
@@ -852,6 +853,135 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // ==================== RECENT CONTACTS ====================
+
+  app.get('/api/recent-contacts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('recent_contacts')
+        .select('*')
+        .eq('user_id', req.user!.id)
+        .order('updated_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // ==================== LOANS ENDPOINTS ====================
+
+  // GET /api/loans - Get all loans for the authenticated user
+  app.get('/api/loans', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('loans')
+        .select('*')
+        .eq('user_id', req.user!.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/loans/apply - Apply for a new loan
+  app.post('/api/loans/apply', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { loanType, principalAmount, interestRate, termMonths, transferPin } = req.body;
+      if (!loanType || !principalAmount || !interestRate || !termMonths) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      if (!user.transferPin) return res.status(400).json({ error: 'PIN not set' });
+      const pinMatch = await bcrypt.compare(String(transferPin), user.transferPin);
+      if (!pinMatch) return res.status(400).json({ error: 'Invalid PIN' });
+
+      const monthlyPayment = (Number(principalAmount) * (Number(interestRate) / 100 / 12)) / (1 - Math.pow(1 + Number(interestRate) / 100 / 12, -Number(termMonths)));
+      const totalInterest = monthlyPayment * Number(termMonths) - Number(principalAmount);
+      const totalPayable = Number(principalAmount) + totalInterest;
+      const loanNumber = `LN${Date.now()}${Math.floor(Math.random() * 10000)}`;
+
+      const { data, error } = await supabase
+        .from('loans')
+        .insert({
+          user_id: req.user!.id,
+          loan_number: loanNumber,
+          loan_type: loanType,
+          principal_amount: String(principalAmount),
+          interest_rate: String(interestRate),
+          term_months: termMonths,
+          monthly_payment: monthlyPayment.toFixed(2),
+          remaining_balance: String(principalAmount),
+          total_interest: totalInterest.toFixed(2),
+          total_payable: totalPayable.toFixed(2),
+          status: 'pending'
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/loans/:id/approve - Approve a loan (admin only)
+  app.post('/api/loans/:id/approve', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('loans')
+        .update({
+          status: 'approved',
+          approved_by: req.user!.id,
+          approved_at: new Date().toISOString(),
+          disbursement_date: new Date().toISOString(),
+          maturity_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        })
+        .eq('id', req.params.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/loans/:id/reject - Reject a loan (admin only)
+  app.post('/api/loans/:id/reject', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('loans')
+        .update({ status: 'rejected' })
+        .eq('id', req.params.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/admin/pending-loans - Get pending loans (admin only)
+  app.get('/api/admin/pending-loans', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('loans')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
   // ==================== ADMIN USER MANAGEMENT ====================
 
   app.post('/api/admin/create-admin-user', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -956,7 +1086,7 @@ export async function registerRoutes(app: Express) {
       }
       const targetUser = email
         ? await storage.getUserByEmail(email)
-        : await storage.getUser(parseInt(supabaseUserId, 10));
+        : await storage.getUser(supabaseUserId);
       if (targetUser) {
         await storage.updateUser(targetUser.id, { role });
       }
@@ -1034,8 +1164,8 @@ export async function registerRoutes(app: Express) {
     try {
       const { id } = req.params;
       const { reason } = req.body;
-      const txnId = parseInt(id, 10);
-      if (isNaN(txnId)) {
+      const txnId = id;
+      if (!txnId) {
         return res.status(400).json({ error: 'Invalid transaction ID' });
       }
       const allTransactions = await storage.getAllTransactions();
@@ -1066,7 +1196,7 @@ export async function registerRoutes(app: Express) {
         description: `Reversal of transaction #${txnId}. Reason: ${reason || 'No reason provided'}`,
         currency: transaction.currency || 'USD'
       });
-      await storage.updateTransactionStatus(txnId, 'reversed', req.user?.id ? (typeof req.user.id === 'number' ? req.user.id : parseInt(req.user.id, 10)) : 1, reason);
+      await storage.updateTransactionStatus(txnId, 'reversed', req.user?.id ? (typeof req.user.id === 'number' ? req.user.id : req.user.id) : 1, reason);
       return res.json({ 
         success: true, 
         message: 'Transaction reversed successfully',
@@ -1081,7 +1211,7 @@ export async function registerRoutes(app: Express) {
   // Statements endpoint
   app.get('/api/statements', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = typeof req.user?.id === 'number' ? req.user.id : parseInt(String(req.user?.id) || '0', 10);
+      const userId = typeof req.user?.id === 'number' ? req.user.id : (String(req.user?.id) || '0');
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }

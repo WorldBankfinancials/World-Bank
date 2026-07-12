@@ -48,8 +48,8 @@ export async function processScheduledTransactions(req: VercelRequest, res: Verc
       success: true, 
       processed: pendingTransactions?.length || 0 
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 
@@ -97,8 +97,8 @@ export async function sendTransactionAlert(req: VercelRequest, res: VercelRespon
     });
 
     res.status(200).json({ success: true, alert });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 
@@ -146,8 +146,8 @@ export async function generateMonthlyStatements(req: VercelRequest, res: VercelR
       success: true, 
       statementsGenerated: users?.length || 0 
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 
@@ -195,8 +195,8 @@ export async function reconcileBalances(req: VercelRequest, res: VercelResponse)
       success: true, 
       accountsReconciled: reconciled 
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 

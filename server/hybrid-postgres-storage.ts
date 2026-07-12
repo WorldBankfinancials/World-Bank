@@ -24,7 +24,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_users WHERE id = ${id} LIMIT 1
       `;
-      return (result[0] as any) as User | undefined;
+      return result[0] as User | undefined;
     } catch (error) {
       return undefined;
     }
@@ -35,7 +35,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_users WHERE username = ${username} LIMIT 1
       `;
-      return (result[0] as any) as User | undefined;
+      return result[0] as User | undefined;
     } catch (error) {
       return undefined;
     }
@@ -46,7 +46,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_users WHERE email = ${email} LIMIT 1
       `;
-      return (result[0] as any) as User | undefined;
+      return result[0] as User | undefined;
     } catch (error) {
       return undefined;
     }
@@ -57,7 +57,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_users WHERE phone = ${phone} LIMIT 1
       `;
-      return (result[0] as any) as User | undefined;
+      return result[0] as User | undefined;
     } catch (error) {
       return undefined;
     }
@@ -68,7 +68,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_users WHERE supabase_id = ${supabaseUserId} LIMIT 1
       `;
-      return (result[0] as any) as User | undefined;
+      return result[0] as User | undefined;
     } catch (error) {
       return undefined;
     }
@@ -79,7 +79,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_users ORDER BY created_at DESC
       `;
-      return (result as any) as User[];
+      return result as User[];
     } catch (error) {
       return [];
     }
@@ -107,8 +107,8 @@ export class HybridPostgresStorage implements IStorage {
         )
         RETURNING *
       `;
-      return (result[0] as any) as User;
-    } catch (error: any) {
+      return result[0] as User;
+    } catch (error: unknown) {
       throw error;
     }
   }
@@ -134,7 +134,7 @@ export class HybridPostgresStorage implements IStorage {
         WHERE id = ${id}
         RETURNING *
       `;
-      return (result[0] as any) as User | undefined;
+      return result[0] as User | undefined;
     } catch (error) {
       return undefined;
     }
@@ -153,7 +153,7 @@ export class HybridPostgresStorage implements IStorage {
         console.error('No user found to update balance:', id, numAmount);
         return undefined;
       }
-      return (result[0] as any) as User | undefined;
+      return result[0] as User | undefined;
     } catch (error) {
       console.error('Hybrid updateUserBalance error:', error);
       return undefined;
@@ -166,7 +166,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_accounts WHERE id = ${id} LIMIT 1
       `;
-      return (result[0] as any) as Account | undefined;
+      return result[0] as Account | undefined;
     } catch (error) {
       return undefined;
     }
@@ -177,7 +177,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_accounts WHERE user_id = ${userId}
       `;
-      return (result as any) as Account[];
+      return result as Account[];
     } catch (error) {
       return [];
     }
@@ -195,8 +195,8 @@ export class HybridPostgresStorage implements IStorage {
         )
         RETURNING *
       `;
-      return (result[0] as any) as Account;
-    } catch (error: any) {
+      return result[0] as Account;
+    } catch (error: unknown) {
       throw error;
     }
   }
@@ -217,7 +217,7 @@ export class HybridPostgresStorage implements IStorage {
         WHERE id = ${id}
         RETURNING *
       `;
-      return (result[0] as any) as Account | undefined;
+      return result[0] as Account | undefined;
     } catch (error) {
       return undefined;
     }
@@ -229,7 +229,7 @@ export class HybridPostgresStorage implements IStorage {
       const result = await sql`
         SELECT * FROM bank_transactions WHERE id = ${id} LIMIT 1
       `;
-      return (result[0] as any) as Transaction | undefined;
+      return result[0] as Transaction | undefined;
     } catch (error) {
       return undefined;
     }
@@ -242,7 +242,7 @@ export class HybridPostgresStorage implements IStorage {
         WHERE from_account_id = ${accountId} OR to_account_id = ${accountId}
         ORDER BY created_at DESC LIMIT 100
       `;
-      return (result as any) as Transaction[];
+      return result as Transaction[];
     } catch (error) {
       return [];
     }
@@ -254,7 +254,7 @@ export class HybridPostgresStorage implements IStorage {
         SELECT * FROM bank_transactions
         ORDER BY created_at DESC LIMIT 500
       `;
-      return (result as any) as Transaction[];
+      return result as Transaction[];
     } catch (error) {
       return [];
     }
@@ -274,8 +274,8 @@ export class HybridPostgresStorage implements IStorage {
         )
         RETURNING *
       `;
-      return (result[0] as any) as Transaction;
-    } catch (error: any) {
+      return result[0] as Transaction;
+    } catch (error: unknown) {
       throw error;
     }
   }
@@ -285,11 +285,11 @@ export class HybridPostgresStorage implements IStorage {
     try {
       const result = await sql`
         INSERT INTO bank_admin_actions (admin_id, action_type, target_id, details, created_at)
-        VALUES (${action.adminId || 0}, ${(action as any).actionType || 'unknown'}, ${action.targetId || 0}, ${(action as any).details || ''}, NOW())
+        VALUES (${action.adminId || 0}, ${action.action || 'unknown'}, ${action.targetId || 0}, ${JSON.stringify(action.details || {})}, NOW())
         RETURNING *
       `;
-      return (result[0] as any) as AdminAction;
-    } catch (error: any) {
+      return result[0] as AdminAction;
+    } catch (error: unknown) {
       throw error;
     }
   }
