@@ -93,8 +93,8 @@ export default function Cards() {
             cardId: selectedCard.id,
             isLocked: !selectedCard.isLocked
           });
-        } catch (apiError: any) {
-          throw new Error(apiError?.message || 'Failed to update card lock status');
+        } catch (apiError) {
+          throw new Error(apiError instanceof Error ? apiError.message : 'Failed to update card lock status');
         }
         
         // Refresh cards data
