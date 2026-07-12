@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { storage } from '../storage/storage-factory';
 import { createClient } from '@supabase/supabase-js';
+import { generateAccountNumber } from '../crypto-utils';
 
 export type AuthenticatedRequest = any;
 
@@ -53,7 +54,7 @@ export async function requireAuth(
           lastName: supabaseUser.user_metadata?.last_name || 'User',
           phoneNumber: supabaseUser.user_metadata?.phone || '',
           profession: 'Not provided',
-          accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
+          accountNumber: `${generateAccountNumber()}`,
           balance: '0',
           isActive: true,
           isVerified: true,

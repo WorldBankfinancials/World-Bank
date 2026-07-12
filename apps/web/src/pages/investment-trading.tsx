@@ -218,7 +218,7 @@ export default function InvestmentTrading() {
                   <div className="space-y-3">
                     {topStocks.map((stock, i) => (
                       <div key={i} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                           <span className="text-blue-600 font-semibold text-sm">{stock.symbol}</span>
                         </div>
@@ -231,7 +231,7 @@ export default function InvestmentTrading() {
                         <div className="font-semibold text-gray-900">{stock.price}</div>
                         <div className={`text-sm flex items-center ${
                           stock.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                        }">
+                        }`}>
                           {stock.trend === 'up' ? 
                             <ArrowUpRight className="w-3 h-3 mr-1" /> : 
                             <ArrowDownRight className="w-3 h-3 mr-1" />

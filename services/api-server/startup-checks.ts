@@ -7,14 +7,14 @@
 import { supabase } from './storage/supabase-public-storage';
 
 /**
- * Verify wb_atomic_balance_update function exists and works correctly
+ * Verify atomic_balance_update function exists and works correctly
  */
 export async function verifyAtomicBalanceFunction(): Promise<boolean> {
   try {
     
-    // Test with a fake account ID (-1) - should fail gracefully
-    const { data, error } = await supabase.rpc('wb_atomic_balance_update', {
-      p_account_id: -1,
+    // Test with a nil UUID - should fail gracefully
+    const { data, error } = await supabase.rpc('atomic_balance_update', {
+      p_account_id: '00000000-0000-0000-0000-000000000000',
       p_amount_change: 0
     });
 
