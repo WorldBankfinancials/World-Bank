@@ -54,7 +54,6 @@ export async function requireAuth(
           phoneNumber: supabaseUser.user_metadata?.phone || '',
           profession: 'Not provided',
           accountNumber: `${Math.floor(10000000 + Math.random() * 90000000)}`,
-          accountId: Date.now(),
           balance: '0',
           isActive: true,
           isVerified: true,
