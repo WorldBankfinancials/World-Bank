@@ -7,12 +7,38 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  Users, 
-  CreditCard, 
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  Users,
+  CreditCard,
   AlertTriangle,
   MessageSquare,
   FileText,
@@ -24,7 +50,11 @@ import {
   Search,
   Edit3,
   Verified,
-  Camera
+  Camera,
+  KeyRound,
+  Trash2,
+  RotateCcw,
+  Crown
 } from "lucide-react";
 import Header from "@/components/Header";
 import { apiRequest } from "@/lib/queryClient";
@@ -66,6 +96,15 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
+  // Admin user-management + transaction-reversal dialog state
+  const [resetPasswordTarget, setResetPasswordTarget] = useState<CustomerData | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [setRoleTarget, setSetRoleTarget] = useState<CustomerData | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>("customer");
+  const [deleteUserTarget, setDeleteUserTarget] = useState<CustomerData | null>(null);
+  const [reverseTxnTarget, setReverseTxnTarget] = useState<Transaction | null>(null);
+  const [reverseReason, setReverseReason] = useState("");
+
   // Real-time updates via Supabase Realtime
   useRealtimeTransactions();
 
@@ -88,6 +127,12 @@ export default function AdminDashboard() {
   // Fetch admin statistics
   const { data: adminStats = {} } = useQuery({
     queryKey: ['/api/admin/stats'],
+  });
+
+  // Fetch all transactions (admin) for the reversal feature
+  const { data: allTransactions = [], isLoading: transactionsLoading } = useQuery<Transaction[]>({
+    queryKey: ['/api/admin/transactions'],
+    staleTime: 30000,
   });
 
 
@@ -193,6 +238,137 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/support-tickets'] });
+    },
+  });
+
+  // Admin: reset a user's password
+  const resetUserPasswordMutation = useMutation({
+    mutationFn: async ({ email, newPassword }: { email: string; newPassword: string }) => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/reset-user-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, newPassword }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Failed to reset password (${response.status})`);
+      }
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      toast({
+        title: "Password reset",
+        description: `Password updated for ${variables.email}.`,
+      });
+      setResetPasswordTarget(null);
+      setNewPassword("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to reset password",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Admin: set a user's role (customer/admin)
+  const setUserRoleMutation = useMutation({
+    mutationFn: async ({ userId, email, role }: { userId?: string | number; email?: string; role: string }) => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/set-user-role`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, email, role }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Failed to set role (${response.status})`);
+      }
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      toast({
+        title: "Role updated",
+        description: `User role set to ${variables.role}.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/customers'] });
+      setSetRoleTarget(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to set role",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Admin: delete a user by email
+  const deleteUserMutation = useMutation({
+    mutationFn: async ({ email }: { email: string }) => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/admin/delete-user/${encodeURIComponent(email)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Failed to delete user (${response.status})`);
+      }
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      toast({
+        title: "User deleted",
+        description: `${variables.email} has been removed from authentication.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/customers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      setDeleteUserTarget(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete user",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Admin: reverse a transaction
+  const reverseTransactionMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string | number; reason?: string }) => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/transactions/${id}/reverse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `Failed to reverse transaction (${response.status})`);
+      }
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      toast({
+        title: "Transaction reversed",
+        description: `Transaction #${variables.id} has been reversed.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-transfers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
+      setReverseTxnTarget(null);
+      setReverseReason("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to reverse transaction",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -382,10 +558,11 @@ export default function AdminDashboard() {
 
         {/* Main Content Tabs */}
         <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="transfers">Transfer Approvals</TabsTrigger>
             <TabsTrigger value="support">Customer Support</TabsTrigger>
             <TabsTrigger value="profiles">Profile Management</TabsTrigger>
+            <TabsTrigger value="transactions">Transactions</TabsTrigger>
           </TabsList>
 
           {/* Transfer Approvals Tab */}
@@ -628,6 +805,98 @@ export default function AdminDashboard() {
                             <Edit3 className="w-4 h-4 mr-2" />
                             Edit Profile
                           </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setResetPasswordTarget(customer);
+                              setNewPassword("");
+                            }}
+                          >
+                            <KeyRound className="w-4 h-4 mr-2" />
+                            Reset Password
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setSetRoleTarget(customer);
+                              setSelectedRole(customer.role === 'admin' ? 'admin' : 'customer');
+                            }}
+                          >
+                            <Crown className="w-4 h-4 mr-2" />
+                            Set Role
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={() => setDeleteUserTarget(customer)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete User
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Transactions tab — transaction reversal feature */}
+          <TabsContent value="transactions" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RotateCcw className="w-5 h-5" />
+                  All Transactions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {transactionsLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading transactions…</div>
+                ) : allTransactions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">No transactions found.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {allTransactions.map((txn) => (
+                      <div
+                        key={txn.id}
+                        className="flex flex-col gap-3 border rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold">#{txn.id}</span>
+                            <Badge variant="outline">{txn.transactionType || txn.type || 'transfer'}</Badge>
+                            <Badge
+                              variant={
+                                txn.status === 'reversed' ? 'destructive'
+                                  : txn.status === 'completed' ? 'default'
+                                  : 'secondary'
+                              }
+                            >
+                              {txn.status}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {txn.amount} {txn.currency}
+                            {txn.description ? ` — ${txn.description}` : ''}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Ref: {txn.referenceNumber || '—'}
+                            {txn.createdAt ? ` • ${new Date(String(txn.createdAt)).toLocaleString()}` : ''}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            disabled={txn.status === 'reversed' || reverseTransactionMutation.isPending}
+                            onClick={() => {
+                              setReverseTxnTarget(txn);
+                              setReverseReason("");
+                            }}
+                          >
+                            <RotateCcw className="w-4 h-4 mr-2" />
+                            Reverse
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -637,6 +906,191 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Reset Password dialog */}
+        <Dialog
+          open={!!resetPasswordTarget}
+          onOpenChange={(open) => {
+            if (!open) {
+              setResetPasswordTarget(null);
+              setNewPassword("");
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reset user password</DialogTitle>
+              <DialogDescription>
+                Set a new password for{" "}
+                <span className="font-medium text-foreground">{resetPasswordTarget?.email}</span>.
+                Must be at least 12 characters with uppercase, lowercase, and a number.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                autoComplete="new-password"
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setResetPasswordTarget(null);
+                  setNewPassword("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={!newPassword || resetUserPasswordMutation.isPending}
+                onClick={() => {
+                  if (!resetPasswordTarget?.email) return;
+                  resetUserPasswordMutation.mutate({
+                    email: resetPasswordTarget.email,
+                    newPassword,
+                  });
+                }}
+              >
+                {resetUserPasswordMutation.isPending ? "Resetting…" : "Reset Password"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Set Role dialog */}
+        <Dialog
+          open={!!setRoleTarget}
+          onOpenChange={(open) => {
+            if (!open) setSetRoleTarget(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Set user role</DialogTitle>
+              <DialogDescription>
+                Change the role for{" "}
+                <span className="font-medium text-foreground">{setRoleTarget?.email}</span>.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="role-select">Role</Label>
+              <Select value={selectedRole} onValueChange={setSelectedRole}>
+                <SelectTrigger id="role-select">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="customer">Customer</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSetRoleTarget(null)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={setUserRoleMutation.isPending}
+                onClick={() => {
+                  if (!setRoleTarget) return;
+                  setUserRoleMutation.mutate({
+                    userId: setRoleTarget.id,
+                    email: setRoleTarget.email,
+                    role: selectedRole,
+                  });
+                }}
+              >
+                {setUserRoleMutation.isPending ? "Updating…" : "Update Role"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete User confirmation */}
+        <AlertDialog
+          open={!!deleteUserTarget}
+          onOpenChange={(open) => {
+            if (!open) setDeleteUserTarget(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete user?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently remove{" "}
+                <span className="font-medium text-foreground">{deleteUserTarget?.email}</span> from the
+                authentication system. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteUserMutation.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deleteUserMutation.isPending}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!deleteUserTarget?.email) return;
+                  deleteUserMutation.mutate({ email: deleteUserTarget.email });
+                }}
+              >
+                {deleteUserMutation.isPending ? "Deleting…" : "Delete User"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Reverse Transaction confirmation */}
+        <AlertDialog
+          open={!!reverseTxnTarget}
+          onOpenChange={(open) => {
+            if (!open) {
+              setReverseTxnTarget(null);
+              setReverseReason("");
+            }
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reverse transaction?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will reverse transaction{" "}
+                <span className="font-medium text-foreground">#{reverseTxnTarget?.id}</span> and refund the
+                sender. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="reverse-reason">Reason (optional)</Label>
+              <Textarea
+                id="reverse-reason"
+                value={reverseReason}
+                onChange={(e) => setReverseReason(e.target.value)}
+                placeholder="Reason for reversal"
+                rows={3}
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={reverseTransactionMutation.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={reverseTransactionMutation.isPending}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!reverseTxnTarget?.id) return;
+                  reverseTransactionMutation.mutate({
+                    id: reverseTxnTarget.id,
+                    reason: reverseReason || undefined,
+                  });
+                }}
+              >
+                {reverseTransactionMutation.isPending ? "Reversing…" : "Reverse Transaction"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
