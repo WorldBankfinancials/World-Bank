@@ -38,6 +38,7 @@ export interface IStorage {
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   updateTransactionStatus(id: ID, status: string, adminId?: ID, notes?: string): Promise<Transaction | undefined>;
   getPendingTransactions(): Promise<Transaction[]>;
+  getTransactionById(id: ID): Promise<Transaction | null>;
   updateAccount?(id: ID, updates: Partial<Account>): Promise<Account | undefined>;
   createAdminAction(action: InsertAdminAction): Promise<AdminAction>;
   getAdminActions(adminId?: ID): Promise<AdminAction[]>;
