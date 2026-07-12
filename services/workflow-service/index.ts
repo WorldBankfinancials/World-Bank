@@ -1,8 +1,3 @@
-/**
- * workflow-service
- *
- * Service entry point for the workflow-service microservice.
- */
-
+export * from '../../packages/shared';
 export const serviceName = 'workflow-service';
 export default { serviceName };

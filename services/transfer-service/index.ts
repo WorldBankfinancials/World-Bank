@@ -1,8 +1,3 @@
-/**
- * transfer-service
- *
- * Service entry point for the transfer-service microservice.
- */
-
+export * from '../../packages/shared';
 export const serviceName = 'transfer-service';
 export default { serviceName };
