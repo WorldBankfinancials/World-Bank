@@ -2391,7 +2391,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // Generate unique file ID
-      const fileId = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      const fileId = `upload_${Date.now()}_${randomUUID().substring(0, 8)}`;
 
       // Mock file storage - replace with actual object storage implementation
       // In production, this should upload to Supabase Storage or similar service
