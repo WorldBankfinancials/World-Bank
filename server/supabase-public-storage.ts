@@ -1,5 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
 import { 
   type User, 
   type InsertUser,
@@ -321,47 +322,41 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const delta = parseFloat(String(amountDelta));
       
-      // STEP 1: Get current balance
-      const { data: currentUser, error: fetchError } = await supabase
-        .from('bank_users')
-        .select('balance')
-        .eq('id', id)
-        .single();
-      if (fetchError) throw new Error(`Fetch error: ${fetchError.message}`);
-      
-      const currentBalance = parseFloat(String(currentUser?.balance || '0')) || 0;
-      const newBalance = Math.max(0, currentBalance + delta); // Prevent negative balance
-      
-      // STEP 2: Update bank_users balance
-      const user = await withRetry(async () => {
-        const { data: user, error } = await supabase
-          .from('bank_users')
-          .update({ balance: newBalance.toFixed(2) })
-          .eq('id', id)
-          .select('*')
-          .single();
-        if (error) throw new Error(`Supabase error: ${error.message}`);
-        if (!user) throw new Error('No user returned');
-        return user;
-      });
-      
-      // STEP 3: Also update the primary account balance in bank_accounts table (keep in sync)
+      // STEP 1: Get current balance from accounts table (source of truth)
       const accounts = await this.getUserAccounts(id);
-      if (accounts && accounts.length > 0) {
-        const primaryAccount = accounts[0];
-        const accCurrentBalance = parseFloat(String(primaryAccount.balance || '0')) || 0;
-        const accNewBalance = Math.max(0, accCurrentBalance + delta);
-        await supabase
-          .from('bank_accounts')
-          .update({ balance: accNewBalance.toFixed(2) })
-          .eq('id', primaryAccount.id)
-          .select();
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No account found for user');
+      }
+      const primaryAccount = accounts[0];
+      const accCurrentBalance = parseFloat(String(primaryAccount.balance || '0')) || 0;
+      const newBalance = accCurrentBalance + delta;
+      if (newBalance < 0) {
+        throw new Error('Insufficient funds');
       }
       
-      return mapUser(user);
+      // STEP 2: Update the accounts table balance (source of truth)
+      await withRetry(async () => {
+        const { error } = await supabase
+          .from('accounts')
+          .update({ balance: newBalance.toFixed(2) })
+          .eq('id', primaryAccount.id);
+        if (error) throw new Error(`Supabase error: ${error.message}`);
+      });
+      
+      // STEP 3: Also update bank_users balance to keep in sync
+      await withRetry(async () => {
+        const { error } = await supabase
+          .from('bank_users')
+          .update({ balance: newBalance.toFixed(2) })
+          .eq('id', id);
+        if (error) throw new Error(`Supabase error: ${error.message}`);
+      });
+      
+      // Return the updated user
+      return this.getUser(id);
     } catch (error) {
       console.error('updateUserBalance error:', error);
-      return undefined;
+      throw error;
     }
   }
 
@@ -369,7 +364,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const accounts = await withRetry(async () => {
         const { data: accounts, error } = await supabase
-          .from('bank_accounts')
+          .from('accounts')
           .select('*')
           .eq('user_id', userId)
           .order('id');
@@ -386,7 +381,7 @@ export class SupabasePublicStorage implements IStorage {
   async getAccount(id: number): Promise<Account | undefined> {
     try {
       const { data: account, error } = await supabase
-        .from('bank_accounts')
+        .from('accounts')
         .select('*')
         .eq('id', id)
         .single();
@@ -400,7 +395,7 @@ export class SupabasePublicStorage implements IStorage {
   async createAccount(data: InsertAccount): Promise<Account> {
     try {
       const { data: account, error } = await supabase
-        .from('bank_accounts')
+        .from('accounts')
         .insert({ user_id: data.userId, account_number: data.accountNumber, account_type: data.accountType, balance: data.balance, currency: data.currency || 'USD', status: data.status || 'active' })
         .select()
         .single();
@@ -416,7 +411,7 @@ export class SupabasePublicStorage implements IStorage {
       const updateData: any = {};
       if (updates.balance !== undefined) updateData.balance = updates.balance;
       if (updates.status !== undefined) updateData.status = updates.status;
-      const { data: account, error } = await supabase.from('bank_accounts').update(updateData).eq('id', id).select().single();
+      const { data: account, error } = await supabase.from('accounts').update(updateData).eq('id', id).select().single();
       if (error || !account) return undefined;
       return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at };
     } catch (error) {
@@ -462,7 +457,7 @@ export class SupabasePublicStorage implements IStorage {
           bank_name: data.bankName,
           swift_code: data.swiftCode,
           transfer_purpose: data.transferPurpose,
-          reference_number: data.referenceNumber
+          reference_number: data.referenceNumber || `TXN-${Date.now()}-${randomUUID().substring(0, 8).toUpperCase()}`
         };
         // Remove undefined fields
         Object.keys(dbData).forEach(key => dbData[key] === undefined && delete dbData[key]);
@@ -479,7 +474,7 @@ export class SupabasePublicStorage implements IStorage {
     }
   }
 
-  async updateTransactionStatus(id: number, status: string, adminId: number, notes?: string): Promise<Transaction | undefined> {
+  async updateTransactionStatus(id: string, status: string, adminId: number, notes?: string): Promise<Transaction | undefined> {
     try {
       const updateData: any = { status };
       if (notes) updateData.admin_notes = notes;
@@ -508,6 +503,17 @@ export class SupabasePublicStorage implements IStorage {
     } catch (error) {
       console.error('getPendingTransactions exception:', error);
       return [];
+    }
+  }
+
+  async getTransactionById(id: string): Promise<Transaction | null> {
+    try {
+      const { data, error } = await supabase.from('transactions').select('*').eq('id', id).single();
+      if (error) return null;
+      return data ? mapTransaction(data) : null;
+    } catch (error) {
+      console.error('getTransactionById error:', error);
+      return null;
     }
   }
 
