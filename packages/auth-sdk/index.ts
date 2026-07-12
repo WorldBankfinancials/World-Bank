@@ -1,8 +1,2 @@
-/**
- * auth-sdk
- *
- * Shared package for the banking platform.
- */
-
+export * from '../shared';
 export const packageName = 'auth-sdk';
-export default { packageName };
