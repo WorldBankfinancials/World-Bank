@@ -1,13 +1,53 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { XCircle, RefreshCw, Phone, Mail, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { authenticatedFetch } from "@/lib/queryClient";
+
+interface TransferStatusResponse {
+  status: string;
+  reference?: string;
+  amount?: number;
+  currency?: string;
+  recipientName?: string;
+  failureReason?: string;
+}
 
 export default function TransferFailed() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { t } = useLanguage();
+
+  const searchParams = new URLSearchParams(search);
+  const transactionId = searchParams.get("id") || "";
+
+  // Fetch the real failure reason from the backend
+  const { data: transaction, isLoading } = useQuery<TransferStatusResponse>({
+    queryKey: ['/api/transfers', transactionId, 'status'],
+    queryFn: async () => {
+      if (!transactionId) throw new Error('No transaction ID');
+      const response = await authenticatedFetch(`/api/transfers/${transactionId}/status`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch transaction details');
+      }
+      return response.json();
+    },
+    enabled: !!transactionId,
+  });
+
+  const reference = transaction?.reference || transactionId;
+  const failureReason = transaction?.failureReason || 'The transfer could not be completed.';
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-gray-600">Loading transaction details...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -26,8 +66,7 @@ export default function TransferFailed() {
               <div className="text-left">
                 <h4 className="font-medium text-red-800">Transfer Declined</h4>
                 <p className="text-sm text-red-700 mt-1">
-                  Your transfer could not be completed due to security verification requirements. 
-                  Please contact our support team for assistance.
+                  {failureReason}
                 </p>
               </div>
             </div>
@@ -39,7 +78,7 @@ export default function TransferFailed() {
               <div className="space-y-2 text-sm text-left">
                 <div className="flex justify-between">
                   <span>{t('reference_id')}</span>
-                  <span className="font-mono">WB{Date.now().toString().slice(-8)}</span>
+                  <span className="font-mono">{reference}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t('status')}</span>
@@ -51,7 +90,7 @@ export default function TransferFailed() {
                 </div>
                 <div className="flex justify-between">
                   <span>{t('reason')}</span>
-                  <span className="text-red-600">{t('security_verification_required')}</span>
+                  <span className="text-red-600">{failureReason}</span>
                 </div>
               </div>
             </div>

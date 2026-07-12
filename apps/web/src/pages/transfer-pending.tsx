@@ -1,11 +1,56 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Clock, AlertCircle, Phone, Mail } from "lucide-react";
+import { authenticatedFetch } from "@/lib/queryClient";
+
+interface TransferStatusResponse {
+  status: string;
+  reference?: string;
+  amount?: number;
+  currency?: string;
+  fee?: number;
+  recipientName?: string;
+  failureReason?: string;
+}
 
 export default function TransferPending() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
+
+  const searchParams = new URLSearchParams(search);
+  const transactionId = searchParams.get("id") || "";
+
+  // Poll the backend for transfer status every 5 seconds
+  const { data: statusData } = useQuery<TransferStatusResponse>({
+    queryKey: ['/api/transfers', transactionId, 'status'],
+    queryFn: async () => {
+      if (!transactionId) return { status: "pending" };
+      const response = await authenticatedFetch(`/api/transfers/${transactionId}/status`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch transfer status');
+      }
+      return response.json();
+    },
+    enabled: !!transactionId,
+    refetchInterval: 5000,
+  });
+
+  // Navigate based on status
+  useEffect(() => {
+    if (!statusData?.status) return;
+    const status = statusData.status;
+    if (status === "completed") {
+      setLocation(`/transfer-success?id=${transactionId}`);
+    } else if (status === "failed" || status === "rejected") {
+      setLocation(`/transfer-failed?id=${transactionId}`);
+    }
+  }, [statusData?.status, transactionId, setLocation]);
+
+  const referenceNumber = statusData?.reference || transactionId;
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -37,7 +82,7 @@ export default function TransferPending() {
               <div className="space-y-2 text-sm text-left">
                 <div className="flex justify-between">
                   <span>Reference ID:</span>
-                  <span className="font-mono">WB{Date.now().toString().slice(-8)}</span>
+                  <span className="font-mono">{referenceNumber}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Status:</span>

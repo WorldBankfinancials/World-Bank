@@ -1,13 +1,62 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle, Download, Share, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { authenticatedFetch } from "@/lib/queryClient";
+
+interface TransferStatusResponse {
+  status: string;
+  reference?: string;
+  amount?: number;
+  currency?: string;
+  fee?: number;
+  recipientName?: string;
+  recipientAccount?: string;
+  bankName?: string;
+  completedAt?: string;
+}
 
 export default function TransferSuccess() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { t } = useLanguage();
+
+  const searchParams = new URLSearchParams(search);
+  const transactionId = searchParams.get("id") || "";
+
+  // Fetch real transaction data from the backend
+  const { data: transaction, isLoading } = useQuery<TransferStatusResponse>({
+    queryKey: ['/api/transfers', transactionId, 'status'],
+    queryFn: async () => {
+      if (!transactionId) throw new Error('No transaction ID');
+      const response = await authenticatedFetch(`/api/transfers/${transactionId}/status`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch transaction details');
+      }
+      return response.json();
+    },
+    enabled: !!transactionId,
+  });
+
+  const amount = transaction?.amount ?? 0;
+  const currency = transaction?.currency || 'USD';
+  const fee = transaction?.fee ?? 0;
+  const recipientName = transaction?.recipientName || '';
+  const bankName = transaction?.bankName || '';
+  const recipientAccount = transaction?.recipientAccount || '';
+  const reference = transaction?.reference || transactionId;
+  const completedAt = transaction?.completedAt || new Date().toISOString();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-gray-600">Loading transaction details...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -33,27 +82,19 @@ export default function TransferSuccess() {
               <div className="space-y-2 text-sm text-left">
                 <div className="flex justify-between">
                   <span>{t('reference_id')}</span>
-                  <span className="font-mono">WB{Date.now().toString().slice(-8)}</span>
+                  <span className="font-mono">{reference}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t('amount_sent')}</span>
-                  <span className="font-medium">$1,000.00 USD</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t('amount_received')}</span>
-                  <span className="font-medium">¥7,230.00 CNY</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{t('exchange_rate')}</span>
-                  <span>1 USD = 7.23 CNY</span>
+                  <span className="font-medium">${amount.toFixed(2)} {currency}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t('transfer_fee')}</span>
-                  <span>$8.00</span>
+                  <span>${fee.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t('completed_timestamp')}</span>
-                  <span>{new Date().toLocaleString()}</span>
+                  <span>{new Date(completedAt).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -61,9 +102,9 @@ export default function TransferSuccess() {
             <div className="border-t pt-4">
               <h4 className="font-medium mb-2">Recipient Details</h4>
               <div className="text-sm text-left text-gray-600">
-                <p>Zhang Wei</p>
-                <p>Bank of China</p>
-                <p>Account: ****8901</p>
+                <p>{recipientName}</p>
+                {bankName && <p>{bankName}</p>}
+                {recipientAccount && <p>Account: {recipientAccount}</p>}
               </div>
             </div>
           </div>
