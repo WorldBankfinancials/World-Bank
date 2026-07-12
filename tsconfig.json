@@ -29,5 +29,12 @@
     "services/api-server/**/*",
     "modules/**/*",
     "domains/**/*"
+  ],
+  "exclude": [
+    "server",
+    "client",
+    "node_modules",
+    "api",
+    "project"
   ]
 }

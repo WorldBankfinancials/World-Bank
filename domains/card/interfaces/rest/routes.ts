@@ -11,6 +11,8 @@
  *   GET    /api/card-transactions
  */
 
-export { registerFixedRoutes } from '../../../../server/fix-routes';
+import { registerFixedRoutes } from '../../../../services/api-server/fix-routes';
 
-export default { registerFixedRoutes };
+export { registerFixedRoutes };
+
+export default registerFixedRoutes;
