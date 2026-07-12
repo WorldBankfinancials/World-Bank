@@ -173,7 +173,7 @@ async function fallbackAtomicUpdate(
     
     // Use a single SQL UPDATE that checks balance constraint
     const { data, error } = await supabase
-      .from('bank_accounts')
+      .from('accounts')
       .select('balance')
       .eq('id', accountId)
       .single();
@@ -192,7 +192,7 @@ async function fallbackAtomicUpdate(
 
     // Optimistic update with version check (using balance as version)
     const { data: updateData, error: updateError } = await supabase
-      .from('bank_accounts')
+      .from('accounts')
       .update({ 
         balance: newBalance,
         updated_at: new Date().toISOString()

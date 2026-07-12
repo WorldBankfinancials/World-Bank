@@ -26,7 +26,7 @@ export interface IStorage {
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   updateUserBalance(id: string, delta: number): Promise<User | undefined>;
 
-  // ---- Accounts (bank_accounts table) ----
+  // ---- Accounts (accounts table) ----
   getUserAccounts(userId: string): Promise<Account[]>;
   getAccount(id: string): Promise<Account | undefined>;
   createAccount(account: InsertAccount): Promise<Account>;

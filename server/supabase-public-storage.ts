@@ -168,7 +168,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const user = await withRetry(async () => {
         const { data: user, error } = await supabase
-          .from('bank_users')
+          .from('users')
           .select('*')
           .eq('id', id)
           .single();
@@ -187,7 +187,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const user = await withRetry(async () => {
         const { data: user, error } = await supabase
-          .from('bank_users')
+          .from('users')
           .select('*')
           .eq('email', email);
         if (error) throw new Error(`Supabase error: ${error.message}`);
@@ -209,7 +209,7 @@ export class SupabasePublicStorage implements IStorage {
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
     try {
       // Supabase auth IDs are UUIDs — look up the auth user to get their email,
-      // then find the matching bank_users record by email
+      // then find the matching users record by email
       const { data: authData, error } = await supabase.auth.admin.getUserById(supabaseUserId);
       if (error || !authData?.user?.email) return undefined;
       return this.getUserByEmail(authData.user.email);
@@ -221,7 +221,7 @@ export class SupabasePublicStorage implements IStorage {
   async getAllUsers(): Promise<User[]> {
     try {
       const { data: users, error } = await supabase
-        .from('bank_users')
+        .from('users')
         .select('*');
       if (error || !users) return [];
       return users.map(user => mapUser(user));
@@ -264,7 +264,7 @@ export class SupabasePublicStorage implements IStorage {
       if ((data as any).accountId !== undefined) row.account_id = (data as any).accountId;
       if ((data as any).annualIncome !== undefined) row.annual_income = (data as any).annualIncome;
       const { data: user, error } = await supabase
-        .from('bank_users')
+        .from('users')
         .insert(row)
         .select('*')
         .single();
@@ -306,7 +306,7 @@ export class SupabasePublicStorage implements IStorage {
       if (updates.idNumber !== undefined) updateData.id_number = updates.idNumber;
       if (Object.keys(updateData).length === 0) return this.getUser(id);
       const { data: user, error } = await supabase
-        .from('bank_users')
+        .from('users')
         .update(updateData)
         .eq('id', id)
         .select('*')
@@ -343,10 +343,10 @@ export class SupabasePublicStorage implements IStorage {
         if (error) throw new Error(`Supabase error: ${error.message}`);
       });
       
-      // STEP 3: Also update bank_users balance to keep in sync
+      // STEP 3: Also update users balance to keep in sync
       await withRetry(async () => {
         const { error } = await supabase
-          .from('bank_users')
+          .from('users')
           .update({ balance: newBalance.toFixed(2), available_balance: newBalance.toFixed(2), updated_at: new Date().toISOString() })
           .eq('id', id);
         if (error) throw new Error(`Supabase error: ${error.message}`);

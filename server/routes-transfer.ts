@@ -67,7 +67,7 @@ export function setupTransferRoutes(app: Express) {
         // ✅ CRITICAL: DEBIT ACCOUNT IMMEDIATELY WHEN TRANSFER SUBMITTED
         const numAmount = parseFloat(String(amount));
         
-        // FIX: Get actual balance from all user accounts, not from bank_users.balance
+        // FIX: Get actual balance from all user accounts, not from users.balance
         const userAccounts = await storage.getUserAccounts(user.id);
         let currentBalance = 0;
         if (userAccounts && userAccounts.length > 0) {
@@ -178,7 +178,7 @@ export function setupTransferRoutes(app: Express) {
         // ✅ CRITICAL: DEBIT ACCOUNT IMMEDIATELY FOR INTERNATIONAL TRANSFER
         const numAmount = parseFloat(String(amount));
         
-        // FIX: Get actual balance from all user accounts, not from bank_users.balance
+        // FIX: Get actual balance from all user accounts, not from users.balance
         const userAccounts = await storage.getUserAccounts(user.id);
         let currentBalance = 0;
         if (userAccounts && userAccounts.length > 0) {
