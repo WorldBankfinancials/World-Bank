@@ -1,35 +1,70 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2, Clock, Shield } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { authenticatedFetch } from "@/lib/queryClient";
+
+interface TransferStatusResponse {
+  status: string;
+  reference?: string;
+  amount?: number;
+  currency?: string;
+  fee?: number;
+  recipientName?: string;
+  failureReason?: string;
+}
 
 export default function TransferProcessing() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { t } = useLanguage();
   const [progress, setProgress] = useState(0);
 
+  const searchParams = new URLSearchParams(search);
+  const transactionId = searchParams.get("id") || "";
+
+  // Poll the backend for transfer status
+  const { data: statusData } = useQuery<TransferStatusResponse>({
+    queryKey: ['/api/transfers', transactionId, 'status'],
+    queryFn: async () => {
+      if (!transactionId) return { status: "processing" };
+      const response = await authenticatedFetch(`/api/transfers/${transactionId}/status`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch transfer status');
+      }
+      return response.json();
+    },
+    enabled: !!transactionId,
+    refetchInterval: 3000,
+  });
+
+  // Navigate based on status
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout> | null = null;
+    if (!statusData?.status) return;
+    const status = statusData.status;
+    if (status === "completed") {
+      setLocation(`/transfer-success?id=${transactionId}`);
+    } else if (status === "failed" || status === "rejected") {
+      setLocation(`/transfer-failed?id=${transactionId}`);
+    } else if (status === "processing" || status === "pending") {
+      setLocation(`/transfer-pending?id=${transactionId}`);
+    }
+  }, [statusData?.status, transactionId, setLocation]);
+
+  // Keep the progress animation as a visual while polling
+  useEffect(() => {
     const interval = setInterval(() => {
       setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          timeout = setTimeout(() => {
-            setLocation("/transfer-pending");
-          }, 1000);
-          return 100;
-        }
+        if (prev >= 90) return 90;
         return prev + 10;
       });
     }, 500);
 
-    return () => {
-      clearInterval(interval);
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [setLocation]);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
