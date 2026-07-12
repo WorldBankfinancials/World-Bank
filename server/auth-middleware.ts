@@ -78,7 +78,7 @@ export async function requireAuth(
     req.user = {
       id:    String(user.id),
       email: user.email,
-      role:  (user.role as any) || 'customer',
+      role:  user.role || 'customer',
     };
 
     next();

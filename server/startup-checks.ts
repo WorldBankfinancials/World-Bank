@@ -23,15 +23,15 @@ export async function runStartupChecks(): Promise<void> {
   const dataSource = process.env.DATA_SOURCE || 'supabase';
   if (dataSource !== 'supabase') return;
 
-  console.log('Running startup checks...');
+  console.info('Running startup checks...');
 
   const atomicExists = await verifyAtomicBalanceFunction();
   if (!atomicExists) {
     // Non-fatal: log warning, continue startup
     console.warn('[startup] atomic_balance_update RPC not found. Balance updates will use direct SQL instead.');
   } else {
-    console.log('[startup] atomic_balance_update RPC: OK');
+    console.info('[startup] atomic_balance_update RPC: OK');
   }
 
-  console.log('Startup checks complete.');
+  console.info('Startup checks complete.');
 }
