@@ -49,7 +49,7 @@ export const verifyPinSchema = z.object({
 });
 
 export const transferFormSchema = z.object({
-  amount:           z.number().min(0, 'Amount is required').max(1_000_000),
+  amount:           z.number().min(0.01, 'Amount must be greater than 0').max(1_000_000),
   recipientName:    z.string().min(1, 'Recipient name is required').max(200),
   recipientCountry: z.string().min(1, 'Country is required').max(100),
   recipientAddress: z.string().max(300).optional().default(''),
