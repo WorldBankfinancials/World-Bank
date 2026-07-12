@@ -16,7 +16,8 @@ export function setupTransferRoutes(app: Express) {
         bankName,
         swiftCode,
         transferPin,
-        purpose
+        purpose,
+        fee = 0
       } = req.body;
 
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
@@ -73,13 +74,15 @@ export function setupTransferRoutes(app: Express) {
           currentBalance = userAccounts.reduce((sum, acc) => sum + parseFloat(String(acc.balance || '0')), 0);
         }
         
-        if (currentBalance < numAmount) {
-          return res.status(400).json({ message: `Insufficient funds. Your total balance is $${currentBalance.toFixed(2)} but you're trying to transfer $${numAmount.toFixed(2)}` });
+        const numFee = Number(fee) || 0;
+        const totalDebit = numAmount + numFee;
+        if (currentBalance < totalDebit) {
+          return res.status(400).json({ message: `Insufficient funds. Your total balance is ${currentBalance.toFixed(2)} but you're trying to transfer ${numAmount.toFixed(2)} plus ${numFee.toFixed(2)} fee` });
         }
         
-        // Deduct amount from user balance (updateUserBalance takes a DELTA - negative to deduct)
-        const newBalance = currentBalance - numAmount;
-        await storage.updateUserBalance(user.id, -numAmount);
+        // Deduct amount + fee from user balance (updateUserBalance takes a DELTA - negative to deduct)
+        const newBalance = currentBalance - totalDebit;
+        await storage.updateUserBalance(user.id, -totalDebit);
         
         // Use existing userAccounts from above - already fetched
         if (!userAccounts || userAccounts.length === 0) {
@@ -104,7 +107,8 @@ export function setupTransferRoutes(app: Express) {
           recipientCountry: recipientCountryTrunc,
           bankName: bankName ? String(bankName).substring(0, 20) : undefined,
           swiftCode: swiftCode ? String(swiftCode).substring(0, 20) : undefined,
-          transferPurpose: (purpose || 'transfer').substring(0, 20)
+          transferPurpose: (purpose || 'transfer').substring(0, 20),
+          fee: String(fee)
         };
         const transaction = await storage.createTransaction(transactionData);
 
@@ -114,6 +118,7 @@ export function setupTransferRoutes(app: Express) {
           transactionId: transactionId,
           status: "processing",
           amount: amount,
+          fee: fee,
           newBalance: newBalance
         });
       } catch (dbError: unknown) {
