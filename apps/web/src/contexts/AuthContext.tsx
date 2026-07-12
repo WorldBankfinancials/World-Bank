@@ -21,12 +21,29 @@ interface User {
   role?: string;
 }
 
+interface SignUpMetadata {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  dateOfBirth?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
+  profession?: string;
+  annualIncome?: string;
+  idType?: string;
+  idNumber?: string;
+  transferPin?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string, metadata?: any) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string, metadata?: SignUpMetadata) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   fetchUserData: (user: User) => Promise<void>;
 }
@@ -159,7 +176,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, metadata?: any): Promise<{ error?: string }> => {
+  const signUp = async (email: string, password: string, metadata?: SignUpMetadata): Promise<{ error?: string }> => {
     try {
       // Register endpoint - intentionally unauthenticated to create account
       const response = await fetch('/api/auth/register-complete', {

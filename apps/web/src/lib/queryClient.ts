@@ -53,10 +53,36 @@ export async function authenticatedFetch(
       clearTimeout(timeoutId);
       
       if (response.status === 401) {
-        localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('userProfile'); localStorage.removeItem('refresh_token');
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken && !url.includes('/api/auth/refresh')) {
+          try {
+            const refreshResponse = await fetch('/api/auth/refresh', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refreshToken })
+            });
+            if (refreshResponse.ok) {
+              const newTokens = await refreshResponse.json();
+              localStorage.setItem('token', newTokens.token);
+              localStorage.setItem('refresh_token', newTokens.refreshToken || '');
+              // Retry original request with new token
+              const headers = new Headers(options?.headers);
+              headers.set('Authorization', `Bearer ${newTokens.token}`);
+              return fetch(url, { ...options, headers });
+            }
+          } catch {
+            // Refresh failed, fall through to logout
+          }
+        }
+        // Clear tokens and redirect to login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userProfile');
+        localStorage.removeItem('refresh_token');
         window.location.href = '/login';
+        return response;
       }
-      
+
       return response;
     } finally {
       clearTimeout(timeoutId);

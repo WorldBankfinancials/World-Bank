@@ -85,11 +85,11 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    console.log("Starting server initialization...");
-    console.log("Supabase integration verified.");
-    console.log("Registering routes...");
+    console.info("Starting server initialization...");
+    console.info("Supabase integration verified.");
+    console.info("Registering routes...");
     const server = await registerFixedRoutes(app);
-    console.log("Routes registered.");
+    console.info("Routes registered.");
     const wss = new WebSocketServer({ server, path: '/ws/chat' });
     setupLiveChatWebSocket(wss);
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -99,19 +99,19 @@ app.use((req, res, next) => {
       res.status(status).json({ message });
     });
     if (app.get("env") === "development") {
-      console.log("Setting up Vite...");
+      console.info("Setting up Vite...");
       await setupVite(app, server);
-      console.log("Vite setup complete.");
+      console.info("Vite setup complete.");
     } else {
       serveStatic(app);
     }
     const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
     server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
-      console.log(`serving on port ${port}`);
+      console.info(`serving on port ${port}`);
     });
-  } catch (error: any) {
-    console.error(`FATAL ERROR DURING STARTUP: ${error.message}`);
-    console.error("FATAL ERROR STACK:", error.stack);
+  } catch (error: unknown) {
+    console.error(`FATAL ERROR DURING STARTUP: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error("FATAL ERROR STACK:", error instanceof Error ? error.stack : 'No stack available');
     process.exit(1);
   }
 })();
