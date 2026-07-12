@@ -1,8 +1,3 @@
-/**
- * aml-service
- *
- * Service entry point for the aml-service microservice.
- */
-
+export * from '../../packages/shared';
 export const serviceName = 'aml-service';
 export default { serviceName };

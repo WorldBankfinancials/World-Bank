@@ -1,8 +1,3 @@
-/**
- * analytics-service
- *
- * Service entry point for the analytics-service microservice.
- */
-
+export * from '../../packages/shared';
 export const serviceName = 'analytics-service';
 export default { serviceName };

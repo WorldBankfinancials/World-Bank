@@ -1,8 +1,3 @@
-/**
- * account-service
- *
- * Service entry point for the account-service microservice.
- */
-
+export * from '../../packages/shared';
 export const serviceName = 'account-service';
 export default { serviceName };
