@@ -103,10 +103,10 @@ export default function RegisterPage() {
       });
 
       setLocation('/login');
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: t('registration_failed'),
-        description: error.message || t('try_again_later'),
+        description: error instanceof Error ? error.message : t('try_again_later'),
         variant: 'destructive',
       });
     } finally {

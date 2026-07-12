@@ -96,9 +96,8 @@ export default function Login() {
       setShowPinVerification(true);
       setLoading(false);
 
-    } catch (error: any) {
-      const errorMsg = error?.message || 'An unexpected error occurred';
-      // Error: ❌ Login error:", errorMsg);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'An unexpected error occurred';
       toast({
         title: t('login_failed'),
         description: errorMsg,
@@ -150,7 +149,6 @@ export default function Login() {
         setLoginPin("");
       }
     } catch (error) {
-      // Error: PIN verification error:", error);
       setPinError('Verification failed. Please try again.');
       setLoginPin("");
     }
