@@ -240,7 +240,6 @@ export class PostgresStorage implements IStorage {
         return undefined;
       }
       
-      console.log('Balance updated successfully:', id, numAmount);
       return this.mapDbUser(result[0]);
     } catch (error) {
       console.error('Postgres updateUserBalance error:', error);
