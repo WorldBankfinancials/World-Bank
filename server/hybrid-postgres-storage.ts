@@ -153,7 +153,6 @@ export class HybridPostgresStorage implements IStorage {
         console.error('No user found to update balance:', id, numAmount);
         return undefined;
       }
-      console.log('Balance updated successfully:', id, numAmount);
       return (result[0] as any) as User | undefined;
     } catch (error) {
       console.error('Hybrid updateUserBalance error:', error);

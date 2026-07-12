@@ -7,8 +7,8 @@ export type AuthenticatedRequest = any;
 
 // Singleton Supabase admin client for auth verification
 const supabaseAdmin = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
