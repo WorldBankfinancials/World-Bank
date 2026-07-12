@@ -254,6 +254,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           details: (dbError as any)?.message 
         });
         return;
+
       }
 
     } catch (error: unknown) {
@@ -653,7 +654,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'userId and accountType are required' });
       }
       const account = await storage.createAccount({
-        userId: parseInt(userId),
+        userId: parseInt(userId, 10),
         accountType,
         accountNumber: accountNumber || `${accountType.charAt(0).toUpperCase() + accountType.slice(1)}-${Date.now()}`,
         balance: balance || '0.00',
@@ -2350,7 +2351,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Statements endpoint
   app.get('/api/statements', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = typeof req.user?.id === 'number' ? req.user.id : parseInt(String(req.user?.id) || '0');
+      const userId = typeof req.user?.id === 'number' ? req.user.id : parseInt(String(req.user?.id) || '0', 10);
       if (!userId) {
         return res.status(401).json({ error: 'User not authenticated' });
       }
@@ -2374,7 +2375,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // Generate unique file ID
-      const fileId = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      const fileId = `upload_${Date.now()}_${randomUUID().substring(0, 8)}`;
 
       // Mock file storage - replace with actual object storage implementation
       // In production, this should upload to Supabase Storage or similar service
@@ -2780,7 +2781,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       // Also update bank_users table
       const targetUser = email
         ? await storage.getUserByEmail(email)
-        : await storage.getUser(parseInt(supabaseUserId));
+        : await storage.getUser(parseInt(supabaseUserId, 10));
       if (targetUser) {
         await storage.updateUser(targetUser.id, { role });
       }
@@ -2850,7 +2851,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User ID and photo URL required' });
       }
 
-      const userId = parseInt(id);
+      const userId = parseInt(id, 10);
       if (isNaN(userId)) {
         return res.status(400).json({ error: 'Invalid user ID' });
       }
@@ -2923,7 +2924,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { reason } = req.body;
       
-      const txnId = parseInt(id);
+      const txnId = parseInt(id, 10);
       if (isNaN(txnId)) {
         return res.status(400).json({ error: 'Invalid transaction ID' });
       }
@@ -2967,7 +2968,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
       // Update original transaction to mark as reversed
-      await storage.updateTransactionStatus(txnId, 'reversed', req.user?.id ? (typeof req.user.id === 'number' ? req.user.id : parseInt(req.user.id)) : 1, reason);
+      await storage.updateTransactionStatus(txnId, 'reversed', req.user?.id ? (typeof req.user.id === 'number' ? req.user.id : parseInt(req.user.id, 10)) : 1, reason);
 
       return res.json({ 
         success: true, 
@@ -3020,7 +3021,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User has no accounts' });
       }
       
-      const senderAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
+      const senderAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id, 10) : userAccounts[0].id;
       
       if (!senderAccountId || senderAccountId <= 0) {
         return res.status(400).json({ error: 'Invalid sender account - account ID must be positive' });
@@ -3436,7 +3437,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User has no accounts' });
       }
       
-      const senderAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
+      const senderAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id, 10) : userAccounts[0].id;
       
       if (!senderAccountId || senderAccountId <= 0) {
         return res.status(400).json({ error: 'Invalid sender account - account ID must be positive' });
