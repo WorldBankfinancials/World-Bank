@@ -149,7 +149,8 @@ export default function TransferFunds() {
           bankName: formData.bankName,
           swiftCode: formData.swiftCode,
           purpose: formData.purpose,
-          transferPin: String(transferPin)
+          transferPin: String(transferPin),
+          idempotencyKey,
         })
       });
 
@@ -171,6 +172,9 @@ export default function TransferFunds() {
         // Refresh user data to reflect balance changes
         const { queryClient } = await import('@/lib/queryClient');
         queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/wallet-balance'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
         
         // Poll for transfer status updates
         const interval = setInterval(async () => {
