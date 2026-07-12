@@ -85,7 +85,7 @@ export function setupTransferRoutes(app: Express) {
         if (!userAccounts || userAccounts.length === 0) {
           return res.status(400).json({ message: "User has no account" });
         }
-        const fromAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
+        const fromAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id, 10) : userAccounts[0].id;
         if (!fromAccountId || fromAccountId <= 0) {
           return res.status(400).json({ message: "Invalid account ID" });
         }
@@ -196,7 +196,7 @@ export function setupTransferRoutes(app: Express) {
         if (!userAccounts || userAccounts.length === 0) {
           return res.status(400).json({ message: "User has no account" });
         }
-        const fromAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
+        const fromAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id, 10) : userAccounts[0].id;
         if (!fromAccountId || fromAccountId <= 0) {
           return res.status(400).json({ message: "Invalid account ID" });
         }
@@ -294,7 +294,7 @@ export function setupTransferRoutes(app: Express) {
   // Admin approve transfer - PROTECTED: requires admin role
   app.post('/api/admin/transfers/:id/approve', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const transactionId = parseInt(req.params.id);
+      const transactionId = parseInt(req.params.id, 10);
       const { notes } = req.body;
       
       // SECURITY: Get admin user from authenticated JWT
@@ -336,7 +336,7 @@ export function setupTransferRoutes(app: Express) {
   // Admin reject transfer with manual reversal option - PROTECTED: requires admin role
   app.post('/api/admin/transfers/:id/reject', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const transactionId = parseInt(req.params.id);
+      const transactionId = parseInt(req.params.id, 10);
       const { notes, reverseToAccount } = req.body;
       
       // SECURITY: Get admin user from authenticated JWT
@@ -414,7 +414,7 @@ export function setupTransferRoutes(app: Express) {
   // Admin approve international transfer - PROTECTED: requires admin role
   app.post('/api/admin/international-transfers/:id/approve', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const transactionId = parseInt(req.params.id);
+      const transactionId = parseInt(req.params.id, 10);
       const { notes } = req.body;
       
       // SECURITY: Get admin user from authenticated JWT
@@ -456,7 +456,7 @@ export function setupTransferRoutes(app: Express) {
   // Admin reject international transfer with manual reversal option - PROTECTED: requires admin role
   app.post('/api/admin/international-transfers/:id/reject', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const transactionId = parseInt(req.params.id);
+      const transactionId = parseInt(req.params.id, 10);
       const { notes, reverseToAccount } = req.body;
       
       // SECURITY: Get admin user from authenticated JWT
