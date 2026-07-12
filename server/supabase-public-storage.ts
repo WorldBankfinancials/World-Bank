@@ -22,14 +22,14 @@ import {
 } from "@shared/schema";
 import { IStorage } from "./storage";
 
-if (!process.env.VITE_SUPABASE_URL) {
-  throw new Error('VITE_SUPABASE_URL environment variable is required');
+if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+  throw new Error('SUPABASE_URL or VITE_SUPABASE_URL environment variable is required');
 }
 if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required');
 }
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
