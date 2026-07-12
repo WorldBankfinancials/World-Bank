@@ -9,13 +9,13 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
+  console.warn('Supabase environment variables not configured. Authentication will not work.');
 }
 
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase: SupabaseClient = createClient(supabaseUrl || '', supabaseAnonKey || '', {
   auth: {
-    persistSession: true,
-    autoRefreshToken: true,
+    persistSession: false,
+    autoRefreshToken: false,
   },
   realtime: {
     params: {
@@ -93,37 +93,25 @@ export function subscribeToRealtimeUpdates(
  * Sign in with email and password
  */
 export async function signInWithPassword(email: string, password: string) {
-  try {
-    return await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-  } catch (error) {
-    throw error;
-  }
+  return await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 }
 
 /**
  * Sign up with email and password
  */
 export async function signUpWithPassword(email: string, password: string) {
-  try {
-    return await supabase.auth.signUp({
-      email,
-      password,
-    });
-  } catch (error) {
-    throw error;
-  }
+  return await supabase.auth.signUp({
+    email,
+    password,
+  });
 }
 
 /**
  * Sign out
  */
 export async function signOut() {
-  try {
-    return await supabase.auth.signOut();
-  } catch (error) {
-    throw error;
-  }
+  return await supabase.auth.signOut();
 }

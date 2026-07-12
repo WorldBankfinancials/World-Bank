@@ -4,7 +4,12 @@
  * Only suppresses development tooling noise — never network/CORS/fetch errors.
  */
 
+let isPatched = false;
+
 export function setupErrorFiltering() {
+  if (isPatched) return;
+  isPatched = true;
+
   const suppressedPatterns = [
     'did not match the expected pattern',
     'AuthRetryableFetchError',

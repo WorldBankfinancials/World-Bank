@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profile && typeof profile === 'object') {
         setUserProfile(profile);
       }
-    } catch (error: any) {
+    } catch (error) {
       // Silently fail - profile already loaded from localStorage
     }
   }, []);
@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // CRITICAL: Validate token is Supabase JWT (3 parts: header.payload.signature)
-      if (!data.token || !data.token.includes('.')) {
+      if (!data.token || data.token.split('.').length !== 3) {
         setLoading(false);
         return { error: 'Invalid authentication token format' };
       }
@@ -153,9 +153,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setLoading(false);
       return { error: 'Authentication failed - invalid response' };
-    } catch (error: any) {
+    } catch (error) {
       setLoading(false);
-      return { error: error?.message || 'Network error' };
+      return { error: error instanceof Error ? error.message : 'Network error' };
     }
   };
 
@@ -196,8 +196,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       return {};
-    } catch (error: any) {
-      return { error: error?.message || 'Signup failed' };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Signup failed' };
     }
   };
 
