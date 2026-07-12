@@ -50,6 +50,7 @@ export default function TransferFunds() {
   const { t } = useLanguage();
   const { toast } = useToast();
   const { userProfile } = useAuth();
+  const [, setLocation] = useLocation();
   const [transferType, setTransferType] = useState("international");
   const [isPending, setIsPending] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
@@ -141,6 +142,7 @@ export default function TransferFunds() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: Number(formData.amount),
+          fee: fee,
           recipientName: formData.recipientName,
           recipientCountry: formData.recipientCountry,
           recipientAccount: formData.accountNumber,
@@ -162,6 +164,9 @@ export default function TransferFunds() {
         setFormData(null);
         setHasSubmitted(true);
         form.reset();
+        
+        // Navigate to the transfer processing status page
+        setLocation(`/transfer-processing?id=${txnId}`);
         
         // Refresh user data to reflect balance changes
         const { queryClient } = await import('@/lib/queryClient');
@@ -531,14 +536,14 @@ export default function TransferFunds() {
                       <Label htmlFor="accountNumber" className="font-semibold">Account Number *</Label>
                       <Input 
                         id="accountNumber"
-                        placeholder="123456789"
-                        {...form.register("accountNumber")}
-                        className="mt-2"
-                      />
-                      {form.formState.errors.accountNumber && (
-                        <p className="text-red-600 text-sm mt-1">{form.formState.errors.accountNumber.message}</p>
-                      )}
-                    </div>
+                      placeholder="123456789"
+                      {...form.register("accountNumber")}
+                      className="mt-2"
+                    />
+                    {form.formState.errors.accountNumber && (
+                      <p className="text-red-600 text-sm mt-1">{form.formState.errors.accountNumber.message}</p>
+                    )}
+                  </div>
                   </div>
 
                   <div>
