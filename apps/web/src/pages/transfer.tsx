@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { authenticatedFetch } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -85,7 +87,18 @@ export default function Transfer() {
     { icon: Send, label: "Express Transfer", description: "Fast international delivery", action: () => setTransferType("express") }
   ];
 
-  const recentContacts: Array<{ name: string; account: string; lastAmount: string }> = []; // TODO: fetch from API
+  const { data: recentContacts = [] } = useQuery<Array<{ name: string; account: string; lastAmount: string }>>({
+    queryKey: ['/api/recent-contacts'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api/recent-contacts');
+      const rows = await res.json() as Array<Record<string, any>>;
+      return (rows || []).map((row) => ({
+        name: row.recipient_name || row.name || '',
+        account: row.recipient_account || row.account || '',
+        lastAmount: row.last_amount || row.lastAmount || '',
+      }));
+    }
+  });
 
   const handleTransfer = async () => {
     try {
@@ -799,4 +812,3 @@ export default function Transfer() {
       <BottomNavigation />
     </div>
   );
-}
