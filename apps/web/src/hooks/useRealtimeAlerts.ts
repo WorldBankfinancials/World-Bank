@@ -3,11 +3,23 @@
  * Listens for live alerts and notifications using Supabase Realtime
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
+interface Alert {
+  id?: string;
+  user_id?: string | number;
+  message?: string;
+  type?: string;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
 export function useRealtimeAlerts(userId?: string | number | undefined, enabled?: boolean) {
-  const handleAlertReceived = useCallback((alert: any) => {
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+
+  const handleAlertReceived = useCallback((alert: Alert) => {
+    setAlerts((prev) => [...prev, alert]);
   }, []);
 
   useEffect(() => {
@@ -26,7 +38,7 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          handleAlertReceived(payload.new);
+          handleAlertReceived(payload.new as Alert);
         }
       )
       .subscribe();
@@ -36,5 +48,9 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
     };
   }, [userId, enabled, handleAlertReceived]);
 
-  return null;
+  const unsubscribe = useCallback(() => {
+    setAlerts([]);
+  }, []);
+
+  return { alerts, unsubscribe };
 }

@@ -3,15 +3,31 @@
  * Listens for live transaction updates using Supabase Realtime
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (transaction: any) => void) {
-  const handleTransactionUpdate = useCallback((transaction: any) => {
-    if (onTransactionUpdate) {
-      onTransactionUpdate(transaction);
-    }
-  }, [onTransactionUpdate]);
+interface Transaction {
+  id?: string;
+  from_user_id?: string;
+  to_user_id?: string;
+  amount?: number;
+  status?: string;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (transaction: Transaction) => void) {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  const handleTransactionUpdate = useCallback(
+    (transaction: Transaction) => {
+      setTransactions((prev) => [...prev, transaction]);
+      if (onTransactionUpdate) {
+        onTransactionUpdate(transaction);
+      }
+    },
+    [onTransactionUpdate]
+  );
 
   useEffect(() => {
     if (!userId) return;
@@ -30,7 +46,7 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
         },
         (payload) => {
           if (payload.new) {
-            handleTransactionUpdate(payload.new);
+            handleTransactionUpdate(payload.new as Transaction);
           }
         }
       )
@@ -41,5 +57,5 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
     };
   }, [userId, handleTransactionUpdate]);
 
-  return null;
+  return { transactions };
 }
