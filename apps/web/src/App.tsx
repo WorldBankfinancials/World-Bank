@@ -53,6 +53,7 @@ import TransactionRouter from "@/pages/transaction-router";
 import About from "@/pages/about";
 import Investment from "@/pages/investment";
 import Exchange from "@/pages/exchange";
+import Loans from "@/pages/loans";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -170,6 +171,7 @@ function App() {
                         <Route path="/transaction-router" component={TransactionRouter} />
                         <Route path="/investment" component={Investment} />
                         <Route path="/exchange" component={Exchange} />
+                        <Route path="/loans" component={Loans} />
                         <Route component={NotFound} />
                       </Switch>
                     </div>

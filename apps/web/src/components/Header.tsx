@@ -72,6 +72,7 @@ export default function Header({}: HeaderProps) {
       items: [
         { icon: TrendingUp, label: "Investment Portfolio", href: "/investment-portfolio" },
         { icon: Building2, label: "Wealth Management", href: "/wealth-management" },
+        { icon: Building2, label: "Loans", href: "/loans" },
         { icon: TrendingUp, label: "Investment Trading", href: "/investment-trading" },
         { icon: Building2, label: "Business Banking", href: "/business-banking" }
       ]
