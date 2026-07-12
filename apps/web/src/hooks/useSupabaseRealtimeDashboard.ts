@@ -58,7 +58,7 @@ export function useSupabaseRealtimeAccounts(
       if (Array.isArray(accountsData)) {
         onAccountsChange(accountsData);
       }
-    } catch (error: any) {
+    } catch (error) {
       // Silent fail - polling will retry
     }
   }, [onAccountsChange]);
@@ -99,7 +99,7 @@ export function useSupabaseRealtimeAccounts(
               }
             }
           });
-      } catch (error: any) {
+      } catch (error) {
         // Silently fallback to polling
         if (!pollInterval) {
           pollInterval = setInterval(fetchAccountsData, 8000);
@@ -171,7 +171,7 @@ export function useSupabaseRealtimeTransactions(
         }));
         onTransactionsChange(txns);
       }
-    } catch (error: any) {
+    } catch (error) {
       // Silent fail
     }
   }, [onTransactionsChange]);
@@ -209,7 +209,7 @@ export function useSupabaseRealtimeTransactions(
               }
             }
           });
-      } catch (error: any) {
+      } catch (error) {
         // Silently fallback to polling
         if (!pollInterval) {
           pollInterval = setInterval(fetchTransactionsData, 8000);
@@ -271,7 +271,7 @@ export function useSupabaseRealtimeUserBalance(
       if (userData) {
         onBalanceChange(userData);
       }
-    } catch (error: any) {
+    } catch (error) {
       // Silent fail
     }
   }, [onBalanceChange]);
@@ -309,7 +309,7 @@ export function useSupabaseRealtimeUserBalance(
               }
             }
           });
-      } catch (error: any) {
+      } catch (error) {
         // Silently fallback to polling
         if (!pollInterval) {
           pollInterval = setInterval(fetchUserData, 8000);

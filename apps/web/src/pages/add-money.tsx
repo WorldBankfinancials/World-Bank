@@ -170,7 +170,7 @@ export default function AddMoney() {
                     selectedMethod === method.id
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300'
-                  }`
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
