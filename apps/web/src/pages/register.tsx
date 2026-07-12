@@ -68,8 +68,9 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegistrationFormData) => {
     setIsLoading(true);
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/auth/register-complete', {
+      // The register endpoint is public — the user has no token yet, so use
+      // a plain fetch() instead of authenticatedFetch.
+      const response = await fetch('/api/auth/register-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
