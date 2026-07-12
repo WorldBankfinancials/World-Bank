@@ -32,20 +32,20 @@ import { z } from 'zod';
 // ============================================================
 
 export const transferPinSchema = z.object({
-  pin: z.string().min(4).max(6),
+  pin: z.string().length(4),
 });
 
 export const transferSchema = z.object({
   amount: z.number().positive().max(1_000_000),
   recipientAccount: z.string().min(1),
-  transferPin: z.string().min(4),
+  transferPin: z.string().length(4),
   purpose: z.string().optional(),
   description: z.string().optional(),
 });
 
 export const verifyPinSchema = z.object({
   email: z.string().email(),
-  pin: z.string().min(4),
+  pin: z.string().length(4),
 });
 
 export const transferFormSchema = z.object({
@@ -64,7 +64,7 @@ export const transferFormSchema = z.object({
   iban:             z.string().max(50).optional().default(''),
   purpose:          z.string().max(200).optional().default(''),
   description:      z.string().max(500).optional().default(''),
-  transferPin:      z.string().min(4, 'PIN is required').max(6),
+  transferPin:      z.string().length(4, 'PIN must be exactly 4 digits'),
 });
 
 export type TransferForm = z.infer<typeof transferFormSchema>;
