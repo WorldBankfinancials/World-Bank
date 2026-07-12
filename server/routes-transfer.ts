@@ -85,8 +85,8 @@ export function setupTransferRoutes(app: Express) {
         if (!userAccounts || userAccounts.length === 0) {
           return res.status(400).json({ message: "User has no account" });
         }
-        const fromAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id, 10) : userAccounts[0].id;
-        if (!fromAccountId || fromAccountId <= 0) {
+        const fromAccountId = userAccounts[0].id;
+        if (!fromAccountId) {
           return res.status(400).json({ message: "Invalid account ID" });
         }
         
@@ -196,8 +196,8 @@ export function setupTransferRoutes(app: Express) {
         if (!userAccounts || userAccounts.length === 0) {
           return res.status(400).json({ message: "User has no account" });
         }
-        const fromAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id, 10) : userAccounts[0].id;
-        if (!fromAccountId || fromAccountId <= 0) {
+        const fromAccountId = userAccounts[0].id;
+        if (!fromAccountId) {
           return res.status(400).json({ message: "Invalid account ID" });
         }
         
@@ -294,18 +294,15 @@ export function setupTransferRoutes(app: Express) {
   // Admin approve transfer - PROTECTED: requires admin role
   app.post('/api/admin/transfers/:id/approve', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const transactionId = parseInt(req.params.id, 10);
+      const transactionId = req.params.id;
       const { notes } = req.body;
       
       // SECURITY: Get admin user from authenticated JWT
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id; if (!adminId) { return res.status(403).json({ message: 'Admin authentication required' }); }
 
-      // Get transaction to verify amount - look for processing transfers
-      const pendingTransactions = await storage.getPendingTransactions();
-      const processingTransactions = (await storage.getAllTransactions()).filter((t: any) => t.status === 'processing');
-      const allTransfers = [...pendingTransactions, ...processingTransactions];
-      const targetTxn = allTransfers.find((t: any) => t.id === transactionId);
+      // Get transaction directly by ID
+      const targetTxn = await storage.getTransactionById(transactionId);
       
       if (!targetTxn) {
         return res.status(404).json({ message: "Transfer not found or already processed" });
@@ -336,18 +333,15 @@ export function setupTransferRoutes(app: Express) {
   // Admin reject transfer with manual reversal option - PROTECTED: requires admin role
   app.post('/api/admin/transfers/:id/reject', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const transactionId = parseInt(req.params.id, 10);
+      const transactionId = req.params.id;
       const { notes, reverseToAccount } = req.body;
       
       // SECURITY: Get admin user from authenticated JWT
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id; if (!adminId) { return res.status(403).json({ message: 'Admin authentication required' }); }
 
-      // Get transaction details - look for processing transfers
-      const pendingTransactions = await storage.getPendingTransactions();
-      const processingTransactions = (await storage.getAllTransactions()).filter((t: any) => t.status === 'processing');
-      const allTransfers = [...pendingTransactions, ...processingTransactions];
-      const targetTxn = allTransfers.find((t: any) => t.id === transactionId);
+      // Get transaction directly by ID
+      const targetTxn = await storage.getTransactionById(transactionId);
       
       if (!targetTxn) {
         return res.status(404).json({ message: "Transfer not found or already processed" });
@@ -414,18 +408,15 @@ export function setupTransferRoutes(app: Express) {
   // Admin approve international transfer - PROTECTED: requires admin role
   app.post('/api/admin/international-transfers/:id/approve', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const transactionId = parseInt(req.params.id, 10);
+      const transactionId = req.params.id;
       const { notes } = req.body;
       
       // SECURITY: Get admin user from authenticated JWT
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id; if (!adminId) { return res.status(403).json({ message: 'Admin authentication required' }); }
 
-      // Get transaction to verify it exists - look for processing transfers
-      const pendingTransactions = await storage.getPendingTransactions();
-      const processingTransactions = (await storage.getAllTransactions()).filter((t: any) => t.status === 'processing');
-      const allTransfers = [...pendingTransactions, ...processingTransactions];
-      const targetTxn = allTransfers.find((t: any) => t.id === transactionId);
+      // Get transaction directly by ID
+      const targetTxn = await storage.getTransactionById(transactionId);
       
       if (!targetTxn) {
         return res.status(404).json({ message: "International transfer not found or already processed" });
@@ -456,18 +447,15 @@ export function setupTransferRoutes(app: Express) {
   // Admin reject international transfer with manual reversal option - PROTECTED: requires admin role
   app.post('/api/admin/international-transfers/:id/reject', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const transactionId = parseInt(req.params.id, 10);
+      const transactionId = req.params.id;
       const { notes, reverseToAccount } = req.body;
       
       // SECURITY: Get admin user from authenticated JWT
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id; if (!adminId) { return res.status(403).json({ message: 'Admin authentication required' }); }
 
-      // Get transaction details - look for processing transfers
-      const pendingTransactions = await storage.getPendingTransactions();
-      const processingTransactions = (await storage.getAllTransactions()).filter((t: any) => t.status === 'processing');
-      const allTransfers = [...pendingTransactions, ...processingTransactions];
-      const targetTxn = allTransfers.find((t: any) => t.id === transactionId);
+      // Get transaction directly by ID
+      const targetTxn = await storage.getTransactionById(transactionId);
       
       if (!targetTxn) {
         return res.status(404).json({ message: "International transfer not found or already processed" });
@@ -531,13 +519,8 @@ export function setupTransferRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Get all user transactions and find by reference ID
-      const allTransactions = await storage.getAllTransactions();
-      const transactions = allTransactions.filter((t: any) => t.fromUserId === user.id);
-      const transaction = transactions.find((t: any) => {
-        // Match by transaction ID or description containing the reference
-        return String(t.id) === id || String(t.transactionId) === id;
-      });
+      // Get transaction directly by ID
+      const transaction = await storage.getTransactionById(id);
 
       if (!transaction) {
         return res.status(404).json({ message: "Transfer not found" });
@@ -564,13 +547,8 @@ export function setupTransferRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Get all user transactions and find by reference ID
-      const allTransactions = await storage.getAllTransactions();
-      const transactions = allTransactions.filter((t: any) => t.fromUserId === user.id);
-      const transaction = transactions.find((t: any) => {
-        // Match by transaction ID or ID string
-        return String(t.id) === id || String(t.transactionId) === id || t.id === id;
-      });
+      // Get transaction directly by ID
+      const transaction = await storage.getTransactionById(id);
 
       if (!transaction) {
         return res.status(404).json({ message: "International transfer not found" });
