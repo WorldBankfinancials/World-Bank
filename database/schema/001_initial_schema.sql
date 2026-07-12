@@ -1,0 +1,46 @@
+-- ============================================================================
+-- 001_initial_schema.sql
+-- ============================================================================
+-- Banking Platform - Initial Schema Definition
+--
+-- This file documents the initial banking schema for the enterprise platform.
+-- The actual migration files are located in database/migrations/ and are
+-- applied in chronological order via Supabase migrations.
+--
+-- Core Banking Schema Overview:
+--
+--   users                  - User accounts (linked to Supabase auth)
+--   user_profiles          - Extended user profile information
+--   user_preferences       - User application preferences
+--   accounts               - Bank accounts (checking, savings, investment)
+--   transactions           - Financial transactions (deposits, withdrawals, transfers)
+--   transfers              - Money transfers between accounts
+--   cards                  - Debit and credit cards
+--   card_transactions      - Card-specific transaction records
+--   investments            - Investment portfolio holdings
+--   market_rates           - Market rate data (stocks, indices)
+--   exchange_rates         - Currency exchange rate data
+--   alerts                 - User notification alerts
+--   messages               - In-app messaging and chat
+--   chat_sessions          - Chat session management
+--   support_tickets        - Customer support tickets
+--   branches               - Bank branch locations
+--   atms                   - ATM locations
+--   admin_actions          - Administrative action audit log
+--   pending_registrations  - User registration approval queue
+--   activity_logs          - User activity tracking
+--   trusted_devices        - User trusted device management
+--   transaction_routes     - Transaction routing configuration
+--   statements             - Account statement records
+--   payment_requests       - Payment request records
+--   mobile_payments        - Mobile payment transaction records
+--   mobile_pay_merchants   - Mobile pay merchant directory
+--   wallet_balances        - Digital wallet balance records
+--   wallet_transactions    - Digital wallet transaction records
+--
+-- Row Level Security (RLS):
+--   All tables have RLS enabled to ensure users can only access their own data.
+--   Admin users have elevated access via service role policies.
+--
+-- See: database/migrations/ for the full migration history.
+-- ============================================================================
