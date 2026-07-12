@@ -1,8 +1,2 @@
-/**
- * validation
- *
- * Shared package for the banking platform.
- */
-
+export * from '../shared/schema';
 export const packageName = 'validation';
-export default { packageName };
