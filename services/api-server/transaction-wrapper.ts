@@ -43,7 +43,8 @@ export class BankingTransaction {
           const result = await step.execute();
           this.executedSteps.push(step);
           this.results.push(result);
-        } catch (stepError: any) {
+        } catch (stepError: unknown) {
+          const stepErrorMsg = stepError instanceof Error ? stepError.message : 'Internal server error';
           
           // ROLLBACK all executed steps in reverse order
           const rollbackFailures = await this.rollback();
@@ -51,13 +52,13 @@ export class BankingTransaction {
           if (rollbackFailures.length > 0) {
             return {
               success: false,
-              error: `Transaction failed at step "${step.name}": ${stepError.message}. CRITICAL: Rollback had ${rollbackFailures.length} failures - manual intervention required: ${rollbackFailures.join('; ')}`
+              error: `Transaction failed at step "${step.name}": ${stepErrorMsg}. CRITICAL: Rollback had ${rollbackFailures.length} failures - manual intervention required: ${rollbackFailures.join('; ')}`
             };
           }
           
           return {
             success: false,
-            error: `Transaction failed at step "${step.name}": ${stepError.message}`
+            error: `Transaction failed at step "${step.name}": ${stepErrorMsg}`
           };
         }
       }
@@ -97,8 +98,8 @@ export class BankingTransaction {
       if (step.rollback) {
         try {
           await step.rollback();
-        } catch (rollbackError: any) {
-          const errorMsg = `Rollback failed for "${step.name}": ${rollbackError.message}`;
+        } catch (rollbackError: unknown) {
+          const errorMsg = `Rollback failed for "${step.name}": ${rollbackError instanceof Error ? rollbackError.message : 'Internal server error'}`;
           rollbackFailures.push(errorMsg);
           
           // Continue rolling back other steps even if one fails
@@ -172,7 +173,7 @@ async function fallbackAtomicUpdate(
     
     // Use a single SQL UPDATE that checks balance constraint
     const { data, error } = await supabase
-      .from('bank_accounts')
+      .from('accounts')
       .select('balance')
       .eq('id', accountId)
       .single();
@@ -191,7 +192,7 @@ async function fallbackAtomicUpdate(
 
     // Optimistic update with version check (using balance as version)
     const { data: updateData, error: updateError } = await supabase
-      .from('bank_accounts')
+      .from('accounts')
       .update({ 
         balance: newBalance,
         updated_at: new Date().toISOString()

@@ -343,7 +343,7 @@ export class SupabasePublicStorage implements IStorage {
         if (!user) throw new Error('No user returned after balance update');
         return user;
       });
-      // Keep bank_accounts in sync
+      // Keep accounts in sync
       const accounts = await this.getUserAccounts(id);
       if (accounts.length > 0) {
         const primary = accounts[0];
@@ -351,7 +351,7 @@ export class SupabasePublicStorage implements IStorage {
         if (accNew < 0) {
           throw new Error('Insufficient funds');
         }
-        await supabase.from('bank_accounts').update({ balance: accNew.toFixed(2) }).eq('id', primary.id);
+        await supabase.from('accounts').update({ balance: accNew.toFixed(2) }).eq('id', primary.id);
       }
       return mapUser(user);
     } catch (error) {
@@ -364,7 +364,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const accounts = await withRetry(async () => {
         const { data: accounts, error } = await supabase
-          .from('bank_accounts')
+          .from('accounts')
           .select('*')
           .eq('user_id', userId)
           .order('id');
@@ -381,7 +381,7 @@ export class SupabasePublicStorage implements IStorage {
   async getAccount(id: string): Promise<Account | undefined> {
     try {
       const { data: account, error } = await supabase
-        .from('bank_accounts')
+        .from('accounts')
         .select('*')
         .eq('id', id)
         .single();
@@ -395,7 +395,7 @@ export class SupabasePublicStorage implements IStorage {
   async createAccount(data: InsertAccount): Promise<Account> {
     try {
       const { data: account, error } = await supabase
-        .from('bank_accounts')
+        .from('accounts')
         .insert({ user_id: data.userId, account_number: data.accountNumber, account_type: data.accountType, balance: data.balance, currency: data.currency || 'USD', status: data.status || 'active' })
         .select()
         .single();
@@ -411,7 +411,7 @@ export class SupabasePublicStorage implements IStorage {
       const updateData: any = {};
       if (updates.balance !== undefined) updateData.balance = updates.balance;
       if (updates.status !== undefined) updateData.status = updates.status;
-      const { data: account, error } = await supabase.from('bank_accounts').update(updateData).eq('id', id).select().single();
+      const { data: account, error } = await supabase.from('accounts').update(updateData).eq('id', id).select().single();
       if (error || !account) return undefined;
       return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at };
     } catch (error) {
