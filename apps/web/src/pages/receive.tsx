@@ -212,7 +212,7 @@ export default function Receive() {
             <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
               <div>
                 <p className="text-sm text-gray-600">Account ID</p>
-                <p className="font-medium">{accountDetails.accountId}</p>
+                <p className="font-medium">{String(accountDetails.accountId ?? '')}</p>
               </div>
               <Button 
                 variant="ghost" 
@@ -280,4 +280,3 @@ export default function Receive() {
       <BottomNavigation />
     </div>
   );
-}
