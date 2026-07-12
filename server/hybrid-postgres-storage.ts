@@ -22,7 +22,7 @@ export class HybridPostgresStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     try {
       const result = await sql`
-        SELECT * FROM bank_users WHERE id = ${id} LIMIT 1
+        SELECT * FROM users WHERE id = ${id} LIMIT 1
       `;
       return result[0] as User | undefined;
     } catch (error) {
@@ -33,7 +33,7 @@ export class HybridPostgresStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     try {
       const result = await sql`
-        SELECT * FROM bank_users WHERE username = ${username} LIMIT 1
+        SELECT * FROM users WHERE username = ${username} LIMIT 1
       `;
       return result[0] as User | undefined;
     } catch (error) {
@@ -44,7 +44,7 @@ export class HybridPostgresStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
       const result = await sql`
-        SELECT * FROM bank_users WHERE email = ${email} LIMIT 1
+        SELECT * FROM users WHERE email = ${email} LIMIT 1
       `;
       return result[0] as User | undefined;
     } catch (error) {
@@ -55,7 +55,7 @@ export class HybridPostgresStorage implements IStorage {
   async getUserByPhone(phone: string): Promise<User | undefined> {
     try {
       const result = await sql`
-        SELECT * FROM bank_users WHERE phone = ${phone} LIMIT 1
+        SELECT * FROM users WHERE phone = ${phone} LIMIT 1
       `;
       return result[0] as User | undefined;
     } catch (error) {
@@ -66,7 +66,7 @@ export class HybridPostgresStorage implements IStorage {
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
     try {
       const result = await sql`
-        SELECT * FROM bank_users WHERE supabase_id = ${supabaseUserId} LIMIT 1
+        SELECT * FROM users WHERE supabase_id = ${supabaseUserId} LIMIT 1
       `;
       return result[0] as User | undefined;
     } catch (error) {
@@ -77,7 +77,7 @@ export class HybridPostgresStorage implements IStorage {
   async getAllUsers(): Promise<User[]> {
     try {
       const result = await sql`
-        SELECT * FROM bank_users ORDER BY created_at DESC
+        SELECT * FROM users ORDER BY created_at DESC
       `;
       return result as User[];
     } catch (error) {
@@ -88,7 +88,7 @@ export class HybridPostgresStorage implements IStorage {
   async createUser(user: InsertUser): Promise<User> {
     try {
       const result = await sql`
-        INSERT INTO bank_users (
+        INSERT INTO users (
           username, email, password, first_name, last_name, phone,
           date_of_birth, address, city, state, country, postal_code,
           profession, annual_income, id_type, id_number, account_number,
@@ -115,8 +115,8 @@ export class HybridPostgresStorage implements IStorage {
 
   async updateUser(id: number, user: Partial<User>): Promise<User | undefined> {
     try {
-      const updates: any[] = [];
-      const values: any[] = [];
+      const updates: string[] = [];
+      const values: unknown[] = [];
 
       Object.entries(user).forEach(([key, value]) => {
         if (value !== undefined && key !== 'id') {
@@ -129,7 +129,7 @@ export class HybridPostgresStorage implements IStorage {
 
       const setClause = updates.map((col, i) => `${col} = $${i + 1}`).join(', ');
       const result = await sql`
-        UPDATE bank_users
+        UPDATE users
         SET ${sql(setClause)}
         WHERE id = ${id}
         RETURNING *
@@ -144,7 +144,7 @@ export class HybridPostgresStorage implements IStorage {
     try {
       const numAmount = parseFloat(String(amount));
       const result = await sql`
-        UPDATE bank_users
+        UPDATE users
         SET balance = ${numAmount.toString()}
         WHERE id = ${id}
         RETURNING *
@@ -164,7 +164,7 @@ export class HybridPostgresStorage implements IStorage {
   async getAccount(id: number): Promise<Account | undefined> {
     try {
       const result = await sql`
-        SELECT * FROM bank_accounts WHERE id = ${id} LIMIT 1
+        SELECT * FROM accounts WHERE id = ${id} LIMIT 1
       `;
       return result[0] as Account | undefined;
     } catch (error) {
@@ -175,7 +175,7 @@ export class HybridPostgresStorage implements IStorage {
   async getUserAccounts(userId: number): Promise<Account[]> {
     try {
       const result = await sql`
-        SELECT * FROM bank_accounts WHERE user_id = ${userId}
+        SELECT * FROM accounts WHERE user_id = ${userId}
       `;
       return result as Account[];
     } catch (error) {
@@ -186,7 +186,7 @@ export class HybridPostgresStorage implements IStorage {
   async createAccount(account: InsertAccount): Promise<Account> {
     try {
       const result = await sql`
-        INSERT INTO bank_accounts (
+        INSERT INTO accounts (
           user_id, account_number, account_type, balance, currency, status
         ) VALUES (
           ${account.userId || 0}, ${account.accountNumber || ''}, ${account.accountType || 'checking'},
@@ -203,7 +203,7 @@ export class HybridPostgresStorage implements IStorage {
 
   async updateAccount(id: number, account: Partial<Account>): Promise<Account | undefined> {
     try {
-      const updates: any[] = [];
+      const updates: string[] = [];
       Object.entries(account).forEach(([key]) => {
         if (key !== 'id') updates.push(key);
       });
@@ -212,7 +212,7 @@ export class HybridPostgresStorage implements IStorage {
 
       const setClause = updates.map((col, i) => `${col} = $${i + 1}`).join(', ');
       const result = await sql`
-        UPDATE bank_accounts
+        UPDATE accounts
         SET ${sql(setClause)}
         WHERE id = ${id}
         RETURNING *

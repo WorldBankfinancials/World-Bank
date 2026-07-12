@@ -8,7 +8,7 @@ import { Request, Response, NextFunction } from 'express';
 
 export interface ApiError extends Error {
   statusCode?: number;
-  details?: any;
+  details?: unknown;
   isOperational?: boolean;
 }
 
@@ -18,7 +18,7 @@ export interface ApiError extends Error {
 export function createApiError(
   message: string,
   statusCode: number = 500,
-  details?: any
+  details?: unknown
 ): ApiError {
   const error: ApiError = new Error(message);
   error.statusCode = statusCode;
@@ -54,7 +54,7 @@ export function errorHandler(
   // Determine status code
   const statusCode = err.statusCode || 500;
   
-  const errorResponse: any = {
+  const errorResponse: Record<string, unknown> = {
     error: true,
     message: err.message || 'Internal server error',
     timestamp: new Date().toISOString(),

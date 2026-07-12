@@ -29,13 +29,13 @@ import { runStartupChecks } from './startup-checks';
 import * as bcrypt from 'bcryptjs';
 
 // SECURITY: Strip sensitive fields from user objects before returning to client
-function sanitizeUser(user: any): any {
+function sanitizeUser(user: Record<string, unknown>): Record<string, unknown> {
   if (!user) return user;
   const { password, transferPin, transfer_pin, password_hash, idNumber, identification_number, ...safe } = user;
   return safe;
 }
 
-function sanitizeUsers(users: any[]): any[] {
+function sanitizeUsers(users: Record<string, unknown>[]): Record<string, unknown>[] {
   return (users || []).map(sanitizeUser);
 }
 
@@ -300,7 +300,7 @@ export async function registerRoutes(app: Express) {
     try {
       const id = req.params.id;
       const { verified = true, active } = req.body;
-      const updates: any = { isVerified: verified };
+      const updates: Record<string, unknown> = { isVerified: verified };
       if (typeof active !== 'undefined') updates.isActive = active;
       else if (verified) updates.isActive = true;
       const updatedUser = await storage.updateUser(id, updates);
@@ -329,9 +329,9 @@ export async function registerRoutes(app: Express) {
       const allUsers = await storage.getAllUsers();
       const customers = allUsers.filter((u: User) => u.role === 'customer');
       const allTransactions = await storage.getAllTransactions();
-      const pendingTransactions = allTransactions.filter((t: any) => t.status === 'pending');
+      const pendingTransactions = allTransactions.filter((t: { status?: string }) => t.status === 'pending');
       const tickets = await storage.getSupportTickets();
-      const openTickets = tickets.filter((t: any) => t.status !== 'resolved' && t.status !== 'closed');
+      const openTickets = tickets.filter((t: { status?: string }) => t.status !== 'resolved' && t.status !== 'closed');
       return res.json({
         totalCustomers: customers.length,
         activeCustomers: customers.filter((u: User) => u.isActive).length,
@@ -373,7 +373,7 @@ export async function registerRoutes(app: Express) {
       const id = req.params.id;
       const { response: adminResponse, notes, status } = req.body;
       const responseText = adminResponse || notes || '';
-      const updates: any = {};
+      const updates: Record<string, unknown> = {};
       if (responseText) updates.adminNotes = responseText;
       updates.status = status || 'responded';
       const updatedTicket = await storage.updateSupportTicket(id, updates);
@@ -385,7 +385,7 @@ export async function registerRoutes(app: Express) {
 
   // ==================== AUTH ENDPOINTS ====================
 
-  // LOGIN - Supabase Auth + Auto-sync to bank_users table
+  // LOGIN - Supabase Auth + Auto-sync to users table
   app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
@@ -415,7 +415,7 @@ export async function registerRoutes(app: Express) {
 
       const supabaseUser = data.user;
 
-      // Sync user to bank_users table
+      // Sync user to users table
       let dbUser = await storage.getUserByEmail(email);
       
       if (!dbUser) {
@@ -457,7 +457,7 @@ export async function registerRoutes(app: Express) {
           });
         }
         const supabaseRole = supabaseUser.app_metadata?.role || 'customer';
-        const updates: any = { lastLogin: new Date() };
+        const updates: Record<string, unknown> = { lastLogin: new Date() };
         if (dbUser.role !== supabaseRole) {
           updates.role = supabaseRole;
         }
@@ -763,7 +763,7 @@ export async function registerRoutes(app: Express) {
       const user = await storage.getUserByEmail(req.user!.email);
       if (!user) return res.json([]);
       const accounts = await storage.getUserAccounts(user.id);
-      const recentActivity: any[] = [];
+      const recentActivity: Record<string, unknown>[] = [];
       if (accounts && accounts.length > 0) {
         const txns = await storage.getAccountTransactions(accounts[0].id, 10);
         txns.forEach((t: Transaction) => {
@@ -1074,7 +1074,7 @@ export async function registerRoutes(app: Express) {
       let supabaseUserId = userId;
       if (!supabaseUserId && email) {
         const { data: users } = await supabaseAdmin.auth.admin.listUsers();
-        const found = users?.users?.find((u: any) => u.email === email);
+        const found = users?.users?.find((u: { id?: string; email?: string }) => u.email === email);
         if (!found) return res.status(404).json({ error: 'User not found in Supabase Auth' });
         supabaseUserId = found.id;
       }
@@ -1112,7 +1112,7 @@ export async function registerRoutes(app: Express) {
       if (listError) {
         return res.status(500).json({ error: 'Failed to list users' });
       }
-      const userToUpdate = users.users.find((u: any) => u.email === email);
+      const userToUpdate = users.users.find((u: { id?: string; email?: string }) => u.email === email);
       if (!userToUpdate) {
         return res.status(404).json({ error: 'User not found in Supabase Auth' });
       }
@@ -1145,7 +1145,7 @@ export async function registerRoutes(app: Express) {
       if (listError) {
         return res.status(500).json({ error: 'Failed to list users' });
       }
-      const userToDelete = users.users.find((u: any) => u.email === email);
+      const userToDelete = users.users.find((u: { id?: string; email?: string }) => u.email === email);
       if (!userToDelete) {
         return res.status(404).json({ error: 'User not found in Supabase Auth' });
       }
@@ -1253,7 +1253,7 @@ export async function registerRoutes(app: Express) {
       }
       return res.json({
         total: data.users.length,
-        users: data.users.map((u: any) => ({
+        users: data.users.map((u: { id?: string; email?: string; app_metadata?: { role?: string }; email_confirmed_at?: string }) => ({
           id: u.id,
           email: u.email,
           role: u.app_metadata?.role || 'customer',
@@ -1309,13 +1309,15 @@ export async function registerLiveChatRoutes(app: Express) {
       let adminUserId = 1;
       try {
         const { data: adminUsers } = await supabase
-          .from('bank_users')
+          .from('users')
           .select('id')
           .eq('role', 'admin')
           .limit(1)
           .single();
         if (adminUsers?.id) adminUserId = adminUsers.id;
-      } catch (_) {}
+      } catch (error: unknown) {
+        console.warn('Failed to query admin users:', error instanceof Error ? error.message : 'Unknown error');
+      }
 
       const { data: savedMsg, error } = await supabase
         .from('messages')

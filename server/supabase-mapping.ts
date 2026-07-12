@@ -118,7 +118,7 @@ export function mapUserToSupabaseInsert(user: Partial<User>): Partial<SupabaseUs
     state: user.state ?? undefined,
     country: user.country ?? undefined,
     postal_code: user.postalCode ?? undefined,
-    annual_income: typeof user.annualIncome === 'string' ? parseInt(user.annualIncome) : user.annualIncome ?? undefined,
+    annual_income: typeof user.annualIncome === 'string' ? Number(user.annualIncome) : user.annualIncome ?? undefined,
     id_type: user.idType ?? undefined,
     id_number: user.idNumber ?? undefined,
     transfer_pin: user.transferPin ?? undefined,
