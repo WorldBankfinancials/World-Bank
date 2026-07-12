@@ -641,11 +641,11 @@ export default function SimpleAdmin() {
             uploadCompressedImage(compressedImage);
           };
           img.src = base64Image;
-        } catch (uploadError: any) {
+        } catch (uploadError) {
           setUploadingPhoto(false);
           toast({
             title: 'Upload Failed',
-            description: `Failed to upload photo: ${uploadError?.message || 'Unknown error'}`,
+            description: `Failed to upload photo: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`,
             variant: 'destructive',
           });
         }
@@ -685,11 +685,11 @@ export default function SimpleAdmin() {
             const errorData = await response.json();
             throw new Error(errorData.error || 'Failed to upload photo');
           }
-        } catch (uploadError: any) {
+        } catch (uploadError) {
           setUploadingPhoto(false);
           toast({
             title: 'Upload Failed',
-            description: `Failed to upload photo: ${uploadError?.message || 'Unknown error'}`,
+            description: `Failed to upload photo: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`,
             variant: 'destructive',
           });
         }
@@ -741,10 +741,10 @@ export default function SimpleAdmin() {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update balance');
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Balance Update Failed',
-        description: `Failed to update customer balance: ${error?.message || 'Unknown error'}`,
+        description: `Failed to update customer balance: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'destructive',
       });
     }
