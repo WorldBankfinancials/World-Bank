@@ -284,32 +284,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check Supabase Auth as secondary confirmation
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-
-      // Use admin API to check if user exists
-      const { data: users, error } = await supabase.auth.admin.listUsers();
-      if (!users) { return res.status(500).json({ error: "Failed to fetch users" }); }
-
-      if (!error && users) {
-        const emailExists = users.users.some((u: any) => u.email === email);
-        if (emailExists) {
-          return res.json({
-            available: false,
-            message: 'Email already registered in authentication system'
-          });
-        }
-      }
-
-      return res.json({
-        available: true,
-        message: 'Email available'
-      });
+      // SECURITY: The local users table is the source of truth.
+      // Do NOT call supabase.auth.admin.listUsers() — listing every user in
+      // the auth system is an expensive and dangerous admin operation and
+      // can leak user emails. Check the local database instead.
+      const existingUser = await storage.getUserByEmail(email);
+      return res.json({ exists: !!existingUser });
     } catch (error: any) {
       return res.status(500).json({ error: 'Failed to check email availability. Please try again.' });
     }
@@ -1324,35 +1304,37 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       const { createClient } = await import('@supabase/supabase-js');
-      const supabaseAdmin = createClient(
-        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
+
+      // SECURITY: Verify the current password using the anon key (user auth),
+      // not the service-role key. The service-role key bypasses RLS and
+      // should never be used to authenticate a user's credentials.
+      const supabaseAnon = createClient(
+        supabaseUrl,
+        process.env.VITE_SUPABASE_ANON_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
 
-      // Verify current password by attempting sign-in
-      const { error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+      // Verify current password by attempting sign-in with the anon-key client
+      const { data: signInData, error: signInError } = await supabaseAnon.auth.signInWithPassword({
         email: req.user!.email,
         password: currentPassword,
       });
 
-      if (signInError) {
+      if (signInError || !signInData.user) {
         return res.status(401).json({ error: 'Current password is incorrect' });
       }
 
-      // Get Supabase user ID
-      const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-      if (listError || !users) {
-        return res.status(500).json({ error: 'Failed to retrieve user' });
-      }
-
-      const supabaseUser = users.users.find((u: any) => u.email === req.user!.email);
-      if (!supabaseUser) {
-        return res.status(404).json({ error: 'User not found in authentication system' });
-      }
+      // Update the password. updateUserById is an admin operation, so a
+      // service-role client is required here — but only for this step.
+      const supabaseAdmin = createClient(
+        supabaseUrl,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
 
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-        supabaseUser.id,
+        signInData.user.id,
         { password: newPassword }
       );
 
@@ -2185,7 +2167,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // POST /api/admin/customers/:id/profile-picture - Update customer profile picture
   app.post('/api/admin/customers/:id/profile-picture', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = req.params.id;
+      const { id } = req.params;
       const { profilePhoto } = req.body;
       if (!profilePhoto) {
         return res.status(400).json({ error: 'profilePhoto is required' });
@@ -2510,14 +2492,16 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // STEP 1: Authenticate via Supabase Auth
+      // SECURITY: Use anon key (not service-role key) for user authentication.
+      // The service-role key bypasses RLS and is only for admin operations.
       const { createClient } = await import('@supabase/supabase-js');
-      const supabaseAdmin = createClient(
-        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY!;
+      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      });
 
-      const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
         email,
         password
       });
@@ -2549,8 +2533,8 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             accountNumber: `${generateAccountNumber()}`,
             accountId: randomUUID(),
             balance: '0',
-            isActive: true,
-            isVerified: true,
+            isActive: false,
+            isVerified: false,
             transferPin: supabaseUser.user_metadata?.transfer_pin || '',
             role: supabaseUser.app_metadata?.role || 'customer'
           });
@@ -2644,21 +2628,33 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // LOGOUT ENDPOINT - Terminates session and clears credentials
   app.post('/api/auth/logout', async (req: Request, res: Response) => {
     try {
-      // Clear session from memory cache
+      // Sign out from Supabase to invalidate the JWT server-side
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY!;
+      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      });
+      // Sign out from Supabase to invalidate the JWT
+      await supabaseClient.auth.signOut().catch(() => {});
+
+      // Clear session from in-memory cache
       const authHeader = req.headers.authorization;
       if (authHeader) {
         const token = authHeader.replace('Bearer ', '');
-        // Token is from Supabase JWT - logging is sufficient for session termination
-        // Supabase invalidates JWTs on server side automatically
+        // Remove any cached session keyed by the token
+        if (sessionCache && sessionCache.has(token)) {
+          sessionCache.delete(token);
+        }
       }
-      
-      return res.json({ 
+
+      return res.json({
         message: "Logged out successfully",
         status: "ok"
       });
     } catch (error: any) {
       // Even if error, consider logout successful
-      return res.json({ 
+      return res.json({
         message: "Logged out successfully",
         status: "ok"
       });
