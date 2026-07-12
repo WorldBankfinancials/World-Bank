@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +36,7 @@ export default function Transfer() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const user = (userProfile as any as User) || null;
   
   const [amount, setAmount] = useState("");
@@ -83,11 +85,7 @@ export default function Transfer() {
     { icon: Send, label: "Express Transfer", description: "Fast international delivery", action: () => setTransferType("express") }
   ];
 
-  const recentContacts = [
-    { name: "John Smith", account: "****1234", lastAmount: "$500" },
-    { name: "Sarah Wilson", account: "****5678", lastAmount: "$1,200" },
-    { name: "Mike Chen", account: "****9012", lastAmount: "$750" }
-  ];
+  const recentContacts: Array<{ name: string; account: string; lastAmount: string }> = []; // TODO: fetch from API
 
   const handleTransfer = async () => {
     try {
@@ -181,15 +179,21 @@ export default function Transfer() {
     }
     
     try {
-      // Verify PIN and create transfer request - ensure all fields have values
+      // Validate required fields before submission - reject empty fields instead of sending dummy data
+      if (!recipientDetails.fullName?.trim() || !recipientDetails.accountNumber?.trim()) {
+        toast({ title: 'Error', description: 'Please fill in all required fields', variant: 'destructive' });
+        setIsProcessing(false);
+        return;
+      }
+
       const transferData = {
         amount: parsedAmount,
-        recipientName: recipientDetails.fullName && recipientDetails.fullName.trim() ? recipientDetails.fullName : 'Transfer Recipient',
-        recipientAccount: recipientDetails.accountNumber && recipientDetails.accountNumber.trim() ? recipientDetails.accountNumber : '00000000',
-        recipientCountry: recipientDetails.country && recipientDetails.country.trim() ? recipientDetails.country : 'US',
-        bankName: recipientDetails.bankName && recipientDetails.bankName.trim() ? recipientDetails.bankName : 'Bank',
-        swiftCode: recipientDetails.swiftCode && recipientDetails.swiftCode.trim() ? recipientDetails.swiftCode : 'INTLUS',
-        purpose: recipientDetails.purpose && recipientDetails.purpose.trim() ? recipientDetails.purpose : 'transfer',
+        recipientName: recipientDetails.fullName,
+        recipientAccount: recipientDetails.accountNumber,
+        recipientCountry: recipientDetails.country || 'US',
+        bankName: recipientDetails.bankName || '',
+        swiftCode: recipientDetails.swiftCode || '',
+        purpose: recipientDetails.purpose || 'transfer',
         transferPin: transferPin
       };
       
@@ -220,6 +224,9 @@ export default function Transfer() {
         setTransferReference(txnId);
         setTransferStatus("processing");
         setShowPendingStatus(true);
+        
+        // Navigate to the transfer processing status page
+        setLocation(`/transfer-processing?id=${txnId}`);
         
         // Refresh user data to reflect balance changes - immediately and cached
         try {
