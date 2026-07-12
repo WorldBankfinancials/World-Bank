@@ -2,7 +2,7 @@
  * Safe localStorage utilities for production use
  */
 
-const STORAGE_PREFIX = 'wb_';
+const STORAGE_PREFIX = 'bank_';
 
 export function setStorageItem(key: string, value: unknown): void {
   try {

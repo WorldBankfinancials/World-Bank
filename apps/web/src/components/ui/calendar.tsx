@@ -50,15 +50,15 @@ function Calendar({
           "aria-selected:bg-accent aria-selected:text-accent-foreground rounded-none",
         hidden: "invisible",
         ...classNames,
-      }}
+      } as any}
       components={{
-        Chevron: ({ ...props }) =>
+        Chevron: ({ ...props }: any) =>
           props.orientation === "left" ? (
             <ChevronLeft className="size-4" />
           ) : (
             <ChevronRight className="size-4" />
           ),
-      }}
+      } as any}
       {...props}
     />
   )
