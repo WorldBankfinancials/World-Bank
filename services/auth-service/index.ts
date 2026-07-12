@@ -1,8 +1,3 @@
-/**
- * auth-service
- *
- * Service entry point for the auth-service microservice.
- */
-
+export * from '../../packages/shared';
 export const serviceName = 'auth-service';
 export default { serviceName };
