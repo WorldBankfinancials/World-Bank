@@ -3,11 +3,25 @@ import { storage } from './storage-factory';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
 import * as bcrypt from 'bcryptjs';
 import { generateTransactionId, generateReferenceNumber } from './crypto-utils';
+import { transactionRateLimiter } from './rate-limiter';
+import { supabase } from './supabase-public-storage';
 
 export function setupTransferRoutes(app: Express) {
   // Regular Transfer API - PROTECTED: requires authentication
-  app.post('/api/transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/transfers', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      // Idempotency check - prevent duplicate transfers
+      const { idempotencyKey } = req.body;
+      if (idempotencyKey) {
+        const { data: existing } = await supabase.from('transactions')
+          .select('id, reference')
+          .eq('metadata->>idempotencyKey', idempotencyKey)
+          .limit(1);
+        if (existing && existing.length > 0) {
+          return res.json(existing[0]);
+        }
+      }
+
       const {
         amount,
         recipientName,
@@ -36,6 +50,17 @@ export function setupTransferRoutes(app: Express) {
       }
       if (!recipientAccount) {
         return res.status(400).json({ message: "Recipient account/number is required" });
+      }
+
+      // Negative/zero transfer amount protection
+      if (!amount || isNaN(parseFloat(String(amount))) || parseFloat(String(amount)) <= 0) {
+        return res.status(400).json({ error: 'Transfer amount must be greater than zero' });
+      }
+
+      // Self-transfer protection
+      const senderAccountNumber = String(user.accountNumber || '');
+      if (senderAccountNumber && String(recipientAccount) === senderAccountNumber) {
+        return res.status(400).json({ error: 'Cannot transfer to your own account' });
       }
 
       // PIN VALIDATION - Verify against stored PIN
@@ -130,7 +155,7 @@ export function setupTransferRoutes(app: Express) {
   });
 
   // International Transfer API - PROTECTED: requires authentication
-  app.post('/api/international-transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/international-transfers', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const {
         amount,
@@ -143,11 +168,22 @@ export function setupTransferRoutes(app: Express) {
         transferPin
       } = req.body;
 
+      // Negative/zero transfer amount protection
+      if (!amount || isNaN(parseFloat(String(amount))) || parseFloat(String(amount)) <= 0) {
+        return res.status(400).json({ error: 'Transfer amount must be greater than zero' });
+      }
+
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
       const user = await storage.getUserByEmail(req.user!.email);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
+      }
+
+      // Self-transfer protection
+      const senderAccountNumber = String(user.accountNumber || '');
+      if (senderAccountNumber && String(accountNumber) === senderAccountNumber) {
+        return res.status(400).json({ error: 'Cannot transfer to your own account' });
       }
       
       // PIN VALIDATION - Verify against stored PIN
@@ -311,6 +347,11 @@ export function setupTransferRoutes(app: Express) {
       
       if (!targetTxn) {
         return res.status(404).json({ message: "Transfer not found or already processed" });
+      }
+
+      // Only allow approving transfers that are currently in 'processing' status
+      if (targetTxn.status !== 'processing') {
+        return res.status(400).json({ error: 'Transfer is not in processing status' });
       }
 
       // ✅ CRITICAL: When approved, funds are now TRANSFERRED (already debited)

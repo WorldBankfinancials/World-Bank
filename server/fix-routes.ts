@@ -99,8 +99,8 @@ export async function registerRoutes(app: Express) {
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      const updates = req.body;
-      const updatedUser = await storage.updateUser(user.id, updates);
+      const { role, isVerified, isActive, id, ...allowedUpdates } = req.body;
+      const updatedUser = await storage.updateUser(user.id, allowedUpdates);
       return res.json(sanitizeUser(updatedUser));
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to update user profile' });
@@ -194,9 +194,10 @@ export async function registerRoutes(app: Express) {
   });
 
   // POST /api/verify-pin - Verify transfer PIN
-  app.post('/api/verify-pin', async (req: Request, res: Response) => {
+  app.post('/api/verify-pin', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { email, pin } = req.body;
+      const { pin } = req.body;
+      const email = req.user!.email;
       if (!email || !pin) {
         return res.status(400).json({ error: 'Email and PIN required' });
       }
@@ -386,7 +387,7 @@ export async function registerRoutes(app: Express) {
   // ==================== AUTH ENDPOINTS ====================
 
   // LOGIN - Supabase Auth + Auto-sync to users table
-  app.post('/api/auth/login', async (req: Request, res: Response) => {
+  app.post('/api/auth/login', authRateLimiter, async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
       if (!email || !password) {
@@ -524,7 +525,7 @@ export async function registerRoutes(app: Express) {
   });
 
   // Admin login
-  app.post('/api/admin/login', async (req: Request, res: Response) => {
+  app.post('/api/admin/login', authRateLimiter, async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
       if (!email || !password) {
@@ -605,7 +606,7 @@ export async function registerRoutes(app: Express) {
   });
 
   // POST /api/add-funds - Add funds to account
-  app.post('/api/add-funds', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/add-funds', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { method, amount } = req.body;
       if (!method || !amount || isNaN(parseFloat(String(amount))) || parseFloat(String(amount)) <= 0) {
@@ -888,12 +889,18 @@ export async function registerRoutes(app: Express) {
   });
 
   // POST /api/loans/apply - Apply for a new loan
-  app.post('/api/loans/apply', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/loans/apply', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { loanType, principalAmount, interestRate, termMonths, transferPin } = req.body;
       if (!loanType || !principalAmount || !interestRate || !termMonths) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
+      const principal = Number(principalAmount);
+      const rate = Number(interestRate);
+      const term = Number(termMonths);
+      if (isNaN(principal) || principal <= 0) return res.status(400).json({ error: 'Invalid principal amount' });
+      if (isNaN(rate) || rate < 0 || rate > 100) return res.status(400).json({ error: 'Invalid interest rate' });
+      if (isNaN(term) || term < 1 || term > 360) return res.status(400).json({ error: 'Invalid term (must be 1-360 months)' });
       const user = await storage.getUserByEmail(req.user!.email);
       if (!user) return res.status(404).json({ error: 'User not found' });
       if (!user.transferPin) return res.status(400).json({ error: 'PIN not set' });
@@ -932,6 +939,9 @@ export async function registerRoutes(app: Express) {
   // POST /api/loans/:id/approve - Approve a loan (admin only)
   app.post('/api/loans/:id/approve', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const { data: loan, error: loanError } = await supabase.from('loans').select('status').eq('id', req.params.id).single();
+      if (loanError || !loan) return res.status(404).json({ error: 'Loan not found' });
+      if (loan.status !== 'pending') return res.status(400).json({ error: 'Loan is not in pending status' });
       const { data, error } = await supabase
         .from('loans')
         .update({
@@ -954,6 +964,9 @@ export async function registerRoutes(app: Express) {
   // POST /api/loans/:id/reject - Reject a loan (admin only)
   app.post('/api/loans/:id/reject', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const { data: loan, error: loanError } = await supabase.from('loans').select('status').eq('id', req.params.id).single();
+      if (loanError || !loan) return res.status(404).json({ error: 'Loan not found' });
+      if (loan.status !== 'pending') return res.status(400).json({ error: 'Loan is not in pending status' });
       const { data, error } = await supabase
         .from('loans')
         .update({ status: 'rejected' })
