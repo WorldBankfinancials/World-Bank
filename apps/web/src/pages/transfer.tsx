@@ -1,0 +1,795 @@
+import Header from "@/components/Header";
+import BottomNavigation from "@/components/BottomNavigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useToast } from "@/hooks/use-toast";
+import { COUNTRIES } from "@/data/countries";
+import { 
+  Send, 
+  Globe, 
+  Building, 
+  Smartphone,
+  Users,
+  Clock,
+  Shield,
+  CheckCircle,
+  AlertCircle
+} from "lucide-react";
+
+interface User {
+  id: number;
+  email: string;
+  fullName?: string;
+  balance?: number;
+  transferPin?: string;
+}
+
+export default function Transfer() {
+  const { t } = useLanguage();
+  const { userProfile } = useAuth();
+  const { toast } = useToast();
+  const user = (userProfile as any as User) || null;
+  
+  const [amount, setAmount] = useState("");
+  const [transferType, setTransferType] = useState("international");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showPinVerification, setShowPinVerification] = useState(false);
+  const [transferPin, setTransferPin] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [showPendingStatus, setShowPendingStatus] = useState(false);
+  const [transferReference, setTransferReference] = useState("");
+  const [transferStatus, setTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
+  const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
+  
+  // International transfer details
+  const [recipientDetails, setRecipientDetails] = useState({
+    fullName: "",
+    address: "",
+    city: "",
+    state: "",
+    country: "",
+    postalCode: "",
+    phoneNumber: "",
+    email: "",
+    bankName: "",
+    bankAddress: "",
+    swiftCode: "",
+    iban: "",
+    accountNumber: "",
+    routingNumber: "",
+    purpose: "",
+    relationship: ""
+  });
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">{t('loading')}</div>
+      </div>
+    );
+  }
+
+  const quickTransferOptions = [
+    { icon: Globe, label: "International Wire", description: "SWIFT transfers worldwide", action: () => setTransferType("international") },
+    { icon: Building, label: "Cross-Border Bank", description: "Bank to bank transfers", action: () => setTransferType("bank") },
+    { icon: Smartphone, label: "Global Mobile Money", description: "190+ countries coverage", action: () => setTransferType("mobile") },
+    { icon: Send, label: "Express Transfer", description: "Fast international delivery", action: () => setTransferType("express") }
+  ];
+
+  const recentContacts = [
+    { name: "John Smith", account: "****1234", lastAmount: "$500" },
+    { name: "Sarah Wilson", account: "****5678", lastAmount: "$1,200" },
+    { name: "Mike Chen", account: "****9012", lastAmount: "$750" }
+  ];
+
+  const handleTransfer = async () => {
+    try {
+      if (!amount) {
+        toast({
+          title: 'Amount required',
+          description: 'Please enter a transfer amount.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      if (!recipientDetails.fullName) {
+        toast({
+          title: 'Recipient name required',
+          description: 'Please enter the recipient name.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      if (!recipientDetails.accountNumber) {
+        toast({
+          title: 'Account number required',
+          description: 'Please enter the recipient account number.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Show PIN verification modal - let backend validate balance
+      setShowPinVerification(true);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error?.message || 'An error occurred',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const verifyPinAndTransfer = async () => {
+    // Validation: Check user and userProfile are loaded - use either
+    const emailToUse = user?.email || userProfile?.email;
+    if (!emailToUse) {
+      setPinError("User profile not loaded. Please refresh the page.");
+      return;
+    }
+    
+    if (!transferPin || transferPin.length !== 4) {
+      setPinError("Please enter a 4-digit PIN");
+      return;
+    }
+
+    // Verify PIN with backend
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const pinResponse = await authenticatedFetch('/api/verify-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userProfile?.email || user?.email!,
+          pin: transferPin
+        })
+      });
+      
+      let pinResult;
+      try {
+        pinResult = await pinResponse.json();
+      } catch (e) {
+        setPinError("Failed to parse PIN verification response");
+        return;
+      }
+      if (!pinResult.success) {
+        setPinError("Invalid PIN");
+        return;
+      }
+    } catch (error) {
+      setPinError("PIN verification failed");
+      return;
+    }
+
+    setPinError("");
+    setIsProcessing(true);
+    
+    const parsedAmount = parseFloat(amount) || 0;
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setPinError("Invalid transfer amount");
+      setIsProcessing(false);
+      return;
+    }
+    
+    try {
+      // Verify PIN and create transfer request - ensure all fields have values
+      const transferData = {
+        amount: parsedAmount,
+        recipientName: recipientDetails.fullName && recipientDetails.fullName.trim() ? recipientDetails.fullName : 'Transfer Recipient',
+        recipientAccount: recipientDetails.accountNumber && recipientDetails.accountNumber.trim() ? recipientDetails.accountNumber : '00000000',
+        recipientCountry: recipientDetails.country && recipientDetails.country.trim() ? recipientDetails.country : 'US',
+        bankName: recipientDetails.bankName && recipientDetails.bankName.trim() ? recipientDetails.bankName : 'Bank',
+        swiftCode: recipientDetails.swiftCode && recipientDetails.swiftCode.trim() ? recipientDetails.swiftCode : 'INTLUS',
+        purpose: recipientDetails.purpose && recipientDetails.purpose.trim() ? recipientDetails.purpose : 'transfer',
+        transferPin: transferPin
+      };
+      
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+
+      const response = await authenticatedFetch('/api/transfers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(transferData)
+      });
+
+      
+      
+      if (response.ok) {
+        let result;
+        try {
+          result = await response.json();
+        } catch (e) {
+          console.error('Failed to parse transfer response:', e);
+          setPinError("Failed to parse transfer response");
+          setIsProcessing(false);
+          return;
+        }
+        
+        setShowPinVerification(false);
+        setTransferPin("");
+        const txnId = result.transactionId || result.id || `WB-${Date.now()}`;
+        setTransferReference(txnId);
+        setTransferStatus("processing");
+        setShowPendingStatus(true);
+        
+        // Refresh user data to reflect balance changes - immediately and cached
+        try {
+          const { authenticatedFetch, queryClient } = await import('@/lib/queryClient');
+          // Force fresh fetch of updated user balance
+          const userResponse = await authenticatedFetch('/api/user');
+          if (userResponse.ok) {
+            const freshUser = await userResponse.json();
+            if (freshUser && freshUser.balance !== undefined) {
+              localStorage.setItem('userProfile', JSON.stringify({
+                ...JSON.parse(localStorage.getItem('userProfile') || '{}'),
+                balance: freshUser.balance
+              }));
+            }
+          }
+          queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        } catch (e) {
+          console.error('Failed to refresh balance:', e);
+        }
+        
+        // Poll for transfer status updates (secret admin approval happens in background)
+        const interval = setInterval(async () => {
+          try {
+            const { authenticatedFetch } = await import('@/lib/queryClient');
+            const statusResponse = await authenticatedFetch(`/api/transfers/${txnId}/status`);
+            if (statusResponse.ok) {
+              const statusData = await statusResponse.json();
+              if (statusData.status === 'approved' || statusData.status === 'completed') {
+                setTransferStatus('success');
+                clearInterval(interval);
+              } else if (statusData.status === 'rejected' || statusData.status === 'failed') {
+                setTransferStatus('failed');
+                clearInterval(interval);
+              }
+            }
+          } catch (error) {
+            // Silent error - continue polling
+          }
+        }, 3000); // Poll every 3 seconds
+        
+        setPollInterval(interval);
+        
+        // Reset form
+        setAmount("");
+        setRecipientDetails({
+          fullName: "",
+          address: "",
+          city: "",
+          state: "",
+          country: "",
+          postalCode: "",
+          phoneNumber: "",
+          email: "",
+          bankName: "",
+          bankAddress: "",
+          swiftCode: "",
+          iban: "",
+          accountNumber: "",
+          routingNumber: "",
+          purpose: "",
+          relationship: ""
+        });
+      } else {
+        const statusCode = response.status;
+        let error;
+        try {
+          error = await response.json();
+        } catch (e) {
+          console.error(`Transfer failed with status ${statusCode}:`, e);
+          setPinError(`Transfer failed (${statusCode}). Please try again.`);
+          setIsProcessing(false);
+          return;
+        }
+        
+        setPinError(error?.message || error?.error || `Transfer failed (${statusCode}). Please verify all details and try again.`);
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      
+      setPinError("Network connection error. Check your internet and try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Show transfer status interface
+  if (showPendingStatus) {
+    const statusConfig = {
+      processing: {
+        icon: Clock,
+        bgColor: 'bg-blue-100',
+        iconColor: 'text-blue-600',
+        title: 'Processing',
+        message: 'Your transfer is being securely processed...',
+        statusText: 'Processing',
+        statusColor: 'text-blue-600',
+        steps: [
+          { done: true, text: 'Transfer request verified' },
+          { done: true, text: 'Security verification complete' },
+          { done: false, text: 'Processing transfer' }
+        ]
+      },
+      pending: {
+        icon: Clock,
+        bgColor: 'bg-orange-100',
+        iconColor: 'text-orange-600',
+        title: 'Pending',
+        message: 'Your transfer is being reviewed and will be processed shortly...',
+        statusText: 'Pending',
+        statusColor: 'text-orange-600',
+        steps: [
+          { done: true, text: 'Transfer request verified' },
+          { done: true, text: 'Security verification complete' },
+          { done: true, text: 'In review' }
+        ]
+      },
+      success: {
+        icon: CheckCircle,
+        bgColor: 'bg-green-100',
+        iconColor: 'text-green-600',
+        title: 'Success',
+        message: 'Your transfer has been approved and is being processed to the recipient bank.',
+        statusText: 'Success',
+        statusColor: 'text-green-600',
+        steps: [
+          { done: true, text: 'Transfer request verified' },
+          { done: true, text: 'Security verification complete' },
+          { done: true, text: 'Transfer approved' }
+        ]
+      },
+      failed: {
+        icon: AlertCircle,
+        bgColor: 'bg-red-100',
+        iconColor: 'text-red-600',
+        title: 'Transfer Failed',
+        message: 'Your transfer could not be processed. Please contact support for assistance.',
+        statusText: 'Failed',
+        statusColor: 'text-red-600',
+        steps: [
+          { done: true, text: 'Transfer request verified' },
+          { done: true, text: 'Security verification complete' },
+          { done: false, text: 'Transfer failed' }
+        ]
+      }
+    };
+
+    const config = statusConfig[transferStatus];
+    const Icon = config.icon;
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header user={undefined} />
+        
+        <div className="px-4 py-6 pb-20">
+          <div className="max-w-md mx-auto">
+            <Card className="text-center">
+              <CardContent className="pt-6">
+                <div className="mb-6">
+                  <div className={`w-20 h-20 ${config.bgColor} rounded-full flex items-center justify-center mx-auto mb-4`}>
+                    <Icon className={`w-10 h-10 ${config.iconColor} ${transferStatus === 'processing' || transferStatus === 'pending' ? 'animate-spin' : ''}`} />
+                  </div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">{config.title}</h2>
+                  <p className="text-gray-600 mb-4">{config.message}</p>
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">Reference Number</span>
+                    <span className="font-mono text-sm font-medium">{transferReference}</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">Status</span>
+                    <span className={`text-sm font-medium ${config.statusColor}`}>{config.statusText}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Estimated Time</span>
+                    <span className="text-sm font-medium">{transferStatus === 'success' ? '1-3 business days' : 'Reviewing...'}</span>
+                  </div>
+                </div>
+                
+                <div className="text-left space-y-3 mb-6">
+                  {config.steps.map((step, idx) => (
+                    <div key={idx} className="flex items-center">
+                      <div className={`w-2 h-2 ${step.done ? 'bg-green-500' : 'bg-gray-300'} rounded-full mr-3 ${!step.done && transferStatus !== 'failed' ? 'animate-pulse' : ''}`}></div>
+                      <span className={`text-sm ${step.done ? 'text-gray-700' : 'text-gray-500'}`}>{step.text}</span>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="flex space-x-3">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => {
+                      setShowPendingStatus(false);
+                      if (pollInterval) clearInterval(pollInterval);
+                    }}
+                  >
+                    New Transfer
+                  </Button>
+                  {transferStatus === 'failed' && (
+                    <Button 
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => {
+                        toast({
+                          title: 'Support',
+                          description: 'Opening live chat...',
+                        });
+                      }}
+                    >
+                      Contact Support
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        
+        <BottomNavigation />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header user={(userProfile as any || user as any) || undefined} />
+      
+      <div className="px-4 py-6 pb-20">
+        {/* Header Section */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">International Money Transfer</h1>
+            <p className="text-sm text-gray-600">Send money worldwide with complete recipient details</p>
+          </div>
+          <div className="flex space-x-2">
+            <Badge className="bg-green-100 text-green-800">
+              <Shield className="w-3 h-3 mr-1" />
+              Secure
+            </Badge>
+            <Badge className="bg-blue-100 text-blue-800">
+              <Globe className="w-3 h-3 mr-1" />
+              190+ Countries
+            </Badge>
+          </div>
+        </div>
+
+        {/* Quick Transfer Options */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Transfer Options</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
+              {quickTransferOptions.map((option, index) => (
+                <Button
+                  key={`item-${index}`}
+                  variant="outline"
+                  onClick={option.action}
+                  className={`h-20 flex flex-col items-center space-y-2 ${
+                    transferType === option.label.toLowerCase().replace(" ", "") ? 'border-blue-500 bg-blue-50' : ''
+                  }`}
+                >
+                  <option.icon className="w-6 h-6" />
+                  <div className="text-center">
+                    <div className="text-xs font-medium">{option.label}</div>
+                    <div className="text-xs text-gray-500">{option.description}</div>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* International Transfer Form */}
+        <Card className="mb-6">
+          <CardHeader className="bg-blue-50 border-b">
+            <CardTitle>{t('transfer_details') || 'Enter Transfer Details'}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5 pt-6">
+            {/* Transfer Amount */}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <Label htmlFor="amount" className="text-lg font-semibold">Transfer Amount (USD)</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="text-2xl font-bold text-center mt-2"
+              />
+              <p className="text-sm text-gray-600 mt-1">Exchange rate: 1 USD = 1.00 USD • Fee: $15.00</p>
+            </div>
+
+            {/* Recipient Information - Simplified */}
+            <div>
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">{t('recipient_information') || 'Recipient Information'}</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="fullName">Full Name *</Label>
+                  <Input
+                    id="fullName"
+                    placeholder="John Smith"
+                    value={recipientDetails.fullName as any}
+                    onChange={(e) => setRecipientDetails(prev => ({...prev, fullName: e.target.value}))}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="country">Country *</Label>
+                    <Select value={recipientDetails.country} onValueChange={(value) => setRecipientDetails(prev => ({...prev, country: value}))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COUNTRIES.map(country => (
+                          <SelectItem key={country} value={country}>{country}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="phoneNumber">Phone Number</Label>
+                    <Input
+                      id="phoneNumber"
+                      placeholder="+1 555 123 4567"
+                      value={recipientDetails.phoneNumber}
+                      onChange={(e) => setRecipientDetails(prev => ({...prev, phoneNumber: e.target.value}))}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bank Information */}
+            <div>
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">{t('bank_details')}</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="bankName">Bank Name</Label>
+                  <Input
+                    id="bankName"
+                    placeholder="JPMorgan Chase Bank"
+                    value={recipientDetails.bankName}
+                    onChange={(e) => setRecipientDetails(prev => ({...prev, bankName: e.target.value}))}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="bankAddress">Bank Address</Label>
+                  <Input
+                    id="bankAddress"
+                    placeholder="270 Park Avenue, New York, NY 10017"
+                    value={recipientDetails.bankAddress}
+                    onChange={(e) => setRecipientDetails(prev => ({...prev, bankAddress: e.target.value}))}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="swiftCode">SWIFT/BIC Code</Label>
+                    <Input
+                      id="swiftCode"
+                      placeholder="CHASUS33"
+                      value={recipientDetails.swiftCode}
+                      onChange={(e) => setRecipientDetails(prev => ({...prev, swiftCode: e.target.value}))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="iban">IBAN (if applicable)</Label>
+                    <Input
+                      id="iban"
+                      placeholder="GB82 WEST 1234 5698 7654 32"
+                      value={recipientDetails.iban}
+                      onChange={(e) => setRecipientDetails(prev => ({...prev, iban: e.target.value}))}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="accountNumber">Account Number</Label>
+                    <Input
+                      id="accountNumber"
+                      placeholder="123456789"
+                      value={recipientDetails.accountNumber}
+                      onChange={(e) => setRecipientDetails(prev => ({...prev, accountNumber: e.target.value}))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="routingNumber">Routing Number (US)</Label>
+                    <Input
+                      id="routingNumber"
+                      placeholder="021000021"
+                      value={recipientDetails.routingNumber}
+                      onChange={(e) => setRecipientDetails(prev => ({...prev, routingNumber: e.target.value}))}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Transfer Purpose */}
+            <div>
+              <h3 className="font-semibold text-lg mb-3 text-gray-800">Transfer Purpose</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="purpose">Purpose of Transfer</Label>
+                  <Select value={recipientDetails.purpose} onValueChange={(value) => setRecipientDetails(prev => ({...prev, purpose: value}))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select purpose" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="family_support">Family Support</SelectItem>
+                      <SelectItem value="education">Education Expenses</SelectItem>
+                      <SelectItem value="medical">Medical Expenses</SelectItem>
+                      <SelectItem value="business">Business Payment</SelectItem>
+                      <SelectItem value="investment">Investment</SelectItem>
+                      <SelectItem value="property">Property Purchase</SelectItem>
+                      <SelectItem value="gift">Gift</SelectItem>
+                      <SelectItem value="loan_repayment">Loan Repayment</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="relationship">Relationship to Recipient</Label>
+                  <Select value={recipientDetails.relationship} onValueChange={(value) => setRecipientDetails(prev => ({...prev, relationship: value}))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select relationship" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="family">Family Member</SelectItem>
+                      <SelectItem value="friend">Friend</SelectItem>
+                      <SelectItem value="business_partner">Business Partner</SelectItem>
+                      <SelectItem value="employee">Employee</SelectItem>
+                      <SelectItem value="service_provider">Service Provider</SelectItem>
+                      <SelectItem value="myself">Myself</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Transfer Summary */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-lg mb-3">Transfer Summary</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Transfer Amount:</span>
+                  <span className="font-medium">${amount || "0.00"} USD</span>
+                </div>
+                <div className="flex justify-between border-t pt-2 font-semibold">
+                  <span>Amount to Send:</span>
+                  <span>${amount || "0.00"} USD</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Fees and exchange rates will be shown at confirmation</p>
+              </div>
+            </div>
+
+            <Button 
+              onClick={handleTransfer}
+              disabled={!amount || !recipientDetails.fullName || !recipientDetails.accountNumber || isProcessing}
+              className="w-full bg-blue-600 text-white h-12 hover:bg-blue-700"
+            >
+              {isProcessing ? (
+                <>
+                  <Clock className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Globe className="w-4 h-4 mr-2" />
+                  Send ${amount || "0.00"} Internationally
+                </>
+              )}
+            </Button>
+            
+            {/* PIN Verification Modal */}
+            {showPinVerification && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                  <div className="text-center mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Enter Transfer PIN</h3>
+                    <p className="text-sm text-gray-600">
+                      Please enter your 4-digit PIN to authorize this ${amount} transfer
+                    </p>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <input
+                      type="password"
+                      value={transferPin}
+                      onChange={(e) => setTransferPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      className="w-full text-center text-2xl tracking-widest p-4 border border-gray-300 rounded-lg"
+                      placeholder="****"
+                      maxLength={4}
+                      autoFocus
+                    />
+                    {pinError && (
+                      <p className="text-red-600 text-sm mt-2 text-center">{pinError}</p>
+                    )}
+                  </div>
+                  
+                  <div className="flex space-x-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowPinVerification(false);
+                        setTransferPin("");
+                        setPinError("");
+                      }}
+                      className="flex-1"
+                      disabled={isProcessing}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={verifyPinAndTransfer}
+                      disabled={transferPin.length !== 4 || isProcessing}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {isProcessing ? "Processing..." : "Confirm Transfer"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Contacts */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Contacts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentContacts.map((contact, index) => (
+                <div key={`item-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Users className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{contact.name}</p>
+                      <p className="text-sm text-gray-600">{contact.account}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500">Last: {contact.lastAmount}</p>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => setRecipientDetails(prev => ({...prev, fullName: contact.name}))}
+                    >
+                      Select
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <BottomNavigation />
+    </div>
+  );
+}
