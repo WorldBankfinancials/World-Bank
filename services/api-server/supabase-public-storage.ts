@@ -109,7 +109,7 @@ const mapMessage = (row: Record<string, any>): Message => ({
   isRead: row.is_read ?? false,
   sessionId: row.session_id ?? null,
   createdAt: row.created_at ?? null,
-} as Message);
+} as unknown as Message);
 
 const mapAdminAction = (row: Record<string, any>): AdminAction => ({
   id: row.id,
@@ -119,7 +119,7 @@ const mapAdminAction = (row: Record<string, any>): AdminAction => ({
   targetType: row.target_type ?? null,
   details: row.details ?? null,
   createdAt: row.created_at ?? null,
-} as AdminAction);
+} as unknown as AdminAction);
 
 const mapCard = (row: Record<string, any>): Card => ({
   id: row.id,
@@ -303,7 +303,7 @@ export class SupabasePublicStorage implements IStorage {
       if (updates.role        !== undefined) updateData.role         = updates.role;
       if (updates.profession  !== undefined) updateData.occupation   = updates.profession;
       if (updates.dateOfBirth !== undefined) updateData.date_of_birth = updates.dateOfBirth;
-      if ((updates as any).lastLogin !== undefined) updateData.last_login = (updates as any).lastLogin;
+      if ((updates as unknown as Record<string, unknown>).lastLogin !== undefined) updateData.last_login = (updates as unknown as Record<string, unknown>).lastLogin;
       if (Object.keys(updateData).length <= 1) return this.getUser(id);
       const { data: user, error } = await supabase
         .from('user_profiles')
@@ -328,7 +328,10 @@ export class SupabasePublicStorage implements IStorage {
         .single();
       if (fetchError) throw new Error(`Fetch balance error: ${fetchError.message}`);
       const currentBalance = parseFloat(String(currentUser?.balance || '0')) || 0;
-      const newBalance = Math.max(0, currentBalance + delta);
+      const newBalance = currentBalance + delta;
+      if (newBalance < 0) {
+        throw new Error('Insufficient funds');
+      }
       const user = await withRetry(async () => {
         const { data: user, error } = await supabase
           .from('user_profiles')
@@ -344,7 +347,10 @@ export class SupabasePublicStorage implements IStorage {
       const accounts = await this.getUserAccounts(id);
       if (accounts.length > 0) {
         const primary = accounts[0];
-        const accNew = Math.max(0, parseFloat(String(primary.balance || '0')) + delta);
+        const accNew = parseFloat(String(primary.balance || '0')) + delta;
+        if (accNew < 0) {
+          throw new Error('Insufficient funds');
+        }
         await supabase.from('bank_accounts').update({ balance: accNew.toFixed(2) }).eq('id', primary.id);
       }
       return mapUser(user);
@@ -365,7 +371,7 @@ export class SupabasePublicStorage implements IStorage {
         if (error) throw new Error(`Supabase error: ${error.message}`);
         return accounts || [];
       });
-      return accounts.map(acc => ({ id: acc.id, userId: acc.user_id, accountNumber: acc.account_number, accountType: acc.account_type, balance: acc.balance?.toString() || '0', currency: acc.currency, status: acc.status || 'active', createdAt: acc.created_at, updatedAt: acc.updated_at } as any));
+      return accounts.map(acc => ({ id: acc.id, userId: acc.user_id, accountNumber: acc.account_number, accountType: acc.account_type, balance: acc.balance?.toString() || '0', currency: acc.currency, status: acc.status || 'active', createdAt: acc.created_at, updatedAt: acc.updated_at } as unknown as Account));
     } catch (error) {
       console.error('getUserAccounts error:', error);
       return [];
@@ -513,10 +519,10 @@ export class SupabasePublicStorage implements IStorage {
   async createAdminAction(data: InsertAdminAction): Promise<AdminAction> {
     try {
       const row = {
-        admin_id: (data as any).adminId ?? (data as any).admin_id,
+        admin_id: (data as unknown as Record<string, unknown>).adminId ?? (data as unknown as Record<string, unknown>).admin_id,
         action: data.action,
-        target_id: (data as any).targetId ?? (data as any).target_id,
-        target_type: (data as any).targetType ?? (data as any).target_type,
+        target_id: (data as unknown as Record<string, unknown>).targetId ?? (data as unknown as Record<string, unknown>).target_id,
+        target_type: (data as unknown as Record<string, unknown>).targetType ?? (data as unknown as Record<string, unknown>).target_type,
         details: data.details,
       };
       const { data: action, error } = await supabase.from('admin_actions').insert(row).select().single();
@@ -542,13 +548,13 @@ export class SupabasePublicStorage implements IStorage {
   async createSupportTicket(data: InsertSupportTicket): Promise<SupportTicket> {
     try {
       const row: Record<string, any> = {
-        user_id: (data as any).userId ?? (data as any).user_id,
+        user_id: (data as unknown as Record<string, unknown>).userId ?? (data as unknown as Record<string, unknown>).user_id,
         subject: data.subject,
         description: data.description,
         status: data.status || 'open',
         priority: data.priority || 'medium',
       };
-      if ((data as any).resolvedAt !== undefined) row.resolved_at = (data as any).resolvedAt;
+      if ((data as unknown as Record<string, unknown>).resolvedAt !== undefined) row.resolved_at = (data as unknown as Record<string, unknown>).resolvedAt;
       const { data: ticket, error } = await supabase.from('support_tickets').insert(row).select().single();
       if (error || !ticket) throw error;
       return ticket;
@@ -616,19 +622,19 @@ export class SupabasePublicStorage implements IStorage {
   async createCard(data: InsertCard): Promise<Card> {
     try {
       const row: Record<string, any> = {
-        account_id: (data as any).accountId ?? (data as any).account_id,
-        card_number: (data as any).cardNumber ?? (data as any).card_number,
-        card_type: (data as any).cardType ?? (data as any).card_type,
-        cardholder_name: (data as any).cardholderName ?? (data as any).cardholder_name ?? 'Account Holder',
+        account_id: (data as unknown as Record<string, unknown>).accountId ?? (data as unknown as Record<string, unknown>).account_id,
+        card_number: (data as unknown as Record<string, unknown>).cardNumber ?? (data as unknown as Record<string, unknown>).card_number,
+        card_type: (data as unknown as Record<string, unknown>).cardType ?? (data as unknown as Record<string, unknown>).card_type,
+        cardholder_name: (data as unknown as Record<string, unknown>).cardholderName ?? (data as unknown as Record<string, unknown>).cardholder_name ?? 'Account Holder',
         status: data.status || 'active',
       };
-      if ((data as any).brand !== undefined) row.brand = (data as any).brand;
-      if ((data as any).expiryMonth !== undefined) row.expiry_month = (data as any).expiryMonth;
-      if ((data as any).expiryYear !== undefined) row.expiry_year = (data as any).expiryYear;
-      if ((data as any).dailyLimit !== undefined) row.daily_limit = (data as any).dailyLimit;
-      if ((data as any).monthlyLimit !== undefined) row.monthly_limit = (data as any).monthlyLimit;
-      if ((data as any).isContactless !== undefined) row.is_contactless = (data as any).isContactless;
-      if ((data as any).pinSet !== undefined) row.pin_set = (data as any).pinSet;
+      if ((data as unknown as Record<string, unknown>).brand !== undefined) row.brand = (data as unknown as Record<string, unknown>).brand;
+      if ((data as unknown as Record<string, unknown>).expiryMonth !== undefined) row.expiry_month = (data as unknown as Record<string, unknown>).expiryMonth;
+      if ((data as unknown as Record<string, unknown>).expiryYear !== undefined) row.expiry_year = (data as unknown as Record<string, unknown>).expiryYear;
+      if ((data as unknown as Record<string, unknown>).dailyLimit !== undefined) row.daily_limit = (data as unknown as Record<string, unknown>).dailyLimit;
+      if ((data as unknown as Record<string, unknown>).monthlyLimit !== undefined) row.monthly_limit = (data as unknown as Record<string, unknown>).monthlyLimit;
+      if ((data as unknown as Record<string, unknown>).isContactless !== undefined) row.is_contactless = (data as unknown as Record<string, unknown>).isContactless;
+      if ((data as unknown as Record<string, unknown>).pinSet !== undefined) row.pin_set = (data as unknown as Record<string, unknown>).pinSet;
       const { data: card, error } = await supabase.from('cards').insert(row).select().single();
       if (error || !card) throw error;
       return card;
@@ -685,7 +691,7 @@ export class SupabasePublicStorage implements IStorage {
   async createInvestment(data: InsertInvestment): Promise<Investment> {
     try {
       const row = {
-        user_id: (data as any).userId ?? (data as any).user_id,
+        user_id: (data as unknown as Record<string, unknown>).userId ?? (data as unknown as Record<string, unknown>).user_id,
         type: data.type,
         amount: String(data.amount),
         rate: data.rate !== undefined ? String(data.rate) : undefined,
@@ -712,14 +718,14 @@ export class SupabasePublicStorage implements IStorage {
   async updateInvestment(id: string, updates: Partial<Investment>): Promise<Investment | undefined> {
     try {
       const dbUpdates: Record<string, any> = {};
-      if ((updates as any).userId !== undefined) dbUpdates.user_id = (updates as any).userId;
+      if ((updates as unknown as Record<string, unknown>).userId !== undefined) dbUpdates.user_id = (updates as unknown as Record<string, unknown>).userId;
       if (updates.type !== undefined) dbUpdates.type = updates.type;
       if (updates.amount !== undefined) dbUpdates.amount = String(updates.amount);
       if (updates.rate !== undefined) dbUpdates.rate = String(updates.rate);
       if (updates.status !== undefined) dbUpdates.status = updates.status;
-      if ((updates as any).symbol !== undefined) dbUpdates.symbol = (updates as any).symbol;
-      if ((updates as any).shares !== undefined) dbUpdates.shares = (updates as any).shares;
-      if ((updates as any).assetType !== undefined) dbUpdates.asset_type = (updates as any).assetType;
+      if ((updates as unknown as Record<string, unknown>).symbol !== undefined) dbUpdates.symbol = (updates as unknown as Record<string, unknown>).symbol;
+      if ((updates as unknown as Record<string, unknown>).shares !== undefined) dbUpdates.shares = (updates as unknown as Record<string, unknown>).shares;
+      if ((updates as unknown as Record<string, unknown>).assetType !== undefined) dbUpdates.asset_type = (updates as unknown as Record<string, unknown>).assetType;
       const { data, error } = await supabase.from('investments').update(dbUpdates).eq('id', id).select().single();
       if (error) return undefined;
       return data ? mapInvestment(data) : undefined;
@@ -766,7 +772,7 @@ export class SupabasePublicStorage implements IStorage {
         sender_id: data.senderId,
         sender_role: data.senderRole || 'customer',
         recipient_id: data.recipientId,
-        recipient_role: (data as any).recipientRole || 'admin',
+        recipient_role: (data as unknown as Record<string, unknown>).recipientRole || 'admin',
         content: data.content,
         is_read: data.isRead ?? false,
         session_id: data.sessionId,
@@ -812,11 +818,11 @@ export class SupabasePublicStorage implements IStorage {
   async createAlert(data: InsertAlert): Promise<Alert> {
     try {
       const row = {
-        user_id: (data as any).userId ?? (data as any).user_id,
+        user_id: (data as unknown as Record<string, unknown>).userId ?? (data as unknown as Record<string, unknown>).user_id,
         title: data.title,
         message: data.message,
         type: data.type,
-        is_read: (data as any).isRead ?? (data as any).is_read ?? false,
+        is_read: (data as unknown as Record<string, unknown>).isRead ?? (data as unknown as Record<string, unknown>).is_read ?? false,
       };
       const { data: alert, error } = await supabase.from('alerts').insert(row).select().single();
       if (error || !alert) throw error;

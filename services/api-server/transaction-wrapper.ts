@@ -67,19 +67,20 @@ export class BankingTransaction {
         data: this.results[this.results.length - 1] as T
       };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : 'Internal server error';
       const rollbackFailures = await this.rollback();
       
       if (rollbackFailures.length > 0) {
         return {
           success: false,
-          error: `Transaction failed: ${error.message}. CRITICAL: Rollback had ${rollbackFailures.length} failures: ${rollbackFailures.join('; ')}`
+          error: `Transaction failed: ${errorMsg}. CRITICAL: Rollback had ${rollbackFailures.length} failures: ${rollbackFailures.join('; ')}`
         };
       }
       
       return {
         success: false,
-        error: `Transaction failed: ${error.message}`
+        error: `Transaction failed: ${errorMsg}`
       };
     }
   }
@@ -152,7 +153,7 @@ export async function atomicBalanceUpdate(
       previousBalance: result.previous_balance?.toString()
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Fallback to direct SQL update if RPC not available
     return await fallbackAtomicUpdate(accountId, amountChange, description);
   }
@@ -206,8 +207,8 @@ async function fallbackAtomicUpdate(
 
     return { success: true, newBalance: newBalance.toString() };
 
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return { success: false, error: (error instanceof Error ? error.message : 'Internal server error') };
   }
 }
 
