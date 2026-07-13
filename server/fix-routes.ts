@@ -1296,6 +1296,270 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // ==================== MISSING API ENDPOINTS ====================
+
+  // -------- Cards endpoints --------
+
+  // GET /api/cards - list user's cards
+  app.get('/api/cards', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('cards').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/cards/lock - lock/unlock a card
+  app.post('/api/cards/lock', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { cardId, locked } = req.body;
+      if (!cardId) return res.status(400).json({ error: 'Card ID required' });
+      const { data, error } = await supabase.from('cards').update({
+        status: locked ? 'locked' : 'active',
+        updated_at: new Date().toISOString()
+      }).eq('id', cardId).eq('user_id', req.user!.id).select().single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/cards/settings - update card settings
+  app.post('/api/cards/settings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { cardId, dailyLimit, monthlyLimit, isContactless } = req.body;
+      if (!cardId) return res.status(400).json({ error: 'Card ID required' });
+      const { data, error } = await supabase.from('cards').update({
+        daily_limit: dailyLimit,
+        monthly_limit: monthlyLimit,
+        is_contactless: isContactless,
+        updated_at: new Date().toISOString()
+      }).eq('id', cardId).eq('user_id', req.user!.id).select().single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Alerts endpoints --------
+
+  // GET /api/alerts - list user's alerts
+  app.get('/api/alerts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('alerts').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // PATCH /api/alerts/:id/read - mark alert as read
+  app.patch('/api/alerts/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('alerts').update({
+        is_read: true,
+        read_at: new Date().toISOString()
+      }).eq('id', req.params.id).eq('user_id', req.user!.id).select().single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // DELETE /api/alerts/:id - delete an alert
+  app.delete('/api/alerts/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { error } = await supabase.from('alerts').delete().eq('id', req.params.id).eq('user_id', req.user!.id);
+      if (error) throw error;
+      return res.json({ success: true });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Investments endpoints --------
+
+  // GET /api/investments - list user's investments
+  app.get('/api/investments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('investments').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/market-rates - get market rates from forex table
+  app.get('/api/market-rates', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('forex').select('*').order('currency', { ascending: true });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Currency exchange endpoint --------
+
+  // POST /api/currency-exchange - exchange currency
+  app.post('/api/currency-exchange', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { fromCurrency, toCurrency, amount } = req.body;
+      if (!fromCurrency || !toCurrency || !amount) return res.status(400).json({ error: 'Missing required fields' });
+      const numAmount = parseFloat(String(amount));
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Amount must be greater than zero' });
+
+      // Get exchange rate
+      const { data: rate, error: rateError } = await supabase.from('forex').select('rate').eq('currency', toCurrency).single();
+      if (rateError || !rate) return res.status(400).json({ error: 'Exchange rate not found' });
+
+      const exchangeRate = parseFloat(String((rate as Record<string, unknown>).rate));
+      const convertedAmount = numAmount * exchangeRate;
+
+      // Create transaction record
+      const reference = `EXC${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const { data: txn, error: txnError } = await supabase.from('transactions').insert({
+        from_account_id: null,
+        to_account_id: null,
+        from_user_id: req.user!.id,
+        amount: numAmount.toFixed(2),
+        currency: fromCurrency,
+        exchange_rate: exchangeRate.toFixed(4),
+        converted_amount: convertedAmount.toFixed(2),
+        transaction_type: 'currency_exchange',
+        category: 'exchange',
+        status: 'completed',
+        description: `Currency exchange: ${numAmount} ${fromCurrency} to ${convertedAmount.toFixed(2)} ${toCurrency}`,
+        reference_number: reference,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      }).select().single();
+      if (txnError) throw txnError;
+
+      return res.json({ transaction: txn, convertedAmount: convertedAmount.toFixed(2), rate: exchangeRate });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Support tickets endpoints --------
+
+  // GET /api/support-tickets - list user's support tickets
+  app.get('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('support_tickets').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/support-tickets - create a support ticket
+  app.post('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { subject, description, priority } = req.body;
+      if (!subject || !description) return res.status(400).json({ error: 'Subject and description required' });
+      const ticketId = `TKT${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const { data, error } = await supabase.from('support_tickets').insert({
+        user_id: req.user!.id,
+        ticket_id: ticketId,
+        subject,
+        description,
+        priority: priority || 'medium',
+        status: 'open'
+      }).select().single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/admin/support-tickets - list all support tickets (admin)
+  app.get('/api/admin/support-tickets', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('support_tickets').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Admin transactions list endpoints --------
+
+  // GET /api/admin/transactions - list all transactions (admin)
+  app.get('/api/admin/transactions', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('transactions').select('*').order('created_at', { ascending: false }).limit(100);
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/admin/transactions - create transaction (admin)
+  app.post('/api/admin/transactions', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { accountId, userId, amount, type, description } = req.body;
+      if (!accountId || !amount || !type) return res.status(400).json({ error: 'Missing required fields' });
+      const reference = `ADM${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const { data, error } = await supabase.from('transactions').insert({
+        from_account_id: accountId,
+        to_account_id: null,
+        from_user_id: userId || req.user!.id,
+        amount: Number(amount).toFixed(2),
+        transaction_type: type,
+        category: 'admin',
+        status: 'completed',
+        description: description || 'Admin transaction',
+        reference_number: reference,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      }).select().single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Savings endpoint --------
+
+  // GET /api/savings - list user's savings accounts
+  app.get('/api/savings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('savings').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Payments endpoint --------
+
+  // GET /api/payments - list user's payments
+  app.get('/api/payments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('payments').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
   // Return server
   const httpServer = createServer(app);
   return httpServer;
