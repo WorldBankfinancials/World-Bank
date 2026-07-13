@@ -131,7 +131,7 @@ export default function AdminDashboard() {
 
   // Fetch all transactions (admin) for the reversal feature
   const { data: allTransactions = [], isLoading: transactionsLoading } = useQuery<Transaction[]>({
-    queryKey: ['/api/admin/transactions'],
+    queryKey: ['/api/admin/transaction-routes'],
     staleTime: 30000,
   });
 
@@ -143,7 +143,7 @@ export default function AdminDashboard() {
       const formData = new FormData();
       formData.append('profilePic', imageFile);
       
-      const response = await authenticatedFetch(`/api/admin/customers/${userId}/profile-picture`, {
+      const response = await authenticatedFetch(`/api/admin/users/${userId}/profile-photo`, {
         method: 'POST',
         body: formData,
       });
@@ -245,7 +245,7 @@ export default function AdminDashboard() {
   const resetUserPasswordMutation = useMutation({
     mutationFn: async ({ email, newPassword }: { email: string; newPassword: string }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch(`/api/admin/reset-user-password`, {
+      const response = await authenticatedFetch(`/api/admin/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, newPassword }),
@@ -357,7 +357,7 @@ export default function AdminDashboard() {
         title: "Transaction reversed",
         description: `Transaction #${variables.id} has been reversed.`,
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/transaction-routes'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/pending-transfers'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/stats'] });
       setReverseTxnTarget(null);
