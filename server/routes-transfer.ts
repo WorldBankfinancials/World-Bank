@@ -91,25 +91,13 @@ export function setupTransferRoutes(app: Express) {
         
         // ✅ CRITICAL: DEBIT ACCOUNT IMMEDIATELY WHEN TRANSFER SUBMITTED
         const numAmount = parseFloat(String(amount));
-        
-        // FIX: Get actual balance from all user accounts, not from users.balance
-        const userAccounts = await storage.getUserAccounts(user.id);
-        let currentBalance = 0;
-        if (userAccounts && userAccounts.length > 0) {
-          currentBalance = userAccounts.reduce((sum, acc) => sum + parseFloat(String(acc.balance || '0')), 0);
-        }
-        
         const numFee = Number(fee) || 0;
         const totalDebit = numAmount + numFee;
-        if (currentBalance < totalDebit) {
-          return res.status(400).json({ message: `Insufficient funds. Your total balance is ${currentBalance.toFixed(2)} but you're trying to transfer ${numAmount.toFixed(2)} plus ${numFee.toFixed(2)} fee` });
-        }
         
-        // Deduct amount + fee from user balance (updateUserBalance takes a DELTA - negative to deduct)
-        const newBalance = currentBalance - totalDebit;
-        await storage.updateUserBalance(user.id, -totalDebit);
-        
-        // Use existing userAccounts from above - already fetched
+        // FIX: Get actual balance from all user accounts, not from users.balance
+        // (used only for the friendly insufficient-funds message; the RPC
+        // performs the authoritative atomic overdraft check)
+        const userAccounts = await storage.getUserAccounts(user.id);
         if (!userAccounts || userAccounts.length === 0) {
           return res.status(400).json({ message: "User has no account" });
         }
@@ -117,30 +105,78 @@ export function setupTransferRoutes(app: Express) {
         if (!fromAccountId) {
           return res.status(400).json({ message: "Invalid account ID" });
         }
+        let currentBalance = 0;
+        currentBalance = userAccounts.reduce((sum, acc) => sum + parseFloat(String(acc.balance || '0')), 0);
+        if (currentBalance < totalDebit) {
+          return res.status(400).json({ message: `Insufficient funds. Your total balance is ${currentBalance.toFixed(2)} but you're trying to transfer ${numAmount.toFixed(2)} plus ${numFee.toFixed(2)} fee` });
+        }
         
-        const transactionData: any = {
-          fromUserId: user.id,
-          fromAccountId: fromAccountId,
-          amount: String(amount),
-          currency: 'USD',
-          type: 'transfer',
-          transactionType: 'transfer',
-          status: 'processing',
-          description: `Transfer to ${recipientNameTrunc}`.substring(0, 255),
-          recipientName: recipientNameTrunc,
-          recipientAccount: recipientAccountTrunc,
-          recipientCountry: recipientCountryTrunc,
-          bankName: bankName ? String(bankName).substring(0, 20) : undefined,
-          swiftCode: swiftCode ? String(swiftCode).substring(0, 20) : undefined,
-          transferPurpose: (purpose || 'transfer').substring(0, 20),
-          fee: String(fee)
-        };
-        const transaction = await storage.createTransaction(transactionData);
+        // ✅ ATOMIC TRANSFER: Use the execute_external_transfer RPC to debit
+        // the account and create the transaction record in a single DB
+        // transaction. This eliminates the TOCTOU race condition that existed
+        // with the previous separate read-then-updateUserBalance approach.
+        const reference = `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`;
+        const { data: transferResult, error: transferError } = await supabase
+          .rpc('execute_external_transfer', {
+            p_from_account_id: fromAccountId,
+            p_from_user_id: user.id,
+            p_amount: numAmount,
+            p_fee: numFee,
+            p_currency: 'USD',
+            p_recipient_name: recipientNameTrunc,
+            p_recipient_account: recipientAccountTrunc,
+            p_recipient_country: recipientCountryTrunc,
+            p_bank_name: bankName ? String(bankName).substring(0, 20) : '',
+            p_swift_code: swiftCode ? String(swiftCode).substring(0, 20) : '',
+            p_reference: reference,
+            p_description: `Transfer to ${recipientNameTrunc}`.substring(0, 255),
+            p_transfer_purpose: (purpose || 'transfer').substring(0, 20),
+            p_transaction_type: 'transfer',
+            p_status: 'processing'
+          });
+        if (transferError) throw transferError;
+        
+        const newBalance = currentBalance - totalDebit;
+
+        // After successful transfer, save to recent_contacts
+        try {
+          const { data: existingContact } = await supabase
+            .from('recent_contacts')
+            .select('id, transfer_count')
+            .eq('user_id', user.id)
+            .eq('contact_account', recipientAccountTrunc)
+            .limit(1);
+
+          if (existingContact && existingContact.length > 0) {
+            await supabase.from('recent_contacts').update({
+              contact_name: recipientNameTrunc,
+              contact_bank_name: bankName ? String(bankName).substring(0, 20) : null,
+              contact_swift_code: swiftCode ? String(swiftCode).substring(0, 20) : null,
+              last_amount: numAmount.toFixed(2),
+              transfer_count: (existingContact[0] as Record<string, unknown>).transfer_count as number + 1,
+              updated_at: new Date().toISOString()
+            }).eq('id', (existingContact[0] as Record<string, unknown>).id as string);
+          } else {
+            await supabase.from('recent_contacts').insert({
+              user_id: user.id,
+              contact_name: recipientNameTrunc,
+              contact_account: recipientAccountTrunc,
+              contact_bank_name: bankName ? String(bankName).substring(0, 20) : null,
+              contact_swift_code: swiftCode ? String(swiftCode).substring(0, 20) : null,
+              last_amount: numAmount.toFixed(2),
+              transfer_count: 1
+            });
+          }
+        } catch (contactError: unknown) {
+          // Non-fatal: recent_contacts save failure should not fail the transfer
+          console.warn('Failed to save recent contact:', contactError instanceof Error ? contactError.message : 'Unknown error');
+        }
 
         // Return processing response - transaction submitted and being processed
         res.json({ 
           message: "Transfer submitted successfully - funds debited, processing transfer",
           transactionId: transactionId,
+          transaction: transferResult,
           status: "processing",
           amount: amount,
           fee: fee,
@@ -215,25 +251,9 @@ export function setupTransferRoutes(app: Express) {
         const numAmount = parseFloat(String(amount));
         
         // FIX: Get actual balance from all user accounts, not from users.balance
+        // (used only for the friendly insufficient-funds message; the RPC
+        // performs the authoritative atomic overdraft check)
         const userAccounts = await storage.getUserAccounts(user.id);
-        let currentBalance = 0;
-        if (userAccounts && userAccounts.length > 0) {
-          currentBalance = userAccounts.reduce((sum, acc) => sum + parseFloat(String(acc.balance || '0')), 0);
-        }
-        
-        if (currentBalance < numAmount) {
-          return res.status(400).json({ message: `Insufficient funds. Your total balance is $${currentBalance.toFixed(2)} but you're trying to transfer $${numAmount.toFixed(2)}` });
-        }
-        
-        // Deduct amount from user balance (updateUserBalance takes a DELTA - negative to deduct)
-        const newBalance = currentBalance - numAmount;
-        await storage.updateUserBalance(user.id, -numAmount);
-        
-        // Truncate all fields to match database constraints
-        const recipientNameTrunc = String(recipientName).substring(0, 20);
-        const recipientCountryTrunc = String(recipientCountry).substring(0, 20);
-        
-        // Use existing userAccounts from above - already fetched
         if (!userAccounts || userAccounts.length === 0) {
           return res.status(400).json({ message: "User has no account" });
         }
@@ -241,28 +261,82 @@ export function setupTransferRoutes(app: Express) {
         if (!fromAccountId) {
           return res.status(400).json({ message: "Invalid account ID" });
         }
+        let currentBalance = 0;
+        currentBalance = userAccounts.reduce((sum, acc) => sum + parseFloat(String(acc.balance || '0')), 0);
+        if (currentBalance < numAmount) {
+          return res.status(400).json({ message: `Insufficient funds. Your total balance is ${currentBalance.toFixed(2)} but you're trying to transfer ${numAmount.toFixed(2)}` });
+        }
         
-        const transactionData: any = {
-          fromUserId: user.id,
-          fromAccountId: fromAccountId,
-          amount: String(amount),
-          currency: 'USD',
-          type: 'transfer',
-          transactionType: 'transfer',
-          status: 'processing',
-          description: `Intl transfer to ${recipientNameTrunc}`.substring(0, 255),
-          recipientName: recipientNameTrunc,
-          recipientCountry: recipientCountryTrunc,
-          bankName: bankName ? String(bankName).substring(0, 20) : undefined,
-          swiftCode: swiftCode ? String(swiftCode).substring(0, 20) : undefined,
-          accountNumber: accountNumber ? String(accountNumber).substring(0, 50) : undefined,
-          transferPurpose: (transferPurpose || 'wire_xfer').substring(0, 20)
-        };
-        const transaction = await storage.createTransaction(transactionData);
+        // Truncate all fields to match database constraints
+        const recipientNameTrunc = String(recipientName).substring(0, 20);
+        const recipientCountryTrunc = String(recipientCountry).substring(0, 20);
+        const recipientAccountTrunc = accountNumber ? String(accountNumber).substring(0, 50) : '';
+        
+        // ✅ ATOMIC TRANSFER: Use the execute_external_transfer RPC to debit
+        // the account and create the transaction record in a single DB
+        // transaction. This eliminates the TOCTOU race condition that existed
+        // with the previous separate read-then-updateUserBalance approach.
+        const reference = `INT${Date.now()}${Math.floor(Math.random() * 10000)}`;
+        const { data: transferResult, error: transferError } = await supabase
+          .rpc('execute_external_transfer', {
+            p_from_account_id: fromAccountId,
+            p_from_user_id: user.id,
+            p_amount: numAmount,
+            p_fee: 0,
+            p_currency: 'USD',
+            p_recipient_name: recipientNameTrunc,
+            p_recipient_account: recipientAccountTrunc,
+            p_recipient_country: recipientCountryTrunc,
+            p_bank_name: bankName ? String(bankName).substring(0, 20) : '',
+            p_swift_code: swiftCode ? String(swiftCode).substring(0, 20) : '',
+            p_reference: reference,
+            p_description: `Intl transfer to ${recipientNameTrunc}`.substring(0, 255),
+            p_transfer_purpose: (transferPurpose || 'wire_xfer').substring(0, 20),
+            p_transaction_type: 'international_transfer',
+            p_status: 'processing'
+          });
+        if (transferError) throw transferError;
+        
+        const newBalance = currentBalance - numAmount;
+
+        // After successful transfer, save to recent_contacts
+        try {
+          const { data: existingContact } = await supabase
+            .from('recent_contacts')
+            .select('id, transfer_count')
+            .eq('user_id', user.id)
+            .eq('contact_account', recipientAccountTrunc)
+            .limit(1);
+
+          if (existingContact && existingContact.length > 0) {
+            await supabase.from('recent_contacts').update({
+              contact_name: recipientNameTrunc,
+              contact_bank_name: bankName ? String(bankName).substring(0, 20) : null,
+              contact_swift_code: swiftCode ? String(swiftCode).substring(0, 20) : null,
+              last_amount: numAmount.toFixed(2),
+              transfer_count: (existingContact[0] as Record<string, unknown>).transfer_count as number + 1,
+              updated_at: new Date().toISOString()
+            }).eq('id', (existingContact[0] as Record<string, unknown>).id as string);
+          } else {
+            await supabase.from('recent_contacts').insert({
+              user_id: user.id,
+              contact_name: recipientNameTrunc,
+              contact_account: recipientAccountTrunc,
+              contact_bank_name: bankName ? String(bankName).substring(0, 20) : null,
+              contact_swift_code: swiftCode ? String(swiftCode).substring(0, 20) : null,
+              last_amount: numAmount.toFixed(2),
+              transfer_count: 1
+            });
+          }
+        } catch (contactError: unknown) {
+          // Non-fatal: recent_contacts save failure should not fail the transfer
+          console.warn('Failed to save recent contact:', contactError instanceof Error ? contactError.message : 'Unknown error');
+        }
 
         res.json({ 
           message: "International transfer submitted successfully - funds debited, processing transfer",
           transactionId: transactionId,
+          transaction: transferResult,
           status: "processing",
           amount: amount,
           newBalance: newBalance

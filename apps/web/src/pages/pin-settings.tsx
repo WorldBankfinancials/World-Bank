@@ -82,7 +82,7 @@ export default function PinSettings() {
 
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/user/change-pin', {
+      const response = await authenticatedFetch('/api/change-pin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
