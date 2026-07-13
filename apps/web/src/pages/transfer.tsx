@@ -39,7 +39,7 @@ export default function Transfer() {
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const user = (userProfile as any to User) || null;
+  const user = (userProfile as any) as User || null;
   
   const [amount, setAmount] = useState("");
   const [transferType, setTransferType] = useState("international");

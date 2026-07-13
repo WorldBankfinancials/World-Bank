@@ -65,7 +65,7 @@ export default function AdminLiveChat() {
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const sessionId = `session_${selectedSession.customerId || selectedSession.id}`;
-        const response = await authenticatedFetch(`/api/messages/session/${sessionId}`);
+        const response = await authenticatedFetch(`/api/chat/history/${sessionId}`);
         if (!response.ok) return [];
         const data = await response.json();
         return data;
@@ -103,7 +103,7 @@ export default function AdminLiveChat() {
     queryKey: ['/api/admin/chat-sessions'],
     queryFn: async () => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/admin/chat-sessions');
+      const response = await authenticatedFetch('/api/chat/sessions');
       return response.ok ? response.json() : [];
     }
   });
@@ -170,7 +170,7 @@ export default function AdminLiveChat() {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const { queryClient } = await import('@/lib/queryClient');
       
-      const response = await authenticatedFetch('/api/messages', {
+      const response = await authenticatedFetch('/api/chat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
