@@ -702,7 +702,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     try {
       const id = validateId(req.params.id);
       const updates = req.body;
-      const updatedAccount = await (storage as unknown as { updateAccount: (id: string, updates: Record<string, unknown>) => Promise<unknown> }).updateAccount(id, updates);
+      const updatedAccount = await (storage as unknown as { updateAccount: (id: string, updates: Record<string, unknown>) => Promise<unknown> }).updateAccount(String(id), updates);
       if (!updatedAccount) {
         return res.status(404).json({ error: 'Account not found' });
       }
@@ -716,7 +716,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.delete('/api/admin/accounts/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = validateId(req.params.id);
-      const updatedAccount = await (storage as unknown as { updateAccount: (id: string, updates: Record<string, unknown>) => Promise<unknown> }).updateAccount(id, { isActive: false });
+      const updatedAccount = await (storage as unknown as { updateAccount: (id: string, updates: Record<string, unknown>) => Promise<unknown> }).updateAccount(String(id), { isActive: false });
       if (!updatedAccount) {
         return res.status(404).json({ error: 'Account not found' });
       }
