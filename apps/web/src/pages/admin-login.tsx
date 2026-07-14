@@ -9,15 +9,17 @@ import { Label } from "@/components/ui/label";
 import { BankLogo } from "@/components/BankLogo";
 import { Shield } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminLogin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const { signIn } = useAuth();
+  const { signIn, signOut } = useAuth();
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +31,16 @@ export default function AdminLogin() {
       if (result.error) {
         setError(result.error);
       } else {
+        // Check if the user has admin role before redirecting.
+        // signIn() writes the profile to localStorage synchronously before returning,
+        // so we read it from there since the userProfile state update may not be reflected yet.
+        const storedProfile = localStorage.getItem('userProfile');
+        const profile = storedProfile ? JSON.parse(storedProfile) : null;
+        if (profile?.role !== 'admin') {
+          toast({ title: 'Access Denied', description: 'You do not have admin privileges', variant: 'destructive' });
+          await signOut();
+          return;
+        }
         setLocation("/admin-dashboard");
       }
     } catch (err) {
