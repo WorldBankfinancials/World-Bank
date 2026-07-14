@@ -10,6 +10,36 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
+// CSRF Protection - HMAC-based token system (no server-side storage needed)
+const CSRF_SECRET = crypto.randomBytes(32).toString('hex');
+
+function generateCsrfToken(): string {
+  const timestamp = Date.now().toString();
+  const hmac = crypto.createHmac('sha256', CSRF_SECRET).update(timestamp).digest('hex');
+  return `${timestamp}.${hmac}`;
+}
+
+function validateCsrfToken(token: string): boolean {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.split('.');
+  if (parts.length !== 2) return false;
+  const [timestamp, signature] = parts;
+  // Optional: reject tokens older than 24 hours
+  const tsNum = Number(timestamp);
+  if (isNaN(tsNum)) return false;
+  const ageMs = Date.now() - tsNum;
+  if (ageMs < 0 || ageMs > 24 * 60 * 60 * 1000) return false;
+  const expected = crypto.createHmac('sha256', CSRF_SECRET).update(timestamp).digest('hex');
+  try {
+    const a = Buffer.from(signature, 'hex');
+    const b = Buffer.from(expected, 'hex');
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
 // CORS - restrict origins via whitelist
 const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:5173', 'http://localhost:3000'];
 
@@ -35,10 +65,13 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   const method = req.method.toUpperCase();
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && req.path.startsWith('/api/')) {
-    const csrfToken = req.headers['x-csrf-token'];
-    const isAuthEndpoint = req.path === '/api/auth/login' || req.path === '/api/auth/register-complete' || req.path === '/api/auth/register';
-    if (!isAuthEndpoint && !csrfToken) {
-      return res.status(403).json({ error: 'CSRF token required' });
+    const csrfToken = req.headers['x-csrf-token'] as string;
+    const isAuthEndpoint = req.path === '/api/auth/login'
+      || req.path === '/api/auth/register-complete'
+      || req.path === '/api/auth/register'
+      || req.path === '/api/csrf-token';
+    if (!isAuthEndpoint && !validateCsrfToken(csrfToken || '')) {
+      return res.status(403).json({ error: 'Invalid CSRF token' });
     }
   }
   const supabaseHost = process.env.SUPABASE_URL?.replace('https://', '') || process.env.VITE_SUPABASE_URL?.replace('https://', '') || 'localhost';
@@ -63,6 +96,13 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 app.use('/api/', generalRateLimiter);
+
+// CSRF token endpoint - must be before the CSRF-protecting middleware above
+// (which already exempts /api/csrf-token from token validation)
+app.get('/api/csrf-token', (req: Request, res: Response) => {
+  const token = generateCsrfToken();
+  res.json({ token });
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
