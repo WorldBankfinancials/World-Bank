@@ -9,7 +9,7 @@ import { log } from './vite';
 import { config, logConfiguration } from './config';
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from './supabase-public-storage';
-import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
+import { requireAuth, requireAdmin, AuthenticatedRequest, getAdminClient } from './auth-middleware';
 import { 
   authRateLimiter, 
   registrationRateLimiter, 
@@ -1990,8 +1990,8 @@ export async function registerRoutes(app: Express) {
       // Create or update investment
       const { data: existing } = await supabaseClient.from('investments').select('id, shares, average_price').eq('user_id', req.user!.id).eq('symbol', symbol).limit(1);
       if (existing && existing.length > 0) {
-        const existingShares = parseFloat(String((existing[0] as Record<string, unknown>).shares || '0')));
-        const existingAvg = parseFloat(String((existing[0] as Record<string, unknown>).average_price || '0')));
+        const existingShares = parseFloat(String((existing[0] as Record<string, unknown>).shares || '0'));
+        const existingAvg = parseFloat(String((existing[0] as Record<string, unknown>).average_price || '0'));
         const newTotalShares = existingShares + numShares;
         const newAvgPrice = ((existingAvg * existingShares) + (numPrice * numShares)) / newTotalShares;
         await supabaseClient.from('investments').update({
@@ -2095,6 +2095,234 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('payments').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- KYC endpoints --------
+
+  // GET /api/kyc/status - get user's KYC verification status
+  app.get('/api/kyc/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('kyc').select('*').eq('user_id', req.user!.id).limit(1).single();
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      // Also get user's verification fields
+      const { data: user } = await supabase.from('users').select('is_verified, kyc_status, email, phone, full_name, address, city, country, profession, annual_income').eq('id', req.user!.id).single();
+      
+      const verificationItems = [
+        { id: 'identity', name: 'Identity Verification', status: user?.is_verified ? 'verified' : 'pending', completedAt: user?.is_verified ? new Date().toISOString() : null },
+        { id: 'email', name: 'Email Verification', status: user?.email ? 'verified' : 'pending', completedAt: user?.email ? new Date().toISOString() : null },
+        { id: 'phone', name: 'Phone Verification', status: user?.phone ? 'verified' : 'pending', completedAt: null },
+        { id: 'address', name: 'Address Verification', status: user?.address ? 'verified' : 'required', completedAt: null },
+        { id: 'income', name: 'Income Verification', status: user?.annual_income ? 'verified' : 'required', completedAt: null },
+        { id: 'kyc', name: 'KYC Compliance', status: user?.kyc_status || 'pending', completedAt: user?.kyc_status === 'approved' ? new Date().toISOString() : null },
+      ];
+      
+      return res.json({ kycRecord: data, verificationItems, user: { isVerified: user?.is_verified, kycStatus: user?.kyc_status } });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/kyc/submit - submit KYC documents
+  app.post('/api/kyc/submit', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { documentType, documentNumber, fullName, dateOfBirth, nationality, address } = req.body;
+      if (!documentType || !fullName) return res.status(400).json({ error: 'Document type and full name required' });
+      
+      const supabaseClient = getAdminClient();
+      const { data, error } = await supabaseClient.from('kyc').upsert({
+        user_id: req.user!.id,
+        document_type: documentType,
+        document_number: documentNumber || null,
+        full_name: fullName,
+        date_of_birth: dateOfBirth || null,
+        nationality: nationality || null,
+        address: address || null,
+        status: 'pending',
+        submitted_at: new Date().toISOString()
+      }).select().single();
+      if (error) throw error;
+      
+      // Update user's kyc_status
+      await supabaseClient.from('users').update({ kyc_status: 'in_review' }).eq('id', req.user!.id);
+      
+      // Create alert
+      await supabaseClient.from('alerts').insert({
+        user_id: req.user!.id,
+        title: 'KYC Submitted',
+        message: 'Your KYC documents have been submitted for review.',
+        type: 'info',
+        priority: 'normal',
+        is_read: false
+      });
+      
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/user/preferences
+  app.get('/api/user/preferences', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('users').select('notification_preferences, privacy_preferences, display_preferences, security_preferences').eq('id', req.user!.id).single();
+      if (error) throw error;
+      return res.json({
+        notificationPreferences: data?.notification_preferences || {},
+        privacyPreferences: data?.privacy_preferences || {},
+        displayPreferences: data?.display_preferences || {},
+        securityPreferences: data?.security_preferences || {}
+      });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // PUT /api/user/preferences
+  app.put('/api/user/preferences', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { notificationPreferences, privacyPreferences, displayPreferences, securityPreferences } = req.body;
+      const updateData: Record<string, unknown> = {};
+      if (notificationPreferences) updateData.notification_preferences = notificationPreferences;
+      if (privacyPreferences) updateData.privacy_preferences = privacyPreferences;
+      if (displayPreferences) updateData.display_preferences = displayPreferences;
+      if (securityPreferences) updateData.security_preferences = securityPreferences;
+      
+      const { error } = await supabase.from('users').update(updateData).eq('id', req.user!.id);
+      if (error) throw error;
+      return res.json({ success: true });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // PUT /api/user/security-questions
+  app.put('/api/user/security-questions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { securityQuestion1, securityAnswer1, securityQuestion2, securityAnswer2 } = req.body;
+      if (!securityQuestion1 || !securityAnswer1 || !securityQuestion2 || !securityAnswer2) {
+        return res.status(400).json({ error: 'Both security questions and answers are required' });
+      }
+      const { error } = await supabase.from('users').update({
+        security_question_1: securityQuestion1,
+        security_answer_1: securityAnswer1,
+        security_question_2: securityQuestion2,
+        security_answer_2: securityAnswer2
+      }).eq('id', req.user!.id);
+      if (error) throw error;
+      return res.json({ success: true });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/transactions/export - export transactions as CSV
+  app.get('/api/transactions/export', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data: accounts } = await supabase.from('accounts').select('id').eq('user_id', req.user!.id);
+      if (!accounts || accounts.length === 0) return res.status(404).json({ error: 'No accounts found' });
+      
+      const accountIds = accounts.map((a: Record<string, unknown>) => a.id);
+      const { data: transactions } = await supabase.from('transactions').select('*').in('from_account_id', accountIds).or(`to_account_id.in.(${accountIds.join(',')})`).order('created_at', { ascending: false }).limit(1000);
+      
+      const csvHeader = 'Date,Reference,Type,Amount,Currency,Status,Description\n';
+      const csvRows = (transactions || []).map((t: Record<string, unknown>) => 
+        `${t.created_at || ''},${t.reference_number || ''},${t.transaction_type || ''},${t.amount || '0'},${t.currency || 'USD'},${t.status || ''},"${String(t.description || '').replace(/"/g, '""')}"`
+      ).join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=transactions.csv');
+      return res.send(csvHeader + csvRows);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/loans/:id/repay - repay a loan
+  app.post('/api/loans/:id/repay', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { amount } = req.body;
+      if (!amount) return res.status(400).json({ error: 'Amount required' });
+      const numAmount = parseFloat(String(amount));
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+      
+      const supabaseClient = getAdminClient();
+      const { data: loan } = await supabaseClient.from('loans').select('*').eq('id', req.params.id).eq('user_id', req.user!.id).single();
+      if (!loan) return res.status(404).json({ error: 'Loan not found' });
+      if ((loan as Record<string, unknown>).status !== 'approved' && (loan as Record<string, unknown>).status !== 'active') {
+        return res.status(400).json({ error: 'Loan is not active' });
+      }
+      
+      // Check balance
+      const { data: account } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (!account) return res.status(404).json({ error: 'Account not found' });
+      const currentBalance = parseFloat(String((account as Record<string, unknown>).balance || '0'));
+      if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
+      
+      // Debit account
+      const newBalance = (currentBalance - numAmount).toFixed(2);
+      await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (account as Record<string, unknown>).id);
+      
+      // Update loan balance
+      const remainingBalance = parseFloat(String((loan as Record<string, unknown>).remaining_balance || (loan as Record<string, unknown>).principal_amount || '0'))) - numAmount;
+      await supabaseClient.from('loans').update({ 
+        remaining_balance: remainingBalance.toFixed(2),
+        status: remainingBalance <= 0 ? 'completed' : 'active',
+        updated_at: new Date().toISOString()
+      }).eq('id', req.params.id);
+      
+      // Create transaction
+      await supabaseClient.from('transactions').insert({
+        from_user_id: req.user!.id,
+        amount: numAmount.toFixed(2),
+        currency: 'USD',
+        transaction_type: 'loan_repayment',
+        category: 'loan',
+        status: 'completed',
+        description: `Loan repayment for loan ${req.params.id}`,
+        reference_number: `LRP${Date.now()}${Math.floor(Math.random() * 10000)}`,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      });
+      
+      // Create alert
+      await supabaseClient.from('alerts').insert({
+        user_id: req.user!.id,
+        title: 'Loan Payment Made',
+        message: `Payment of ${numAmount.toFixed(2)} applied to your loan. Remaining balance: ${remainingBalance.toFixed(2)}.`,
+        type: 'success',
+        priority: 'normal',
+        is_read: false
+      });
+      
+      return res.json({ success: true, newBalance, remainingBalance: remainingBalance.toFixed(2) });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/loans/:id - get single loan
+  app.get('/api/loans/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('loans').select('*').eq('id', req.params.id).eq('user_id', req.user!.id).single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/cards/:id - get single card
+  app.get('/api/cards/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data: account } = await supabase.from('accounts').select('id').eq('user_id', req.user!.id);
+      if (!account) return res.status(404).json({ error: 'Account not found' });
+      const { data, error } = await supabase.from('cards').select('*').eq('id', req.params.id).in('account_id', account.map((a: Record<string, unknown>) => a.id)).single();
+      if (error) throw error;
+      return res.json(data);
     } catch (error: unknown) {
       return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
     }
