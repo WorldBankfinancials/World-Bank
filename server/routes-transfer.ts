@@ -95,8 +95,6 @@ export function setupTransferRoutes(app: Express) {
         const totalDebit = numAmount + numFee;
         
         // FIX: Get actual balance from all user accounts, not from users.balance
-        // (used only for the friendly insufficient-funds message; the RPC
-        // performs the authoritative atomic overdraft check)
         const userAccounts = await storage.getUserAccounts(user.id);
         if (!userAccounts || userAccounts.length === 0) {
           return res.status(400).json({ message: "User has no account" });
@@ -111,10 +109,7 @@ export function setupTransferRoutes(app: Express) {
           return res.status(400).json({ message: `Insufficient funds. Your total balance is ${currentBalance.toFixed(2)} but you're trying to transfer ${numAmount.toFixed(2)} plus ${numFee.toFixed(2)} fee` });
         }
         
-        // ✅ ATOMIC TRANSFER: Use the execute_external_transfer RPC to debit
-        // the account and create the transaction record in a single DB
-        // transaction. This eliminates the TOCTOU race condition that existed
-        // with the previous separate read-then-updateUserBalance approach.
+        // ✅ ATOMIC TRANSFER: Use the execute_external_transfer RPC
         const reference = `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`;
         const { data: transferResult, error: transferError } = await supabase
           .rpc('execute_external_transfer', {
@@ -152,6 +147,24 @@ export function setupTransferRoutes(app: Express) {
           console.warn('Failed to create transfer alert:', alertError instanceof Error ? alertError.message : 'Unknown error');
         }
 
+        // Notify admins of new transfer pending approval
+        try {
+          const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin').eq('is_active', true);
+          if (admins && admins.length > 0) {
+            const adminAlerts = admins.map((admin: Record<string, unknown>) => ({
+              user_id: admin.id,
+              title: 'New Transfer Pending Approval',
+              message: `Transfer of ${numAmount.toFixed(2)} from ${user.email} to ${recipientName} requires review.`,
+              type: 'warning',
+              priority: 'high',
+              is_read: false
+            }));
+            await supabase.from('alerts').insert(adminAlerts);
+          }
+        } catch (adminAlertError: unknown) {
+          console.warn('Failed to create admin alert:', adminAlertError instanceof Error ? adminAlertError.message : 'Unknown error');
+        }
+
         // After successful transfer, save to recent_contacts
         try {
           const { data: existingContact } = await supabase
@@ -182,11 +195,9 @@ export function setupTransferRoutes(app: Express) {
             });
           }
         } catch (contactError: unknown) {
-          // Non-fatal: recent_contacts save failure should not fail the transfer
           console.warn('Failed to save recent contact:', contactError instanceof Error ? contactError.message : 'Unknown error');
         }
 
-        // Return processing response - transaction submitted and being processed
         res.json({ 
           message: "Transfer submitted successfully - funds debited, processing transfer",
           transactionId: transactionId,
@@ -218,30 +229,24 @@ export function setupTransferRoutes(app: Express) {
         transferPin
       } = req.body;
 
-      // Negative/zero transfer amount protection
       if (!amount || isNaN(parseFloat(String(amount))) || parseFloat(String(amount)) <= 0) {
         return res.status(400).json({ error: 'Transfer amount must be greater than zero' });
       }
 
-      // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
       const user = await storage.getUserByEmail(req.user!.email);
-      
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Self-transfer protection
       const senderAccountNumber = String(user.accountNumber || '');
       if (senderAccountNumber && String(accountNumber) === senderAccountNumber) {
         return res.status(400).json({ error: 'Cannot transfer to your own account' });
       }
       
-      // PIN VALIDATION - Verify against stored PIN
       if (!transferPin || String(transferPin).length !== 4) {
         return res.status(401).json({ message: "Invalid PIN format - must be 4 digits" });
       }
 
-      // Get fresh user data to verify PIN
       const userForPin = await storage.getUserByEmail(req.user!.email);
       if (!userForPin || !userForPin.transferPin) {
         return res.status(401).json({ message: "PIN not set on account" });
@@ -252,21 +257,14 @@ export function setupTransferRoutes(app: Express) {
         return res.status(401).json({ message: "Incorrect PIN - transfer denied" });
       }
 
-      // Validate required fields
       if (!amount || !recipientName || !recipientCountry) {
         return res.status(400).json({ message: "Missing required international transfer details" });
       }
 
       const transactionId = generateTransactionId('INT');
 
-      // Create transaction with pending status
       try {
-        // ✅ CRITICAL: DEBIT ACCOUNT IMMEDIATELY FOR INTERNATIONAL TRANSFER
         const numAmount = parseFloat(String(amount));
-        
-        // FIX: Get actual balance from all user accounts, not from users.balance
-        // (used only for the friendly insufficient-funds message; the RPC
-        // performs the authoritative atomic overdraft check)
         const userAccounts = await storage.getUserAccounts(user.id);
         if (!userAccounts || userAccounts.length === 0) {
           return res.status(400).json({ message: "User has no account" });
@@ -281,21 +279,16 @@ export function setupTransferRoutes(app: Express) {
           return res.status(400).json({ message: `Insufficient funds. Your total balance is ${currentBalance.toFixed(2)} but you're trying to transfer ${numAmount.toFixed(2)}` });
         }
 
-        const internationalFee = Math.max(numAmount * 0.015, 15); // 1.5% or $15 minimum
+        const internationalFee = Math.max(numAmount * 0.015, 15);
         const totalDebit = numAmount + internationalFee;
         if (currentBalance < totalDebit) {
           return res.status(400).json({ message: `Insufficient funds. Your total balance is ${currentBalance.toFixed(2)} but you need ${totalDebit.toFixed(2)} (transfer + fee)` });
         }
 
-        // Truncate all fields to match database constraints
         const recipientNameTrunc = String(recipientName).substring(0, 20);
         const recipientCountryTrunc = String(recipientCountry).substring(0, 20);
         const recipientAccountTrunc = accountNumber ? String(accountNumber).substring(0, 50) : '';
 
-        // ✅ ATOMIC TRANSFER: Use the execute_external_transfer RPC to debit
-        // the account and create the transaction record in a single DB
-        // transaction. This eliminates the TOCTOU race condition that existed
-        // with the previous separate read-then-updateUserBalance approach.
         const reference = `INT${Date.now()}${Math.floor(Math.random() * 10000)}`;
         const { data: transferResult, error: transferError } = await supabase
           .rpc('execute_external_transfer', {
@@ -319,7 +312,6 @@ export function setupTransferRoutes(app: Express) {
 
         const newBalance = currentBalance - totalDebit;
 
-        // After successful transfer, save to recent_contacts
         try {
           const { data: existingContact } = await supabase
             .from('recent_contacts')
@@ -349,7 +341,6 @@ export function setupTransferRoutes(app: Express) {
             });
           }
         } catch (contactError: unknown) {
-          // Non-fatal: recent_contacts save failure should not fail the transfer
           console.warn('Failed to save recent contact:', contactError instanceof Error ? contactError.message : 'Unknown error');
         }
 
@@ -369,10 +360,8 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 
-  // Enhanced Transfer API with proper workflow - PROTECTED: requires authentication
   app.post('/api/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
       const user = await storage.getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -391,12 +380,10 @@ export function setupTransferRoutes(app: Express) {
         purpose
       } = req.body;
 
-      // Validate required fields
       if (!amount || !recipientName || !recipientAccount) {
         return res.status(400).json({ message: "Missing required fields" });
       }
 
-      // Get user accounts
       const accounts = await storage.getUserAccounts(user.id);
       if (accounts.length === 0) {
         return res.status(400).json({ message: "No account found" });
@@ -404,7 +391,6 @@ export function setupTransferRoutes(app: Express) {
 
       const fromAccount = accounts[0];
 
-      // Create transaction record as "processing" - admin approval happens secretly in admin dashboard
       const transaction = await storage.createTransaction({
         fromAccountId: fromAccount.id,
         type: transferType || "international_transfer",
@@ -426,35 +412,27 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 
-  // Admin approve transfer - PROTECTED: requires admin role
   app.post('/api/admin/transfers/:id/approve', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const transactionId = req.params.id;
       const { notes } = req.body;
       
-      // SECURITY: Get admin user from authenticated JWT
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id; if (!adminId) { return res.status(403).json({ message: 'Admin authentication required' }); }
 
-      // Get transaction directly by ID
       const targetTxn = await storage.getTransactionById(transactionId);
       
       if (!targetTxn) {
         return res.status(404).json({ message: "Transfer not found or already processed" });
       }
 
-      // Only allow approving transfers that are currently in 'processing' status
       if (targetTxn.status !== 'processing') {
         return res.status(400).json({ error: 'Transfer is not in processing status' });
       }
 
-      // ✅ CRITICAL: When approved, funds are now TRANSFERRED (already debited)
-      // Status changes to 'completed' to indicate success
-      // Transition: processing → completed
       const transaction = await storage.updateTransactionStatus(transactionId, 'completed', adminId, notes);
       
       if (transaction) {
-        // Log admin action
         await storage.createAdminAction({
           adminId: adminId,
           action: 'approve_transfer',
@@ -470,48 +448,36 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 
-  // Admin reject transfer with manual reversal option - PROTECTED: requires admin role
   app.post('/api/admin/transfers/:id/reject', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const transactionId = req.params.id;
       const { notes, reverseToAccount } = req.body;
       
-      // SECURITY: Get admin user from authenticated JWT
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id; if (!adminId) { return res.status(403).json({ message: 'Admin authentication required' }); }
 
-      // Get transaction directly by ID
       const targetTxn = await storage.getTransactionById(transactionId);
       
       if (!targetTxn) {
         return res.status(404).json({ message: "Transfer not found or already processed" });
       }
 
-      // Transition: processing → failed
       const transaction = await storage.updateTransactionStatus(transactionId, 'failed', adminId, notes);
       
-      // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
-      // If reverseToAccount = true, credit back to user's account
       if (reverseToAccount && targetTxn.fromUserId) {
-        // Credit back amount + fee
         const refundAmount = parseFloat(String(targetTxn.amount)) + parseFloat(String(targetTxn.fee || '0'));
         await storage.updateUserBalance(targetTxn.fromUserId, refundAmount);
       }
       
       if (transaction) {
-        // Log admin action
         await storage.createAdminAction({
           adminId: adminId,
           action: 'reject_transfer',
           targetType: 'transaction',
           targetId: transactionId,
-          details: { 
-            notes, 
-            reversed: reverseToAccount || false 
-          }
+          details: { notes, reversed: reverseToAccount || false }
         });
 
-        // Create automatic support ticket for failed transfer
         if (targetTxn.fromUserId) {
           await storage.createSupportTicket({
             userId: targetTxn.fromUserId,
@@ -535,7 +501,6 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 
-  // Get pending transfers for admin - PROTECTED: requires admin role
   app.get('/api/admin/pending-transfers', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const pendingTransfers = await storage.getPendingTransactions();
@@ -545,30 +510,23 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 
-  // Admin approve international transfer - PROTECTED: requires admin role
   app.post('/api/admin/international-transfers/:id/approve', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const transactionId = req.params.id;
       const { notes } = req.body;
       
-      // SECURITY: Get admin user from authenticated JWT
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id; if (!adminId) { return res.status(403).json({ message: 'Admin authentication required' }); }
 
-      // Get transaction directly by ID
       const targetTxn = await storage.getTransactionById(transactionId);
       
       if (!targetTxn) {
         return res.status(404).json({ message: "International transfer not found or already processed" });
       }
 
-      // ✅ CRITICAL: When approved, funds are now TRANSFERRED (already debited)
-      // Status changes to 'completed' to indicate success
-      // Transition: processing → completed
       const transaction = await storage.updateTransactionStatus(transactionId, 'completed', adminId, notes);
       
       if (transaction) {
-        // Log admin action
         await storage.createAdminAction({
           adminId: adminId,
           action: 'approve_international_transfer',
@@ -584,48 +542,36 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 
-  // Admin reject international transfer with manual reversal option - PROTECTED: requires admin role
   app.post('/api/admin/international-transfers/:id/reject', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const transactionId = req.params.id;
       const { notes, reverseToAccount } = req.body;
       
-      // SECURITY: Get admin user from authenticated JWT
       const admin = await storage.getUserByEmail(req.user!.email);
       const adminId = admin?.id; if (!adminId) { return res.status(403).json({ message: 'Admin authentication required' }); }
 
-      // Get transaction directly by ID
       const targetTxn = await storage.getTransactionById(transactionId);
       
       if (!targetTxn) {
         return res.status(404).json({ message: "International transfer not found or already processed" });
       }
 
-      // Transition: processing → failed
       const transaction = await storage.updateTransactionStatus(transactionId, 'failed', adminId, notes);
       
-      // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
-      // If reverseToAccount = true, credit back to user's account
       if (reverseToAccount && targetTxn.fromUserId) {
-        // Credit back amount + fee
         const refundAmount = parseFloat(String(targetTxn.amount)) + parseFloat(String(targetTxn.fee || '0'));
         await storage.updateUserBalance(targetTxn.fromUserId, refundAmount);
       }
       
       if (transaction) {
-        // Log admin action
         await storage.createAdminAction({
           adminId: adminId,
           action: 'reject_international_transfer',
           targetType: 'transaction',
           targetId: transactionId,
-          details: { 
-            notes, 
-            reversed: reverseToAccount || false 
-          }
+          details: { notes, reversed: reverseToAccount || false }
         });
 
-        // Create automatic support ticket for rejected international transfer
         if (targetTxn.fromUserId) {
           await storage.createSupportTicket({
             userId: targetTxn.fromUserId,
@@ -649,23 +595,17 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 
-  // Get transfer status - PROTECTED: requires authentication
   app.get('/api/transfers/:id/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const user = await storage.getUserByEmail(req.user!.email);
-      
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-
-      // Get transaction directly by ID
       const transaction = await storage.getTransactionById(id);
-
       if (!transaction) {
         return res.status(404).json({ message: "Transfer not found" });
       }
-
       res.json({
         id: transaction.id,
         status: transaction.status,
@@ -677,23 +617,17 @@ export function setupTransferRoutes(app: Express) {
     }
   });
 
-  // Get international transfer status - PROTECTED: requires authentication
   app.get('/api/international-transfers/:id/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
       const user = await storage.getUserByEmail(req.user!.email);
-      
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-
-      // Get transaction directly by ID
       const transaction = await storage.getTransactionById(id);
-
       if (!transaction) {
         return res.status(404).json({ message: "International transfer not found" });
       }
-
       res.json({
         id: transaction.id,
         status: transaction.status,
