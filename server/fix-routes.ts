@@ -488,10 +488,28 @@ export async function registerRoutes(app: Express) {
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
       const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY!;
-      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+      // Extract the access token from the Authorization header
+      const authHeader = req.headers.authorization;
+      const accessToken = authHeader?.replace('Bearer ', '');
+
+      // Use service role key to properly sign out the user's session
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
         auth: { autoRefreshToken: false, persistSession: false }
       });
-      await supabaseClient.auth.signOut().catch(() => {});
+
+      // Revoke the refresh token if provided
+      const { refreshToken } = req.body || {};
+      if (refreshToken) {
+        await supabaseAdmin.auth.admin.signOut(refreshToken, 'refresh_token').catch(() => {});
+      }
+
+      // Also try to revoke the access token's session
+      if (accessToken) {
+        await supabaseAdmin.auth.admin.signOut(accessToken, 'access_token').catch(() => {});
+      }
+
       return res.json({ message: "Logged out successfully", status: "ok" });
     } catch (error: unknown) {
       return res.json({ message: "Logged out successfully", status: "ok" });
@@ -617,18 +635,41 @@ export async function registerRoutes(app: Express) {
       const accounts = await storage.getUserAccounts(user.id);
       if (accounts.length === 0) return res.status(404).json({ error: 'No account found' });
       const parsedAmount = parseFloat(String(amount));
-      const transaction = await storage.createTransaction({
-        fromAccountId: accounts[0].id,
-        type: 'deposit',
-        amount: parsedAmount.toString(),
-        description: `Funds added via ${method}`,
-        status: 'completed',
-        currency: 'USD',
-        referenceNumber: `DEP-${Date.now()}`,
-        createdAt: new Date()
-      });
-      await storage.updateUserBalance(user.id, parsedAmount);
-      return res.json({ success: true, transaction, amount: parsedAmount });
+
+      try {
+        // Update balance first
+        const updated = await storage.updateUserBalance(user.id, parsedAmount);
+        if (!updated) {
+          return res.status(500).json({ error: 'Failed to update balance' });
+        }
+        // Then create transaction record
+        const transaction = await storage.createTransaction({
+          fromAccountId: accounts[0].id,
+          type: 'deposit',
+          amount: parsedAmount.toString(),
+          description: `Funds added via ${method}`,
+          status: 'completed',
+          currency: 'USD',
+          referenceNumber: `DEP-${Date.now()}`,
+          createdAt: new Date()
+        });
+
+        // Auto-create alert on transaction
+        await supabase.from('alerts').insert({
+          user_id: req.user!.id,
+          title: 'Funds Added',
+          message: `${parsedAmount.toFixed(2)} has been added to your account via ${method}.`,
+          type: 'success',
+          priority: 'normal',
+          is_read: false
+        });
+
+        return res.json({ success: true, transaction, amount: parsedAmount, newBalance: updated.balance });
+      } catch (error) {
+        // If transaction creation fails, reverse the balance update
+        await storage.updateUserBalance(user.id, -parsedAmount);
+        return res.status(500).json({ error: 'Failed to complete deposit' });
+      }
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to add funds' });
     }
@@ -939,7 +980,7 @@ export async function registerRoutes(app: Express) {
   // POST /api/loans/:id/approve - Approve a loan (admin only)
   app.post('/api/loans/:id/approve', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data: loan, error: loanError } = await supabase.from('loans').select('status').eq('id', req.params.id).single();
+      const { data: loan, error: loanError } = await supabase.from('loans').select('*').eq('id', req.params.id).single();
       if (loanError || !loan) return res.status(404).json({ error: 'Loan not found' });
       if (loan.status !== 'pending') return res.status(400).json({ error: 'Loan is not in pending status' });
       const { data, error } = await supabase
@@ -949,12 +990,47 @@ export async function registerRoutes(app: Express) {
           approved_by: req.user!.id,
           approved_at: new Date().toISOString(),
           disbursement_date: new Date().toISOString(),
-          maturity_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          maturity_date: new Date(Date.now() + (loan.term_months * 30 * 24 * 60 * 60 * 1000)).toISOString()
         })
         .eq('id', req.params.id)
         .select()
         .single();
       if (error) throw error;
+
+      // Disburse loan funds to user account
+      const { data: account } = await supabase.from('accounts').select('id, balance').eq('user_id', loan.user_id).eq('status', 'active').limit(1).single();
+      if (account) {
+        const newBalance = (parseFloat(String((account as Record<string, unknown>).balance || '0')) + parseFloat(String(loan.principal_amount))).toFixed(2);
+        await supabase.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (account as Record<string, unknown>).id);
+
+        // Create disbursement transaction
+        await supabase.from('transactions').insert({
+          from_account_id: null,
+          to_account_id: (account as Record<string, unknown>).id,
+          from_user_id: null,
+          to_user_id: loan.user_id,
+          amount: parseFloat(String(loan.principal_amount)).toFixed(2),
+          currency: 'USD',
+          transaction_type: 'loan_disbursement',
+          category: 'loan',
+          status: 'completed',
+          description: `Loan disbursement - ${loan.loan_type} - ${loan.loan_number}`,
+          reference_number: `LOAN${Date.now()}${Math.floor(Math.random() * 10000)}`,
+          processed_at: new Date().toISOString(),
+          completed_at: new Date().toISOString()
+        });
+
+        // Create alert for user
+        await supabase.from('alerts').insert({
+          user_id: loan.user_id,
+          title: 'Loan Approved',
+          message: `Your ${loan.loan_type} loan of ${parseFloat(String(loan.principal_amount)).toFixed(2)} has been approved and disbursed to your account.`,
+          type: 'success',
+          priority: 'high',
+          is_read: false
+        });
+      }
+
       return res.json(data);
     } catch (error: unknown) {
       return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
@@ -1424,6 +1500,16 @@ export async function registerRoutes(app: Express) {
       const exchangeRate = parseFloat(String((rate as Record<string, unknown>).rate));
       const convertedAmount = numAmount * exchangeRate;
 
+      // Check balance first
+      const { data: userAccount } = await supabase.from('accounts').select('balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (!userAccount) return res.status(404).json({ error: 'Account not found' });
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
+      if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
+
+      // Debit the amount
+      const newBalance = (currentBalance - numAmount).toFixed(2);
+      await supabase.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', req.user!.id).eq('status', 'active');
+
       // Create transaction record
       const reference = `EXC${Date.now()}${Math.floor(Math.random() * 10000)}`;
       const { data: txn, error: txnError } = await supabase.from('transactions').insert({
@@ -1542,6 +1628,274 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('savings').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/savings - create a savings account
+  app.post('/api/savings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { accountType, initialDeposit, goalName, targetAmount } = req.body;
+      const supabaseClient = getAdminClient();
+      const deposit = parseFloat(String(initialDeposit || '0'));
+      if (isNaN(deposit) || deposit < 0) return res.status(400).json({ error: 'Invalid deposit amount' });
+
+      // Check balance if initial deposit
+      if (deposit > 0) {
+        const { data: userAccount } = await supabaseClient.from('accounts').select('balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+        if (!userAccount) return res.status(404).json({ error: 'Account not found' });
+        const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
+        if (currentBalance < deposit) return res.status(400).json({ error: 'Insufficient funds for initial deposit' });
+        // Debit from checking
+        const newBalance = (currentBalance - deposit).toFixed(2);
+        await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', req.user!.id).eq('status', 'active');
+      }
+
+      const savingsNumber = `SAV${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const { data, error } = await supabaseClient.from('savings').insert({
+        user_id: req.user!.id,
+        account_number: savingsNumber,
+        account_type: accountType || 'savings',
+        balance: deposit.toFixed(2),
+        goal_name: goalName || null,
+        target_amount: targetAmount || null,
+        interest_rate: '2.50',
+        status: 'active'
+      }).select().single();
+      if (error) throw error;
+
+      if (deposit > 0) {
+        await supabaseClient.from('transactions').insert({
+          from_user_id: req.user!.id,
+          to_user_id: req.user!.id,
+          amount: deposit.toFixed(2),
+          currency: 'USD',
+          transaction_type: 'savings_deposit',
+          category: 'savings',
+          status: 'completed',
+          description: `Initial deposit to savings account ${savingsNumber}`,
+          reference_number: `SAV${Date.now()}${Math.floor(Math.random() * 10000)}`,
+          processed_at: new Date().toISOString(),
+          completed_at: new Date().toISOString()
+        });
+      }
+
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/savings/deposit - deposit to savings
+  app.post('/api/savings/deposit', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { savingsId, amount } = req.body;
+      if (!savingsId || !amount) return res.status(400).json({ error: 'Missing required fields' });
+      const numAmount = parseFloat(String(amount));
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Amount must be greater than zero' });
+
+      const supabaseClient = getAdminClient();
+      // Check and debit checking account
+      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (!userAccount) return res.status(404).json({ error: 'Account not found' });
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
+      if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
+
+      const newCheckingBalance = (currentBalance - numAmount).toFixed(2);
+      await supabaseClient.from('accounts').update({ balance: newCheckingBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
+
+      // Credit savings account
+      const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user!.id).single();
+      if (!savings) return res.status(404).json({ error: 'Savings account not found' });
+      const newSavingsBalance = (parseFloat(String((savings as Record<string, unknown>).balance || '0')) + numAmount).toFixed(2);
+      await supabaseClient.from('savings').update({ balance: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId);
+
+      await supabaseClient.from('transactions').insert({
+        from_user_id: req.user!.id,
+        to_user_id: req.user!.id,
+        amount: numAmount.toFixed(2),
+        currency: 'USD',
+        transaction_type: 'savings_deposit',
+        category: 'savings',
+        status: 'completed',
+        description: `Deposit to savings account`,
+        reference_number: `SAV${Date.now()}${Math.floor(Math.random() * 10000)}`,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      });
+
+      return res.json({ success: true, newSavingsBalance });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/savings/withdraw - withdraw from savings
+  app.post('/api/savings/withdraw', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { savingsId, amount } = req.body;
+      if (!savingsId || !amount) return res.status(400).json({ error: 'Missing required fields' });
+      const numAmount = parseFloat(String(amount));
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Amount must be greater than zero' });
+
+      const supabaseClient = getAdminClient();
+      const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user!.id).single();
+      if (!savings) return res.status(404).json({ error: 'Savings account not found' });
+      const savingsBalance = parseFloat(String((savings as Record<string, unknown>).balance || '0'));
+      if (savingsBalance < numAmount) return res.status(400).json({ error: 'Insufficient savings balance' });
+
+      // Debit savings
+      const newSavingsBalance = (savingsBalance - numAmount).toFixed(2);
+      await supabaseClient.from('savings').update({ balance: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId);
+
+      // Credit checking
+      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (userAccount) {
+        const newCheckingBalance = (parseFloat(String((userAccount as Record<string, unknown>).balance || '0')) + numAmount).toFixed(2);
+        await supabaseClient.from('accounts').update({ balance: newCheckingBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
+      }
+
+      await supabaseClient.from('transactions').insert({
+        from_user_id: req.user!.id,
+        to_user_id: req.user!.id,
+        amount: numAmount.toFixed(2),
+        currency: 'USD',
+        transaction_type: 'savings_withdrawal',
+        category: 'savings',
+        status: 'completed',
+        description: `Withdrawal from savings account`,
+        reference_number: `SAW${Date.now()}${Math.floor(Math.random() * 10000)}`,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      });
+
+      return res.json({ success: true, newSavingsBalance });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Investment endpoints --------
+
+  // POST /api/investments/buy - buy an investment
+  app.post('/api/investments/buy', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { symbol, assetType, shares, price } = req.body;
+      if (!symbol || !shares || !price) return res.status(400).json({ error: 'Missing required fields' });
+      const numShares = parseFloat(String(shares));
+      const numPrice = parseFloat(String(price));
+      if (isNaN(numShares) || numShares <= 0) return res.status(400).json({ error: 'Invalid shares amount' });
+      if (isNaN(numPrice) || numPrice <= 0) return res.status(400).json({ error: 'Invalid price' });
+
+      const totalCost = numShares * numPrice;
+      const supabaseClient = getAdminClient();
+
+      // Check balance
+      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (!userAccount) return res.status(404).json({ error: 'Account not found' });
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
+      if (currentBalance < totalCost) return res.status(400).json({ error: 'Insufficient funds' });
+
+      // Debit account
+      const newBalance = (currentBalance - totalCost).toFixed(2);
+      await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
+
+      // Create or update investment
+      const { data: existing } = await supabaseClient.from('investments').select('id, shares, average_price').eq('user_id', req.user!.id).eq('symbol', symbol).limit(1);
+      if (existing && existing.length > 0) {
+        const existingShares = parseFloat(String((existing[0] as Record<string, unknown>).shares || '0'));
+        const existingAvg = parseFloat(String((existing[0] as Record<string, unknown>).average_price || '0'));
+        const newTotalShares = existingShares + numShares;
+        const newAvgPrice = ((existingAvg * existingShares) + (numPrice * numShares)) / newTotalShares;
+        await supabaseClient.from('investments').update({
+          shares: newTotalShares.toString(),
+          average_price: newAvgPrice.toFixed(2),
+          current_price: numPrice.toFixed(2),
+          updated_at: new Date().toISOString()
+        }).eq('id', (existing[0] as Record<string, unknown>).id);
+      } else {
+        await supabaseClient.from('investments').insert({
+          user_id: req.user!.id,
+          symbol,
+          asset_type: assetType || 'stock',
+          shares: numShares.toString(),
+          average_price: numPrice.toFixed(2),
+          current_price: numPrice.toFixed(2),
+          status: 'active'
+        });
+      }
+
+      // Create transaction
+      await supabaseClient.from('transactions').insert({
+        from_user_id: req.user!.id,
+        amount: totalCost.toFixed(2),
+        currency: 'USD',
+        transaction_type: 'investment_buy',
+        category: 'investment',
+        status: 'completed',
+        description: `Bought ${numShares} shares of ${symbol} at ${numPrice.toFixed(2)}`,
+        reference_number: `INV${Date.now()}${Math.floor(Math.random() * 10000)}`,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      });
+
+      return res.json({ success: true, totalCost: totalCost.toFixed(2), newBalance });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/investments/sell - sell an investment
+  app.post('/api/investments/sell', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { investmentId, shares, price } = req.body;
+      if (!investmentId || !shares || !price) return res.status(400).json({ error: 'Missing required fields' });
+      const numShares = parseFloat(String(shares));
+      const numPrice = parseFloat(String(price));
+      if (isNaN(numShares) || numShares <= 0) return res.status(400).json({ error: 'Invalid shares amount' });
+      if (isNaN(numPrice) || numPrice <= 0) return res.status(400).json({ error: 'Invalid price' });
+
+      const totalProceeds = numShares * numPrice;
+      const supabaseClient = getAdminClient();
+
+      // Check investment
+      const { data: investment } = await supabaseClient.from('investments').select('id, shares, average_price, symbol').eq('id', investmentId).eq('user_id', req.user!.id).single();
+      if (!investment) return res.status(404).json({ error: 'Investment not found' });
+      const heldShares = parseFloat(String((investment as Record<string, unknown>).shares || '0'));
+      if (heldShares < numShares) return res.status(400).json({ error: 'Insufficient shares' });
+
+      // Credit account
+      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (userAccount) {
+        const newBalance = (parseFloat(String((userAccount as Record<string, unknown>).balance || '0')) + totalProceeds).toFixed(2);
+        await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
+      }
+
+      // Update or delete investment
+      const remainingShares = heldShares - numShares;
+      if (remainingShares > 0) {
+        await supabaseClient.from('investments').update({ shares: remainingShares.toString(), current_price: numPrice.toFixed(2), updated_at: new Date().toISOString() }).eq('id', investmentId);
+      } else {
+        await supabaseClient.from('investments').update({ shares: '0', status: 'sold', updated_at: new Date().toISOString() }).eq('id', investmentId);
+      }
+
+      const symbol = (investment as Record<string, unknown>).symbol as string;
+      await supabaseClient.from('transactions').insert({
+        from_user_id: null,
+        to_user_id: req.user!.id,
+        amount: totalProceeds.toFixed(2),
+        currency: 'USD',
+        transaction_type: 'investment_sell',
+        category: 'investment',
+        status: 'completed',
+        description: `Sold ${numShares} shares of ${symbol} at ${numPrice.toFixed(2)}`,
+        reference_number: `SEL${Date.now()}${Math.floor(Math.random() * 10000)}`,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      });
+
+      return res.json({ success: true, totalProceeds: totalProceeds.toFixed(2) });
     } catch (error: unknown) {
       return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
     }
