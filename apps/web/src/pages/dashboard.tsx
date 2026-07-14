@@ -248,7 +248,7 @@ export default function Dashboard() {
               className="w-8 h-8 object-contain"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                target.src = "https://upload.wikimedia.org/wikipedia/en/thumb/8/80/World_Bank_Group_logo.svg/1200px-World_Bank_Group_logo.svg.png";
+                target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%231E40AF'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='14' font-weight='bold' fill='white' text-anchor='middle'%3EWB%3C/text%3E%3C/svg%3E";
               }}
             />
             <div>

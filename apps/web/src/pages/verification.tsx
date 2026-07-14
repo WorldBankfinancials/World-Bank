@@ -4,6 +4,10 @@ import { Shield, Check, AlertCircle, Upload, FileText, CreditCard, User, Phone, 
 import Header from '@/components/Header';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface VerificationItem {
   id: string;
@@ -16,83 +20,58 @@ interface VerificationItem {
   documents?: string[];
 }
 
+const iconMap: Record<string, any> = {
+  identity: User,
+  email: Mail,
+  phone: Phone,
+  address: Building2,
+  income: FileText,
+  enhanced_due_diligence: Shield,
+  biometric: Camera,
+  tax_compliance: Globe,
+};
+
 export default function VerificationCenter() {
   const { userProfile } = useAuth();
   const { t } = useLanguage();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedVerification, setSelectedVerification] = useState<string | null>(null);
 
-  const verificationItems: VerificationItem[] = [
-    {
-      id: 'identity',
-      title: t('identity_verification'),
-      description: t('government_issued_id_verification'),
-      status: 'verified',
-      icon: User,
-      lastUpdated: 'Dec 10, 2024',
-      documents: ['National ID Card', 'Passport']
-    },
-    {
-      id: 'email',
-      title: t('email_verification'),
-      description: t('confirm_email_address'),
-      status: 'verified',
-      icon: Mail,
-      lastUpdated: 'Dec 15, 2024'
-    },
-    {
-      id: 'phone',
-      title: t('phone_verification'),
-      description: t('verify_mobile_number'),
-      status: 'verified',
-      icon: Phone,
-      lastUpdated: 'Dec 15, 2024'
-    },
-    {
-      id: 'address',
-      title: t('address_verification'),
-      description: t('proof_of_residence_verification'),
-      status: 'verified',
-      icon: Building2,
-      lastUpdated: 'Dec 5, 2024',
-      documents: ['Utility Bill', 'Bank Statement']
-    },
-    {
-      id: 'income',
-      title: t('income_verification'),
-      description: t('employment_and_income_proof'),
-      status: 'verified',
-      icon: FileText,
-      lastUpdated: 'Nov 28, 2024',
-      documents: ['Employment Letter', 'Salary Certificate']
-    },
-    {
-      id: 'enhanced_due_diligence',
-      title: t('enhanced_due_diligence'),
-      description: t('additional_verification_high_value'),
-      status: 'verified',
-      icon: Shield,
-      lastUpdated: 'Dec 1, 2024',
-      documents: ['Source of Funds Declaration', 'Business Registration']
-    },
-    {
-      id: 'biometric',
-      title: t('biometric_verification'),
-      description: t('facial_recognition_fingerprint'),
-      status: 'pending',
-      icon: Camera,
-      lastUpdated: 'Pending submission'
-    },
-    {
-      id: 'tax_compliance',
-      title: t('tax_compliance'),
-      description: t('tax_residency_status'),
-      status: 'required',
-      icon: Globe,
-      expiryDate: 'Due: Jan 30, 2025'
+  // KYC form state
+  const [kycForm, setKycForm] = useState({
+    documentType: 'national_id',
+    fullName: '',
+    dateOfBirth: '',
+    nationality: '',
+    address: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  // Fetch KYC status from API
+  const { data: kycData, isLoading: kycLoading } = useQuery<any>({
+    queryKey: ['/api/kyc/status'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch('/api/kyc/status');
+      if (!res.ok) return null;
+      return res.json();
     }
-  ];
+  });
+
+  // Build verification items from API response, fall back to empty array
+  const verificationItems: VerificationItem[] = (kycData?.verificationItems || []).map((item: any) => ({
+    id: item.id,
+    title: item.title || t(`${item.id}_verification`) || item.id,
+    description: item.description || '',
+    status: item.status || 'required',
+    icon: iconMap[item.id] || Shield,
+    lastUpdated: item.lastUpdated,
+    expiryDate: item.expiryDate,
+    documents: item.documents,
+  }));
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -304,7 +283,7 @@ export default function VerificationCenter() {
         {/* Upload Modal */}
         {showUploadModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="bg-white rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">{t('upload_verification_documents')}</h3>
                 <button
@@ -313,6 +292,55 @@ export default function VerificationCenter() {
                 >
                   <X className="w-5 h-5 text-gray-500" />
                 </button>
+              </div>
+
+              {/* KYC Form Fields */}
+              <div className="space-y-4 mb-4">
+                <div>
+                  <Label className="mb-1.5 block">Document Type</Label>
+                  <select
+                    value={kycForm.documentType}
+                    onChange={(e) => setKycForm({ ...kycForm, documentType: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-md bg-white"
+                  >
+                    <option value="national_id">National ID</option>
+                    <option value="passport">Passport</option>
+                    <option value="drivers_license">Driver's License</option>
+                    <option value="residence_permit">Residence Permit</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="mb-1.5 block">Full Name</Label>
+                  <Input
+                    value={kycForm.fullName}
+                    onChange={(e) => setKycForm({ ...kycForm, fullName: e.target.value })}
+                    placeholder="Enter your full name"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1.5 block">Date of Birth</Label>
+                  <Input
+                    type="date"
+                    value={kycForm.dateOfBirth}
+                    onChange={(e) => setKycForm({ ...kycForm, dateOfBirth: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1.5 block">Nationality</Label>
+                  <Input
+                    value={kycForm.nationality}
+                    onChange={(e) => setKycForm({ ...kycForm, nationality: e.target.value })}
+                    placeholder="Enter your nationality"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1.5 block">Address</Label>
+                  <Input
+                    value={kycForm.address}
+                    onChange={(e) => setKycForm({ ...kycForm, address: e.target.value })}
+                    placeholder="Enter your address"
+                  />
+                </div>
               </div>
               
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
@@ -336,8 +364,37 @@ export default function VerificationCenter() {
                 >
                   {t('cancel')}
                 </button>
-                <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                  {t('upload')}
+                <button
+                  disabled={submitting}
+                  onClick={async () => {
+                    setSubmitting(true);
+                    try {
+                      const { authenticatedFetch } = await import('@/lib/queryClient');
+                      const res = await authenticatedFetch('/api/kyc/submit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          verificationType: selectedVerification,
+                          ...kycForm,
+                        })
+                      });
+                      if (!res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        throw new Error(data.error || 'Failed to submit verification');
+                      }
+                      toast({ title: 'Success', description: 'Verification documents submitted' });
+                      queryClient.invalidateQueries({ queryKey: ['/api/kyc/status'] });
+                      setShowUploadModal(false);
+                      setKycForm({ documentType: 'national_id', fullName: '', dateOfBirth: '', nationality: '', address: '' });
+                    } catch (err) {
+                      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to submit', variant: 'destructive' });
+                    } finally {
+                      setSubmitting(false);
+                    }
+                  }}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {submitting ? 'Submitting...' : t('upload')}
                 </button>
               </div>
             </div>
