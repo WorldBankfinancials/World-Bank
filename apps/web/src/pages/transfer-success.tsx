@@ -5,6 +5,7 @@ import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle, Download, Share, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useToast } from "@/hooks/use-toast";
 import { authenticatedFetch } from "@/lib/queryClient";
 
 interface TransferStatusResponse {
@@ -23,6 +24,7 @@ export default function TransferSuccess() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const { t } = useLanguage();
+  const { toast } = useToast();
 
   const searchParams = new URLSearchParams(search);
   const transactionId = searchParams.get("id") || "";
@@ -111,11 +113,57 @@ export default function TransferSuccess() {
 
           <div className="space-y-3">
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm" className="flex-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => {
+                  const lines = [
+                    'Transfer Receipt',
+                    '-----------------',
+                    `Reference: ${reference}`,
+                    `Amount: ${amount.toFixed(2)} ${currency}`,
+                    `Fee: ${fee.toFixed(2)}`,
+                    `Recipient: ${recipientName}`,
+                    bankName ? `Bank: ${bankName}` : '',
+                    recipientAccount ? `Account: ${recipientAccount}` : '',
+                    `Completed: ${new Date(completedAt).toLocaleString()}`,
+                  ].filter(Boolean);
+                  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `receipt-${reference}.txt`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Download Receipt
               </Button>
-              <Button variant="outline" size="sm" className="flex-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={async () => {
+                  const shareData = {
+                    title: 'Transfer Receipt',
+                    text: `Transfer ${reference}: ${amount.toFixed(2)} ${currency} to ${recipientName} - Completed`,
+                  };
+                  try {
+                    if (navigator.share) {
+                      await navigator.share(shareData);
+                    } else {
+                      await navigator.clipboard.writeText(shareData.text);
+                      toast({ title: 'Copied', description: 'Receipt details copied to clipboard' });
+                    }
+                  } catch (err) {
+                    // user cancelled or clipboard unavailable - ignore
+                  }
+                }}
+              >
                 <Share className="w-4 h-4 mr-2" />
                 Share
               </Button>

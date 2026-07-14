@@ -49,9 +49,8 @@ export default function TransferProcessing() {
       setLocation(`/transfer-success?id=${transactionId}`);
     } else if (status === "failed" || status === "rejected") {
       setLocation(`/transfer-failed?id=${transactionId}`);
-    } else if (status === "processing" || status === "pending") {
-      setLocation(`/transfer-pending?id=${transactionId}`);
     }
+    // processing and pending statuses stay on the processing page while polling continues
   }, [statusData?.status, transactionId, setLocation]);
 
   // Keep the progress animation as a visual while polling
