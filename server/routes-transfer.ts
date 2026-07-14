@@ -138,6 +138,20 @@ export function setupTransferRoutes(app: Express) {
         
         const newBalance = currentBalance - totalDebit;
 
+        // Auto-create alert on transfer
+        try {
+          await supabase.from('alerts').insert({
+            user_id: user.id,
+            title: 'Transfer Initiated',
+            message: `Transfer of \${numAmount.toFixed(2)} to ${recipientName} (${recipientAccount}) is being processed.`,
+            type: 'info',
+            priority: 'normal',
+            is_read: false
+          });
+        } catch (alertError: unknown) {
+          console.warn('Failed to create transfer alert:', alertError instanceof Error ? alertError.message : 'Unknown error');
+        }
+
         // After successful transfer, save to recent_contacts
         try {
           const { data: existingContact } = await supabase
@@ -266,12 +280,18 @@ export function setupTransferRoutes(app: Express) {
         if (currentBalance < numAmount) {
           return res.status(400).json({ message: `Insufficient funds. Your total balance is ${currentBalance.toFixed(2)} but you're trying to transfer ${numAmount.toFixed(2)}` });
         }
-        
+
+        const internationalFee = Math.max(numAmount * 0.015, 15); // 1.5% or $15 minimum
+        const totalDebit = numAmount + internationalFee;
+        if (currentBalance < totalDebit) {
+          return res.status(400).json({ message: `Insufficient funds. Your total balance is ${currentBalance.toFixed(2)} but you need ${totalDebit.toFixed(2)} (transfer + fee)` });
+        }
+
         // Truncate all fields to match database constraints
         const recipientNameTrunc = String(recipientName).substring(0, 20);
         const recipientCountryTrunc = String(recipientCountry).substring(0, 20);
         const recipientAccountTrunc = accountNumber ? String(accountNumber).substring(0, 50) : '';
-        
+
         // ✅ ATOMIC TRANSFER: Use the execute_external_transfer RPC to debit
         // the account and create the transaction record in a single DB
         // transaction. This eliminates the TOCTOU race condition that existed
@@ -282,7 +302,7 @@ export function setupTransferRoutes(app: Express) {
             p_from_account_id: fromAccountId,
             p_from_user_id: user.id,
             p_amount: numAmount,
-            p_fee: 0,
+            p_fee: internationalFee,
             p_currency: 'USD',
             p_recipient_name: recipientNameTrunc,
             p_recipient_account: recipientAccountTrunc,
@@ -296,8 +316,8 @@ export function setupTransferRoutes(app: Express) {
             p_status: 'processing'
           });
         if (transferError) throw transferError;
-        
-        const newBalance = currentBalance - numAmount;
+
+        const newBalance = currentBalance - totalDebit;
 
         // After successful transfer, save to recent_contacts
         try {
@@ -473,9 +493,9 @@ export function setupTransferRoutes(app: Express) {
       // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
       // If reverseToAccount = true, credit back to user's account
       if (reverseToAccount && targetTxn.fromUserId) {
-        const numAmount = parseFloat(String(targetTxn.amount));
-        // updateUserBalance takes a DELTA — credit back the amount (positive delta)
-        await storage.updateUserBalance(targetTxn.fromUserId, +numAmount);
+        // Credit back amount + fee
+        const refundAmount = parseFloat(String(targetTxn.amount)) + parseFloat(String(targetTxn.fee || '0'));
+        await storage.updateUserBalance(targetTxn.fromUserId, refundAmount);
       }
       
       if (transaction) {
@@ -587,9 +607,9 @@ export function setupTransferRoutes(app: Express) {
       // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
       // If reverseToAccount = true, credit back to user's account
       if (reverseToAccount && targetTxn.fromUserId) {
-        const numAmount = parseFloat(String(targetTxn.amount));
-        // updateUserBalance takes a DELTA — credit back the amount (positive delta)
-        await storage.updateUserBalance(targetTxn.fromUserId, +numAmount);
+        // Credit back amount + fee
+        const refundAmount = parseFloat(String(targetTxn.amount)) + parseFloat(String(targetTxn.fee || '0'));
+        await storage.updateUserBalance(targetTxn.fromUserId, refundAmount);
       }
       
       if (transaction) {
