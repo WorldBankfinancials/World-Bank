@@ -86,7 +86,13 @@ export async function registerRoutes(app: Express) {
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      return res.json(sanitizeUser(user));
+      const userData = sanitizeUser(user) as Record<string, unknown>;
+      // Return accounts.balance as the primary balance
+      const { data: account } = await supabase.from('accounts').select('balance').eq('user_id', userData.id).eq('status', 'active').limit(1).single();
+      if (account) {
+        userData.balance = (account as Record<string, unknown>).balance;
+      }
+      return res.json(userData);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch user profile' });
     }
@@ -374,11 +380,31 @@ export async function registerRoutes(app: Express) {
       const id = req.params.id;
       const { response: adminResponse, notes, status } = req.body;
       const responseText = adminResponse || notes || '';
-      const updates: Record<string, unknown> = {};
-      if (responseText) updates.adminNotes = responseText;
-      updates.status = status || 'responded';
-      const updatedTicket = await storage.updateSupportTicket(id, updates);
-      return res.json({ success: true, ticket: updatedTicket, message: 'Reply sent successfully' });
+      const supabase = getAdminClient();
+
+      // Fetch existing ticket to append to adminNotes
+      const { data: ticket } = await supabase.from('support_tickets').select('admin_notes').eq('id', id).single();
+      const existingNotes = (ticket as Record<string, unknown>)?.admin_notes || '';
+      const newNotes = existingNotes
+        ? `${existingNotes}\n---\n[${new Date().toISOString()}] ${responseText}`
+        : `[${new Date().toISOString()}] ${responseText}`;
+
+      await supabase.from('support_tickets').update({
+        admin_notes: newNotes,
+        status: status || 'responded',
+        updated_at: new Date().toISOString()
+      }).eq('id', id);
+
+      // Log admin action
+      await supabase.from('admin_actions').insert({
+        admin_id: req.user!.id,
+        action_type: 'ticket_respond',
+        target_id: id,
+        description: `Responded to support ticket ${id}`,
+        metadata: { response: responseText }
+      });
+
+      return res.json({ success: true, message: 'Reply sent successfully' });
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to respond to ticket' });
     }
@@ -542,6 +568,42 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // POST /api/auth/change-password - Change user password
+  app.post('/api/auth/change-password', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password required' });
+      if (newPassword.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
+      if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+        return res.status(400).json({ error: 'Password must contain uppercase, lowercase, and a number' });
+      }
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY!;
+      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      });
+
+      // Verify current password by signing in
+      const { error: signInError } = await supabaseClient.auth.signInWithPassword({
+        email: req.user!.email,
+        password: currentPassword
+      });
+      if (signInError) return res.status(401).json({ error: 'Current password is incorrect' });
+
+      // Update password
+      const { error: updateError } = await supabaseClient.auth.updateUser({
+        password: newPassword
+      });
+      if (updateError) throw updateError;
+
+      return res.json({ success: true, message: 'Password changed successfully' });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
   // Admin login
   app.post('/api/admin/login', authRateLimiter, async (req: Request, res: Response) => {
     try {
@@ -623,6 +685,63 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // POST /api/payment-requests/:id/pay - Fulfill a payment request
+  app.post('/api/payment-requests/:id/pay', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const supabase = getAdminClient();
+      const { data: request } = await supabase.from('transactions').select('*').eq('id', req.params.id).eq('transaction_type', 'payment_request').single();
+      if (!request) return res.status(404).json({ error: 'Payment request not found' });
+      if ((request as Record<string, unknown>).status !== 'pending') return res.status(400).json({ error: 'Payment request is no longer pending' });
+
+      const amount = parseFloat(String((request as Record<string, unknown>).amount));
+      // Check balance
+      const { data: userAccount } = await supabase.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (!userAccount) return res.status(404).json({ error: 'Account not found' });
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
+      if (currentBalance < amount) return res.status(400).json({ error: 'Insufficient funds' });
+
+      // Debit payer
+      const newBalance = (currentBalance - amount).toFixed(2);
+      await supabase.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
+
+      // Mark request as paid
+      await supabase.from('transactions').update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        from_user_id: req.user!.id
+      }).eq('id', req.params.id);
+
+      // Create payment transaction
+      await supabase.from('transactions').insert({
+        from_user_id: req.user!.id,
+        to_user_id: (request as Record<string, unknown>).to_user_id,
+        amount: amount.toFixed(2),
+        currency: 'USD',
+        transaction_type: 'payment',
+        category: 'payment',
+        status: 'completed',
+        description: `Payment for request ${req.params.id}`,
+        reference_number: `PAY${Date.now()}${Math.floor(Math.random() * 10000)}`,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      });
+
+      // Create alert
+      await supabase.from('alerts').insert({
+        user_id: req.user!.id,
+        title: 'Payment Sent',
+        message: `Payment of ${amount.toFixed(2)} has been sent.`,
+        type: 'success',
+        priority: 'normal',
+        is_read: false
+      });
+
+      return res.json({ success: true, newBalance });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
   // POST /api/add-funds - Add funds to account
   app.post('/api/add-funds', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -642,6 +761,12 @@ export async function registerRoutes(app: Express) {
         if (!updated) {
           return res.status(500).json({ error: 'Failed to update balance' });
         }
+        // Sync accounts table balance
+        const newBalance = (parseFloat(String(updated.balance || '0'))).toFixed(2);
+        await supabase.from('accounts').update({
+          balance: newBalance,
+          updated_at: new Date().toISOString()
+        }).eq('user_id', user.id).eq('status', 'active');
         // Then create transaction record
         const transaction = await storage.createTransaction({
           fromAccountId: accounts[0].id,
@@ -970,7 +1095,20 @@ export async function registerRoutes(app: Express) {
         })
         .select()
         .single();
-      if (error) throw error;
+      if (error) throw data;
+      // Notify admins of new loan application
+      const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin').eq('is_active', true);
+      if (admins && admins.length > 0) {
+        const adminAlerts = admins.map((admin: Record<string, unknown>) => ({
+          user_id: admin.id,
+          title: 'New Loan Application',
+          message: `Loan application for ${principalAmount} from ${req.user!.email} requires review.`,
+          type: 'warning',
+          priority: 'high',
+          is_read: false
+        }));
+        await supabase.from('alerts').insert(adminAlerts);
+      }
       return res.json(data);
     } catch (error: unknown) {
       return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
@@ -1408,6 +1546,8 @@ export async function registerRoutes(app: Express) {
     try {
       const { cardId, dailyLimit, monthlyLimit, isContactless } = req.body;
       if (!cardId) return res.status(400).json({ error: 'Card ID required' });
+      if (dailyLimit !== undefined && parseFloat(String(dailyLimit)) < 0) return res.status(400).json({ error: 'Daily limit cannot be negative' });
+      if (monthlyLimit !== undefined && parseFloat(String(monthlyLimit)) < 0) return res.status(400).json({ error: 'Monthly limit cannot be negative' });
       const { data, error } = await supabase.from('cards').update({
         daily_limit: dailyLimit,
         monthly_limit: monthlyLimit,
@@ -1415,6 +1555,52 @@ export async function registerRoutes(app: Express) {
         updated_at: new Date().toISOString()
       }).eq('id', cardId).eq('user_id', req.user!.id).select().single();
       if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/cards - Create a new card
+  app.post('/api/cards', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { cardType, cardholderName } = req.body;
+      if (!cardType || !cardholderName) return res.status(400).json({ error: 'Card type and cardholder name required' });
+      const supabase = getAdminClient();
+
+      // Get user's account
+      const { data: account } = await supabase.from('accounts').select('id').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (!account) return res.status(404).json({ error: 'No active account found' });
+
+      const cardNumber = '4' + Math.floor(Math.random() * 9000000000000000 + 1000000000000000).toString();
+      const expiryMonth = Math.floor(Math.random() * 12) + 1;
+      const expiryYear = new Date().getFullYear() + 4;
+
+      const { data, error } = await supabase.from('cards').insert({
+        user_id: req.user!.id,
+        account_id: (account as Record<string, unknown>).id,
+        card_number: cardNumber,
+        card_type: cardType,
+        cardholder_name: cardholderName,
+        expiry_month: expiryMonth,
+        expiry_year: expiryYear,
+        status: 'active',
+        is_contactless: true,
+        daily_limit: '5000.00',
+        monthly_limit: '50000.00',
+        pin_set: false
+      }).select().single();
+      if (error) throw error;
+
+      await supabase.from('alerts').insert({
+        user_id: req.user!.id,
+        title: 'New Card Created',
+        message: `A new ${cardType} card has been created for your account.`,
+        type: 'success',
+        priority: 'normal',
+        is_read: false
+      });
+
       return res.json(data);
     } catch (error: unknown) {
       return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
@@ -1862,7 +2048,7 @@ export async function registerRoutes(app: Express) {
       // Check investment
       const { data: investment } = await supabaseClient.from('investments').select('id, shares, average_price, symbol').eq('id', investmentId).eq('user_id', req.user!.id).single();
       if (!investment) return res.status(404).json({ error: 'Investment not found' });
-      const heldShares = parseFloat(String((investment as Record<string, unknown>).shares || '0'));
+      const heldShares = parseFloat(String((investment as Record<string, unknown>).shares || '0')));
       if (heldShares < numShares) return res.status(400).json({ error: 'Insufficient shares' });
 
       // Credit account
@@ -1981,6 +2167,20 @@ export async function registerLiveChatRoutes(app: Express) {
           timestamp: new Date().toISOString()
         }
       });
+
+      // Also create alerts for admins
+      const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin').eq('is_active', true);
+      if (admins && admins.length > 0) {
+        const adminAlerts = admins.map((admin: Record<string, unknown>) => ({
+          user_id: admin.id,
+          title: 'New Chat Message',
+          message: `New message from ${req.user!.email}`,
+          type: 'info',
+          priority: 'normal',
+          is_read: false
+        }));
+        await supabase.from('alerts').insert(adminAlerts);
+      }
 
       return res.json({ success: true, messageId: savedMsg?.id });
     } catch (error: unknown) {
