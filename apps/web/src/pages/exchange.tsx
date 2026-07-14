@@ -32,6 +32,13 @@ export default function Exchange() {
     refetchInterval: 60000 // Auto refresh every minute
   });
 
+  // Fetch 24h change data from API (falls back to empty when unavailable)
+  const { data: rateChanges } = useQuery<Record<string, number>>({
+    queryKey: ['/api/exchange-rates/changes'],
+    staleTime: 30000,
+    refetchInterval: 60000
+  });
+
   // Calculate converted amount
   useEffect(() => {
     if (exchangeRates && amount) {
@@ -265,8 +272,9 @@ export default function Exchange() {
               <div className="space-y-3">
                 {topRates.map(([currency, rate]) => {
                   const currencyInfo = currencies.find(c => c.code === currency);
-                  const change = Math.random() * 2 - 1; // Simulate rate change
-                  const isPositive = change >= 0;
+                  const change = rateChanges?.[currency];
+                  const hasChange = typeof change === 'number' && isFinite(change);
+                  const isPositive = hasChange ? change >= 0 : true;
                   
                   return (
                     <div key={currency} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
@@ -279,14 +287,16 @@ export default function Exchange() {
                       </div>
                       <div className="text-right">
                         <div className="font-medium">{rate.toFixed(4)}</div>
-                        <div className={`text-sm flex items-center ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                          {isPositive ? (
-                            <TrendingUp className="w-3 h-3 mr-1" />
-                          ) : (
-                            <TrendingDown className="w-3 h-3 mr-1" />
-                          )}
-                          {isPositive ? '+' : ''}{change.toFixed(2)}%
-                        </div>
+                        {hasChange ? (
+                          <div className={`text-sm flex items-center ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                            {isPositive ? (
+                              <TrendingUp className="w-3 h-3 mr-1" />
+                            ) : (
+                              <TrendingDown className="w-3 h-3 mr-1" />
+                            )}
+                            {isPositive ? '+' : ''}{change.toFixed(2)}%
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   );

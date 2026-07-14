@@ -114,6 +114,18 @@ export default function SupportCenter() {
                 </div>
               ))}
             </div>
+
+            <div className="mt-6 pt-6 border-t">
+              <p className="text-sm text-wb-text mb-3">
+                Can't find what you're looking for? Create a support ticket and our team will get back to you.
+              </p>
+              <a
+                href="/customer-support"
+                className="inline-flex items-center justify-center rounded-md bg-wb-blue text-white px-4 py-2 text-sm font-medium hover:opacity-90"
+              >
+                Create a Support Ticket
+              </a>
+            </div>
           </CardContent>
         </Card>
       </div>

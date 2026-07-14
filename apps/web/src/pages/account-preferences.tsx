@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Header from '@/components/Header';
@@ -18,11 +18,18 @@ import {
   Save
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 
 export default function AccountPreferences() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
+
+  // Fetch user data from API to initialize preferences from real values
+  const { data: userData } = useQuery<any>({
+    queryKey: ['/api/user'],
+    staleTime: 60000,
+  });
   
   const [preferences, setPreferences] = useState({
     notifications: {
@@ -47,6 +54,41 @@ export default function AccountPreferences() {
       autoLogout: true
     }
   });
+
+  // Initialize preference toggles from fetched user data instead of hardcoded defaults
+  useEffect(() => {
+    if (!userData) return;
+    const saved = (userData as any)?.preferences;
+    if (saved) {
+      setPreferences(prev => ({
+        notifications: { ...prev.notifications, ...(saved.notifications || {}) },
+        privacy: { ...prev.privacy, ...(saved.privacy || {}) },
+        display: { ...prev.display, ...(saved.display || {}) },
+        security: { ...prev.security, ...(saved.security || {}) },
+      }));
+    } else {
+      // Fall back to individual fields on the user object if present
+      setPreferences(prev => ({
+        ...prev,
+        display: {
+          ...prev.display,
+          currency: (userData as any).currency || prev.display.currency,
+          language: (userData as any).language || prev.display.language,
+        },
+        notifications: {
+          ...prev.notifications,
+          email: (userData as any).emailNotifications ?? prev.notifications.email,
+          sms: (userData as any).smsNotifications ?? prev.notifications.sms,
+          push: (userData as any).pushNotifications ?? prev.notifications.push,
+        },
+        privacy: {
+          ...prev.privacy,
+          twoFactorAuth: (userData as any).twoFactorEnabled ?? prev.privacy.twoFactorAuth,
+          showBalance: (userData as any).showBalance ?? prev.privacy.showBalance,
+        },
+      }));
+    }
+  }, [userData]);
 
   const handleSave = async () => {
     const { authenticatedFetch } = await import('@/lib/queryClient');
