@@ -31,6 +31,10 @@ export default function Cards() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [billProvider, setBillProvider] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
+  const [createCardDialogOpen, setCreateCardDialogOpen] = useState(false);
+  const [newCardType, setNewCardType] = useState('debit');
+  const [newCardholderName, setNewCardholderName] = useState('');
+  const [creatingCard, setCreatingCard] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -230,7 +234,7 @@ export default function Cards() {
             <h1 className="text-2xl font-bold text-gray-900">{t('my_cards') || 'My Cards'}</h1>
             <p className="text-gray-600">{t('manage_cards') || 'Manage your credit and debit cards'}</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
+          <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setCreateCardDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             {t('add_card') || 'Add Card'}
           </Button>
@@ -623,7 +627,75 @@ export default function Cards() {
           </div>
         </DialogContent>
       </Dialog>
-      
+
+      {/* Create New Card Dialog */}
+      <Dialog open={createCardDialogOpen} onOpenChange={setCreateCardDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Card</DialogTitle>
+            <DialogDescription>Choose a card type and enter the cardholder name.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="mb-1.5 block">Card Type</Label>
+              <select
+                value={newCardType}
+                onChange={(e) => setNewCardType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-md bg-white"
+              >
+                <option value="debit">Debit</option>
+                <option value="credit">Credit</option>
+                <option value="prepaid">Prepaid</option>
+                <option value="virtual">Virtual</option>
+              </select>
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Cardholder Name</Label>
+              <Input
+                value={newCardholderName}
+                onChange={(e) => setNewCardholderName(e.target.value)}
+                placeholder="Enter cardholder name"
+              />
+            </div>
+          </div>
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => setCreateCardDialogOpen(false)} className="flex-1">
+              {t('cancel') || 'Cancel'}
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={creatingCard || !newCardholderName}
+              onClick={async () => {
+                setCreatingCard(true);
+                try {
+                  const { authenticatedFetch } = await import('@/lib/queryClient');
+                  const res = await authenticatedFetch('/api/cards', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cardType: newCardType, cardholderName: newCardholderName })
+                  });
+                  if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || 'Failed to create card');
+                  }
+                  toast({ title: 'Success', description: 'Card created successfully' });
+                  queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
+                  setCreateCardDialogOpen(false);
+                  setNewCardholderName('');
+                  setNewCardType('debit');
+                } catch (err) {
+                  toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to create card', variant: 'destructive' });
+                } finally {
+                  setCreatingCard(false);
+                }
+              }}
+            >
+              {creatingCard ? 'Creating...' : 'Create Card'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <BottomNavigation />
     </div>
   );

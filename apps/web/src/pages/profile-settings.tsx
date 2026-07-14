@@ -2,12 +2,15 @@ import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
-import { User, Shield, MapPin, Check, Eye, Lock, KeyRound } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { User, Shield, MapPin, Check, Eye, Lock, KeyRound, Pencil } from "lucide-react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import LiveChat from "@/components/LiveChat";
+import { useToast } from "@/hooks/use-toast";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { CustomerData } from "@/types";
@@ -15,12 +18,83 @@ import { CustomerData } from "@/types";
 export default function ProfileSettings() {
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [showLiveChat, setShowLiveChat] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    fullName: '',
+    phone: '',
+    profession: '',
+    address: '',
+    city: '',
+    country: '',
+    postalCode: '',
+  });
+  const [isSaving, setIsSaving] = useState(false);
   const { data: user, isLoading } = useQuery<CustomerData>({
     queryKey: ['/api/user'],
   });
   const displayUser: CustomerData = user || { id: '' };
   const loading = isLoading;
+
+  // Initialize edit form when user data loads or editing starts
+  useEffect(() => {
+    if (user) {
+      setEditForm({
+        fullName: (user as any).fullName || (user as any).firstName || '',
+        phone: (user as any).phone || '',
+        profession: (user as any).profession || '',
+        address: (user as any).address || '',
+        city: (user as any).city || '',
+        country: (user as any).country || '',
+        postalCode: (user as any).postalCode || '',
+      });
+    }
+  }, [user]);
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    // Reset form to current user values
+    if (user) {
+      setEditForm({
+        fullName: (user as any).fullName || (user as any).firstName || '',
+        phone: (user as any).phone || '',
+        profession: (user as any).profession || '',
+        address: (user as any).address || '',
+        city: (user as any).city || '',
+        country: (user as any).country || '',
+        postalCode: (user as any).postalCode || '',
+      });
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch('/api/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update profile');
+      }
+      toast({ title: 'Success', description: 'Profile updated successfully' });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      setIsEditing(false);
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update profile', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -52,9 +126,17 @@ export default function ProfileSettings() {
         {/* Profile Overview */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <User className="w-5 h-5 mr-2" />
-              Profile Information
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
+                <User className="w-5 h-5 mr-2" />
+                Profile Information
+              </div>
+              {!isEditing && (
+                <Button variant="outline" size="sm" onClick={handleEdit}>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit Profile
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -135,6 +217,46 @@ export default function ProfileSettings() {
                   <p className="text-gray-900">{(displayUser as any)?.annualIncome || 'Not provided'}</p>
                 </div>
               </div>
+
+              {/* Edit Form */}
+              {isEditing && (
+                <div className="pt-4 border-t space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-fullName">Full Name</Label>
+                      <Input id="edit-fullName" value={editForm.fullName} onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-phone">Phone</Label>
+                      <Input id="edit-phone" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-profession">Profession</Label>
+                      <Input id="edit-profession" value={editForm.profession} onChange={(e) => setEditForm({ ...editForm, profession: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-address">Address</Label>
+                      <Input id="edit-address" value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-city">City</Label>
+                      <Input id="edit-city" value={editForm.city} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-country">Country</Label>
+                      <Input id="edit-country" value={editForm.country} onChange={(e) => setEditForm({ ...editForm, country: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-postalCode">Postal Code</Label>
+                      <Input id="edit-postalCode" value={editForm.postalCode} onChange={(e) => setEditForm({ ...editForm, postalCode: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>Cancel</Button>
+                    <Button onClick={handleSave} disabled={isSaving}>{isSaving ? 'Saving...' : 'Save'}</Button>
+                  </div>
+                </div>
+              )}
 
               <div className="pt-4 border-t">
                 <div className="flex items-center space-x-2">

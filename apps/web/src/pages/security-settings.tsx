@@ -5,21 +5,146 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Shield, Key, Smartphone, AlertTriangle } from "lucide-react";
 
 
 export default function SecuritySettings() {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Toggle state for security preferences
+  const [twoFactorSMS, setTwoFactorSMS] = useState(false);
+  const [twoFactorAuthenticator, setTwoFactorAuthenticator] = useState(false);
+  const [loginAlertsEmail, setLoginAlertsEmail] = useState(true);
+  const [loginAlertsSuspicious, setLoginAlertsSuspicious] = useState(true);
+
+  // Security questions state
+  const [securityQuestions, setSecurityQuestions] = useState({
+    question1: "What was your first pet's name?",
+    answer1: '',
+    question2: "What city were you born in?",
+    answer2: ''
+  });
+
+  // Snapshot for cancel/reset
+  const [savedPrefs, setSavedPrefs] = useState({
+    twoFactorSMS: false,
+    twoFactorAuthenticator: false,
+    loginAlertsEmail: true,
+    loginAlertsSuspicious: true,
+  });
+
+  // Load existing preferences on mount
+  const { data: prefs } = useQuery<any>({
+    queryKey: ['/api/user/preferences'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch('/api/user/preferences');
+      if (!res.ok) return null;
+      return res.json();
+    }
+  });
+
+  // Initialize toggles from prefs
+  useEffect(() => {
+    if (prefs) {
+      const sec = prefs.securityPreferences || {};
+      const notif = prefs.notificationPreferences || {};
+      const initial = {
+        twoFactorSMS: sec.twoFactorSMS ?? false,
+        twoFactorAuthenticator: sec.twoFactorAuthenticator ?? false,
+        loginAlertsEmail: notif.loginAlertsEmail ?? true,
+        loginAlertsSuspicious: notif.loginAlertsSuspicious ?? true,
+      };
+      setTwoFactorSMS(initial.twoFactorSMS);
+      setTwoFactorAuthenticator(initial.twoFactorAuthenticator);
+      setLoginAlertsEmail(initial.loginAlertsEmail);
+      setLoginAlertsSuspicious(initial.loginAlertsSuspicious);
+      setSavedPrefs(initial);
+    }
+  }, [prefs]);
+
+  const updatePreference = async (payload: Record<string, any>) => {
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch('/api/user/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update preferences');
+      }
+      toast({ title: 'Success', description: 'Preferences updated' });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/preferences'] });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update preferences', variant: 'destructive' });
+    }
+  };
+
+  const handleTwoFactorSMS = (value: boolean) => {
+    setTwoFactorSMS(value);
+    updatePreference({ securityPreferences: { twoFactorSMS: value } });
+  };
+
+  const handleTwoFactorAuthenticator = (value: boolean) => {
+    setTwoFactorAuthenticator(value);
+    updatePreference({ securityPreferences: { twoFactorAuthenticator: value } });
+  };
+
+  const handleLoginAlertsEmail = (value: boolean) => {
+    setLoginAlertsEmail(value);
+    updatePreference({ notificationPreferences: { loginAlertsEmail: value } });
+  };
+
+  const handleLoginAlertsSuspicious = (value: boolean) => {
+    setLoginAlertsSuspicious(value);
+    updatePreference({ notificationPreferences: { loginAlertsSuspicious: value } });
+  };
+
+  const handleUpdateSecurityQuestions = async () => {
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch('/api/user/security-questions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(securityQuestions)
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update security questions');
+      }
+      toast({ title: 'Success', description: 'Security questions updated' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to update security questions', variant: 'destructive' });
+    }
+  };
+
+  const handleSaveAll = async () => {
+    await updatePreference({
+      securityPreferences: { twoFactorSMS, twoFactorAuthenticator },
+      notificationPreferences: { loginAlertsEmail, loginAlertsSuspicious }
+    });
+    setSavedPrefs({ twoFactorSMS, twoFactorAuthenticator, loginAlertsEmail, loginAlertsSuspicious });
+  };
+
+  const handleCancel = () => {
+    setTwoFactorSMS(savedPrefs.twoFactorSMS);
+    setTwoFactorAuthenticator(savedPrefs.twoFactorAuthenticator);
+    setLoginAlertsEmail(savedPrefs.loginAlertsEmail);
+    setLoginAlertsSuspicious(savedPrefs.loginAlertsSuspicious);
+  };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,14 +260,14 @@ export default function SecuritySettings() {
                   <h3 className="font-medium">SMS Authentication</h3>
                   <p className="text-sm text-gray-600">Receive codes via SMS</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={twoFactorSMS} onCheckedChange={handleTwoFactorSMS} />
               </div>
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium">Authenticator App</h3>
                   <p className="text-sm text-gray-600">Use Google Authenticator or similar</p>
                 </div>
-                <Switch />
+                <Switch checked={twoFactorAuthenticator} onCheckedChange={handleTwoFactorAuthenticator} />
               </div>
               <Button variant="outline">
                 Setup Authenticator App
@@ -164,14 +289,14 @@ export default function SecuritySettings() {
                   <h3 className="font-medium">Email Notifications</h3>
                   <p className="text-sm text-gray-600">Get notified of new logins</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={loginAlertsEmail} onCheckedChange={handleLoginAlertsEmail} />
               </div>
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium">Suspicious Activity</h3>
                   <p className="text-sm text-gray-600">Alert on unusual account activity</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={loginAlertsSuspicious} onCheckedChange={handleLoginAlertsSuspicious} />
               </div>
             </CardContent>
           </Card>
@@ -187,23 +312,23 @@ export default function SecuritySettings() {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="question1">Security Question 1</Label>
-                <Input id="question1" defaultValue="What was your first pet's name?" disabled />
-                <Input placeholder="Your answer" className="mt-2" />
+                <Input id="question1" value={securityQuestions.question1} onChange={(e) => setSecurityQuestions({ ...securityQuestions, question1: e.target.value })} />
+                <Input placeholder="Your answer" className="mt-2" value={securityQuestions.answer1} onChange={(e) => setSecurityQuestions({ ...securityQuestions, answer1: e.target.value })} />
               </div>
               <div>
                 <Label htmlFor="question2">Security Question 2</Label>
-                <Input id="question2" defaultValue="What city were you born in?" disabled />
-                <Input placeholder="Your answer" className="mt-2" />
+                <Input id="question2" value={securityQuestions.question2} onChange={(e) => setSecurityQuestions({ ...securityQuestions, question2: e.target.value })} />
+                <Input placeholder="Your answer" className="mt-2" value={securityQuestions.answer2} onChange={(e) => setSecurityQuestions({ ...securityQuestions, answer2: e.target.value })} />
               </div>
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleUpdateSecurityQuestions}>
                 Update Security Questions
               </Button>
             </CardContent>
           </Card>
 
           <div className="flex justify-end space-x-3">
-            <Button variant="outline">Cancel</Button>
-            <Button className="bg-blue-600 text-white hover:bg-blue-700">
+            <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+            <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={handleSaveAll}>
               Save All Changes
             </Button>
           </div>
