@@ -139,18 +139,18 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
           // Determine recipient
           const recipientId = data.recipientId || (userRole === 'admin' ? data.customerId : 'admin');
 
-          // Save message to database
+          // Save message to database (messages table, snake_case columns)
           const { data: savedMessage, error } = await supabase
-            .from('chat_messages')
+            .from('messages')
             .insert([
               {
-                senderId: userId,
-                senderName: userEmail || userId,
-                senderRole: userRole,
-                recipientId,
+                sender_id: userId,
+                sender_name: userEmail || userId,
+                sender_role: userRole,
+                recipient_id: recipientId,
                 content: data.content,
-                createdAt: new Date(),
-                isRead: false
+                created_at: new Date().toISOString(),
+                is_read: false
               }
             ])
             .select()
@@ -197,10 +197,10 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
         if (data.type === 'mark_read') {
           // Mark messages as read
           await supabase
-            .from('chat_messages')
-            .update({ isRead: true })
-            .eq('recipientId', userId)
-            .eq('isRead', false);
+            .from('messages')
+            .update({ is_read: true })
+            .eq('recipient_id', userId)
+            .eq('is_read', false);
 
           ws.send(JSON.stringify({
             type: 'messages_marked_read',
@@ -254,10 +254,10 @@ export async function getChatHistory(req: Request, res: Response) {
     }
 
     const { data: messages, error } = await supabase
-      .from('chat_messages')
+      .from('messages')
       .select('*')
-      .or(`senderId.eq.${userId},recipientId.eq.${userId}`)
-      .order('createdAt', { ascending: false })
+      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
       .range(Number(offset), Number(offset) + Number(limit) - 1);
 
     if (error) throw error;

@@ -31,7 +31,7 @@ export const transferSchema = z.object({
   recipientBank:    z.string().max(200).optional(),
   recipientCountry: z.string().max(100).optional(),
   swiftCode:        z.string().regex(/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/, 'Invalid SWIFT code').optional(),
-  transferPin:      z.string().regex(/^\d{4,6}$/, 'PIN must be 4-6 digits'),
+  transferPin:      z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits'),
   description:      z.string().max(500).optional(),
   transferPurpose:  z.string().max(200).optional(),
   idempotencyKey:   z.string().optional(),
@@ -48,7 +48,7 @@ export const registrationSchema = z.object({
   email:       z.string().email(),
   password:    z.string().min(8).regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Requires uppercase, lowercase, number'),
   firstName:   z.string().min(1).max(100),
-  lastName:    z.string().min(1).max(100),
+  lastName:   z.string().min(1).max(100),
   phone:       z.string().min(7).max(20).optional(),
   dateOfBirth: z.string().optional(),
   address:     z.string().max(300).optional(),
@@ -60,7 +60,7 @@ export const registrationSchema = z.object({
   annualIncome: z.string().max(50).optional(),
   idType:      z.string().max(50).optional(),
   idNumber:    z.string().max(100).optional(),
-  transferPin: z.string().regex(/^\d{4,6}$/, 'PIN must be 4-6 digits'),
+  transferPin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits'),
 });
 
 export const approvalSchema = z.object({
@@ -75,8 +75,8 @@ export const rejectionSchema = z.object({
 });
 
 export const pinChangeSchema = z.object({
-  currentPin: z.string().regex(/^\d{4,6}$/, 'PIN must be 4-6 digits'),
-  newPin:     z.string().regex(/^\d{4,6}$/, 'PIN must be 4-6 digits'),
+  currentPin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits'),
+  newPin:     z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits'),
 });
 
 export const supportTicketSchema = z.object({
