@@ -115,11 +115,21 @@ export default function TransferPending() {
             </Button>
             
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm" className="flex-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => { window.location.href = 'tel:+18006002000'; }}
+              >
                 <Phone className="w-4 h-4 mr-2" />
                 Call Support
               </Button>
-              <Button variant="outline" size="sm" className="flex-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => { window.location.href = 'mailto:support@worldbank.example?subject=Pending%20Transfer%20' + encodeURIComponent(referenceNumber); }}
+              >
                 <Mail className="w-4 h-4 mr-2" />
                 Email Support
               </Button>
