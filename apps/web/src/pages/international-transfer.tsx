@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
@@ -45,7 +45,17 @@ export default function InternationalTransfer() {
   const [showPendingStatus, setShowPendingStatus] = useState(false);
   const [transferReference2, setTransferReference2] = useState("");
   const [transferStatus, setTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
-  const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   if (!user) {
     return (
@@ -219,7 +229,7 @@ export default function InternationalTransfer() {
           }
         }, 3000);
         
-        setPollInterval(interval);
+        pollIntervalRef.current = interval;
 
         setTransferAmount("");
         setRecipientFullName("");
@@ -363,7 +373,7 @@ export default function InternationalTransfer() {
                     className="flex-1"
                     onClick={() => {
                       setShowPendingStatus(false);
-                      if (pollInterval) clearInterval(pollInterval);
+                      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
                     }}
                   >
                     New Transfer
