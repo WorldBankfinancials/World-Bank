@@ -47,7 +47,6 @@ export function useRealtimeChat(
   useEffect(() => {
     if (!userId) return;
 
-    // Subscribe to chat messages for this user
     const channel = supabase.channel(`chat:${userId}`);
 
     channel
@@ -71,7 +70,27 @@ export function useRealtimeChat(
         },
         handleMessage
       )
-      .subscribe();
+      .subscribe((status: string) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          const interval = setInterval(async () => {
+            try {
+              const { authenticatedFetch } = await import('@/lib/queryClient');
+              const res = await authenticatedFetch('/api/chat/history');
+              if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                  setMessages(prev => {
+                    const existingIds = new Set(prev.map(m => m.id));
+                    const newMsgs = data.filter((msg: any) => !existingIds.has(msg.id));
+                    return [...prev, ...newMsgs];
+                  });
+                }
+              }
+            } catch {}
+          }, 10000);
+          return () => clearInterval(interval);
+        }
+      });
 
     return () => {
       channel.unsubscribe();

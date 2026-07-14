@@ -19,14 +19,24 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   return { 'Authorization': `Bearer ${token}` };
 }
 
+let csrfToken: string | null = null;
+
+async function getCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken;
+  try {
+    const response = await fetch('/api/csrf-token');
+    const data = await response.json();
+    csrfToken = data.token;
+    return csrfToken!;
+  } catch {
+    return '';
+  }
+}
+
 /**
  * CRITICAL FIX: Authenticated fetch wrapper
  * Use this instead of raw fetch() to ensure authentication headers are included
  * Automatically waits for Supabase session with retry logic
- * 
- * @example
- * const response = await authenticatedFetch('/api/user');
- * const data = await response.json();
  */
 export async function authenticatedFetch(
   url: string,
@@ -39,13 +49,21 @@ export async function authenticatedFetch(
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
+      const method = options?.method?.toUpperCase() || 'GET';
+      const headers: Record<string, string> = {
+        ...authHeaders,
+        ...(options?.headers as Record<string, string>),
+        'Accept-Encoding': 'gzip, deflate',
+      };
+      
+      if (method !== 'GET') {
+        const token = await getCsrfToken();
+        headers['x-csrf-token'] = token;
+      }
+      
       const response = await fetch(url, {
         ...options,
-        headers: {
-          ...authHeaders,
-          ...options?.headers,
-          'Accept-Encoding': 'gzip, deflate',
-        },
+        headers,
         credentials: "include",
         signal: controller.signal,
       });
@@ -65,7 +83,6 @@ export async function authenticatedFetch(
               const newTokens = await refreshResponse.json();
               localStorage.setItem('token', newTokens.token);
               localStorage.setItem('refresh_token', newTokens.refreshToken || '');
-              // Retry original request with new token
               const headers = new Headers(options?.headers);
               headers.set('Authorization', `Bearer ${newTokens.token}`);
               return fetch(url, { ...options, headers });
@@ -74,7 +91,6 @@ export async function authenticatedFetch(
             // Refresh failed, fall through to logout
           }
         }
-        // Clear tokens and redirect to login
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('userProfile');

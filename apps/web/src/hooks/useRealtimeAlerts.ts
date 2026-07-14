@@ -25,7 +25,6 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
   useEffect(() => {
     if (!userId || !enabled) return;
 
-    // Subscribe to alerts channel
     const channel = supabase.channel(`alerts:${userId}`);
 
     channel
@@ -41,7 +40,27 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
           handleAlertReceived(payload.new as Alert);
         }
       )
-      .subscribe();
+      .subscribe((status: string) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          const interval = setInterval(async () => {
+            try {
+              const { authenticatedFetch } = await import('@/lib/queryClient');
+              const res = await authenticatedFetch('/api/alerts');
+              if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                  setAlerts(prev => {
+                    const existingIds = new Set(prev.map(a => a.id));
+                    const newAlerts = data.filter((alert: any) => !existingIds.has(alert.id));
+                    return [...prev, ...newAlerts];
+                  });
+                }
+              }
+            } catch {}
+          }, 10000);
+          return () => clearInterval(interval);
+        }
+      });
 
     return () => {
       channel.unsubscribe();

@@ -32,7 +32,6 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
   useEffect(() => {
     if (!userId) return;
 
-    // Subscribe to transactions channel
     const channel = supabase.channel(`transactions:${userId}`);
 
     channel
@@ -50,7 +49,27 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
           }
         }
       )
-      .subscribe();
+      .subscribe((status: string) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          const interval = setInterval(async () => {
+            try {
+              const { authenticatedFetch } = await import('@/lib/queryClient');
+              const res = await authenticatedFetch('/api/transactions');
+              if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) {
+                  setTransactions(prev => {
+                    const existingIds = new Set(prev.map(t => t.id));
+                    const newTxs = data.filter((tx: any) => !existingIds.has(tx.id));
+                    return [...prev, ...newTxs];
+                  });
+                }
+              }
+            } catch {}
+          }, 10000);
+          return () => clearInterval(interval);
+        }
+      });
 
     return () => {
       channel.unsubscribe();
