@@ -181,7 +181,7 @@ export async function registerRoutes(app: Express) {
   // ==================== PIN MANAGEMENT ====================
 
   // POST /api/set-pin - Set transfer PIN
-  app.post('/api/set-pin', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/set-pin', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { pin } = req.body;
       if (!pin || String(pin).length !== 4) {
@@ -222,7 +222,7 @@ export async function registerRoutes(app: Express) {
   });
 
   // POST /api/change-pin - Change transfer PIN
-  app.post('/api/change-pin', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/change-pin', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { currentPin, newPin } = req.body;
       if (!currentPin || !newPin || String(newPin).length !== 4) {
@@ -569,7 +569,7 @@ export async function registerRoutes(app: Express) {
   });
 
   // POST /api/auth/change-password - Change user password
-  app.post('/api/auth/change-password', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/auth/change-password', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { currentPassword, newPassword } = req.body;
       if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password required' });
@@ -1689,7 +1689,7 @@ export async function registerRoutes(app: Express) {
       // Check balance first
       const { data: userAccount } = await supabase.from('accounts').select('balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0')));
       if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
 
       // Debit the amount
@@ -1831,7 +1831,7 @@ export async function registerRoutes(app: Express) {
       if (deposit > 0) {
         const { data: userAccount } = await supabaseClient.from('accounts').select('balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
         if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-        const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
+        const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0')));
         if (currentBalance < deposit) return res.status(400).json({ error: 'Insufficient funds for initial deposit' });
         // Debit from checking
         const newBalance = (currentBalance - deposit).toFixed(2);
@@ -1885,7 +1885,7 @@ export async function registerRoutes(app: Express) {
       // Check and debit checking account
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0')));
       if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
 
       const newCheckingBalance = (currentBalance - numAmount).toFixed(2);
@@ -1928,7 +1928,7 @@ export async function registerRoutes(app: Express) {
       const supabaseClient = getAdminClient();
       const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user!.id).single();
       if (!savings) return res.status(404).json({ error: 'Savings account not found' });
-      const savingsBalance = parseFloat(String((savings as Record<string, unknown>).balance || '0'));
+      const savingsBalance = parseFloat(String((savings as Record<string, unknown>).balance || '0')));
       if (savingsBalance < numAmount) return res.status(400).json({ error: 'Insufficient savings balance' });
 
       // Debit savings
@@ -1980,7 +1980,7 @@ export async function registerRoutes(app: Express) {
       // Check balance
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0')));
       if (currentBalance < totalCost) return res.status(400).json({ error: 'Insufficient funds' });
 
       // Debit account
@@ -1990,8 +1990,8 @@ export async function registerRoutes(app: Express) {
       // Create or update investment
       const { data: existing } = await supabaseClient.from('investments').select('id, shares, average_price').eq('user_id', req.user!.id).eq('symbol', symbol).limit(1);
       if (existing && existing.length > 0) {
-        const existingShares = parseFloat(String((existing[0] as Record<string, unknown>).shares || '0'));
-        const existingAvg = parseFloat(String((existing[0] as Record<string, unknown>).average_price || '0'));
+        const existingShares = parseFloat(String((existing[0] as Record<string, unknown>).shares || '0')));
+        const existingAvg = parseFloat(String((existing[0] as Record<string, unknown>).average_price || '0')));
         const newTotalShares = existingShares + numShares;
         const newAvgPrice = ((existingAvg * existingShares) + (numPrice * numShares)) / newTotalShares;
         await supabaseClient.from('investments').update({

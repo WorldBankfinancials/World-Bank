@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import crypto from "crypto";
+import zlib from "zlib";
 import { registerFixedRoutes } from "./fix-routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { WebSocketServer } from "ws";
@@ -7,8 +8,38 @@ import { setupLiveChatWebSocket } from "./supabase-live-chat";
 import { generalRateLimiter } from "./rate-limiter";
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// Compression middleware (inline implementation - no external dependency)
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const acceptEncoding = req.headers['accept-encoding'] || '';
+  if (!acceptEncoding.includes('gzip')) return next();
+  const originalSend = res.send.bind(res);
+  res.send = function (body: any): Response {
+    if (typeof body === 'string' || Buffer.isBuffer(body)) {
+      const buf = typeof body === 'string' ? Buffer.from(body) : body;
+      if (buf.length > 1024) {
+        zlib.gzip(buf, (err, compressed) => {
+          if (err) return originalSend(body);
+          res.setHeader('Content-Encoding', 'gzip');
+          res.setHeader('Content-Length', String(compressed.length));
+          return originalSend(compressed);
+        });
+        return res;
+      }
+    }
+    return originalSend(body);
+  } as any;
+  next();
+});
+
+// Cache static assets aggressively
+app.use('/assets', (_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  next();
+});
 
 // CSRF Protection - HMAC-based token system (no server-side storage needed)
 const CSRF_SECRET = crypto.randomBytes(32).toString('hex');
@@ -155,6 +186,22 @@ app.use((req, res, next) => {
     server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
       console.info(`serving on port ${port}`);
     });
+
+    // Graceful shutdown
+    const shutdown = (signal: string) => {
+      console.info(`Received ${signal}, shutting down gracefully...`);
+      server.close(() => {
+        console.info('HTTP server closed.');
+        process.exit(0);
+      });
+      // Force exit if server doesn't close within 10 seconds
+      setTimeout(() => {
+        console.error('Forcing exit after timeout.');
+        process.exit(1);
+      }, 10000).unref();
+    };
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
   } catch (error: unknown) {
     console.error(`FATAL ERROR DURING STARTUP: ${error instanceof Error ? error.message : 'Unknown error'}`);
     console.error("FATAL ERROR STACK:", error instanceof Error ? error.stack : 'No stack available');
