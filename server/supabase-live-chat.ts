@@ -219,6 +219,14 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
     ws.on('close', async () => {
       activeConnections.delete(connectionId);
 
+      // Unsubscribe from Supabase realtime channels to prevent leaks
+      try {
+        supabase.removeChannel(chatChannel);
+        supabase.removeChannel(presenceChannel);
+      } catch (e) {
+        // Channel cleanup best-effort
+      }
+
       // Update user presence
       try {
         await supabase
