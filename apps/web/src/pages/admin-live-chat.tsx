@@ -59,7 +59,7 @@ export default function AdminLiveChat() {
   
   // Fetch messages from API when session is selected
   const { data: queryMessages = [] } = useQuery<Message[]>({
-    queryKey: ['/api/messages', selectedSession?.id],
+    queryKey: [`/api/chat/history/${selectedSession?.id}`],
     queryFn: async () => {
       if (!selectedSession?.id) return [];
       try {
@@ -100,7 +100,7 @@ export default function AdminLiveChat() {
   const queryClient = require('@tanstack/react-query').useQueryClient?.() || null;
 
   const { data: chatSessions = [] } = useQuery<ChatSession[]>({
-    queryKey: ['/api/admin/chat-sessions'],
+    queryKey: ['/api/chat/sessions'],
     queryFn: async () => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/chat/sessions');
@@ -182,7 +182,7 @@ export default function AdminLiveChat() {
 
       // CRITICAL: Invalidate message cache so messages persist when returning to chat
       if (queryClient && response.ok) {
-        queryClient.invalidateQueries({ queryKey: ['/api/messages', selectedSession?.id] });
+        queryClient.invalidateQueries({ queryKey: [`/api/chat/history/${selectedSession?.id}`] });
       }
     } catch (error) {
     }
