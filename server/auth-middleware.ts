@@ -17,7 +17,7 @@ export interface AuthenticatedRequest extends Request {
 
 let _adminClient: ReturnType<typeof createClient> | null = null;
 
-function getAdminClient() {
+export function getAdminClient() {
   if (!_adminClient) {
     const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
