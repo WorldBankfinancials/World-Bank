@@ -94,12 +94,6 @@ export default function AdminLogin() {
               {isLoading ? t('signing_in') : t('access_admin_panel')}
             </Button>
           </form>
-
-          <div className="mt-6 p-3 bg-blue-50 rounded-md">
-            <p className="text-sm text-blue-700 font-medium">Admin Credentials:</p>
-            <p className="text-sm text-blue-600">Username: admin</p>
-            <p className="text-sm text-blue-600">Password: admin123</p>
-          </div>
         </CardContent>
       </Card>
     </div>

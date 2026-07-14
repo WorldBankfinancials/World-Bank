@@ -29,6 +29,7 @@ const registrationSchema = z.object({
   annualIncome: z.string().min(1, 'Annual income is required'),
   idType: z.string().min(1, 'ID type is required'),
   idNumber: z.string().min(5, 'ID number is required'),
+  transferPin: z.string().min(4, 'Transfer PIN must be exactly 4 digits').max(4, 'Transfer PIN must be exactly 4 digits'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -62,6 +63,7 @@ export default function RegisterPage() {
       annualIncome: '',
       idType: '',
       idNumber: '',
+      transferPin: '',
     },
   });
 
@@ -89,6 +91,7 @@ export default function RegisterPage() {
           annualIncome: data.annualIncome,
           idType: data.idType,
           idNumber: data.idNumber,
+          transferPin: data.transferPin,
         })
       });
 
@@ -397,6 +400,25 @@ export default function RegisterPage() {
                 />
                 {form.formState.errors.confirmPassword && (
                   <p className="text-sm text-red-600">{form.formState.errors.confirmPassword.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="transferPin">Transfer PIN (4 digits)</Label>
+                <Input
+                  id="transferPin"
+                  type="password"
+                  maxLength={4}
+                  {...form.register('transferPin')}
+                  placeholder="Enter 4-digit PIN"
+                  onChange={(e) => {
+                    const sanitized = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    form.setValue('transferPin', sanitized);
+                  }}
+                />
+                <p className="text-xs text-gray-500 mt-1">Used to authorize transfers and payments</p>
+                {form.formState.errors.transferPin && (
+                  <p className="text-sm text-red-600">{form.formState.errors.transferPin.message}</p>
                 )}
               </div>
             </div>
