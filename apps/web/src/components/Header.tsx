@@ -1,5 +1,5 @@
 import { Settings, User, LogOut, Shield, Check, Download, Building2, RotateCcw, TrendingUp, HelpCircle, CreditCard, ArrowUpRight, Menu } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from "wouter";
 import type { User as UserType } from "@packages/shared/schema";
 import NavigationMenu from "./NavigationMenu";
@@ -18,6 +18,17 @@ export default function Header({}: HeaderProps) {
   const { userProfile, signOut } = useAuth();
   const { t } = useLanguage();
   const [displayBalance, setDisplayBalance] = useState<string | number>(userProfile?.balance || '0');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const checkBalance = () => {
@@ -116,7 +127,6 @@ export default function Header({}: HeaderProps) {
           </Link>
 
           <div className="flex items-center space-x-3">
-            {/* Menu Toggle Button */}
             <button
               onClick={() => setIsMenuOpen(true)}
               className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -125,17 +135,27 @@ export default function Header({}: HeaderProps) {
               <Menu className="w-5 h-5 text-gray-700" />
             </button>
 
-            {/* Profile Icon with Dropdown */}
-            <div className="relative">
+            {displayBalance && (
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg">
+                <span className="text-xs text-blue-600 font-medium">Balance</span>
+                <span className="text-sm font-bold text-blue-900">${parseFloat(String(displayBalance)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+              </div>
+            )}
+
+            <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                aria-expanded={showProfileMenu}
+                aria-haspopup="true"
+                aria-controls="profile-dropdown"
+                aria-label="Toggle profile menu"
               >
                 <Avatar size={40} />
               </button>
 
               {showProfileMenu && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                <div id="profile-dropdown" className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                   <div className="p-4 border-b border-gray-100">
                     <div className="flex items-center space-x-3">
                       <Avatar size={64} />

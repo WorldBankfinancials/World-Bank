@@ -107,7 +107,10 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
                 text: payload.new.message || '',
                 timestamp: new Date(payload.new.created_at || new Date())
               };
-              setMessages(prev => [...prev, newMessage]);
+              setMessages(prev => {
+                if (prev.some(m => m.id === newMessage.id)) return prev; // Dedup
+                return [...prev, newMessage];
+              });
             }
           )
           .subscribe((status) => {
@@ -164,23 +167,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
         body: JSON.stringify({ message: messageText })
       });
 
-      if (response.ok) {
-        const agentMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          sender: 'agent',
-          text: 'Your message has been received. An agent will respond shortly.',
-          timestamp: new Date()
-        };
-        setMessages(prev => {
-          const updated = [...prev, agentMessage];
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-          } catch (e) {
-            // Ignore storage errors
-          }
-          return updated;
-        });
-      } else {
+      if (!response.ok) {
         toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' });
       }
     } catch (error) {
