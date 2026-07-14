@@ -8,11 +8,13 @@ import BottomNavigation from '@/components/BottomNavigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { AccountData } from '@/types';
 
 export default function Investment() {
   const { userProfile } = useAuth();
   const { t } = useLanguage();
+  const [, setLocation] = useLocation();
   const [selectedTimeframe, setSelectedTimeframe] = useState('1M');
 
   interface InvestmentData {
@@ -82,7 +84,7 @@ export default function Investment() {
               <h1 className="text-2xl font-bold text-gray-900">{t('investment_portfolio') || 'Investment Portfolio'}</h1>
               <p className="text-gray-600">{t('manage_investments') || 'Manage your investment portfolio'}</p>
             </div>
-            <Button className="bg-blue-600 text-white">
+            <Button className="bg-blue-600 text-white" onClick={() => setLocation('/investment-trading')}>
               <TrendingUp className="w-4 h-4 mr-2" />
               {t('invest_now') || 'Invest Now'}
             </Button>
@@ -211,19 +213,19 @@ export default function Investment() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" className="flex flex-col items-center space-y-2 h-20">
+                <Button variant="outline" className="flex flex-col items-center space-y-2 h-20" onClick={() => setLocation('/investment-trading')}>
                   <TrendingUp className="w-6 h-6 text-blue-600" />
                   <span className="text-sm">{t('buy_stocks') || 'Buy Stocks'}</span>
                 </Button>
-                <Button variant="outline" className="flex flex-col items-center space-y-2 h-20">
+                <Button variant="outline" className="flex flex-col items-center space-y-2 h-20" onClick={() => setLocation('/investment-portfolio')}>
                   <PieChart className="w-6 h-6 text-green-600" />
                   <span className="text-sm">{t('portfolio_review') || 'Portfolio Review'}</span>
                 </Button>
-                <Button variant="outline" className="flex flex-col items-center space-y-2 h-20">
+                <Button variant="outline" className="flex flex-col items-center space-y-2 h-20" onClick={() => setLocation('/investment-portfolio')}>
                   <BarChart3 className="w-6 h-6 text-purple-600" />
                   <span className="text-sm">{t('market_analysis') || 'Market Analysis'}</span>
                 </Button>
-                <Button variant="outline" className="flex flex-col items-center space-y-2 h-20">
+                <Button variant="outline" className="flex flex-col items-center space-y-2 h-20" onClick={() => setLocation('/investment-portfolio')}>
                   <DollarSign className="w-6 h-6 text-orange-600" />
                   <span className="text-sm">{t('rebalance') || 'Rebalance'}</span>
                 </Button>
