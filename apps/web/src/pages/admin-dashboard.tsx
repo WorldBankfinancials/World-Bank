@@ -531,7 +531,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/security-center")}>
             <CardContent className="p-4">
               <div className="flex items-center space-x-3">
                 <Shield className="w-8 h-8 text-green-600" />
@@ -543,7 +543,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/statements-reports")}>
             <CardContent className="p-4">
               <div className="flex items-center space-x-3">
                 <FileText className="w-8 h-8 text-purple-600" />

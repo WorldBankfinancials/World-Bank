@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, Globe, Users, CreditCard, ArrowLeft, Phone, Mail, Building, Award } from 'lucide-react';
 import { useLocation } from 'wouter';
+import { useToast } from '@/hooks/use-toast';
 
 export default function About() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -249,7 +251,7 @@ export default function About() {
               <h3 className="font-semibold text-gray-900 mb-2">International</h3>
               <div className="text-gray-600 space-y-1 text-sm">
                 <p>Global Coverage</p>
-                <p className="font-mono">SWIFT: WBANKUSX</p>
+                <p className="font-mono">SWIFT: WBGLUS33</p>
                 <p>international@worldbank.com</p>
               </div>
             </div>
@@ -283,10 +285,10 @@ export default function About() {
             <span>Licensed and regulated financial institution. Member FDIC. SWIFT Member.</span>
           </p>
           <div className="flex justify-center space-x-6 mt-4">
-            <button className="hover:text-gray-700 transition-colors">Privacy Policy</button>
-            <button className="hover:text-gray-700 transition-colors">Terms of Service</button>
-            <button className="hover:text-gray-700 transition-colors">Security Center</button>
-            <button className="hover:text-gray-700 transition-colors">Contact Us</button>
+            <button className="hover:text-gray-700 transition-colors" onClick={() => toast({ title: 'Privacy Policy', description: 'Privacy policy details are available upon request.' })}>Privacy Policy</button>
+            <button className="hover:text-gray-700 transition-colors" onClick={() => toast({ title: 'Terms of Service', description: 'Terms of service details are available upon request.' })}>Terms of Service</button>
+            <button className="hover:text-gray-700 transition-colors" onClick={() => setLocation('/security-center')}>Security Center</button>
+            <button className="hover:text-gray-700 transition-colors" onClick={() => setLocation('/support-center')}>Contact Us</button>
           </div>
         </div>
       </div>

@@ -100,6 +100,29 @@ export default function History() {
     queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
   };
 
+  const handleExport = async () => {
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/transactions/export');
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = window.document.createElement('a');
+        a.href = url;
+        a.download = 'transactions.csv';
+        window.document.body.appendChild(a);
+        a.click();
+        window.document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        toast({ title: 'Export started', description: 'Your transactions are downloading.' });
+      } else {
+        toast({ title: 'Export Failed', description: 'Failed to export transactions.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'An error occurred during export.', variant: 'destructive' });
+    }
+  };
+
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          transaction.amount.includes(searchTerm) ||
@@ -160,7 +183,7 @@ export default function History() {
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
@@ -207,7 +230,7 @@ export default function History() {
                 ))}
               </select>
 
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={() => toast({ title: 'Date filtering coming soon' })}>
                 <Calendar className="w-4 h-4 mr-2" />
                 Date Range
               </Button>
@@ -296,7 +319,7 @@ export default function History() {
                       <div className="text-right">
                         <div className={`text-lg font-semibold ${
                           transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'
-                        }`}>
+                        }">
                           {formatAmount(transaction.amount, transaction.type)}
                         </div>
                         <div className="text-xs text-gray-500">
