@@ -231,7 +231,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Clear ALL stored credentials IMMEDIATELY
       localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('userProfile'); localStorage.removeItem('refresh_token');
-      sessionStorage.clear();
+      sessionStorage.removeItem('auth_token');
+      sessionStorage.removeItem('auth_user');
+      sessionStorage.removeItem('auth_session');
       
       // Clear state
       setUser(null);
@@ -248,7 +250,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       // Even on error, clear everything and logout
       localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('userProfile'); localStorage.removeItem('refresh_token');
-      sessionStorage.clear();
+      sessionStorage.removeItem('auth_token');
+      sessionStorage.removeItem('auth_user');
+      sessionStorage.removeItem('auth_session');
       setUser(null);
       setUserProfile(null);
       window.location.replace('/login');

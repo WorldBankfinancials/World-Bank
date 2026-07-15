@@ -31,6 +31,10 @@ export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps)
     await signOut();
   };
 
+  const initials = userProfile?.fullName
+    ? userProfile.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'U';
+
   const menuSections = [
     {
       title: "QUICK LINKS",
@@ -83,9 +87,7 @@ export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps)
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center ring-2 ring-white ring-opacity-30">
                 <span className="text-lg font-medium text-white">
-                  {userProfile?.fullName
-                    ? userProfile.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                    : 'U'}
+                  {initials}
                 </span>
               </div>
               <div>
