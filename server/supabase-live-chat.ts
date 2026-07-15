@@ -195,12 +195,17 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
         }
 
         if (data.type === 'mark_read') {
-          // Mark messages as read
-          await supabase
+          // Mark messages as read — only from a specific sender when senderId is provided
+          const senderId = data.senderId;
+          let updateQuery = supabase
             .from('messages')
             .update({ is_read: true })
             .eq('recipient_id', userId)
             .eq('is_read', false);
+          if (senderId) {
+            updateQuery = updateQuery.eq('sender_id', senderId);
+          }
+          await updateQuery;
 
           ws.send(JSON.stringify({
             type: 'messages_marked_read',
@@ -231,8 +236,8 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
       try {
         await supabase
           .from('user_presence')
-          .update({ isOnline: false, lastSeen: new Date() })
-          .eq('userId', userId);
+          .update({ is_online: false, last_seen: new Date().toISOString() })
+          .eq('user_id', userId);
       } catch (error) {
       }
     });
@@ -247,7 +252,11 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
  */
 export async function getChatHistory(req: Request, res: Response) {
   try {
-    const { userId, limit = 50, offset = 0 } = req.query;
+    // SECURITY: Always use the authenticated user's id from the auth middleware,
+    // never trust a client-supplied userId query param (IDOR fix).
+    const userId = (req as any).user?.id || req.query.userId;
+    const limit = req.query.limit || 50;
+    const offset = req.query.offset || 0;
 
     if (!userId) {
       return res.status(400).json({ error: 'userId required' });

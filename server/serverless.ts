@@ -62,6 +62,12 @@ export async function sendTransactionAlert(req: VercelRequest, res: VercelRespon
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Check secret token to prevent unauthorized access
+  const authHeader = req.headers.authorization;
+  if (authHeader !== `Bearer ${process.env.SERVERLESS_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   try {
     const { userId, transactionId, amount, type } = req.body;
 
