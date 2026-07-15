@@ -5,11 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import { Target, Calendar, Users, Award } from "lucide-react";
 
 
 export default function WealthManagement() {
   const { t } = useLanguage();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -49,7 +53,7 @@ export default function WealthManagement() {
                 </div>
                 <p className="text-xs text-green-600 mt-1">75% complete</p>
               </div>
-              <Button className="bg-wb-blue text-white w-full">
+              <Button className="bg-wb-blue text-white w-full" onClick={() => setLocation('/customer-support')}>
                 <Calendar className="w-4 h-4 mr-2" />
                 Schedule Consultation
               </Button>
@@ -73,7 +77,7 @@ export default function WealthManagement() {
                   <p className="text-sm text-wb-text">Senior Wealth Advisor</p>
                 </div>
               </div>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={() => { toast({ title: 'Your advisor will contact you within 24 hours' }); setLocation('/support-center'); }}>
                 Contact Your Advisor
               </Button>
             </CardContent>

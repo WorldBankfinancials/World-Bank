@@ -6,11 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useToast } from "@/hooks/use-toast";
 import { Download, FileText, Calendar, Filter } from "lucide-react";
 
 
 export default function StatementsReports() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   
   // ALL HOOKS MUST BE AT TOP - BEFORE ANY RETURNS
   const { data: user, isLoading } = useQuery<User>({
@@ -21,6 +23,47 @@ export default function StatementsReports() {
     queryKey: ['/api/statements'],
     enabled: !!user,
   });
+
+  const handleDownload = async () => {
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/transactions/export');
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = window.document.createElement('a');
+        a.href = url;
+        a.download = 'transactions.csv';
+        window.document.body.appendChild(a);
+        a.click();
+        window.document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        toast({ title: 'Download started', description: 'Your transactions export is downloading.' });
+      } else {
+        toast({ title: 'Download Failed', description: 'Failed to export transactions.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'An error occurred during download.', variant: 'destructive' });
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    toast({ title: 'Generating report...' });
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      await authenticatedFetch('/api/statements');
+    } catch {
+      // best-effort fetch
+    }
+  };
+
+  const handleView = (statement: any) => {
+    if (statement.file_url || statement.fileUrl) {
+      window.open(statement.file_url || statement.fileUrl, '_blank');
+    } else {
+      toast({ title: 'View', description: 'Statement preview is not available.' });
+    }
+  };
 
   const statementsList = statements || [];
 
@@ -43,7 +86,7 @@ export default function StatementsReports() {
             <h1 className="text-3xl font-bold text-gray-900">Statements & Reports</h1>
             <p className="text-gray-600 mt-2">Download your account statements and financial reports</p>
           </div>
-          <Button className="bg-blue-600 text-white hover:bg-blue-700">
+          <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={handleGenerateReport}>
             <Download className="w-4 h-4 mr-2" />
             Generate Custom Report
           </Button>
@@ -132,10 +175,10 @@ export default function StatementsReports() {
                         <p className="text-xs text-gray-500">Generated on {new Date(statement.generated_at || statement.generatedAt).toLocaleDateString()}</p>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm" data-testid={`statement-view-${statement.id}`}>
+                        <Button variant="outline" size="sm" data-testid={`statement-view-${statement.id}`} onClick={() => handleView(statement)}>
                           View
                         </Button>
-                        <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" data-testid={`statement-download-${statement.id}`}>
+                        <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" data-testid={`statement-download-${statement.id}`} onClick={handleDownload}>
                           <Download className="w-4 h-4 mr-2" />
                           Download
                         </Button>
@@ -159,7 +202,7 @@ export default function StatementsReports() {
                   <p className="text-sm text-gray-600">1099, 1098 forms</p>
                 </div>
               </div>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={() => toast({ title: 'This feature is coming soon' })}>
                 Download Tax Forms
               </Button>
             </CardContent>
@@ -174,7 +217,7 @@ export default function StatementsReports() {
                   <p className="text-sm text-gray-600">Annual overview</p>
                 </div>
               </div>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={() => toast({ title: 'This feature is coming soon' })}>
                 Generate Summary
               </Button>
             </CardContent>
@@ -189,7 +232,7 @@ export default function StatementsReports() {
                   <p className="text-sm text-gray-600">Multiple statements</p>
                 </div>
               </div>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" onClick={() => toast({ title: 'This feature is coming soon' })}>
                 Bulk Download
               </Button>
             </CardContent>

@@ -1,10 +1,11 @@
-
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 import type { User } from "@packages/shared/schema";
 import { 
   TrendingUp, 
@@ -24,6 +25,10 @@ import { Investment } from "@/types";
 
 export default function InvestmentTrading() {
   const { t } = useLanguage();
+  const { toast } = useToast();
+  const [tradeSymbol, setTradeSymbol] = useState('AAPL');
+  const [tradeAmount, setTradeAmount] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { data: user, isLoading } = useQuery<any>({
     queryKey: ['/api/user'],
   });
@@ -64,6 +69,33 @@ export default function InvestmentTrading() {
   const costBasis = totalPortfolioValue - totalGainLoss;
   const gainLossPercent = costBasis > 0 ? (totalGainLoss / costBasis) * 100 : 0;
 
+  const handleTrade = async (type: 'buy' | 'sell') => {
+    if (!tradeSymbol || !tradeAmount) {
+      toast({ title: 'Missing Information', description: 'Please enter a symbol and amount.', variant: 'destructive' });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch(`/api/investments/${type}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol: tradeSymbol, amount: parseFloat(tradeAmount) })
+      });
+      if (response.ok) {
+        toast({ title: type === 'buy' ? 'Buy Order Placed' : 'Sell Order Placed', description: `${type === 'buy' ? 'Bought' : 'Sold'} ${tradeAmount} of ${tradeSymbol}` });
+        setTradeAmount('');
+      } else {
+        const err = await response.json().catch(() => ({}));
+        toast({ title: 'Order Failed', description: err.error || 'Failed to place order.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Error', description: 'An error occurred while placing the order.', variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -84,11 +116,11 @@ export default function InvestmentTrading() {
             <p className="text-gray-600 mt-2">Professional investment bank for global markets</p>
           </div>
           <div className="flex space-x-3">
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => toast({ title: 'This feature is coming soon' })}>
               <BarChart3 className="w-4 h-4 mr-2" />
               Market Research
             </Button>
-            <Button className="bg-blue-600 text-white">
+            <Button className="bg-blue-600 text-white" onClick={() => handleTrade('buy')} disabled={isSubmitting}>
               <TrendingUp className="w-4 h-4 mr-2" />
               Place Order
             </Button>
@@ -295,12 +327,32 @@ export default function InvestmentTrading() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Symbol</label>
+                  <input
+                    type="text"
+                    value={tradeSymbol}
+                    onChange={(e) => setTradeSymbol(e.target.value.toUpperCase())}
+                    placeholder="AAPL"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Amount</label>
+                  <input
+                    type="number"
+                    value={tradeAmount}
+                    onChange={(e) => setTradeAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <Button className="bg-green-600 text-white hover:bg-green-700">
+                  <Button className="bg-green-600 text-white hover:bg-green-700" onClick={() => handleTrade('buy')} disabled={isSubmitting}>
                     <TrendingUp className="w-4 h-4 mr-1" />
                     Buy
                   </Button>
-                  <Button variant="outline" className="text-red-600 border-red-600 hover:bg-red-50">
+                  <Button variant="outline" className="text-red-600 border-red-600 hover:bg-red-50" onClick={() => handleTrade('sell')} disabled={isSubmitting}>
                     <TrendingDown className="w-4 h-4 mr-1" />
                     Sell
                   </Button>
@@ -317,15 +369,15 @@ export default function InvestmentTrading() {
                 <CardTitle>Trading Tools</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: 'This feature is coming soon' })}>
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Technical Analysis
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: 'This feature is coming soon' })}>
                   <AlertTriangle className="w-4 h-4 mr-2" />
                   Risk Calculator
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start" onClick={() => toast({ title: 'This feature is coming soon' })}>
                   <Globe className="w-4 h-4 mr-2" />
                   Economic Calendar
                 </Button>
@@ -348,7 +400,7 @@ export default function InvestmentTrading() {
                   <div className="text-gray-500">Strong quarterly results drive growth...</div>
                   <div className="text-xs text-gray-400 mt-1">4 hours ago</div>
                 </div>
-                <Button variant="outline" size="sm" className="w-full">
+                <Button variant="outline" size="sm" className="w-full" onClick={() => toast({ title: 'This feature is coming soon' })}>
                   View All News
                 </Button>
               </CardContent>
