@@ -3,7 +3,7 @@
  * Live chat messaging with Supabase Realtime
  */
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface ChatMessage {
@@ -22,6 +22,7 @@ export function useRealtimeChat(
   onMessageReceived?: (message: ChatMessage) => void
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMessage = useCallback(
     (payload: { new: Record<string, unknown> }) => {
@@ -72,7 +73,8 @@ export function useRealtimeChat(
       )
       .subscribe((status: string) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          const interval = setInterval(async () => {
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = setInterval(async () => {
             try {
               const { authenticatedFetch } = await import('@/lib/queryClient');
               const res = await authenticatedFetch('/api/chat/history');
@@ -88,12 +90,12 @@ export function useRealtimeChat(
               }
             } catch {}
           }, 10000);
-          return () => clearInterval(interval);
         }
       });
 
     return () => {
       channel.unsubscribe();
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, [userId, handleMessage]);
 

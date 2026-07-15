@@ -3,7 +3,7 @@
  * Listens for live transaction updates using Supabase Realtime
  */
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface Transaction {
@@ -18,6 +18,7 @@ interface Transaction {
 
 export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (transaction: Transaction) => void) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleTransactionUpdate = useCallback(
     (transaction: Transaction) => {
@@ -44,14 +45,23 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
           filter: `from_user_id=eq.${userId}`
         },
         (payload) => {
-          if (payload.new) {
-            handleTransactionUpdate(payload.new as Transaction);
+          const event = (payload as any).eventType;
+          if (event === 'INSERT') {
+            setTransactions(prev => {
+              if (prev.some(t => t.id === (payload.new as Transaction).id)) return prev;
+              return [payload.new as Transaction, ...prev];
+            });
+          } else if (event === 'UPDATE') {
+            setTransactions(prev => prev.map(t => t.id === (payload.new as Transaction).id ? payload.new as Transaction : t));
+          } else if (event === 'DELETE') {
+            setTransactions(prev => prev.filter(t => t.id !== (payload as any).old?.id));
           }
         }
       )
       .subscribe((status: string) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          const interval = setInterval(async () => {
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = setInterval(async () => {
             try {
               const { authenticatedFetch } = await import('@/lib/queryClient');
               const res = await authenticatedFetch('/api/transactions');
@@ -67,12 +77,12 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
               }
             } catch {}
           }, 10000);
-          return () => clearInterval(interval);
         }
       });
 
     return () => {
       channel.unsubscribe();
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, [userId, handleTransactionUpdate]);
 

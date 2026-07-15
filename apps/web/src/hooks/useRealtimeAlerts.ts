@@ -3,7 +3,7 @@
  * Listens for live alerts and notifications using Supabase Realtime
  */
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface Alert {
@@ -17,6 +17,7 @@ interface Alert {
 
 export function useRealtimeAlerts(userId?: string | number | undefined, enabled?: boolean) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleAlertReceived = useCallback((alert: Alert) => {
     setAlerts((prev) => [...prev, alert]);
@@ -37,12 +38,24 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          handleAlertReceived(payload.new as Alert);
+          const event = (payload as any).eventType;
+          if (event === 'DELETE') {
+            setAlerts(prev => prev.filter(a => a.id !== (payload as any).old?.id));
+            return;
+          }
+          // Only add for INSERT
+          if (event === 'INSERT') {
+            setAlerts(prev => {
+              if (prev.some(a => a.id === (payload.new as Alert).id)) return prev;
+              return [payload.new as Alert, ...prev];
+            });
+          }
         }
       )
       .subscribe((status: string) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          const interval = setInterval(async () => {
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = setInterval(async () => {
             try {
               const { authenticatedFetch } = await import('@/lib/queryClient');
               const res = await authenticatedFetch('/api/alerts');
@@ -58,12 +71,12 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
               }
             } catch {}
           }, 10000);
-          return () => clearInterval(interval);
         }
       });
 
     return () => {
       channel.unsubscribe();
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, [userId, enabled, handleAlertReceived]);
 
