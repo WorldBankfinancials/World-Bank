@@ -12,6 +12,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function PinSettings() {
   const [, setLocation] = useLocation();
@@ -19,6 +20,7 @@ export default function PinSettings() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -106,6 +108,7 @@ export default function PinSettings() {
           title: 'PIN changed',
           description: 'Your transfer PIN has been updated successfully.',
         });
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         setCurrentPin('');
         setNewPin('');
         setConfirmPin('');
@@ -255,7 +258,7 @@ export default function PinSettings() {
                                 ? 'bg-yellow-500'
                                 : 'bg-green-500'
                               : 'bg-gray-200'
-                          }`}
+                          }`
                         />
                       ))}
                     </div>

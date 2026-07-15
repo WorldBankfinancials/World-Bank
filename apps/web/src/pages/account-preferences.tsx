@@ -18,12 +18,13 @@ import {
   Save
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function AccountPreferences() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch user data from API to initialize preferences from real values
   const { data: userData } = useQuery<any>({
@@ -104,6 +105,7 @@ export default function AccountPreferences() {
           title: 'Preferences Saved',
           description: t('preferences_saved'),
         });
+        queryClient.invalidateQueries({ queryKey: ['/api/user/preferences'] });
       } else {
         toast({
           title: 'Save Failed',
