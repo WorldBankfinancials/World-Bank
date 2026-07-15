@@ -83,7 +83,7 @@ export default function DigitalWallet() {
             <h1 className="text-xl font-semibold text-gray-900">{t('digital_wallet')}</h1>
             <p className="text-sm text-gray-600">{t('digital_wallet_desc')}</p>
           </div>
-          <Button onClick={() => toast({ title: 'Add Funds', description: 'Redirecting to add funds page...' })} className="bg-blue-600 text-white">
+          <Button onClick={() => navigate('/add-money')} className="bg-blue-600 text-white">
             <Plus className="w-4 h-4 mr-1" />
             Add Funds
           </Button>
@@ -199,7 +199,7 @@ export default function DigitalWallet() {
                     <p className="text-sm text-gray-600">Scan to pay instantly</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => toast({ title: 'QR Scanner', description: 'Opening QR code scanner...' })}>
+                <Button variant="outline" size="sm" onClick={() => toast({ title: 'QR scanning coming soon' })}>
                   <Scan className="w-4 h-4 mr-1" />
                   Scan
                 </Button>
@@ -212,7 +212,7 @@ export default function DigitalWallet() {
                     <p className="text-sm text-gray-600">Send to phone numbers</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => toast({ title: 'Mobile Transfer', description: 'Opening mobile transfer feature...' })}>
+                <Button variant="outline" size="sm" onClick={() => navigate('/transfer-funds')}>
                   Send
                 </Button>
               </div>
@@ -224,7 +224,7 @@ export default function DigitalWallet() {
                     <p className="text-sm text-gray-600">Send money worldwide</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => toast({ title: 'International Payment', description: 'Opening international transfer feature...' })}>
+                <Button variant="outline" size="sm" onClick={() => navigate('/transfer-funds')}>
                   Transfer
                 </Button>
               </div>

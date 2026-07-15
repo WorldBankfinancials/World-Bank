@@ -9,10 +9,12 @@ import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 
 
 export default function CreditCards() {
   const { t } = useLanguage();
+  const [, setLocation] = useLocation();
   
   // CRITICAL FIX: Move ALL hooks before ANY conditional returns
   // Prevents "Rendered more hooks than during the previous render" error
@@ -46,10 +48,10 @@ export default function CreditCards() {
   }
   
   const quickActions = [
-    { icon: Lock, label: t('lock_card'), action: () => toast({ title: 'Card locked', description: 'Your card has been locked.' }) },
-    { icon: Smartphone, label: t('mobile_pay'), action: () => toast({ title: 'Mobile pay', description: 'Mobile pay activated successfully.' }) },
-    { icon: DollarSign, label: t('pay_bill'), action: () => toast({ title: 'Payment', description: 'Redirecting to payment page.' }) },
-    { icon: Settings, label: t('settings'), action: () => toast({ title: 'Settings', description: 'Card settings opened.' }) }
+    { icon: Lock, label: t('lock_card'), action: () => { toast({ title: 'Please use the Cards page for this action' }); setLocation('/cards'); } },
+    { icon: Smartphone, label: t('mobile_pay'), action: () => { toast({ title: 'Please use the Cards page for this action' }); setLocation('/cards'); } },
+    { icon: DollarSign, label: t('pay_bill'), action: () => { toast({ title: 'Please use the Cards page for this action' }); setLocation('/cards'); } },
+    { icon: Settings, label: t('settings'), action: () => { toast({ title: 'Please use the Cards page for this action' }); setLocation('/cards'); } }
   ];
 
   return (
@@ -60,7 +62,7 @@ export default function CreditCards() {
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-semibold text-gray-900">{t('my_cards')}</h1>
-          <Button size="sm" className="bg-blue-600 text-white">
+          <Button size="sm" className="bg-blue-600 text-white" onClick={() => setLocation('/cards')}>
             <Plus className="w-4 h-4 mr-1" />
             {t('add_card')}
           </Button>
@@ -119,7 +121,7 @@ export default function CreditCards() {
               <CreditCard className="w-16 h-16 mx-auto mb-4 text-gray-300" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">{t('no_credit_cards')}</h3>
               <p className="text-gray-500 mb-6">{t('you_dont_have_any_credit_cards_yet')}</p>
-              <Button className="bg-blue-600 text-white">
+              <Button className="bg-blue-600 text-white" onClick={() => setLocation('/cards')}>
                 <Plus className="w-4 h-4 mr-2" />
                 {t('apply_for_card')}
               </Button>

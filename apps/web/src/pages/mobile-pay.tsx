@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Smartphone, 
   QrCode, 
@@ -25,6 +27,8 @@ import {
 
 export default function MobilePay() {
   const { t } = useLanguage();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -225,15 +229,15 @@ export default function MobilePay() {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button className="w-full justify-start">
+                <Button className="w-full justify-start" onClick={() => toast({ title: 'QR scanning coming soon' })}>
                   <QrCode className="w-4 h-4 mr-2" />
                   Scan QR Code
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start" onClick={() => setLocation('/cards')}>
                   <CreditCard className="w-4 h-4 mr-2" />
                   Pay with Card
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start" onClick={() => setLocation('/transfer-funds')}>
                   <Users className="w-4 h-4 mr-2" />
                   Split Bill
                 </Button>
