@@ -7,15 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Send, MessageSquare, Users, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 
 export default function CustomerSupport() {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -55,6 +58,7 @@ export default function CustomerSupport() {
           title: 'Success!',
           description: `Support ticket #${data.id} submitted successfully! Our team will respond within 24 hours.`,
         });
+        queryClient.invalidateQueries({ queryKey: ['/api/support-tickets'] });
         setSubject('');
         setCategory('technical');
         setPriority('medium');
@@ -199,13 +203,13 @@ export default function CustomerSupport() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50">
+                <Button variant="outline" className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50" onClick={() => setLocation('/cards')}>
                   Report Lost/Stolen Card
                 </Button>
-                <Button variant="outline" className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50">
+                <Button variant="outline" className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50" onClick={() => setLocation('/history')}>
                   Dispute Transaction
                 </Button>
-                <Button variant="outline" className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50">
+                <Button variant="outline" className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50" onClick={() => setLocation('/security-settings')}>
                   Freeze Account
                 </Button>
               </CardContent>

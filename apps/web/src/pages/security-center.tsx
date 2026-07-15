@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, 
   Lock, 
@@ -28,8 +30,31 @@ import {
 
 export default function SecurityCenter() {
   const { t } = useLanguage();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
+  });
+
+  const updatePreferenceMutation = useMutation({
+    mutationFn: async (payload: Record<string, any>) => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/user/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error('Failed to update preference');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({ title: 'Preference updated', description: 'Your security preference has been saved.' });
+    },
+    onError: () => {
+      toast({ title: 'Update failed', description: 'Could not update preference. Please try again.', variant: 'destructive' });
+    }
   });
 
   if (isLoading) {
@@ -146,7 +171,7 @@ export default function SecurityCenter() {
                       <Badge variant={feature.enabled ? "default" : "secondary"}>
                         {feature.enabled ? t('account_active') : t('account_inactive')}
                       </Badge>
-                      <Switch checked={feature.enabled} />
+                      <Switch checked={feature.enabled} onCheckedChange={(checked) => updatePreferenceMutation.mutate({ [feature.title]: checked })} />
                     </div>
                   </div>
                 ))}
@@ -207,7 +232,7 @@ export default function SecurityCenter() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Button variant="outline" className="justify-start h-auto p-4">
+                  <Button variant="outline" className="justify-start h-auto p-4" onClick={() => setLocation('/security-settings')}>
                     <div className="text-left">
                       <div className="flex items-center mb-1">
                         <Key className="w-4 h-4 mr-2" />
@@ -261,7 +286,7 @@ export default function SecurityCenter() {
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div className="bg-green-600 h-2 rounded-full" style={{ width: '95%' }}></div>
                 </div>
-                <Button variant="outline" size="sm" className="mt-4">
+                <Button variant="outline" size="sm" className="mt-4" onClick={() => setLocation('/security-settings')}>
                   Improve Score
                 </Button>
               </CardContent>
@@ -285,7 +310,7 @@ export default function SecurityCenter() {
                     <div className="text-sm text-wb-text">{device.lastUsed}</div>
                   </div>
                 ))}
-                <Button variant="outline" size="sm" className="w-full">
+                <Button variant="outline" size="sm" className="w-full" onClick={() => toast({ title: 'Manage Devices', description: 'Device management is coming soon.' })}>
                   Manage Devices
                 </Button>
               </CardContent>

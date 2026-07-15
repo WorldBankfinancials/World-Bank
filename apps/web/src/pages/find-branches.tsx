@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { User } from "@packages/shared/schema";
 
 import Header from "@/components/Header";
@@ -8,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useToast } from "@/hooks/use-toast";
 import { 
   MapPin, 
   Search, 
@@ -26,6 +28,8 @@ import {
 
 export default function FindBranches() {
   const { t } = useLanguage();
+  const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState('');
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -47,7 +51,12 @@ export default function FindBranches() {
     );
   }
 
-  const branchesList = branches || [];
+  const branchesList = (branches || []).filter((branch: any) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (branch.name || '').toLowerCase().includes(q) ||
+           (branch.address || '').toLowerCase().includes(q);
+  });
   const atmsList = atms || [];
 
   const globalPresence = {
@@ -81,15 +90,17 @@ export default function FindBranches() {
                   <Input 
                     placeholder="Enter city, state, or ZIP code" 
                     className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button>
+                <Button onClick={() => setSearchQuery(searchQuery)}>
                   <MapPin className="w-4 h-4 mr-2" />
                   Search
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => toast({ title: 'Location services coming soon', description: 'We are unable to detect your location at this time.' })}>
                   <Navigation className="w-4 h-4 mr-2" />
                   Use My Location
                 </Button>
@@ -135,7 +146,15 @@ export default function FindBranches() {
                           </div>
                           <div className="text-right">
                             {branch.distance && <div className="text-wb-blue font-semibold mb-2">{branch.distance}</div>}
-                            <Button size="sm" data-testid={`branch-directions-${branch.id}`}>Get Directions</Button>
+                            <Button size="sm" data-testid={`branch-directions-${branch.id}`} onClick={() => {
+                              const lat = branch.latitude || branch.lat;
+                              const lng = branch.longitude || branch.lng;
+                              if (lat && lng) {
+                                window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+                              } else {
+                                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((branch.name || '') + ' ' + (branch.address || ''))}`, '_blank');
+                              }
+                            }}>Get Directions</Button>
                           </div>
                         </div>
                         
