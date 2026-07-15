@@ -135,10 +135,10 @@ export default function Header({}: HeaderProps) {
               <Menu className="w-5 h-5 text-gray-700" />
             </button>
 
-            {displayBalance && (
+            {displayBalance !== null && displayBalance !== undefined && (
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg">
                 <span className="text-xs text-blue-600 font-medium">Balance</span>
-                <span className="text-sm font-bold text-blue-900">${parseFloat(String(displayBalance)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                <span className="text-sm font-bold text-blue-900">${(() => { const balanceNum = parseFloat(String(displayBalance)); return isNaN(balanceNum) ? '0.00' : balanceNum.toLocaleString('en-US', { minimumFractionDigits: 2 }); })()}</span>
               </div>
             )}
 

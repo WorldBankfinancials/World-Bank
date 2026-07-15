@@ -57,6 +57,9 @@ export default function QuickActions() {
   const [isTyping, setIsTyping] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const isChatOpenRef = useRef(isChatOpen);
+
+  useEffect(() => { isChatOpenRef.current = isChatOpen; }, [isChatOpen]);
 
   // WebSocket connection for real-time chat
   useEffect(() => {
@@ -90,7 +93,7 @@ export default function QuickActions() {
               isRead: false
             };
             setChatMessages(prev => [...prev, newMessage]);
-            if (!isChatOpen) {
+            if (!isChatOpenRef.current) {
               setUnreadChats(prev => prev + 1);
             }
           }
