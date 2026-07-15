@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   Building2, 
@@ -28,6 +30,8 @@ import {
 
 export default function BusinessBanking() {
   const { t } = useLanguage();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const { data: user, isLoading } = useQuery<User | any>({
     queryKey: ['/api/user'],
   });
@@ -99,11 +103,11 @@ export default function BusinessBanking() {
             {t('comprehensive_solutions')}
           </p>
           <div className="flex justify-center space-x-3">
-            <Button className="bg-blue-600 text-white hover:bg-blue-700">
+            <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => setLocation('/register-multi')}>
               <Briefcase className="w-4 h-4 mr-2" />
               {t('get_started')}
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => setLocation('/customer-support')}>
               <Users className="w-4 h-4 mr-2" />
               {t('contact_specialist')}
             </Button>
@@ -155,7 +159,7 @@ export default function BusinessBanking() {
                       </div>
                     ))}
                   </div>
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full" onClick={() => setLocation('/banking-services')}>
                     {t('learn_more')}
                   </Button>
                 </CardContent>
@@ -207,7 +211,7 @@ export default function BusinessBanking() {
                     <span className="text-blue-100">24/7 support</span>
                   </div>
                 </div>
-                <Button className="bg-white text-blue-600 hover:bg-gray-100">
+                <Button className="bg-white text-blue-600 hover:bg-gray-100" onClick={() => setLocation('/dashboard')}>
                   Try Digital Banking
                 </Button>
               </div>
@@ -230,11 +234,11 @@ export default function BusinessBanking() {
               Our business banking specialists are ready to help you find the right solutions for your company
             </p>
             <div className="flex justify-center space-x-4">
-              <Button className="bg-blue-600 text-white hover:bg-blue-700">
+              <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => setLocation('/customer-support')}>
                 <Phone className="w-4 h-4 mr-2" />
                 Schedule Consultation
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={() => toast({ title: 'Brochure download coming soon' })}>
                 <FileText className="w-4 h-4 mr-2" />
                 Download Brochure
               </Button>

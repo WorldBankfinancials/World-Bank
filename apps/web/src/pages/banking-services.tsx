@@ -7,6 +7,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { 
   Building2, 
   CreditCard, 
@@ -26,6 +27,7 @@ import {
 
 export default function BankingServices() {
   const { t } = useLanguage();
+  const [, setLocation] = useLocation();
   const { data: user, isLoading } = useQuery<User | any>({
     queryKey: ['/api/user'],
   });
@@ -43,25 +45,29 @@ export default function BankingServices() {
       icon: Building2,
       title: t('checking_accounts'),
       description: t('checking_description'),
-      features: [t('no_minimum_balance'), t('free_atm_worldwide'), t('mobile_banking')]
+      features: [t('no_minimum_balance'), t('free_atm_worldwide'), t('mobile_banking')],
+      link: '/dashboard'
     },
     {
       icon: PiggyBank,
       title: t('savings_accounts'),
       description: t('savings_description'),
-      features: [t('high_apy'), t('no_monthly_fees'), t('automatic_savings')]
+      features: [t('high_apy'), t('no_monthly_fees'), t('automatic_savings')],
+      link: '/dashboard'
     },
     {
       icon: CreditCard,
       title: t('credit_cards'),
       description: t('credit_cards_description'),
-      features: [t('no_foreign_fees'), t('travel_rewards'), t('purchase_protection')]
+      features: [t('no_foreign_fees'), t('travel_rewards'), t('purchase_protection')],
+      link: '/cards'
     },
     {
       icon: Home,
       title: t('mortgage_services'),
       description: t('mortgage_description'),
-      features: [t('competitive_rates'), t('multiple_currencies'), t('expert_guidance')]
+      features: [t('competitive_rates'), t('multiple_currencies'), t('expert_guidance')],
+      link: '/loans'
     }
   ];
 
@@ -70,25 +76,29 @@ export default function BankingServices() {
       icon: Users,
       title: t('business_banking'),
       description: t('business_banking_description'),
-      features: [t('multi_currency_accounts'), t('trade_finance'), t('cash_management')]
+      features: [t('multi_currency_accounts'), t('trade_finance'), t('cash_management')],
+      link: '/business-banking'
     },
     {
       icon: Globe,
       title: t('international_trade'),
       description: t('international_trade_description'),
-      features: [t('letters_of_credit'), t('documentary_collections'), t('trade_guarantees')]
+      features: [t('letters_of_credit'), t('documentary_collections'), t('trade_guarantees')],
+      link: '/transfer-funds'
     },
     {
       icon: TrendingUp,
       title: t('investment_services'),
       description: t('investment_services_description'),
-      features: [t('portfolio_management'), t('market_research'), t('risk_assessment')]
+      features: [t('portfolio_management'), t('market_research'), t('risk_assessment')],
+      link: '/investment'
     },
     {
       icon: ArrowRightLeft,
       title: t('treasury_services'),
       description: t('treasury_services_description'),
-      features: [t('liquidity_management'), t('fx_services'), t('payment_solutions')]
+      features: [t('liquidity_management'), t('fx_services'), t('payment_solutions')],
+      link: '/exchange'
     }
   ];
 
@@ -97,19 +107,22 @@ export default function BankingServices() {
       icon: Calculator,
       title: t('loan_services'),
       description: t('loan_services_description'),
-      types: [t('personal_loans'), t('auto_loans'), t('business_loans'), t('equipment_financing')]
+      types: [t('personal_loans'), t('auto_loans'), t('business_loans'), t('equipment_financing')],
+      link: '/loans'
     },
     {
       icon: GraduationCap,
       title: t('education_financing'),
       description: t('education_financing_description'),
-      types: [t('student_loans'), t('education_savings'), t('study_abroad_financing')]
+      types: [t('student_loans'), t('education_savings'), t('study_abroad_financing')],
+      link: '/loans'
     },
     {
       icon: Shield,
       title: t('insurance_services'),
       description: t('insurance_services_description'),
-      types: [t('life_insurance'), t('property_insurance'), t('business_insurance')]
+      types: [t('life_insurance'), t('property_insurance'), t('business_insurance')],
+      link: '/wealth-management'
     }
   ];
 
@@ -160,7 +173,7 @@ export default function BankingServices() {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full mt-4" variant="outline">{t('learn_more')}</Button>
+                  <Button className="w-full mt-4" variant="outline" onClick={() => setLocation(service.link)}>{t('learn_more')}</Button>
                 </CardContent>
               </Card>
             ))}
@@ -187,7 +200,7 @@ export default function BankingServices() {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full mt-4" variant="outline">{t('learn_more')}</Button>
+                  <Button className="w-full mt-4" variant="outline" onClick={() => setLocation(service.link)}>{t('learn_more')}</Button>
                 </CardContent>
               </Card>
             ))}
@@ -213,7 +226,7 @@ export default function BankingServices() {
                       </Badge>
                     ))}
                   </div>
-                  <Button className="w-full mt-4" variant="outline">{t('explore_options')}</Button>
+                  <Button className="w-full mt-4" variant="outline" onClick={() => setLocation(service.link)}>{t('explore_options')}</Button>
                 </CardContent>
               </Card>
             ))}

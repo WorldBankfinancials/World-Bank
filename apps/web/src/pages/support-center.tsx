@@ -14,6 +14,8 @@ import LiveChat from "@/components/LiveChat";
 export default function SupportCenter() {
   const { t } = useLanguage();
   const [showLiveChat, setShowLiveChat] = useState(false);
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ['/api/user'],
   });
@@ -27,11 +29,16 @@ export default function SupportCenter() {
   }
 
   const faqItems = [
-    { question: "How do I transfer funds between accounts?", category: "Banking" },
-    { question: "What are your current interest rates?", category: "Rates" },
-    { question: "How do I report a lost or stolen card?", category: "Security" },
-    { question: "What are the wire transfer fees?", category: "Fees" },
+    { question: "How do I transfer funds between accounts?", category: "Banking", answer: "You can transfer funds between accounts from the Transfer Funds page. Navigate to the transfer section in your dashboard and follow the prompts to complete a transfer." },
+    { question: "What are your current interest rates?", category: "Rates", answer: "Our interest rates vary by product and are updated regularly. Please visit the Rates section or contact our support team for the most current rates on savings accounts, loans, and other products." },
+    { question: "How do I report a lost or stolen card?", category: "Security", answer: "If your card is lost or stolen, immediately navigate to the Cards page to lock your card, or contact our 24/7 phone support at 1-800-WORLD-BANK to report it and request a replacement." },
+    { question: "What are the wire transfer fees?", category: "Fees", answer: "Wire transfer fees depend on the type and destination of the transfer. Domestic wires typically have lower fees than international wires. Please check the Fees section or contact support for a detailed fee schedule." },
   ];
+
+  const filteredFaqs = faqItems.filter(faq =>
+    faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    faq.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-wb-gray">
@@ -90,7 +97,7 @@ export default function SupportCenter() {
               <p className="text-wb-text mb-4">Search our help articles</p>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input placeholder="Search help articles..." className="pl-10" />
+                <Input placeholder="Search help articles..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
             </CardContent>
           </Card>
@@ -102,17 +109,28 @@ export default function SupportCenter() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {faqItems.map((faq, index) => (
-                <div key={`item-${index}`} className="flex justify-between items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                  <div>
-                    <p className="font-medium wb-dark">{faq.question}</p>
-                    <p className="text-sm text-wb-text">{faq.category}</p>
+              {filteredFaqs.length === 0 ? (
+                <div className="text-center py-8 text-wb-text">No FAQs match your search.</div>
+              ) : (
+                filteredFaqs.map((faq, index) => (
+                <div key={`item-${index}`} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium wb-dark">{faq.question}</p>
+                      <p className="text-sm text-wb-text">{faq.category}</p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setExpandedFaq(expandedFaq === index ? null : index)}>
+                      {expandedFaq === index ? 'Hide Answer' : 'View Answer'}
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    View Answer
-                  </Button>
+                  {expandedFaq === index && (
+                    <div className="mt-3 pt-3 border-t text-wb-text text-sm">
+                      {faq.answer}
+                    </div>
+                  )}
                 </div>
-              ))}
+                ))
+              )}
             </div>
 
             <div className="mt-6 pt-6 border-t">
