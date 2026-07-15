@@ -1689,7 +1689,7 @@ export async function registerRoutes(app: Express) {
       // Check balance first
       const { data: userAccount } = await supabase.from('accounts').select('balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0')));
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
       if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
 
       // Debit the amount
@@ -1831,7 +1831,7 @@ export async function registerRoutes(app: Express) {
       if (deposit > 0) {
         const { data: userAccount } = await supabaseClient.from('accounts').select('balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
         if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-        const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0')));
+        const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
         if (currentBalance < deposit) return res.status(400).json({ error: 'Insufficient funds for initial deposit' });
         // Debit from checking
         const newBalance = (currentBalance - deposit).toFixed(2);
@@ -1885,7 +1885,7 @@ export async function registerRoutes(app: Express) {
       // Check and debit checking account
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0')));
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
       if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
 
       const newCheckingBalance = (currentBalance - numAmount).toFixed(2);
@@ -1928,7 +1928,7 @@ export async function registerRoutes(app: Express) {
       const supabaseClient = getAdminClient();
       const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user!.id).single();
       if (!savings) return res.status(404).json({ error: 'Savings account not found' });
-      const savingsBalance = parseFloat(String((savings as Record<string, unknown>).balance || '0')));
+      const savingsBalance = parseFloat(String((savings as Record<string, unknown>).balance || '0'));
       if (savingsBalance < numAmount) return res.status(400).json({ error: 'Insufficient savings balance' });
 
       // Debit savings
@@ -1980,7 +1980,7 @@ export async function registerRoutes(app: Express) {
       // Check balance
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0')));
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
       if (currentBalance < totalCost) return res.status(400).json({ error: 'Insufficient funds' });
 
       // Debit account
@@ -2048,7 +2048,7 @@ export async function registerRoutes(app: Express) {
       // Check investment
       const { data: investment } = await supabaseClient.from('investments').select('id, shares, average_price, symbol').eq('id', investmentId).eq('user_id', req.user!.id).single();
       if (!investment) return res.status(404).json({ error: 'Investment not found' });
-      const heldShares = parseFloat(String((investment as Record<string, unknown>).shares || '0')));
+      const heldShares = parseFloat(String((investment as Record<string, unknown>).shares || '0'));
       if (heldShares < numShares) return res.status(400).json({ error: 'Insufficient shares' });
 
       // Credit account
@@ -2338,7 +2338,7 @@ export async function registerLiveChatRoutes(app: Express) {
   const { getChatHistory, getActiveSessions, createTicketFromChat } = await import('./supabase-live-chat');
   const { supabase } = await import('./supabase-public-storage');
   
-  app.get('/api/chat/history', getChatHistory);
+  app.get('/api/chat/history', requireAuth, getChatHistory);
   app.get('/api/chat/sessions', requireAdmin, getActiveSessions);
   app.post('/api/chat/create-ticket', requireAuth, createTicketFromChat);
 
