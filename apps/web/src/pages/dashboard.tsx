@@ -598,9 +598,9 @@ export default function Dashboard() {
             <div className="space-y-4" key="transactions-list">
               {recentTransactions.length > 0 ? (
                 recentTransactions.map((tx, idx) => (
-                  <div key={`dashboard-tx-${idx}-${tx.id}`} className="flex items-start justify-between">
+                  <div key={"dashboard-tx-" + idx + "-" + tx.id} className="flex items-start justify-between">
                     <div className="flex items-start space-x-3 flex-1">
-                      <div className={`w-10 h-10 ${tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                      <div className={"w-10 h-10 " + (tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100') + " rounded-full flex items-center justify-center flex-shrink-0 mt-1"}>
                         {tx.type === 'credit' ? (
                           <ArrowDownRight className="w-5 h-5 text-green-600" />
                         ) : (
@@ -613,14 +613,14 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end space-y-1">
-                      <span className={`font-medium ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className={"font-medium " + (tx.type === 'credit' ? 'text-green-600' : 'text-red-600')}>
                         {tx.type === 'credit' ? '+' : '-'}${parseFloat(String(tx.amount)).toFixed(2)}
                       </span>
-                      <Badge variant="outline" className={`text-xs ${
+                      <Badge variant="outline" className={"text-xs " + (
                         tx.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' :
                         tx.status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
                         'bg-yellow-50 text-yellow-700 border-yellow-200'
-                      }`}>
+                      )}>
                         {tx.status || 'pending'}
                       </Badge>
                     </div>
@@ -667,12 +667,12 @@ export default function Dashboard() {
                   { title: "Payment Received", message: "You received $2,500 from ABC Corporation", type: "success" }
                 ]).map((notif, idx) => (
                   <div
-                    key={`notif-${idx}`}
-                    className={`p-4 rounded-lg border ${
+                    key={"notif-" + idx}
+                    className={"p-4 rounded-lg border " + (
                       notif.type === 'warning' ? 'border-orange-200 bg-orange-50' :
                       notif.type === 'success' ? 'border-green-200 bg-green-50' :
                       'border-blue-200 bg-blue-50'
-                    }`}
+                    )}
                   >
                     <div className="flex justify-between items-start">
                       <div>
