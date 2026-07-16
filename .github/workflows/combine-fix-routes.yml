@@ -10,22 +10,44 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v4
         with:
           ref: deep-scan-27-fixes
           fetch-depth: 0
 
-      - name: Combine parts
+      - name: Combine parts and push via API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -f server/fix-routes-part1.ts ] && [ -f server/fix-routes-part2.ts ] && [ -f server/fix-routes-part3.ts ] && [ -f server/fix-routes-part4.ts ]; then
-            cat server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts > server/fix-routes.ts
-            rm -f server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "Combine fix-routes parts into single file with 18 bug fixes"
-            git push
-          else
-            echo "Parts not found, skipping"
+          if [ ! -f server/fix-routes-part1.ts ]; then
+            echo "Parts already combined, skipping"
+            exit 0
           fi
+          cat server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts > server/fix-routes.ts
+          COMBINED=$(cat server/fix-routes.ts)
+          rm -f server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts
+          
+          # Get current file SHA
+          OLD_SHA=$(gh api repos/WorldBankfinancials/World-Bank/contents/server/fix-routes.ts?ref=deep-scan-27-fixes --jq '.sha')
+          
+          # Update fix-routes.ts
+          gh api repos/WorldBankfinancials/World-Bank/contents/server/fix-routes.ts \
+            --method PUT \
+            -f message="Combine fix-routes parts into single file with 18 bug fixes" \
+            -f content="$(base64 -w0 server/fix-routes.ts)" \
+            -f sha="$OLD_SHA" \
+            -f branch="deep-scan-27-fixes"
+          
+          # Delete part files
+          for i in 1 2 3 4; do
+            PART_SHA=$(gh api "repos/WorldBankfinancials/World-Bank/contents/server/fix-routes-part${i}.ts?ref=deep-scan-27-fixes" --jq '.sha')
+            gh api "repos/WorldBankfinancials/World-Bank/contents/server/fix-routes-part${i}.ts" \
+              --method DELETE \
+              -f message="Remove fix-routes-part${i}.ts" \
+              -f sha="$PART_SHA" \
+              -f branch="deep-scan-27-fixes" || true
+          done
+          
+          echo "Done combining files"
