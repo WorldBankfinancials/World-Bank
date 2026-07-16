@@ -19,7 +19,7 @@ export async function verifyAtomicBalanceFunction(): Promise<boolean> {
     });
 
     // If the function doesn't exist, we'll get a specific error
-    if (error && error.message?.includes('function') && error.message?.includes('does not exist')) {
+    if (error && (error as Error).message?.includes('function') && (error as Error).message?.includes('does not exist')) {
       return false;
     }
 

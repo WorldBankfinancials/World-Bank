@@ -40,7 +40,7 @@ export function errorHandler(
   // SECURITY FIX: Log error WITHOUT sensitive data (passwords, PINs, tokens)
   const isProduction = process.env.NODE_ENV === 'production';
   
-  // Log error details safely
+  // Log error details safely (internal logging keeps the real message)
   const errorLog = {
     message: err.message,
     stack: isProduction ? undefined : err.stack,
@@ -50,13 +50,17 @@ export function errorHandler(
     statusCode: err.statusCode,
     timestamp: new Date().toISOString()
   };
+  console.error('Error handler:', errorLog);
 
   // Determine status code
   const statusCode = err.statusCode || 500;
   
-  const errorResponse: any = {
+  // SECURITY: Never send the real error message to the client
+  const message = 'An internal error occurred';
+
+  const errorResponse: Record<string, unknown> = {
     error: true,
-    message: err.message || 'Internal server error',
+    message,
     timestamp: new Date().toISOString(),
     path: req.path
   };
