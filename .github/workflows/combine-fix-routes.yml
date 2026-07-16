@@ -1,6 +1,7 @@
 name: Combine fix-routes parts
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - deep-scan-27-fixes
@@ -11,40 +12,21 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Combine and push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
+        with:
+          ref: deep-scan-27-fixes
+          fetch-depth: 0
+
+      - name: Combine parts and push
         run: |
-          REPO="WorldBankfinancials/World-Bank"
-          BRANCH="deep-scan-27-fixes"
-          
-          # Fetch all 4 parts
-          PART1=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/contents/server/fix-routes-part1.ts?ref=$BRANCH" | jq -r '.content' | base64 -d)
-          PART2=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/contents/server/fix-routes-part2.ts?ref=$BRANCH" | jq -r '.content' | base64 -d)
-          PART3=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/contents/server/fix-routes-part3.ts?ref=$BRANCH" | jq -r '.content' | base64 -d)
-          PART4=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/contents/server/fix-routes-part4.ts?ref=$BRANCH" | jq -r '.content' | base64 -d)
-          
-          COMBINED="$PART1$PART2$PART3$PART4"
-          ENCODED=$(echo -n "$COMBINED" | base64 -w0)
-          
-          # Get SHA of existing fix-routes.ts
-          OLD_SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/contents/server/fix-routes.ts?ref=$BRANCH" | jq -r '.sha')
-          
-          # Update fix-routes.ts with combined content
-          curl -s -X PUT \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "{\"message\":\"Combine fix-routes parts with 18 bug fixes\",\"content\":\"$ENCODED\",\"sha\":\"$OLD_SHA\",\"branch\":\"$BRANCH\"}" \
-            "https://api.github.com/repos/$REPO/contents/server/fix-routes.ts"
-          
-          # Delete part files
-          for i in 1 2 3 4; do
-            PART_SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/contents/server/fix-routes-part${i}.ts?ref=$BRANCH" | jq -r '.sha')
-            curl -s -X DELETE \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "{\"message\":\"Delete part $i\",\"sha\":\"$PART_SHA\",\"branch\":\"$BRANCH\"}" \
-              "https://api.github.com/repos/$REPO/contents/server/fix-routes-part${i}.ts" || true
-          done
-          
-          echo "Done"
+          if [ ! -f server/fix-routes-part1.ts ]; then
+            echo "Parts already combined, skipping"
+            exit 0
+          fi
+          cat server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts > server/fix-routes.ts
+          rm -f server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Combine fix-routes parts into single file with 18 bug fixes"
+          git push
