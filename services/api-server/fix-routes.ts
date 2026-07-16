@@ -1,4 +1,4 @@
-import type { User, InsertTransaction } from '@packages/shared/schema';
+import type { User, InsertTransaction, TransactionType, TransactionStatus } from '@packages/shared/schema';
 import { generateAccountNumber, generateTransferPin, generateTransactionId, generateReferenceNumber } from './crypto-utils';
 import { randomUUID } from 'crypto';
 import { validateId, validateAmount } from './validators';
@@ -750,12 +750,11 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       const transaction = await storage.createTransaction({
         fromAccountId: primaryAccount.id,
-        transactionType: body.type,
+        transactionType: body.type as TransactionType,
         amount: body.amount,
         description: body.description,
-        status: body.status || 'completed',
-        createdAt: new Date()
-      });
+        status: (body.status || 'completed') as TransactionStatus,
+      } as InsertTransaction);
 
       // Update account balance if it's a credit/debit
       if (body.type === 'credit' || body.type === 'debit') {
@@ -806,13 +805,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Create transaction record
       const transaction = await storage.createTransaction({
-        fromAccountId: accountId,
-        transactionType: body.type,
+        fromAccountId: String(accountId),
+        transactionType: body.type as TransactionType,
         amount: amountNum.toString(),
         description: body.description,
-        status: 'success',
-        createdAt: new Date()
-      });
+        status: 'success' as TransactionStatus,
+      } as InsertTransaction);
 
       // AUDIT TRAIL: Log admin action
       const admin = await (storage).getUserByEmail(req.user?.email);
@@ -821,7 +819,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           adminId: admin.id,
           action: 'update_account_balance',
           targetType: 'account',
-          targetId: accountId,
+          targetId: String(accountId),
           details: { accountId, amount: body.amount, transactionType: body.type, oldBalance: account.balance, newBalance }
         });
       }
@@ -867,7 +865,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           adminId: admin.id,
           action: 'update_customer_balance',
           targetType: 'user',
-          targetId: customerId,
+          targetId: String(customerId),
           details: { customerId, amount: body.amount, oldBalance: oldUser?.balance, newBalance: updatedUser.balance, description: body.description }
         });
       }
@@ -937,7 +935,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           adminId: admin.id,
           action: 'update_customer',
           targetType: 'user',
-          targetId: customerId,
+          targetId: String(customerId),
           details: { customerId, updates }
         });
       }
@@ -1190,7 +1188,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           adminId: admin.id,
           action: 'approve_registration',
           targetType: 'user',
-          targetId: registrationId,
+          targetId: String(registrationId),
           details: { userId: registrationId, initialBalance: initialBalance || 0 }
         });
       }
@@ -1251,7 +1249,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           adminId: admin.id,
           action: 'reject_registration',
           targetType: 'user',
-          targetId: registrationId,
+          targetId: String(registrationId),
           details: { userId: registrationId, reason }
         });
       }
@@ -2003,7 +2001,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           adminId: admin.id,
           action: 'update_support_ticket',
           targetType: 'support_ticket',
-          targetId: id,
+          targetId: String(id),
           details: { ticketId: id, updates, action: actionDescription }
         });
       }
