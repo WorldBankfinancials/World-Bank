@@ -47,14 +47,6 @@ export default function AccountPreferences() {
     }
   }, [queryError]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   const [preferences, setPreferences] = useState({
     notifications: { email: true, sms: true, push: true, marketing: false },
     privacy: { showBalance: true, shareData: false, twoFactorAuth: true },
@@ -81,6 +73,14 @@ export default function AccountPreferences() {
       }));
     }
   }, [userData]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   const handleSave = async () => {
     const { authenticatedFetch } = await import('@/lib/queryClient');
