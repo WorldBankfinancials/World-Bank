@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Request, Response, NextFunction } from 'express';
 
 /**
  * COMPREHENSIVE INPUT VALIDATION SCHEMAS
@@ -133,7 +134,7 @@ export const securePinValidator = (pin: string): boolean => {
  * Validate request body against a schema
  * Returns { success: true, data } or { success: false, errors }
  */
-export function validateRequest<T>(schema: z.ZodSchema<T>, data: any): 
+export function validateRequest<T>(schema: z.ZodSchema<T>, data: unknown): 
   { success: true; data: T } | { success: false; errors: string[] } {
   
   try {
@@ -154,7 +155,7 @@ export function validateRequest<T>(schema: z.ZodSchema<T>, data: any):
  * Middleware to validate request body
  */
 export function validateBody<T>(schema: z.ZodSchema<T>) {
-  return (req: any, res: any, next: any) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     const result = validateRequest(schema, req.body);
     
     if (!result.success) {

@@ -5,12 +5,11 @@
  * Imported by BOTH client (via @shared/schema) and server (via @shared/schema).
  *
  * Database: Supabase Postgres
- * Primary user table : user_profiles  (id uuid = auth.uid())
- * Accounts table     : bank_accounts  (id uuid)
+ * Primary user table : users          (id uuid = auth.uid())
+ * Accounts table     : accounts       (id uuid)
  * Transactions table : transactions   (id uuid, uses transaction_type not type)
- * Supporting tables  : alerts, messages, cards, investments,
- *                      support_tickets, admin_actions  — all uuid PKs
- * Auth gate table    : users (id uuid = auth.uid(), role, kyc_status)
+ * Supporting tables  : alerts, messages, cards, investments, loans, savings,
+ *                      support_tickets, admin_actions, forex, kyc  — all uuid PKs
  *
  * All primary-key IDs are UUID strings throughout.
  * No prefix on exported TypeScript types.
@@ -80,7 +79,7 @@ export type VerifyPinInput   = z.infer<typeof verifyPinSchema>;
 // CORE TABLE: user_profiles
 // ============================================================
 
-export const userProfiles = pgTable('user_profiles', {
+export const users = pgTable('users', {
   id:                   uuid('id').primaryKey(),
   email:                text('email'),
   username:             text('username'),
@@ -119,21 +118,9 @@ export const userProfiles = pgTable('user_profiles', {
   passwordHash:         text('password_hash'),
 });
 
-export const authUsers = pgTable('users', {
-  id:                  uuid('id').primaryKey(),
-  email:               text('email').notNull().unique(),
-  role:                text('role').notNull().default('customer'),
-  kycStatus:           text('kyc_status').notNull().default('pending'),
-  accountStatus:       text('account_status').notNull().default('active'),
-  transferPinHash:     text('transfer_pin_hash'),
-  lastLoginAt:         timestamp('last_login_at', { withTimezone: true }),
-  failedLoginAttempts: integer('failed_login_attempts').default(0),
-  lockedUntil:         timestamp('locked_until', { withTimezone: true }),
-  createdAt:           timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt:           timestamp('updated_at', { withTimezone: true }).defaultNow(),
-});
+export const userProfiles = users;
 
-export const bankAccounts = pgTable('bank_accounts', {
+export const bankAccounts = pgTable('accounts', {
   id:               uuid('id').primaryKey(),
   userId:           uuid('user_id').notNull(),
   accountNumber:    text('account_number').notNull(),
@@ -175,7 +162,7 @@ export const transactions = pgTable('transactions', {
   location:         jsonb('location'),
   requiresApproval: boolean('requires_approval').default(false),
   approvedBy:       uuid('approved_by'),
-  approvedAt:       timestamp('approved_at', { withTimezone: true }),
+  approvedAt:      timestamp('approved_at', { withTimezone: true }),
   createdAt:        timestamp('created_at', { withTimezone: true }).defaultNow(),
   processedAt:      timestamp('processed_at', { withTimezone: true }),
   completedAt:      timestamp('completed_at', { withTimezone: true }),
@@ -274,7 +261,7 @@ export const alerts = pgTable('alerts', {
 // DRIZZLE-ZOD INSERT SCHEMAS
 // ============================================================
 
-export const insertUserProfileSchema   = createInsertSchema(userProfiles);
+export const insertUserProfileSchema   = createInsertSchema(users);
 export const insertBankAccountSchema   = createInsertSchema(bankAccounts);
 export const insertTransactionSchema   = createInsertSchema(transactions);
 export const insertAdminActionSchema   = createInsertSchema(adminActions);
@@ -285,10 +272,124 @@ export const insertMessageSchema       = createInsertSchema(messages);
 export const insertAlertSchema         = createInsertSchema(alerts);
 
 // ============================================================
+// LOANS TABLE
+// ============================================================
+
+export const loans = pgTable('loans', {
+  id:                uuid('id').primaryKey(),
+  userId:            uuid('user_id').notNull(),
+  accountId:         uuid('account_id'),
+  loanNumber:        text('loan_number').notNull(),
+  loanType:          text('loan_type').notNull().default('personal'),
+  principalAmount:   numeric('principal_amount', { precision: 18, scale: 2 }).notNull(),
+  interestRate:      numeric('interest_rate', { precision: 6, scale: 4 }).default('0.0500'),
+  termMonths:        integer('term_months').default(12),
+  monthlyPayment:    numeric('monthly_payment', { precision: 18, scale: 2 }),
+  remainingBalance:  numeric('remaining_balance', { precision: 18, scale: 2 }),
+  totalInterest:     numeric('total_interest', { precision: 18, scale: 2 }),
+  totalPayable:      numeric('total_payable', { precision: 18, scale: 2 }),
+  status:            text('status').notNull().default('pending'),
+  approvedBy:        uuid('approved_by'),
+  approvedAt:        timestamp('approved_at', { withTimezone: true }),
+  disbursementDate:  timestamp('disbursement_date', { withTimezone: true }),
+  maturityDate:      timestamp('maturity_date', { withTimezone: true }),
+  metadata:          jsonb('metadata').default('{}'),
+  createdAt:         timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt:         timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertLoanSchema = createInsertSchema(loans);
+export type LoanRow = typeof loans.$inferSelect;
+
+export interface Loan {
+  id: string;
+  userId: string;
+  accountId?: string | null;
+  loanNumber: string;
+  loanType: string;
+  principalAmount: string;
+  interestRate?: string | null;
+  termMonths?: number | null;
+  monthlyPayment?: string | null;
+  remainingBalance?: string | null;
+  totalInterest?: string | null;
+  totalPayable?: string | null;
+  status: string;
+  approvedBy?: string | null;
+  approvedAt?: string | Date | null;
+  disbursementDate?: string | Date | null;
+  maturityDate?: string | Date | null;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
+}
+
+export interface InsertLoan {
+  userId: string;
+  loanNumber: string;
+  loanType: string;
+  principalAmount: string;
+  interestRate?: string;
+  termMonths?: number;
+  monthlyPayment?: string;
+  remainingBalance?: string;
+  totalInterest?: string;
+  totalPayable?: string;
+  status?: string;
+}
+
+// ============================================================
+// SAVINGS TABLE
+// ============================================================
+
+export const savings = pgTable('savings', {
+  id:              uuid('id').primaryKey(),
+  userId:          uuid('user_id').notNull(),
+  accountId:       uuid('account_id'),
+  savingsType:     text('savings_type').notNull().default('goal'),
+  goalName:        text('goal_name'),
+  targetAmount:    numeric('target_amount', { precision: 18, scale: 2 }),
+  currentAmount:   numeric('current_amount', { precision: 18, scale: 2 }).default('0.00'),
+  interestRate:    numeric('interest_rate', { precision: 6, scale: 4 }).default('0.0200'),
+  targetDate:      timestamp('target_date', { withTimezone: true }),
+  status:          text('status').notNull().default('active'),
+  metadata:        jsonb('metadata').default('{}'),
+  createdAt:       timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt:       timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertSavingsSchema = createInsertSchema(savings);
+export type SavingsRow = typeof savings.$inferSelect;
+
+export interface SavingsGoal {
+  id: string;
+  userId: string;
+  accountId?: string | null;
+  savingsType: string;
+  goalName?: string | null;
+  targetAmount?: string | null;
+  currentAmount?: string | null;
+  interestRate?: string | null;
+  targetDate?: string | Date | null;
+  status: string;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
+}
+
+export interface InsertSavingsGoal {
+  userId: string;
+  savingsType?: string;
+  goalName?: string;
+  targetAmount?: string;
+  currentAmount?: string;
+  interestRate?: string;
+  status?: string;
+}
+
+// ============================================================
 // DRIZZLE SELECT ROW TYPES (no Insert* here — canonical interfaces below)
 // ============================================================
 
-export type UserProfileRow      = typeof userProfiles.$inferSelect;
+export type UserProfileRow      = typeof users.$inferSelect;
 export type BankAccountRow      = typeof bankAccounts.$inferSelect;
 export type TransactionRow      = typeof transactions.$inferSelect;
 export type AdminActionRow      = typeof adminActions.$inferSelect;
@@ -324,7 +425,7 @@ export interface User {
   avatarUrl?: string | null;
   username?: string | null;
   dateOfBirth?: string | null;
-  address?: string | Record<string, any> | null;
+  address?: string | Record<string, unknown> | null;
   city?: string | null;
   state?: string | null;
   country?: string | null;
@@ -561,7 +662,7 @@ export interface AdminAction {
   action: string;
   targetType?: string | null;
   targetId?: string | null;
-  details?: Record<string, any> | null;
+  details?: Record<string, unknown> | null;
   createdAt?: string | Date | null;
 }
 
@@ -570,7 +671,7 @@ export interface InsertAdminAction {
   action: string;
   targetType?: string;
   targetId?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 // ============================================================
