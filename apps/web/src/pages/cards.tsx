@@ -11,6 +11,7 @@ import Header from '@/components/Header';
 import BottomNavigation from '@/components/BottomNavigation';
 import QuickActions from '@/components/QuickActions';
 import { useAuth } from '@/contexts/AuthContext';
+import type { User } from '@packages/shared/schema';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest, authenticatedFetch } from '@/lib/queryClient';
@@ -63,6 +64,14 @@ export default function Cards() {
       toast({ title: t('error') || 'Error', description: 'Failed to load cards. Please refresh the page.', variant: 'destructive' });
     }
   }, [cardsError]);
+
+  if (cardsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   const handleLockCard = async () => {
     if (!selectedCard) return;
@@ -138,20 +147,20 @@ export default function Cards() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={userProfile as any || { id: 0, email: '', firstName: '', lastName: '', username: '', password: '', role: 'customer', isVerified: false, isActive: true, fullName: '', profession: '', accountId: 0, accountNumber: '', idType: null, idNumber: null, transferPin: null, annualIncome: null, address: null, city: null, state: null, postalCode: null, country: null, dateOfBirth: null, mothersMaidenName: null, citizenship: null, taxId: null, industry: null, phone: null, createdAt: new Date(), updatedAt: null }} />
+      <Header user={(userProfile as unknown as User) || { id: 0, email: '', firstName: '', lastName: '', username: '', password: '', role: 'customer', isVerified: false, isActive: true, fullName: '', profession: '', accountId: 0, accountNumber: '', idType: null, idNumber: null, transferPin: null, annualIncome: null, address: null, city: null, state: null, postalCode: null, country: null, dateOfBirth: null, mothersMaidenName: null, citizenship: null, taxId: null, industry: null, phone: null, createdAt: new Date(), updatedAt: null }} />
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         <div className="flex items-center justify-between mb-6"><div><h1 className="text-2xl font-bold text-gray-900">{t('my_cards') || 'My Cards'}</h1><p className="text-gray-600">{t('manage_cards') || 'Manage your credit and debit cards'}</p></div><Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setCreateCardDialogOpen(true)}><Plus className="w-4 h-4 mr-2" />{t('add_card') || 'Add Card'}</Button></div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {cardsLoading && <div className="text-center py-8">Loading cards...</div>}
           {creditCards && creditCards.map((card: CardType) => (
             <Card key={card.id} className="overflow-hidden">
-              <div className={`${(card as any).color || 'bg-gradient-to-br from-blue-600 to-blue-800'} text-white p-6 relative`}>
+              <div className={`${(card as unknown as Record<string, unknown>).color || 'bg-gradient-to-br from-blue-600 to-blue-800'} text-white p-6 relative`}>
                 <div className="flex justify-between items-start mb-4"><div><p className="text-sm opacity-80">{card.name}</p><p className="text-lg font-mono">{card.number}</p></div><div className="flex items-center space-x-2"><Badge variant="secondary" className="bg-white/20 text-white">{card.type}</Badge><button onClick={() => { setSelectedCard(card); setSettingsDialogOpen(true); }} className="p-1 rounded hover:bg-white/20 transition-colors"><MoreVertical className="w-4 h-4" /></button></div></div>
-                <div className="flex justify-between items-end"><div><p className="text-xs opacity-80">Available Credit</p><p className="text-xl font-bold">{showBalance ? `$${(((card as any).limit || 0) - ((card as any).balance || 0)).toLocaleString()}` : '••••••'}</p></div><div className="text-right"><p className="text-xs opacity-80">Expires</p><p className="text-sm">{(card as any).expiry || 'N/A'}</p></div></div>
+                <div className="flex justify-between items-end"><div><p className="text-xs opacity-80">Available Credit</p><p className="text-xl font-bold">{showBalance ? `${((Number((card as unknown as Record<string, unknown>).limit) || 0) - (Number((card as unknown as Record<string, unknown>).balance) || 0)).toLocaleString()}` : '••••••'}</p></div><div className="text-right"><p className="text-xs opacity-80">Expires</p><p className="text-sm">{String((card as unknown as Record<string, unknown>).expiry || 'N/A')}</p></div></div>
                 <div className="absolute top-16 left-6 w-8 h-6 bg-yellow-400 rounded opacity-80"></div>
               </div>
               <CardContent className="p-5 space-y-4">
-                <div className="grid grid-cols-2 gap-4 pb-4 border-b border-gray-200"><div><p className="text-xs text-gray-500 font-medium mb-1">Current Balance</p><p className="text-lg font-bold text-gray-900">{showBalance ? `$${(((card as any).balance || 0).toLocaleString())}` : '••••••'}</p></div><div><p className="text-xs text-gray-500 font-medium mb-1">Credit Limit</p><p className="text-lg font-bold text-gray-900">${(((card as any).limit || 0).toLocaleString())}</p></div></div>
+                <div className="grid grid-cols-2 gap-4 pb-4 border-b border-gray-200"><div><p className="text-xs text-gray-500 font-medium mb-1">Current Balance</p><p className="text-lg font-bold text-gray-900">{showBalance ? `${(Number((card as unknown as Record<string, unknown>).balance) || 0).toLocaleString()}` : '••••••'}</p></div><div><p className="text-xs text-gray-500 font-medium mb-1">Credit Limit</p><p className="text-lg font-bold text-gray-900">${(Number((card as unknown as Record<string, unknown>).limit) || 0).toLocaleString()}</p></div></div>
                 <div className="space-y-2"><Button onClick={() => { setSelectedCard(card); setLockDialogOpen(true); }} className={`w-full font-semibold ${card.isLocked ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}>{card.isLocked ? <Unlock className="w-4 h-4 mr-2" /> : <Lock className="w-4 h-4 mr-2" />}{card.isLocked ? (t('unlock_card') || 'Unlock') : (t('lock_card') || 'Lock')}</Button><div className="grid grid-cols-2 gap-2"><Button onClick={() => setMobilePayDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold" size="sm"><Smartphone className="w-4 h-4 mr-1" />Mobile Pay</Button><Button onClick={() => setPayBillDialogOpen(true)} className="bg-amber-600 hover:bg-amber-700 text-white font-semibold" size="sm"><DollarSign className="w-4 h-4 mr-1" />Pay Bill</Button></div><Button onClick={() => { setSelectedCard(card); setSettingsDialogOpen(true); }} variant="outline" className="w-full border-gray-300 hover:bg-gray-100 font-semibold" size="sm"><Settings className="w-4 h-4 mr-2" />Card Settings</Button></div>
               </CardContent>
             </Card>

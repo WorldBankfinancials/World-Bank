@@ -1,5 +1,5 @@
 import type { User } from "@packages/shared/schema";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,11 +38,17 @@ export default function CreditCards() {
 
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (cardsError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [cardsError]);
+
   // NOW safe to return early - all hooks are called
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">{t('loading')}</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -62,7 +68,7 @@ export default function CreditCards() {
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-semibold text-gray-900">{t('my_cards')}</h1>
-          <Button size="sm" className="bg-blue-600 text-white" onClick={() => setLocation('/cards')}>
+          <Button size="sm" className="bg-blue-600 text-white" onClick={() => setLocation('/cards')}">
             <Plus className="w-4 h-4 mr-1" />
             {t('add_card')}
           </Button>
@@ -78,15 +84,15 @@ export default function CreditCards() {
             <div className="flex items-center justify-center py-12">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
-          ) : creditCards && Array.isArray(creditCards) && creditCards.length > 0 ? creditCards.map((card: any) => (
-            <Card key={card.id} className={`bg-gradient-to-r ${card.color} text-white relative overflow-hidden`}>
+          ) : creditCards && Array.isArray(creditCards) && creditCards.length > 0 ? creditCards.map((card: Record<string, unknown>) => (
+            <Card key={String(card.id)} className={`bg-gradient-to-r ${String(card.color) || ''} text-white relative overflow-hidden`}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-6">
                   <div>
-                    <p className="text-blue-100 text-sm mb-1">{card.name}</p>
+                    <p className="text-blue-100 text-sm mb-1">{String(card.name)}</p>
                     <div className="flex items-center space-x-2">
                       <span className="text-lg font-mono">
-                        {showCardNumbers ? card.number : card.maskedNumber}
+                        {showCardNumbers ? String(card.number) : String(card.maskedNumber)}
                       </span>
                       <button
                         onClick={() => setShowCardNumbers(!showCardNumbers)}
@@ -102,24 +108,24 @@ export default function CreditCards() {
                 <div className="flex items-end justify-between">
                   <div>
                     <p className="text-blue-100 text-xs">Valid Thru</p>
-                    <p className="text-sm font-medium">{card.expiry}</p>
+                    <p className="text-sm font-medium">{String(card.expiry)}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-blue-100 text-xs">Available Credit</p>
-                    <p className="text-lg font-semibold">${((parseFloat(card.availableCredit) || 0) >= 0 ? parseFloat(card.availableCredit) || 0 : 0).toLocaleString()}</p>
+                    <p className="text-lg font-semibold">${((parseFloat(String(card.availableCredit)) || 0) >= 0 ? parseFloat(String(card.availableCredit)) || 0 : 0).toLocaleString()}</p>
                   </div>
                 </div>
 
                 {/* Credit utilization bar */}
                 <div className="mt-4">
                   <div className="flex justify-between text-xs text-blue-100 mb-1">
-                    <span>Used: ${((parseFloat(card.balance) || 0) >= 0 ? parseFloat(card.balance) || 0 : 0).toLocaleString()}</span>
-                    <span>Limit: ${((parseFloat(card.limit) || 0) >= 0 ? parseFloat(card.limit) || 0 : 0).toLocaleString()}</span>
+                    <span>Used: ${((parseFloat(String(card.balance)) || 0) >= 0 ? parseFloat(String(card.balance)) || 0 : 0).toLocaleString()}</span>
+                    <span>Limit: ${((parseFloat(String(card.limit)) || 0) >= 0 ? parseFloat(String(card.limit)) || 0 : 0).toLocaleString()}</span>
                   </div>
                   <div className="w-full bg-blue-800 rounded-full h-2">
                     <div 
                       className="bg-white rounded-full h-2" 
-                      style={{width: `${((parseFloat(card.balance) || 0) / (parseFloat(card.limit) || 1)) * 100}%`}}
+                      style={{width: `${((parseFloat(String(card.balance)) || 0) / (parseFloat(String(card.limit)) || 1)) * 100}%`}}
                     ></div>
                   </div>
                 </div>
@@ -167,18 +173,18 @@ export default function CreditCards() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentTransactions && Array.isArray(recentTransactions) && recentTransactions.length > 0 ? recentTransactions.map((transaction: any, index: number) => (
+              {recentTransactions && Array.isArray(recentTransactions) && recentTransactions.length > 0 ? recentTransactions.map((transaction: Record<string, unknown>, index: number) => (
                 <div key={`item-${index}`} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                       <CreditCard className="w-5 h-5 text-gray-600" />
                     </div>
                     <div>
-                      <p className="font-medium text-sm">{transaction.description}</p>
-                      <p className="text-xs text-gray-500">{transaction.category} • {transaction.date}</p>
+                      <p className="font-medium text-sm">{String(transaction.description)}</p>
+                      <p className="text-xs text-gray-500">{String(transaction.category)} • {String(transaction.date)}</p>
                     </div>
                   </div>
-                  <span className="font-medium text-red-600">-${transaction.amount}</span>
+                  <span className="font-medium text-red-600">-${String(transaction.amount)}</span>
                 </div>
               )) : (
                 <div className="text-center py-8 text-gray-500">
