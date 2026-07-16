@@ -21,7 +21,7 @@ export default function AdminTransactionCreator() {
   const { t } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: accounts = [] } = useQuery<Account[]>({
+  const { data: accounts = [], isLoading: accountsLoading, error: accountsError } = useQuery<Account[]>({
     queryKey: ['/api/accounts'],
     queryFn: async () => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -119,16 +119,24 @@ export default function AdminTransactionCreator() {
           <CardContent className="space-y-4">
             <div>
               <Label>Select Account</Label>
-              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+              <Select value={selectedAccountId} onValueChange={setSelectedAccountId} disabled={accountsLoading}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose account..." />
+                  <SelectValue placeholder={accountsLoading ? "Loading accounts..." : "Choose account..."} />
                 </SelectTrigger>
                 <SelectContent>
-                  {(accounts as Account[]).map((acc: Account) => (
-                    <SelectItem key={acc.id} value={acc.id.toString()}>
-                      {acc.accountName} - {acc.accountNumber}
-                    </SelectItem>
-                  ))}
+                  {accountsError ? (
+                    <div className="p-2 text-sm text-red-600">Failed to load accounts. Please try again.</div>
+                  ) : accountsLoading ? (
+                    <div className="p-2 text-sm text-gray-500">Loading accounts...</div>
+                  ) : (accounts as Account[]).length === 0 ? (
+                    <div className="p-2 text-sm text-gray-500">No accounts found.</div>
+                  ) : (
+                    (accounts as Account[]).map((acc: Account) => (
+                      <SelectItem key={acc.id} value={acc.id.toString()}>
+                        {acc.accountName} - {acc.accountNumber}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
