@@ -37,30 +37,30 @@ import {
  */
 class SupabasePublicStorage implements IStorage {
   async getUser(id: string) {
-    return getRecord('user_profiles', id) as Promise<User | undefined>;
+    return getRecord('users', id) as Promise<User | undefined>;
   }
   async getUserByEmail(email: string) {
-    const rows = await listRecords('user_profiles', { email }) as Array<Record<string, unknown>>;
+    const rows = await listRecords('users', { email }) as Array<Record<string, unknown>>;
     return rows[0] as unknown as User | undefined;
   }
   async getUserByUsername(username: string) {
-    const rows = await listRecords('user_profiles', { username }) as Array<Record<string, unknown>>;
+    const rows = await listRecords('users', { username }) as Array<Record<string, unknown>>;
     return rows[0] as unknown as User | undefined;
   }
   async getAllUsers() {
-    return listRecords('user_profiles') as Promise<User[]>;
+    return listRecords('users') as Promise<User[]>;
   }
   async createUser(user: InsertUser) {
-    return insertRecord('user_profiles', user as unknown as Record<string, unknown>) as Promise<User>;
+    return insertRecord('users', user as unknown as Record<string, unknown>) as Promise<User>;
   }
   async updateUser(id: string, updates: Partial<InsertUser>) {
-    return updateRecord('user_profiles', id, updates as unknown as Record<string, unknown>) as Promise<User | undefined>;
+    return updateRecord('users', id, updates as unknown as Record<string, unknown>) as Promise<User | undefined>;
   }
   async updateUserBalance(id: string, delta: number) {
     const user = await this.getUser(id);
     if (!user) return undefined;
     const newBalance = (Number(user.balance) || 0) + delta;
-    return updateRecord('user_profiles', id, { balance: String(newBalance) }) as Promise<User | undefined>;
+    return updateRecord('users', id, { balance: String(newBalance) }) as Promise<User | undefined>;
   }
 
   async getUserAccounts(userId: string) {
@@ -77,7 +77,7 @@ class SupabasePublicStorage implements IStorage {
   }
 
   async getAccountTransactions(accountId: string, limit?: number) {
-    const rows = await listRecords('transactions', { account_id: accountId }) as Array<Record<string, unknown>>;
+    const rows = await listRecords('transactions', { from_account_id: accountId }) as Array<Record<string, unknown>>;
     return (limit ? rows.slice(0, limit) : rows) as unknown as Transaction[];
   }
   async getAllTransactions() {
@@ -149,35 +149,38 @@ class SupabasePublicStorage implements IStorage {
       : listRecords('messages') as Promise<Message[]>;
   }
   async getUserMessages(userId: string) {
-    return listRecords('messages', { user_id: userId }) as Promise<Message[]>;
+    const { supabase } = await import('./supabase-public-storage');
+    const { data, error } = await supabase.from('messages').select('*').or(`sender_id.eq.${userId},recipient_id.eq.${userId}`).order('created_at', { ascending: false });
+    if (error) return [];
+    return data as unknown as Message[];
   }
   async createMessage(message: InsertMessage) {
     return insertRecord('messages', message as unknown as Record<string, unknown>) as Promise<Message>;
   }
   async markMessageAsRead(id: string) {
-    return updateRecord('messages', id, { read: true }) as Promise<Message | undefined>;
+    return updateRecord('messages', id, { is_read: true }) as Promise<Message | undefined>;
   }
 
   async getUserAlerts(userId: string) {
     return listRecords('alerts', { user_id: userId }) as Promise<Alert[]>;
   }
   async getUnreadAlerts(userId: string) {
-    return listRecords('alerts', { user_id: userId }) as Promise<Alert[]>;
+    return listRecords('alerts', { user_id: userId, is_read: false }) as Promise<Alert[]>;
   }
   async createAlert(alert: InsertAlert) {
     return insertRecord('alerts', alert as unknown as Record<string, unknown>) as Promise<Alert>;
   }
   async markAlertAsRead(id: string) {
-    return updateRecord('alerts', id, { read: true }) as Promise<Alert | undefined>;
+    return updateRecord('alerts', id, { is_read: true }) as Promise<Alert | undefined>;
   }
   async deleteAlert(id: string) {
     await deleteRecord('alerts', id);
   }
 
-  async getBranches() { return listRecords('branches') as Promise<Record<string, unknown>[]>; }
-  async getAtms() { return listRecords('atms') as Promise<Record<string, unknown>[]>; }
-  async getExchangeRates() { return listRecords('exchange_rates') as Promise<Record<string, unknown>[]>; }
-  async getMarketRates() { return listRecords('market_rates') as Promise<Record<string, unknown>[]>; }
+  async getBranches() { return [] as Array<Record<string, unknown>>; }
+  async getAtms() { return [] as Array<Record<string, unknown>>; }
+  async getExchangeRates() { return listRecords('forex') as Promise<Record<string, unknown>[]>; }
+  async getMarketRates() { return listRecords('forex') as Promise<Record<string, unknown>[]>; }
   async getStatementsByUserId(_userId: string) { return [] as Array<Record<string, unknown>>; }
 }
 

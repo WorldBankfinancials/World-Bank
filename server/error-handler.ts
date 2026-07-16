@@ -55,12 +55,12 @@ export function errorHandler(
   // Determine status code
   const statusCode = err.statusCode || 500;
   
-  // SECURITY: Never send the real error message to the client
-  const message = 'An internal error occurred';
+  // SECURITY: Send actual message for client errors (4xx), generic for server errors (5xx)
+  const isClientError = statusCode >= 400 && statusCode < 500;
+  const message = isClientError && err.isOperational ? err.message : 'An internal error occurred';
 
   const errorResponse: Record<string, unknown> = {
-    error: true,
-    message,
+    error: message,
     timestamp: new Date().toISOString(),
     path: req.path
   };
@@ -83,7 +83,7 @@ export function errorHandler(
  * Catches errors from async route handlers
  */
 export function asyncHandler(
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>
 ) {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
@@ -95,8 +95,7 @@ export function asyncHandler(
  */
 export function notFoundHandler(req: Request, res: Response) {
   res.status(404).json({
-    error: true,
-    message: `Route ${req.method} ${req.path} not found`,
+    error: `Route ${req.method} ${req.path} not found`,
     timestamp: new Date().toISOString()
   });
 }

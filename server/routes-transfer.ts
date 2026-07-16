@@ -8,7 +8,7 @@ import * as bcrypt from 'bcryptjs';
 
 // Wrap async handlers to catch rejected promises and satisfy Express's RequestHandler type
 function wrap(
-  handler: (req: AuthenticatedRequest, res: Response) => Promise<any>
+  handler: (req: AuthenticatedRequest, res: Response) => Promise<unknown>
 ): RequestHandler {
   return (req, res, next) => {
     Promise.resolve(handler(req as AuthenticatedRequest, res as Response)).catch(next);
@@ -58,12 +58,14 @@ export function setupTransferRoutes(app: Express) {
       
       try {
         await atomicTransfer({
-          fromAccountId: Number(account.id),
-          toAccountId: Number(recipientAccount),
+          fromAccountId: String(account.id),
+          toAccountId: String(recipientAccount),
           amount: numAmount,
-          transactionType: transferType || 'domestic',
+          transactionType: 'transfer',
           description: description || `Transfer to ${recipientName}`,
           recipientName,
+          currency: currency || 'USD',
+          referenceNumber: reference,
         });
         
         return res.json({ success: true, reference, amount: numAmount });
@@ -97,7 +99,7 @@ export function setupTransferRoutes(app: Express) {
       allTxns.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
       return res.json(allTxns);
     } catch (error: unknown) {
-      return res.json([]);
+      return res.status(500).json({ error: 'Failed to load transfers' });
     }
   }));
 
@@ -138,13 +140,15 @@ export function setupTransferRoutes(app: Express) {
       
       try {
         await atomicTransfer({
-          fromAccountId: Number(account.id),
-          toAccountId: Number(recipientAccount),
+          fromAccountId: String(account.id),
+          toAccountId: String(recipientAccount),
           amount: numAmount,
-          transactionType: 'international',
+          transactionType: 'international_transfer',
           description: description || `International transfer to ${recipientName}`,
           recipientName,
           recipientCountry,
+          currency: currency || 'USD',
+          referenceNumber: reference,
         });
         
         return res.json({ success: true, reference, amount: numAmount });

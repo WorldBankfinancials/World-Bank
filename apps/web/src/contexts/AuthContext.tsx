@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const response = await authenticatedFetch(`/api/users/${authUser.id}`);
+      const response = await authenticatedFetch('/api/user');
       
       if (!response.ok) {
         return;
@@ -126,10 +126,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: data?.error || 'Login failed' };
       }
 
-      // CRITICAL: Validate token is Supabase JWT (3 parts: header.payload.signature)
+      // CRITICAL: Validate token is a JWT (header.payload.signature, each base64url-encoded)
       if (!data.token || data.token.split('.').length !== 3) {
         setLoading(false);
         return { error: 'Invalid authentication token format' };
+      }
+      try {
+        const payload = JSON.parse(atob(data.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        if (!payload.sub || !payload.exp || payload.exp * 1000 < Date.now()) {
+          setLoading(false);
+          return { error: 'Token expired or invalid' };
+        }
+      } catch {
+        setLoading(false);
+        return { error: 'Invalid authentication token' };
       }
 
       if (data.token && data.user) {
@@ -218,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      // ✅ CRITICAL: Notify backend to terminate session
+      // CRITICAL: Notify backend to terminate session
       try {
         await authenticatedFetch('/api/auth/logout', {
           method: 'POST',

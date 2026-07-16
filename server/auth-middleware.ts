@@ -2,31 +2,17 @@
  * server/auth-middleware.ts
  *
  * Verifies Supabase JWTs server-side.
- * Looks up user in user_profiles (primary user table).
+ * Looks up user in users (primary user table).
  * req.user = { id: UUID string, email: string, role: UserRole }
  */
 import { Request, Response, NextFunction } from 'express';
 import { storage } from './storage-factory';
-import { createClient } from '@supabase/supabase-js';
+import { getAdminClient } from './supabase-public-storage';
 import type { User } from '@shared/schema';
 import type { AuthUser } from '@shared/types';
 
 export interface AuthenticatedRequest extends Request {
   user?: AuthUser;
-}
-
-let _adminClient: ReturnType<typeof createClient> | null = null;
-
-export function getAdminClient() {
-  if (!_adminClient) {
-    const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-    if (!url || !key) throw new Error('Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-    _adminClient = createClient(url, key, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-  }
-  return _adminClient;
 }
 
 async function verifyToken(token: string): Promise<{ userId: string; email: string } | null> {
@@ -84,7 +70,11 @@ export async function requireAuth(
     next();
   } catch (err) {
     console.error('[auth] requireAuth error:', err);
-    res.status(401).json({ error: 'Authentication failed' });
+    if (err instanceof Error && err.message.includes('Invalid token')) {
+      res.status(401).json({ error: 'Authentication failed' });
+    } else {
+      res.status(500).json({ error: 'Authentication service error' });
+    }
   }
 }
 
