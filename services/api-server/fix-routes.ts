@@ -161,7 +161,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       if (authError || !authData.user) {
         return res.status(500).json({ 
-          error: authError?.message || 'Failed to create authentication account' 
+          error: 'Failed to create authentication account'
         });
       }
 
@@ -242,7 +242,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     } catch (error: unknown) {
       return res.status(500).json({ 
         error: 'Registration failed',
-        details: (error as Error)?.message || "Unknown error" 
+        details: 'An internal error occurred'
       });
     }
   });
@@ -345,7 +345,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       );
 
       if (updateError) {
-        return res.status(500).json({ error: 'Failed to update password', details: updateError.message });
+        return res.status(500).json({ error: 'Failed to update password', details: 'An internal error occurred' });
       }
 
       return res.json({ 
@@ -355,7 +355,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Password reset failed', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
+      return res.status(500).json({ error: 'Password reset failed', details: 'An internal error occurred' });
     }
   });
 
@@ -470,7 +470,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
     } catch (error: unknown) {
       return res.status(500).json({ 
         error: 'Failed to create user profile',
-        details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" 
+        details: 'An internal error occurred' 
       });
     }
   });
@@ -479,7 +479,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // User endpoints - PROTECTED with JWT authentication
   app.get('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const email = req.user!.email;
+      const email = req.user?.email;
       const user = await storage.getUserByEmail(email);
       
       if (!user) {
@@ -488,14 +488,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       
       return res.json(user);
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to get user', details: (error instanceof Error ? error.message : 'Internal server error') });
+      return res.status(500).json({ error: 'Failed to get user', details: 'An internal error occurred' });
     }
   });
 
   // Profile endpoint - PROTECTED with JWT authentication
   app.get('/api/profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const email = req.user!.email;
+      const email = req.user?.email;
       const user = await storage.getUserByEmail(email);
       
       if (!user) {
@@ -512,7 +512,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         cards
       });
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to get profile', details: (error instanceof Error ? error.message : 'Internal server error') });
+      return res.status(500).json({ error: 'Failed to get profile', details: 'An internal error occurred' });
     }
   });
   
@@ -539,7 +539,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Real user profile endpoint - PROTECTED with JWT authentication
   app.post('/api/user/profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -555,7 +555,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/user/preferences', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const preferences = req.body;
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -588,7 +588,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid image format' });
       }
 
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -640,14 +640,14 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         user: updatedUser
       });
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to upload avatar', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
+      return res.status(500).json({ error: 'Failed to upload avatar', details: 'An internal error occurred' });
     }
   });
 
   // Real user accounts endpoint - PROTECTED with JWT authentication
   app.post('/api/accounts/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -765,7 +765,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // AUDIT TRAIL: Log admin action
-      const admin = await (storage).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user?.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -815,7 +815,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
       // AUDIT TRAIL: Log admin action
-      const admin = await (storage).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user?.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -861,7 +861,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // AUDIT TRAIL: Log admin action
-      const admin = await (storage).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user?.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -931,7 +931,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
 
       // AUDIT TRAIL: Log admin action
-      const admin = await (storage).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user?.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -1040,7 +1040,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Get all transactions for authenticated user (across all accounts)
   app.get('/api/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1073,7 +1073,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // Account endpoints - PROTECTED with JWT authentication
   app.get('/api/accounts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
 
       if (!user) {
         return res.status(404).json({ 
@@ -1094,7 +1094,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const accountId = validateId(req.params.id);
 
       // SECURITY: Verify account belongs to authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1184,7 +1184,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // AUDIT TRAIL: Log admin action
-      const admin = await (storage).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user?.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -1245,7 +1245,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       });
 
       // AUDIT TRAIL: Log admin action
-      const admin = await (storage).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user?.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -1292,7 +1292,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { currentPin, newPin } = validation.data;
 
       // Get authenticated user (email from JWT token)
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
 
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
@@ -1351,7 +1351,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Verify current password by attempting sign-in
       const { error: signInError } = await supabaseAdmin.auth.signInWithPassword({
-        email: req.user!.email,
+        email: req.user?.email,
         password: currentPassword,
       });
 
@@ -1365,7 +1365,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to retrieve user' });
       }
 
-      const supabaseUser = users.users.find((u: any) => u.email === req.user!.email);
+      const supabaseUser = users.users.find((u: any) => u.email === req.user?.email);
       if (!supabaseUser) {
         return res.status(404).json({ error: 'User not found in authentication system' });
       }
@@ -1376,12 +1376,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       );
 
       if (updateError) {
-        return res.status(500).json({ error: 'Failed to update password', details: updateError.message });
+        return res.status(500).json({ error: 'Failed to update password', details: 'An internal error occurred' });
       }
 
       return res.json({ success: true, message: 'Password updated successfully' });
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Password change failed', details: (error instanceof Error ? error.message : 'Internal server error') });
+      return res.status(500).json({ error: 'Password change failed', details: 'An internal error occurred' });
     }
   });
 
@@ -1393,7 +1393,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== CARDS API ROUTES - PROTECTED ====================
   app.get('/api/cards', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1409,7 +1409,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const cardId = validateId(req.params.id);
 
       // SECURITY: Verify card belongs to authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1436,7 +1436,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { cardId, isLocked } = req.body;
 
       // SECURITY: Verify card belongs to authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1464,7 +1464,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { cardId, dailyLimit, contactlessEnabled } = req.body;
 
       // SECURITY: Verify card belongs to authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1494,7 +1494,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== INVESTMENTS API ROUTES - PROTECTED ====================
   app.get('/api/investments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1510,7 +1510,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const id = validateId(req.params.id);
 
       // SECURITY: Verify investment belongs to authenticated user
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1602,7 +1602,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/portfolio-assets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // SECURITY: Get authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1648,7 +1648,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { fromCurrency, toCurrency, amount } = req.body;
 
       // SECURITY: Get authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1693,7 +1693,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // SECURITY: Only return messages for authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1709,7 +1709,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.get('/api/messages/user/:userId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1722,7 +1722,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.post('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1732,7 +1732,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'content required' });
       }
 
-      const senderRole = req.user!.role === 'admin' ? 'admin' : 'customer';
+      const senderRole = req.user?.role === 'admin' ? 'admin' : 'customer';
       const finalRecipientId = typeof recipientId === 'string' && recipientId === 'admin' ? 1 : (recipientId || 1);
       const finalSessionId = sessionId || `session_${user.id}`;
       
@@ -1752,12 +1752,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         .single();
 
       if (error) {
-        return res.status(500).json({ error: 'Failed to save message', details: (error instanceof Error ? error.message : 'Internal server error') });
+        return res.status(500).json({ error: 'Failed to save message', details: 'An internal error occurred' });
       }
 
       return res.json({ success: true, message: data });
     } catch (error: unknown) {
-      return res.status(500).json({ error: 'Failed to save message', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
+      return res.status(500).json({ error: 'Failed to save message', details: 'An internal error occurred' });
     }
   });
 
@@ -1805,7 +1805,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const id = validateId(req.params.id);
 
       // SECURITY: Only allow marking own messages as read
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1827,7 +1827,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== ALERTS API ROUTES - PROTECTED ====================
   app.get('/api/alerts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1848,7 +1848,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.get('/api/alerts/unread', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1862,7 +1862,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.post('/api/alerts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // SECURITY: Derive userId from authenticated user, not client input
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1885,7 +1885,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const id = validateId(req.params.id);
 
       // SECURITY: Only allow deleting own alerts
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1910,7 +1910,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const id = validateId(req.params.id);
 
       // SECURITY: Only allow marking own alerts as read
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1932,7 +1932,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== SUPPORT TICKETS API ROUTES ====================
   app.get('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1963,7 +1963,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid ticket data', details: parsed.error.errors });
       }
 
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -1993,7 +1993,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const updatedTicket = await storage.updateSupportTicket(id, updates);
 
       // AUDIT TRAIL: Log admin action for ticket updates
-      const admin = await (storage).getUserByEmail(req.user!.email);
+      const admin = await (storage).getUserByEmail(req.user?.email);
       if (admin && updatedTicket) {
         const actionDescription = updates.status 
           ? `Updated ticket #${id} status to ${updates.status}`
@@ -2045,7 +2045,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       }
 
       // Get authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -2092,7 +2092,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           await storage.updateAccount(senderAccountId, { balance: String(balanceNum) });
         }
       } catch (balanceError) {
-        // Non-blocking balance update
+        console.error('Balance update failed after transfer:', balanceError);
       }
 
       const response: any = {
@@ -2108,7 +2108,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       return res.json(response);
     } catch (error: unknown) {
-      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" || 'Failed to create transfer', details: (error instanceof Error ? error.toString() : 'Unknown error') });
+      return res.status(500).json({ error: 'An internal error occurred', details: 'An internal error occurred' });
     }
   });
 
@@ -2146,7 +2146,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== ACCOUNT BALANCE ENDPOINT ====================
   app.get('/api/accounts/balance', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -2228,7 +2228,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
   app.get('/api/chat/sessions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -2270,12 +2270,12 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'content required' });
       }
 
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await (storage).getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      const senderRole = req.user!.role === 'admin' ? 'admin' : 'customer';
+      const senderRole = req.user?.role === 'admin' ? 'admin' : 'customer';
       const finalRecipientId = typeof recipientId === 'string' && recipientId === 'admin' ? 1 : (recipientId || 1);
       const finalSessionId = sessionId || `session_${user.id}`;
 
