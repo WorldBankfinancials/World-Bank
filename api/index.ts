@@ -8,7 +8,7 @@
  * - Request logging
  */
 import express, { type Request, Response, NextFunction } from 'express';
-import { registerFixedRoutes } from '../server/fix-routes';
+import { registerRoutes } from '../server/fix-routes';
 import { generalRateLimiter } from '../server/rate-limiter';
 
 const app = express();
@@ -93,14 +93,13 @@ interface AppError {
 }
 app.use((err: AppError | Error, _req: Request, res: Response, _next: NextFunction) => {
   const status = (err as AppError).status || (err as AppError).statusCode || 500;
-  const message = process.env.NODE_ENV === 'production'
-    ? 'Internal server error'
-    : (err instanceof Error ? err.message : 'Internal server error');
+  // SECURITY: Never disclose error.message to clients in any environment
+  const message = 'An internal error occurred';
   res.status(status).json({ error: message });
 });
 
 // ---- Register all routes ----
-const routesReady = registerFixedRoutes(app).catch(err => {
+const routesReady = registerRoutes(app).catch((err: unknown) => {
   console.error('[api] Failed to register routes:', err);
 });
 
