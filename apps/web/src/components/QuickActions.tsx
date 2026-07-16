@@ -1,319 +1,85 @@
 import React, { useState, useEffect, useRef } from "react";
 import { 
   ArrowLeftRight, 
-  Building2, 
-  FileText, 
-  Headphones, 
-  Shield, 
-  Wallet, 
-  Receipt, 
-  Smartphone,
-  MessageCircle,
-  Bell,
-  X,
-  Send,
-  User,
-  TrendingUp,
-  DollarSign
+  CreditCard, 
+  Download, 
+  PiggyBank,
+  HelpCircle,
+  type LucideIcon
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useLocation } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useQuery } from "@tanstack/react-query";
-import { authenticatedFetch } from "@/lib/queryClient";
 
-interface ChatMessage {
+interface QuickAction {
   id: string;
-  senderId: string;
-  senderName: string;
-  senderRole: 'customer' | 'admin';
-  message: string;
-  timestamp: Date;
-  isRead: boolean;
+  labelKey: string;
+  icon: LucideIcon;
+  href: string;
+  color: string;
 }
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  timestamp: Date;
-  isRead: boolean;
-}
+const quickActions: QuickAction[] = [
+  { id: "transfer", labelKey: "send_money", icon: ArrowLeftRight, href: "/transfer-funds", color: "bg-blue-500" },
+  { id: "cards", labelKey: "my_cards", icon: CreditCard, href: "/cards", color: "bg-purple-500" },
+  { id: "statements", labelKey: "statements", icon: Download, href: "/statements-reports", color: "bg-green-500" },
+  { id: "savings", labelKey: "add_money", icon: PiggyBank, href: "/savings", color: "bg-orange-500" },
+  { id: "support", labelKey: "live_chat", icon: HelpCircle, href: "/support", color: "bg-red-500" },
+];
 
 export default function QuickActions() {
   const { t } = useLanguage();
-  const [, setLocation] = useLocation();
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [currentMessage, setCurrentMessage] = useState("");
-  const [unreadChats, setUnreadChats] = useState(0);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-  const isChatOpenRef = useRef(isChatOpen);
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { isChatOpenRef.current = isChatOpen; }, [isChatOpen]);
-
-  // WebSocket connection for real-time chat
   useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    
-    try {
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
 
-      ws.onopen = () => {
-        setIsConnected(true);
-        ws.send(JSON.stringify({
-          type: 'customer_connect',
-          userId: 'user-' + Math.random().toString(36).substr(2, 9),
-          userName: 'Customer'
-        }));
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'chat_message') {
-            const newMessage: ChatMessage = {
-              id: Date.now().toString(),
-              senderId: data.senderId || 'admin',
-              senderName: data.senderName || 'Customer Service',
-              senderRole: data.senderRole || 'admin',
-              message: data.message,
-              timestamp: new Date(),
-              isRead: false
-            };
-            setChatMessages(prev => [...prev, newMessage]);
-            if (!isChatOpenRef.current) {
-              setUnreadChats(prev => prev + 1);
-            }
-          }
-          if (data.type === 'typing_indicator') {
-            setIsTyping(data.isTyping);
-          }
-        } catch (error) { console.error('QuickActions error:', error); }
-      };
-
-      ws.onclose = () => { setIsConnected(false); };
-      ws.onerror = (error) => { setIsConnected(false); };
-    } catch (error) { console.error('QuickActions error:', error); }
-
-    return () => {
-      if (wsRef.current) { wsRef.current.close(); }
-    };
-  }, [isChatOpen]);
-
-  // Fetch alerts from API
-  const { data: alerts = [] } = useQuery({
-    queryKey: ['/api/alerts'],
-    queryFn: async () => {
-      try {
-        const response = await authenticatedFetch('/api/alerts');
-        if (!response.ok) return [];
-        return response.json();
-      } catch {
-        return [];
-      }
-    },
-    refetchInterval: 30000,
-  });
-
-  // Map API alerts to notifications
-  useEffect(() => {
-    if (alerts && alerts.length > 0) {
-      const mappedNotifications: Notification[] = alerts
-        .filter((alert: any) => !alert.is_read)
-        .slice(0, 5)
-        .map((alert: any) => ({
-          id: String(alert.id),
-          title: alert.type || 'Notification',
-          message: alert.message || '',
-          type: alert.type === 'warning' ? 'warning' : alert.type === 'error' ? 'warning' : 'info',
-          timestamp: new Date(alert.created_at || Date.now()),
-          isRead: !!alert.is_read
-        }));
-      setNotifications(mappedNotifications);
-      setUnreadNotifications(mappedNotifications.filter(n => !n.isRead).length);
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
     }
-  }, [alerts]);
 
-  useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-    }
-  }, [chatMessages]);
-
-  const quickActions = [
-    { icon: ArrowLeftRight, label: "Transfer Funds", onClick: () => setLocation("/transfer-funds") },
-    { icon: Building2, label: "Banking Services", onClick: () => setLocation("/banking-services") },
-    { icon: FileText, label: "Generate Report", onClick: () => setLocation("/statements-reports") },
-    { icon: Headphones, label: "Support Center", onClick: () => setLocation("/support-center") },
-    { icon: Shield, label: "Security Center", onClick: () => setLocation("/security-center") },
-    { icon: Wallet, label: t('digital_wallet'), onClick: () => setLocation("/digital-wallet") },
-    { icon: Receipt, label: "Account Statement", onClick: () => setLocation("/statements-reports") },
-    { icon: Smartphone, label: "Mobile Pay", onClick: () => setLocation("/mobile-pay") },
-    { icon: TrendingUp, label: "Investment", onClick: () => setLocation("/investment") },
-    { icon: DollarSign, label: "Exchange", onClick: () => setLocation("/exchange") },
-  ];
-
-  const handleSendMessage = async () => {
-    if (!currentMessage.trim()) return;
-    const message: ChatMessage = {
-      id: Date.now().toString(),
-      senderId: 'user-' + Math.random().toString(36).substr(2, 9),
-      senderName: 'Customer',
-      senderRole: 'customer',
-      message: currentMessage,
-      timestamp: new Date(),
-      isRead: true
-    };
-    setChatMessages(prev => [...prev, message]);
-    try {
-      await authenticatedFetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: currentMessage, recipientId: 1, sessionId: 'session_1' })
-      });
-    } catch (error) { console.error('QuickActions error:', error); }
-    setCurrentMessage("");
-  };
-
-  const handleOpenChat = () => {
-    setIsChatOpen(true);
-    setUnreadChats(0);
-    setChatMessages(prev => prev.map(msg => ({ ...msg, isRead: true })));
-  };
-
-  const handleOpenNotifications = () => {
-    setIsNotificationOpen(true);
-    setUnreadNotifications(0);
-    setNotifications(prev => prev.map(notif => ({ ...notif, isRead: true })));
-  };
-
-  const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <>
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-6" style={{ color: '#1e40af' }}>Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
-          {quickActions.map((action, index) => (
-            <div key={`item-${index}`} onClick={action.onClick} className="flex flex-col items-center p-4 rounded-lg hover:bg-blue-50 transition-colors cursor-pointer border border-transparent hover:border-blue-200">
-              <action.icon className="w-8 h-8 mb-2" style={{ color: '#1e40af' }} />
-              <span className="text-sm font-medium text-center" style={{ color: '#1f2937' }}>{action.label}</span>
+    <div 
+      ref={containerRef}
+      className="grid grid-cols-5 gap-2 sm:gap-4"
+      role="navigation"
+      aria-label={t("quick_actions")}
+    >
+      {quickActions.map((action, index) => {
+        const Icon = action.icon;
+        return (
+          <a
+            key={action.id}
+            href={action.href}
+            className={`
+              flex flex-col items-center justify-center gap-2 p-3 sm:p-4
+              rounded-xl bg-white shadow-sm border border-gray-100
+              hover:shadow-md hover:border-gray-200 transition-all
+              ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}
+            `}
+            style={{ transitionDelay: `${index * 50}ms` }}
+            aria-label={t(action.labelKey)}
+            role="button"
+          >
+            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${action.color} flex items-center justify-center`}>
+              <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" aria-hidden="true" />
             </div>
-          ))}
-        </div>
-        <div className="border-t pt-4">
-          <h3 className="text-lg font-medium mb-4" style={{ color: '#1e40af' }}>Customer Service</h3>
-          <div className="flex space-x-4">
-            <Button onClick={handleOpenChat} className="relative flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2">
-              <MessageCircle className="w-5 h-5" />
-              <span>Live Chat</span>
-              {unreadChats > 0 && <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs">{unreadChats}</Badge>}
-              {isConnected && <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>}
-            </Button>
-            <Button onClick={handleOpenNotifications} className="relative flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2">
-              <Bell className="w-5 h-5" />
-              <span>Notifications</span>
-              {unreadNotifications > 0 && <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs">{unreadNotifications}</Badge>}
-            </Button>
-          </div>
-        </div>
-      </div>
-      {isChatOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md h-[600px] flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg">Live Chat Support</CardTitle>
-              <div className="flex items-center space-x-2">
-                {isConnected ? <Badge className="bg-green-100 text-green-800">Online</Badge> : <Badge className="bg-red-100 text-red-800">Offline</Badge>}
-                <Button variant="ghost" size="sm" onClick={() => setIsChatOpen(false)}><X className="w-4 h-4" /></Button>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col p-0">
-              <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-                {chatMessages.length === 0 ? (
-                  <div className="text-center text-gray-500 mt-8">
-                    <MessageCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                    <p>Start a conversation with our support team</p>
-                  </div>
-                ) : (
-                  chatMessages.map((msg) => (
-                    <div key={msg.id} className={`flex ${msg.senderRole === 'customer' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] rounded-lg p-3 ${msg.senderRole === 'customer' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'}`}>
-                        <div className="flex items-center space-x-2 mb-1">
-                          <User className="w-3 h-3" />
-                          <span className="text-xs font-medium">{msg.senderName}</span>
-                          <span className="text-xs opacity-70">{formatTime(msg.timestamp)}</span>
-                        </div>
-                        <p className="text-sm">{msg.message}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-100 rounded-lg p-3">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="border-t p-4">
-                <div className="flex space-x-2">
-                  <Input value={currentMessage} onChange={(e) => setCurrentMessage(e.target.value)} placeholder="Type your message..." onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} className="flex-1" />
-                  <Button onClick={handleSendMessage} disabled={!currentMessage.trim() || !isConnected} className="bg-blue-600 hover:bg-blue-700"><Send className="w-4 h-4" /></Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-      {isNotificationOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md max-h-[80vh] overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg">Notifications</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setIsNotificationOpen(false)}><X className="w-4 h-4" /></Button>
-            </CardHeader>
-            <CardContent className="max-h-96 overflow-y-auto">
-              {notifications.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">
-                  <Bell className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p>No notifications</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {notifications.map((notification) => (
-                    <div key={notification.id} className={`p-3 rounded-lg border ${notification.type === 'error' ? 'border-red-200 bg-red-50' : notification.type === 'warning' ? 'border-orange-200 bg-orange-50' : notification.type === 'success' ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'}`}>
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-medium text-sm">{notification.title}</h4>
-                        <span className="text-xs text-gray-500">{formatTime(notification.timestamp)}</span>
-                      </div>
-                      <p className="text-sm text-gray-700">{notification.message}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </>
+            <span className="text-xs sm:text-sm font-medium text-gray-700 text-center">
+              {t(action.labelKey)}
+            </span>
+          </a>
+        );
+      })}
+    </div>
   );
 }
