@@ -28,7 +28,7 @@ export default function TransactionRouter() {
   const [, setLocation] = useLocation();
   
   // Fetch real transaction routes from API instead of hardcoded array
-  const { data: routes = [] } = useQuery<TransactionRoute[]>({
+  const { data: routes = [], isLoading, error } = useQuery<TransactionRoute[]>({
     queryKey: ['/api/admin/transaction-routes'],
     queryFn: async () => {
       try {
@@ -59,7 +59,21 @@ export default function TransactionRouter() {
 
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
-  
+
+  useEffect(() => {
+    if (error) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [error]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   const handleDeleteRoute = (routeId: string) => {
     // Delete route via API
     const deleteRoute = async () => {

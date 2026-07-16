@@ -1,5 +1,6 @@
 import type { User } from "@packages/shared/schema";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -16,14 +17,22 @@ export default function SupportCenter() {
   const [showLiveChat, setShowLiveChat] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['/api/user'],
   });
 
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (error) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [error]);
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-wb-gray flex items-center justify-center">
-        <div className="text-wb-dark">{t('loading')}</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }

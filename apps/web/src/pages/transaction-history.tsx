@@ -37,7 +37,7 @@ export default function TransactionHistory() {
   const [selectedAccount, setSelectedAccount] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  const { data: accounts = [], isLoading: accountsLoading } = useQuery<Account[]>({
+  const { data: accounts = [], isLoading: accountsLoading, error: accountsError } = useQuery<Account[]>({
     queryKey: ['/api/accounts'],
     queryFn: async () => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -47,7 +47,7 @@ export default function TransactionHistory() {
     }
   });
 
-  const { data: transactions = [], isLoading: loading } = useQuery<Transaction[]>({
+  const { data: transactions = [], isLoading: loading, error: transactionsError } = useQuery<Transaction[]>({
     queryKey: ['/api/transactions', accounts],
     queryFn: async () => {
       if (accounts.length === 0) return [];
@@ -97,10 +97,18 @@ export default function TransactionHistory() {
     }
   };
 
+  const queryError = accountsError || transactionsError;
+
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [queryError]);
+
   if (loading || accountsLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">Loading transactions...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -213,3 +221,4 @@ export default function TransactionHistory() {
     </div>
   );
 }
+
