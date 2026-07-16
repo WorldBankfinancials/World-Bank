@@ -155,7 +155,7 @@ const mapInvestment = (row: Record<string, any>): Investment => ({
 
 // Add retry logic with exponential backoff for network failures
 async function withRetry<T>(fn: () => Promise<T>, maxAttempts: number = 3): Promise<T> {
-  let lastError: any;
+  let lastError: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fn();
@@ -276,9 +276,9 @@ export class SupabasePublicStorage implements IStorage {
     }
   }
 
-  async updateUser(id: string, updates: Partial<User> & { [key: string]: any }): Promise<User | undefined> {
+  async updateUser(id: string, updates: Partial<User> & { [key: string]: unknown }): Promise<User | undefined> {
     try {
-      const updateData: any = { updated_at: new Date().toISOString() };
+      const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
       if (updates.firstName !== undefined || updates.lastName !== undefined) {
         const existing = await this.getUser(id);
         const first = updates.firstName ?? existing?.firstName ?? '';
@@ -399,7 +399,7 @@ export class SupabasePublicStorage implements IStorage {
 
   async updateAccount(id: string, updates: Partial<Account>): Promise<Account | undefined> {
     try {
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (updates.balance !== undefined) updateData.balance = updates.balance;
       if (updates.status !== undefined) updateData.status = updates.status;
       const { data: account, error } = await supabase.from('accounts').update(updateData).eq('id', id).select().single();
@@ -431,7 +431,7 @@ export class SupabasePublicStorage implements IStorage {
   async createTransaction(data: InsertTransaction): Promise<Transaction> {
     try {
       const transaction = await withRetry(async () => {
-        const dbData: any = {
+        const dbData: Record<string, unknown> = {
           from_user_id: data.fromUserId,
           from_account_id: data.fromAccountId,
           to_account_id: data.toAccountId,
@@ -465,7 +465,7 @@ export class SupabasePublicStorage implements IStorage {
 
   async updateTransactionStatus(id: string, status: string, adminId: string, notes?: string): Promise<Transaction | undefined> {
     try {
-      const updateData: any = { status };
+      const updateData: Record<string, unknown> = { status };
       if (notes) updateData.admin_notes = notes;
       if (adminId) updateData.admin_id = adminId;
       updateData.updated_at = new Date().toISOString();
@@ -884,7 +884,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       const accounts = await this.getUserAccounts(userId);
       if (!accounts || accounts.length === 0) return [];
-      const statements: any[] = [];
+      const statements: Array<Record<string, unknown>> = [];
       const months = ['January', 'February', 'March'];
       const year = new Date().getFullYear();
       months.forEach((month, i) => {
