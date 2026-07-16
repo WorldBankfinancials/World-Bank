@@ -57,7 +57,6 @@ import {
   Crown
 } from "lucide-react";
 import Header from "@/components/Header";
-import { apiRequest } from "@/lib/queryClient";
 import type { Transaction, User } from "@packages/shared/schema";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
