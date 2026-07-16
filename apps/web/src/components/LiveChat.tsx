@@ -29,10 +29,9 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const initializedRef = useRef(false);
 
-  // LOAD MESSAGES ON COMPONENT MOUNT (NOT JUST ON isOpen CHANGE)
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
@@ -54,7 +53,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
         }
       }
     } catch (e) {
-      // Ignore errors
     }
     
     const defaultMsg: Message = {
@@ -67,7 +65,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([defaultMsg]));
   }, []);
 
-  // SAVE TO LOCALSTORAGE WHENEVER MESSAGES CHANGE
   useEffect(() => {
     if (messages.length === 0) return;
     
@@ -77,7 +74,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
       } catch (e) {
-        // Storage quota exceeded or other error - continue anyway
       }
     }, 500);
 
@@ -86,7 +82,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
     };
   }, [messages]);
 
-  // REALTIME SUBSCRIPTION
   useEffect(() => {
     if (!isOpen) return;
 
@@ -110,7 +105,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
                 timestamp: new Date((newRecord.created_at as string) || new Date())
               };
               setMessages(prev => {
-                if (prev.some(m => m.id === newMessage.id)) return prev; // Dedup
+                if (prev.some(m => m.id === newMessage.id)) return prev;
                 return [...prev, newMessage];
               });
             }
@@ -156,7 +151,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       } catch (e) {
-        // Ignore storage errors
       }
       return updated;
     });
@@ -198,77 +192,44 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
               size="sm"
               className="text-white hover:bg-blue-700 h-8 w-8 p-0 flex-shrink-0"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </Button>
           )}
         </CardHeader>
-
-        <div className="flex flex-col flex-1 bg-gray-50 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4 pr-6 space-y-4 border-b-2 border-gray-200">
-            {messages.length === 0 ? (
-              <div className="text-center text-gray-500 text-sm mt-4">No messages yet</div>
-            ) : (
-              messages.map(msg => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.sender === 'user' ? 'justify-end pr-2' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-xs px-4 py-2 rounded-lg text-sm break-words ${
-                      msg.sender === 'user'
-                        ? 'bg-blue-600 text-white rounded-br-none shadow'
-                        : 'bg-white text-gray-900 border border-gray-300 rounded-bl-none shadow'
-                    }`}
-                  >
-                    <p className="mb-1 leading-relaxed">{msg.text}</p>
-                    <p className={`text-xs ${msg.sender === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
-                      {msg.timestamp.toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
+        <CardContent className="flex-1 overflow-y-auto p-3 space-y-2">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[75%] p-2 rounded-lg text-sm ${
+                  msg.sender === 'user'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-800'
+                }`}
+              >
+                {msg.text}
+                <div className="text-[10px] opacity-70 mt-1">
+                  {msg.timestamp.toLocaleTimeString()}
                 </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div className="bg-white p-4 space-y-3 border-t-2 border-gray-200 flex-shrink-0">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-700 block">Type your message:</label>
-              <div className="flex gap-2">
-                <Input
-                  ref={inputRef}
-                  placeholder="Type your message..."
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  autoFocus
-                  type="text"
-                  className="border-blue-200 focus:border-blue-500"
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!inputText.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4"
-                  size="sm"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
               </div>
             </div>
-            {!isConnected && (
-              <div className="text-xs text-orange-600 bg-orange-50 p-2 rounded">
-                Connection status: Reconnecting...
-              </div>
-            )}
-          </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </CardContent>
+        <div className="border-t p-2 flex gap-2 flex-shrink-0">
+          <Input
+            ref={inputRef}
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="Type your message..."
+            className="flex-1"
+          />
+          <Button onClick={handleSendMessage} size="sm" className="bg-blue-600 hover:bg-blue-700">
+            <Send className="w-4 h-4" />
+          </Button>
         </div>
       </Card>
     </div>
