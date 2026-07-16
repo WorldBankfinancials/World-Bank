@@ -34,7 +34,7 @@ export default function Investment() {
   }
 
   // Fetch real investment data from Supabase
-  const { data: investmentData, isLoading } = useQuery<InvestmentData>({
+  const { data: investmentData, isLoading, error } = useQuery<InvestmentData>({
     queryKey: ['/api/investments', userProfile?.id],
     enabled: !!userProfile?.id,
     staleTime: 30000
@@ -54,6 +54,17 @@ export default function Investment() {
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
           <p className="text-gray-600">{t('loading')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-2">Failed to load investments. Please try again.</p>
         </div>
       </div>
     );
@@ -114,7 +125,13 @@ export default function Investment() {
 
           {/* Investment Accounts */}
           <div className="space-y-4 mb-6">
-            {investmentAccounts.map((account: any, index: number) => (
+            {investmentAccounts.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center text-gray-500">
+                  <p>No investments found. Start investing to see your portfolio here.</p>
+                </CardContent>
+              </Card>
+            ) : investmentAccounts.map((account: any, index: number) => (
               <Card key={account.id || index}>
                 <CardContent className="p-6">
                   <div className="flex justify-between items-center">

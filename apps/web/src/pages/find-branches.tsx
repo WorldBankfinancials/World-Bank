@@ -35,11 +35,11 @@ export default function FindBranches() {
   });
 
   // Fetch branches and ATMs from real database
-  const { data: branches, isLoading: branchesLoading } = useQuery<any[]>({
+  const { data: branches, isLoading: branchesLoading, error: branchesError } = useQuery<any[]>({
     queryKey: ['/api/branches'],
   });
 
-  const { data: atms, isLoading: atmsLoading } = useQuery<any[]>({
+  const { data: atms, isLoading: atmsLoading, error: atmsError } = useQuery<any[]>({
     queryKey: ['/api/atms'],
   });
 
@@ -47,6 +47,16 @@ export default function FindBranches() {
     return (
       <div className="min-h-screen bg-wb-gray flex items-center justify-center">
         <div className="text-wb-dark">{t('loading')}</div>
+      </div>
+    );
+  }
+
+  if (branchesError || atmsError) {
+    return (
+      <div className="min-h-screen bg-wb-gray flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-2">Failed to load locations. Please try again.</p>
+        </div>
       </div>
     );
   }
@@ -120,8 +130,7 @@ export default function FindBranches() {
                   <Card>
                     <CardContent className="p-8 text-center text-gray-500">
                       <Building className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p>No branches found in your area</p>
-                      <p className="text-sm">Try searching in a different location</p>
+                      <p>No branches found matching your criteria.</p>
                     </CardContent>
                   </Card>
                 ) : (

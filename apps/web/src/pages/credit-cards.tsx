@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Plus, Eye, EyeOff, Settings, MoreHorizontal, ArrowLeft, Lock, Smartphone, DollarSign, Wallet } from "lucide-react";
+import { CreditCard, Plus, Eye, EyeOff, Settings, MoreHorizontal, ArrowLeft, Lock, Smartphone, DollarSign, Wallet, AlertCircle } from "lucide-react";
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -22,7 +22,7 @@ export default function CreditCards() {
     queryKey: ['/api/user'],
   });
   
-  const { data: creditCards } = useQuery({
+  const { data: creditCards, isLoading: cardsLoading, error: cardsError } = useQuery({
     queryKey: ['/api/cards'],
     staleTime: 30000
   });
@@ -69,7 +69,16 @@ export default function CreditCards() {
         </div>
         {/* Credit Cards */}
         <div className="space-y-4">
-          {creditCards && Array.isArray(creditCards) && creditCards.length > 0 ? creditCards.map((card: any) => (
+          {cardsError ? (
+            <div className="text-center py-12">
+              <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
+              <p className="text-red-600 mb-2">Failed to load cards. Please try again.</p>
+            </div>
+          ) : cardsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : creditCards && Array.isArray(creditCards) && creditCards.length > 0 ? creditCards.map((card: any) => (
             <Card key={card.id} className={`bg-gradient-to-r ${card.color} text-white relative overflow-hidden`}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-6">
