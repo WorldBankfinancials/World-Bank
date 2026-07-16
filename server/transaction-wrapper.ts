@@ -29,7 +29,7 @@ export class BankingTransaction {
    * Execute all steps atomically
    * If ANY step fails, ALL previous steps are rolled back
    */
-  async execute<T = any>(): Promise<{ success: boolean; data?: T; error?: string }> {
+  async execute<T = unknown>(): Promise<{ success: boolean; data?: T; error?: string }> {
     // CRITICAL FIX: Reset internal state to prevent double-execution bugs
     // This ensures clean state even if transaction instance is reused
     this.results = [];
@@ -109,8 +109,7 @@ export class BankingTransaction {
     }
     
     if (rollbackFailures.length > 0) {
-      // In production, this should trigger alerts to administrators
-    } else {
+      console.error('Rollback failures:', rollbackFailures);
     }
     
     return rollbackFailures;
@@ -122,9 +121,9 @@ export class BankingTransaction {
  * Uses SQL to prevent race conditions - NO read-then-write pattern!
  */
 export async function atomicBalanceUpdate(
-  accountId: number,
+  accountId: string,
   amountChange: number,
-  description: string
+  _description: string
 ): Promise<{ success: boolean; newBalance?: string; error?: string; previousBalance?: string }> {
   try {
     // CRITICAL FIX: Use SQL to atomically update AND check constraints in ONE operation
@@ -156,7 +155,7 @@ export async function atomicBalanceUpdate(
 
   } catch (error: unknown) {
     // Fallback to direct SQL update if RPC not available
-    return await fallbackAtomicUpdate(accountId, amountChange, description);
+    return await fallbackAtomicUpdate(accountId, amountChange, _description);
   }
 }
 
@@ -165,9 +164,9 @@ export async function atomicBalanceUpdate(
  * Still atomic because it's a single SQL statement
  */
 async function fallbackAtomicUpdate(
-  accountId: number,
+  accountId: string,
   amountChange: number,
-  description: string
+  _description: string
 ): Promise<{ success: boolean; newBalance?: string; error?: string }> {
   try {
     
@@ -217,13 +216,15 @@ async function fallbackAtomicUpdate(
  * HELPER: Create transaction with balance deduction - ATOMIC
  */
 export async function atomicTransfer(params: {
-  fromAccountId: number;
-  toAccountId?: number;
+  fromAccountId: string;
+  toAccountId?: string;
   amount: number;
   transactionType: string;
   description: string;
   recipientName?: string;
   recipientCountry?: string;
+  currency?: string;
+  referenceNumber?: string;
 }): Promise<{ success: boolean; transaction?: Record<string, unknown>; error?: string }> {
   
   const tx = new BankingTransaction();
@@ -262,13 +263,17 @@ export async function atomicTransfer(params: {
         .insert({
           from_account_id: params.fromAccountId,
           to_account_id: params.toAccountId,
-          amount: params.amount,
+          amount: params.amount.toFixed(2),
+          currency: params.currency || 'USD',
           transaction_type: params.transactionType,
           description: params.description,
           recipient_name: params.recipientName,
           recipient_country: params.recipientCountry,
-          status: 'success',
-          created_at: new Date().toISOString()
+          reference_number: params.referenceNumber || `TXN${Date.now()}${Math.floor(Math.random() * 10000)}`,
+          status: 'completed',
+          created_at: new Date().toISOString(),
+          processed_at: new Date().toISOString(),
+          completed_at: new Date().toISOString()
         })
         .select()
         .single();
