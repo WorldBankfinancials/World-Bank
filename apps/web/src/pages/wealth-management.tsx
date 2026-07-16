@@ -8,20 +8,27 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { Target, Calendar, Users, Award } from "lucide-react";
+import { useEffect } from "react";
 
 
 export default function WealthManagement() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['/api/user'],
   });
 
+  useEffect(() => {
+    if (error) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [error]);
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-wb-gray flex items-center justify-center">
-        <div className="text-wb-dark">{t('loading')}</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }

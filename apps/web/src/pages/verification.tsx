@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { Shield, CheckCircle, Clock, AlertCircle, Upload, FileText, Mail, Phone, MapPin, DollarSign, User as UserIcon } from 'lucide-react';
 import Header from '@/components/Header';
+import type { User } from '@packages/shared/schema';
 import BottomNavigation from '@/components/BottomNavigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery } from '@tanstack/react-query';
 import { authenticatedFetch } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 interface VerificationItem {
   id: string;
@@ -31,7 +33,7 @@ export default function Verification() {
   const [nationality, setNationality] = useState('');
   const [address, setAddress] = useState('');
 
-  const { data: kycData } = useQuery<KycData>({
+  const { data: kycData, isLoading, error } = useQuery<KycData>({
     queryKey: ['/api/kyc/status'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/kyc/status');
@@ -39,6 +41,22 @@ export default function Verification() {
       return response.json();
     }
   });
+
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (error) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [error]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
     if (!documentType || !fullName) return;
@@ -66,7 +84,7 @@ export default function Verification() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={userProfile as any || undefined} />
+      <Header user={(userProfile as unknown as User) || undefined} />
       <main className="container mx-auto px-4 py-6 max-w-4xl pb-20">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('verification_center')}</h1>
         <p className="text-gray-600 mb-6">{t('manage_account_verification_status')}</p>

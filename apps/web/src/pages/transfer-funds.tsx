@@ -1,12 +1,13 @@
 import { useLocation } from 'wouter';
 import { useState, useRef, useEffect } from 'react';
 import Header from '@/components/Header';
+import type { User } from '@packages/shared/schema';
 import BottomNavigation from '@/components/BottomNavigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { authenticatedFetch, apiRequest } from '@/lib/queryClient';
+import { authenticatedFetch } from '@/lib/queryClient';
 import { ArrowLeftRight, Send, Check, AlertCircle, Loader2 } from 'lucide-react';
 
 interface UserAccount {
@@ -34,7 +35,7 @@ export default function TransferFunds() {
   const [referenceNumber, setReferenceNumber] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const { data: accounts = [] } = useQuery<UserAccount[]>({
+  const { data: accounts = [], isLoading, error } = useQuery<UserAccount[]>({
     queryKey: ['/api/accounts'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/accounts');
@@ -42,6 +43,20 @@ export default function TransferFunds() {
       return response.json();
     }
   });
+
+  useEffect(() => {
+    if (error) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [error]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
     // Validate
@@ -109,7 +124,7 @@ export default function TransferFunds() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={userProfile as any || undefined} />
+      <Header user={(userProfile as unknown as User) || undefined} />
       <main className="container mx-auto px-4 py-6 max-w-2xl pb-20">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('transfer')}</h1>
 
