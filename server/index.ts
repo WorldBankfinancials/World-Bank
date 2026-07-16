@@ -1,4 +1,4 @@
-import express, { type Request, Response, NextFunction } from "express";
+import express, { type Request, Response, NextFunction, type Express } from "express";
 import crypto from "crypto";
 import { type Server, createServer } from "http";
 import { storage } from "./storage-factory";
@@ -45,11 +45,15 @@ interface Transaction {
   updatedAt?: string | Date | null;
 }
 
-const { randomUUID } = await import('crypto');
+import { randomUUID } from 'crypto';
+
+// Typed wrapper that accepts async route handlers returning Promise<void> | Promise<Response> | void
+const wrap = (fn: (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<unknown> | unknown) =>
+  (req: Request, res: Response, next: NextFunction): void => { Promise.resolve(fn(req as AuthenticatedRequest, res, next)).catch(next); };
 
 export async function registerRoutes(app: Express) {
   // Register transfer routes first (they take priority for /api/transfers endpoints)
-  setupTransferRoutes(app);
+  setupTransferRoutes(app as Express);
 
   // ==================== HEALTH CHECK ====================
   app.get('/api/health', async (req: Request, res: Response) => {
@@ -63,94 +67,95 @@ export async function registerRoutes(app: Express) {
   // ==================== USER PROFILE ENDPOINTS ====================
 
   // GET /api/user - Get current user profile
-  app.get('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/user', wrap(requireAuth), wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user?.email);
+      const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
-      const userData = sanitizeUser(user) as Record<string, unknown>;
+      const userData = sanitizeUser(user as unknown as Record<string, unknown>) as Record<string, unknown>;
       const { data: account } = await supabase.from('accounts').select('balance').eq('user_id', userData.id).eq('status', 'active').limit(1).single();
       if (account) userData.balance = (account as Record<string, unknown>).balance;
       return res.json(userData);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch user profile' });
     }
-  });
+  }));
 
   // PATCH /api/user - Update user profile
-  app.patch('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.patch('/api/user', wrap(requireAuth), wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user?.email);
+      const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const { role, isVerified, isActive, id, ...allowedUpdates } = req.body;
       const updatedUser = await storage.updateUser(user.id, allowedUpdates);
-      return res.json(sanitizeUser(updatedUser));
+      return res.json(sanitizeUser(updatedUser as unknown as Record<string, unknown>));
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to update user profile' });
     }
-  });
+  }));
 
   // GET /api/user/accounts - Get user accounts
-  app.get('/api/user/accounts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/user/accounts', wrap(requireAuth), wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user?.email);
+      const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const accounts = await storage.getUserAccounts(user.id);
       return res.json(accounts);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch accounts' });
     }
-  });
+  }));
 
   // GET /api/accounts - Get user accounts (alias)
-  app.get('/api/accounts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/accounts', wrap(requireAuth), wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user?.email);
+      const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const accounts = await storage.getUserAccounts(user.id);
       return res.json(accounts);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch accounts' });
     }
-  });
+  }));
 
   // GET /api/transactions - Get user transactions
-  app.get('/api/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/transactions', wrap(requireAuth), wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user?.email);
+      const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.json([]);
       const allTxns: Transaction[] = [];
       for (const account of accounts) {
         const txns = await storage.getAccountTransactions(account.id);
-        allTxns.push(...txns);
+        allTxns.push(...(txns as unknown as Transaction[]));
       }
       allTxns.sort((a: Transaction, b: Transaction) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
       return res.json(allTxns);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch transactions' });
     }
-  });
+  }));
 
   // GET /api/transactions/:id - Get single transaction
-  app.get('/api/transactions/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/transactions/:id', wrap(requireAuth), wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const transaction = await storage.getTransactionById(id);
+      const allTransactions = await storage.getAllTransactions();
+      const transaction = (allTransactions as unknown as Transaction[]).find((t: Transaction) => String(t.id) === String(id));
       if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
       return res.json(transaction);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch transaction' });
     }
-  });
+  }));
 
   // ==================== PIN MANAGEMENT ====================
 
-  app.post('/api/set-pin', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/set-pin', wrap(requireAuth), wrap(authRateLimiter), wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { pin } = req.body;
       if (!pin || String(pin).length !== 4) return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
-      const user = await storage.getUserByEmail(req.user?.email);
+      const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const pinHash = await bcrypt.hash(String(pin), 12);
       await storage.updateUser(user.id, { transferPin: pinHash });
@@ -158,9 +163,9 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to set PIN' });
     }
-  });
+  }));
 
-  app.post('/api/verify-pin', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/verify-pin', wrap(requireAuth), wrap(authRateLimiter), wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { pin } = req.body;
       const email = req.user?.email;
@@ -173,13 +178,13 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) {
       return res.status(500).json({ success: false, message: 'PIN verification failed' });
     }
-  });
+  }));
 
-  app.post('/api/change-pin', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/change-pin', wrap(requireAuth), wrap(authRateLimiter), wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { currentPin, newPin } = req.body;
       if (!currentPin || !newPin || String(newPin).length !== 4) return res.status(400).json({ error: 'Current PIN and new PIN (4 digits) required' });
-      const user = await storage.getUserByEmail(req.user?.email);
+      const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user || !user.transferPin) return res.status(401).json({ error: 'PIN not set on account' });
       const pinMatch = await bcrypt.compare(String(currentPin).trim(), String(user.transferPin).trim());
       if (!pinMatch) return res.status(401).json({ error: 'Current PIN is incorrect' });
@@ -189,7 +194,7 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to change PIN' });
     }
-  });
+  }));
 
   // Return server
   const httpServer = createServer(app);
