@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { authenticatedFetch, queryClient } from '@/lib/queryClient';
 
 interface UserProfile {
   id: string;
@@ -72,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             try {
               const parsedProfile = JSON.parse(storedProfile);
               setUserProfile(parsedProfile);
-            } catch (e) {}
+            } catch (e) { console.error('Auth error:', e); }
           }
         }
       } catch (e) {
@@ -88,7 +89,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/users/${authUser.id}`);
       
       if (!response.ok) {
@@ -99,9 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profile && typeof profile === 'object') {
         setUserProfile(profile);
       }
-    } catch (error) {
-      // Silently fail - profile already loaded from localStorage
-    }
+    } catch (error) { console.error('Auth error:', error); }
   }, []);
 
   const signIn = async (email: string, password: string): Promise<{ error?: string }> => {
@@ -222,12 +220,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // ✅ CRITICAL: Notify backend to terminate session
       try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
         await authenticatedFetch('/api/auth/logout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         }).catch(() => {}); // Don't fail if endpoint unavailable
-      } catch (e) {}
+      } catch (e) { console.error('Auth error:', e); }
       
       // Clear ALL stored credentials IMMEDIATELY
       localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('userProfile'); localStorage.removeItem('refresh_token');
@@ -241,9 +238,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Clear query cache
       try {
-        const { queryClient } = await import('@/lib/queryClient');
         queryClient.clear();
-      } catch (e) {}
+      } catch (e) { console.error('Auth error:', e); }
       
       // Force navigation to login with hard refresh
       window.location.replace('/login');

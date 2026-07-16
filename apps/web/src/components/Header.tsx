@@ -40,7 +40,7 @@ export default function Header({}: HeaderProps) {
             setDisplayBalance(profile.balance);
           }
         }
-      } catch (e) {}
+      } catch (e) { console.error('Header error:', e); }
     };
 
     checkBalance();
