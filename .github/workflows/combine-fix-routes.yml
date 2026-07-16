@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - deep-scan-27-fixes
-    paths:
-      - 'server/fix-routes-part*.ts'
 
 jobs:
   combine:
@@ -20,16 +18,14 @@ jobs:
 
       - name: Combine parts
         run: |
-          cat server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts > server/fix-routes.ts
-
-      - name: Remove parts
-        run: |
-          rm -f server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts
-
-      - name: Commit combined file
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Combine fix-routes parts into single file with 18 bug fixes" || echo "Nothing to commit"
-          git push
+          if [ -f server/fix-routes-part1.ts ] && [ -f server/fix-routes-part2.ts ] && [ -f server/fix-routes-part3.ts ] && [ -f server/fix-routes-part4.ts ]; then
+            cat server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts > server/fix-routes.ts
+            rm -f server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Combine fix-routes parts into single file with 18 bug fixes"
+            git push
+          else
+            echo "Parts not found, skipping"
+          fi
