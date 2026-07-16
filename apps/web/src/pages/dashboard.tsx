@@ -3,12 +3,7 @@ import BottomNavigation from "@/components/BottomNavigation";
 import { Avatar } from "@/components/Avatar";
 import LiveChat from "@/components/LiveChat";
 
-// Wire LiveChat for dashboard support - ACTIVE + REAL-TIME
-import { useUserData, useAccountData } from "@/hooks/useUserData";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRealtimeChat } from "@/hooks/useRealtimeChat";
-import { useRealtimeTransactions } from "@/hooks/useRealtimeTransactions";
-import type { User } from '@packages/shared/schema';
 import { useToast } from "@/hooks/use-toast";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,9 +50,7 @@ import {
   BarChart3,
   Headphones,
   MapPin,
-  Lock,
-  Filter,
-  Trash2
+  Lock
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { CustomerData, TransactionData } from "@/types";
