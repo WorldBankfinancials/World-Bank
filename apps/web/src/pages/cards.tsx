@@ -13,7 +13,7 @@ import QuickActions from '@/components/QuickActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, authenticatedFetch } from '@/lib/queryClient';
 import { Card as CardType, ApiError } from '@/types';
 
 export default function Cards() {
@@ -42,7 +42,6 @@ export default function Cards() {
   const { data: creditCards = [], isLoading: cardsLoading, error: cardsError } = useQuery<CardType[]>({
     queryKey: ['/api/cards'],
     queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/cards');
       if (!response.ok) throw new Error('Failed to load cards');
       return response.json();
@@ -54,7 +53,6 @@ export default function Cards() {
     queryKey: ['/api/transactions'],
     queryFn: async () => {
       try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
         const response = await authenticatedFetch('/api/transactions?limit=5');
         if (!response.ok) return [];
         return response.json();
@@ -79,7 +77,6 @@ export default function Cards() {
     if (!selectedCard) return;
     
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -130,7 +127,6 @@ export default function Cards() {
 
   const handleMobilePay = async () => {
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -138,9 +134,31 @@ export default function Cards() {
       });
 
       if (response.ok) {
+        // Create the actual transaction
+        const mobilePayAmount = parseFloat(amount);
+        const mobilePayPhone = phoneNumber;
+        const txnResponse = await authenticatedFetch('/api/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: mobilePayAmount,
+            currency: 'USD',
+            transaction_type: 'payment',
+            description: `Mobile payment to ${mobilePayPhone}`,
+            recipient_name: mobilePayPhone,
+            status: 'completed'
+          })
+        });
+        if (!txnResponse.ok) {
+          const errorData = await txnResponse.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Payment failed');
+        }
+        // Then show success toast and invalidate queries
+        queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         toast({
           title: t('mobile_payment_sent') || 'Mobile Payment Sent',
-          description: `${t('sent') || 'Sent'} $${amount} ${t('to') || 'to'} ${phoneNumber}`,
+          description: `${t('sent') || 'Sent'} ${amount} ${t('to') || 'to'} ${phoneNumber}`,
         });
         setMobilePayDialogOpen(false);
         setPin('');
@@ -164,17 +182,39 @@ export default function Cards() {
 
   const handlePayBill = async () => {
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
+        body: JSON.stringify({ email: userProfile?.email || 'user@worldbank.com', pin })
       });
 
       if (response.ok) {
+        // Create the actual transaction
+        const payBillAmount = parseFloat(amount);
+        const billProviderName = billProvider;
+        const billAccountNumber = accountNumber;
+        const txnResponse = await authenticatedFetch('/api/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: payBillAmount,
+            currency: 'USD',
+            transaction_type: 'payment',
+            description: `Bill payment to ${billProviderName} - Account: ${billAccountNumber}`,
+            recipient_name: billProviderName,
+            reference_number: billAccountNumber,
+            status: 'completed'
+          })
+        });
+        if (!txnResponse.ok) {
+          const errorData = await txnResponse.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Payment failed');
+        }
+        queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         toast({
           title: t('bill_payment_successful') || 'Bill Payment Successful',
-          description: `${t('paid') || 'Paid'} $${amount} ${t('to') || 'to'} ${billProvider}`,
+          description: `${t('paid') || 'Paid'} ${amount} ${t('to') || 'to'} ${billProvider}`,
         });
         setPayBillDialogOpen(false);
         setPin('');
@@ -668,7 +708,6 @@ export default function Cards() {
               onClick={async () => {
                 setCreatingCard(true);
                 try {
-                  const { authenticatedFetch } = await import('@/lib/queryClient');
                   const res = await authenticatedFetch('/api/cards', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

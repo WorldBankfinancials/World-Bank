@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, Send, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { authenticatedFetch } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabase';
 
 interface Message {
@@ -160,7 +161,6 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
     });
 
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/chat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -242,7 +242,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
                   placeholder="Type your message..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
                       handleSendMessage();

@@ -17,7 +17,12 @@ import { useToast } from '@/hooks/use-toast';
 const step4Schema = z.object({
   idType: z.string().min(1, 'ID type is required'),
   idNumber: z.string().min(5, 'ID number is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
   confirmPassword: z.string().min(8, 'Please confirm your password'),
   transferPin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits'),
   agreeToTerms: z.boolean().refine(val => val === true, 'You must agree to terms and conditions'),
