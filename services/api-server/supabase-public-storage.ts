@@ -178,7 +178,7 @@ export class SupabasePublicStorage implements IStorage {
           .select('*')
           .eq('id', id)
           .single();
-        if (error) throw new Error(`Supabase error: ${error.message}`);
+        if (error) throw new Error('Database operation failed');
         return user;
       });
       if (!user) return undefined;
@@ -196,7 +196,7 @@ export class SupabasePublicStorage implements IStorage {
           .from('user_profiles')
           .select('*')
           .eq('email', email);
-        if (error) throw new Error(`Supabase error: ${error.message}`);
+        if (error) throw new Error('Database operation failed');
         if (!user || user.length === 0) return null;
         return user[0];
       });
@@ -326,7 +326,7 @@ export class SupabasePublicStorage implements IStorage {
         .select('balance')
         .eq('id', id)
         .single();
-      if (fetchError) throw new Error(`Fetch balance error: ${fetchError.message}`);
+      if (fetchError) throw new Error('Database operation failed');
       const currentBalance = parseFloat(String(currentUser?.balance || '0')) || 0;
       const newBalance = currentBalance + delta;
       if (newBalance < 0) {
@@ -339,7 +339,7 @@ export class SupabasePublicStorage implements IStorage {
           .eq('id', id)
           .select('*')
           .single();
-        if (error) throw new Error(`Update balance error: ${error.message}`);
+        if (error) throw new Error('Balance update failed');
         if (!user) throw new Error('No user returned after balance update');
         return user;
       });
@@ -368,7 +368,7 @@ export class SupabasePublicStorage implements IStorage {
           .select('*')
           .eq('user_id', userId)
           .order('id');
-        if (error) throw new Error(`Supabase error: ${error.message}`);
+        if (error) throw new Error('Database operation failed');
         return accounts || [];
       });
       return accounts.map(acc => ({ id: acc.id, userId: acc.user_id, accountNumber: acc.account_number, accountType: acc.account_type, balance: acc.balance?.toString() || '0', currency: acc.currency, status: acc.status || 'active', createdAt: acc.created_at, updatedAt: acc.updated_at } as unknown as Account));
@@ -463,7 +463,7 @@ export class SupabasePublicStorage implements IStorage {
         Object.keys(dbData).forEach(key => dbData[key] === undefined && delete dbData[key]);
         
         const { data: transaction, error } = await supabase.from('transactions').insert(dbData).select().single();
-        if (error) throw new Error(`Supabase error: ${error.message}`);
+        if (error) throw new Error('Database operation failed');
         if (!transaction) throw new Error('Failed to create transaction');
         return transaction;
       });
