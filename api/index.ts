@@ -8,7 +8,7 @@
  * - Request logging
  */
 import express, { type Request, Response, NextFunction } from 'express';
-import { registerRoutes } from '../server/fix-routes';
+import { registerRoutes, registerLiveChatRoutes } from '../server/fix-routes';
 import { generalRateLimiter } from '../server/rate-limiter';
 
 const app = express();
@@ -99,7 +99,7 @@ app.use((err: AppError | Error, _req: Request, res: Response, _next: NextFunctio
 });
 
 // ---- Register all routes ----
-const routesReady = registerRoutes(app).catch((err: unknown) => {
+const routesReady = registerRoutes(app).then(() => registerLiveChatRoutes(app)).catch((err: unknown) => {
   console.error('[api] Failed to register routes:', err);
 });
 
