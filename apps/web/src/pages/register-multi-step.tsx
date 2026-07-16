@@ -45,22 +45,22 @@ export default function MultiStepRegisterPage() {
   const { signUp } = useAuth();
   const { toast } = useToast();
 
-  const handleStep1Next = (data: any) => {
+  const handleStep1Next = (data: Record<string, unknown>) => {
     setRegistrationData(prev => ({ ...prev, ...data }));
     setCurrentStep(2);
   };
 
-  const handleStep2Next = (data: any) => {
+  const handleStep2Next = (data: Record<string, unknown>) => {
     setRegistrationData(prev => ({ ...prev, ...data }));
     setCurrentStep(3);
   };
 
-  const handleStep3Next = (data: any) => {
+  const handleStep3Next = (data: Record<string, unknown>) => {
     setRegistrationData(prev => ({ ...prev, ...data }));
     setCurrentStep(4);
   };
 
-  const handleStep4Submit = async (data: any, idCardFile?: File) => {
+  const handleStep4Submit = async (data: Record<string, unknown>, idCardFile?: File) => {
     setIsSubmitting(true);
     
     try {

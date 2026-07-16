@@ -131,7 +131,7 @@ export default function Investment() {
                   <p>No investments found. Start investing to see your portfolio here.</p>
                 </CardContent>
               </Card>
-            ) : investmentAccounts.map((account: any, index: number) => (
+            ) : investmentAccounts.map((account: AccountData, index: number) => (
               <Card key={account.id || index}>
                 <CardContent className="p-6">
                   <div className="flex justify-between items-center">
@@ -140,7 +140,7 @@ export default function Investment() {
                         <TrendingUp className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{account.account_type?.charAt(0).toUpperCase() + account.account_type?.slice(1)} Account</h3>
+                        <h3 className="font-semibold text-gray-900">{(account.account_type || account.accountType || 'savings')?.charAt(0)?.toUpperCase() + (account.account_type || account.accountType || 'savings')?.slice(1)} Account</h3>
                         <p className="text-sm text-gray-600">{account.account_number}</p>
                       </div>
                     </div>
