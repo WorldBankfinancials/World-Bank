@@ -11,6 +11,7 @@ import { Lock, Shield, Eye, EyeOff, ArrowLeft, AlertTriangle, CheckCircle } from
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
+import type { User } from '@packages/shared/schema';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -156,7 +157,7 @@ export default function PinSettings() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={(user as any) || undefined} />
+      <Header user={(user as unknown as User) || undefined} />
       
       <div className="container mx-auto px-4 py-8 max-w-md">
         <div className="flex items-center mb-6">

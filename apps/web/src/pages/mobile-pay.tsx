@@ -6,7 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authenticatedFetch } from "@/lib/queryClient";
 import { Smartphone, Send, Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Merchant {
   id: number;
@@ -25,13 +26,14 @@ interface MobilePayment {
 
 export default function MobilePay() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const { userProfile } = useAuth();
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [pin, setPin] = useState('');
 
-  const { data: merchants = [] } = useQuery<Merchant[]>({
+  const { data: merchants = [], isLoading: merchantsLoading, error: merchantsError } = useQuery<Merchant[]>({
     queryKey: ['/api/mobile-pay/merchants'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/mobile-pay/merchants');
@@ -40,7 +42,7 @@ export default function MobilePay() {
     }
   });
 
-  const { data: payments = [] } = useQuery<MobilePayment[]>({
+  const { data: payments = [], isLoading: paymentsLoading, error: paymentsError } = useQuery<MobilePayment[]>({
     queryKey: ['/api/mobile-payments'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/mobile-payments');
@@ -48,6 +50,23 @@ export default function MobilePay() {
       return response.json();
     }
   });
+
+  const isLoading = merchantsLoading || paymentsLoading;
+  const queryError = merchantsError || paymentsError;
+
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [queryError]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   const handleSendPayment = async () => {
     if (!amount || !phoneNumber || !pin) return;
