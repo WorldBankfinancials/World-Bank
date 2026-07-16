@@ -172,8 +172,8 @@ export default function DigitalWallet() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentTransactions && (recentTransactions as unknown as Array<Record<string, unknown>>).length > 0 ? (
-                (recentTransactions as unknown as Array<Record<string, unknown>>).map((transaction, index: number) => (
+              {recentTransactions && (recentTransactions as Array<Record<string, unknown>>).length > 0 ? (
+                (recentTransactions as Array<Record<string, unknown>>).map((transaction, index: number) => (
                 <div key={`item-${index}`} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${

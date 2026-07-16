@@ -263,7 +263,7 @@ export default function Alerts() {
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start space-x-3">
-                          <div className={`w-10 h-10 ${bgColor} rounded-full flex items-center justify-center">
+                          <div className={`w-10 h-10 ${bgColor} rounded-full flex items-center justify-center`}>
                             <IconComponent className={`w-5 h-5 ${color}`} />
                           </div>
                           <div className="flex-1">
