@@ -5,6 +5,7 @@
 
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { authenticatedFetch } from '@/lib/queryClient';
 
 interface Alert {
   id?: string;
@@ -57,7 +58,6 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           pollIntervalRef.current = setInterval(async () => {
             try {
-              const { authenticatedFetch } = await import('@/lib/queryClient');
               const res = await authenticatedFetch('/api/alerts');
               if (res.ok) {
                 const data = await res.json();
@@ -69,7 +69,7 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
                   });
                 }
               }
-            } catch {}
+            } catch (e) { console.error('Realtime alerts error:', e); }
           }, 10000);
         }
       });

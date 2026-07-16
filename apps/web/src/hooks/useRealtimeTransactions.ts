@@ -5,6 +5,7 @@
 
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { authenticatedFetch } from '@/lib/queryClient';
 
 interface Transaction {
   id?: string;
@@ -63,7 +64,6 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           pollIntervalRef.current = setInterval(async () => {
             try {
-              const { authenticatedFetch } = await import('@/lib/queryClient');
               const res = await authenticatedFetch('/api/transactions');
               if (res.ok) {
                 const data = await res.json();
@@ -75,7 +75,7 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
                   });
                 }
               }
-            } catch {}
+            } catch (e) { console.error('Realtime transactions error:', e); }
           }, 10000);
         }
       });

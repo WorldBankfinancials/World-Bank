@@ -5,6 +5,7 @@
 
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { authenticatedFetch } from '@/lib/queryClient';
 
 interface ChatMessage {
   id?: string;
@@ -76,7 +77,6 @@ export function useRealtimeChat(
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           pollIntervalRef.current = setInterval(async () => {
             try {
-              const { authenticatedFetch } = await import('@/lib/queryClient');
               const res = await authenticatedFetch('/api/chat/history');
               if (res.ok) {
                 const data = await res.json();
@@ -88,7 +88,7 @@ export function useRealtimeChat(
                   });
                 }
               }
-            } catch {}
+            } catch (e) { console.error('Realtime chat error:', e); }
           }, 10000);
         }
       });
