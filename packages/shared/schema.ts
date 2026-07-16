@@ -302,6 +302,62 @@ export const savings = pgTable('savings', {
 });
 
 // ============================================================
+// FOREX TABLE
+// ============================================================
+
+export const forex = pgTable('forex', {
+  id:              uuid('id').primaryKey(),
+  fromCurrency:    text('from_currency').notNull(),
+  toCurrency:      text('to_currency').notNull(),
+  rate:            numeric('rate', { precision: 18, scale: 8 }).notNull(),
+  margin:          numeric('margin', { precision: 6, scale: 4 }).default('0.0000'),
+  buyRate:         numeric('buy_rate', { precision: 18, scale: 8 }),
+  sellRate:        numeric('sell_rate', { precision: 18, scale: 8 }),
+  source:          text('source').default('internal'),
+  effectiveDate:   timestamp('effective_date', { withTimezone: true }).defaultNow(),
+  expiresAt:       timestamp('expires_at', { withTimezone: true }),
+  isActive:        boolean('is_active').default(true),
+  metadata:        jsonb('metadata').default('{}'),
+  createdAt:       timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt:       timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+export const insertForexSchema = createInsertSchema(forex);
+export type ForexRow = typeof forex.$inferSelect;
+
+// ============================================================
+// KYC TABLE
+// ============================================================
+
+export const kyc = pgTable('kyc', {
+  id:              uuid('id').primaryKey(),
+  userId:          uuid('user_id').notNull(),
+  kycType:         text('kyc_type').notNull().default('individual'),
+  status:          text('status').notNull().default('pending'),
+  documentType:    text('document_type'),
+  documentNumber:  text('document_number'),
+  documentFront:   text('document_front'),
+  documentBack:    text('document_back'),
+  selfieImage:     text('selfie_image'),
+  verifiedBy:      uuid('verified_by'),
+  verifiedAt:      timestamp('verified_at', { withTimezone: true }),
+  expiresAt:       timestamp('expires_at', { withTimezone: true }),
+  rejectionReason: text('rejection_reason'),
+  riskScore:       numeric('risk_score', { precision: 6, scale: 2 }).default('0.00'),
+  metadata:        jsonb('metadata').default('{}'),
+  createdAt:       timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt:       timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  submittedAt:     timestamp('submitted_at', { withTimezone: true }),
+  fullName:         text('full_name'),
+  dateOfBirth:     text('date_of_birth'),
+  nationality:     text('nationality'),
+  address:         text('address'),
+});
+
+export const insertKycSchema = createInsertSchema(kyc);
+export type KycRow = typeof kyc.$inferSelect;
+
+// ============================================================
 // DRIZZLE-ZOD INSERT SCHEMAS
 // ============================================================
 
