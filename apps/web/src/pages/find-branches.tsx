@@ -88,7 +88,7 @@ export default function FindBranches() {
     );
   }
 
-  const branchesList = (branches || []).filter((branch: any) => {
+  const branchesList = (branches || []).filter((branch: Branch) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (branch.name || '').toLowerCase().includes(q) ||
@@ -161,7 +161,7 @@ export default function FindBranches() {
                     </CardContent>
                   </Card>
                 ) : (
-                  branchesList.map((branch: any) => (
+                  branchesList.map((branch: Branch) => (
                     <Card key={branch.id} className="hover:shadow-md transition-shadow" data-testid={`branch-card-${branch.id}`}>
                       <CardContent className="p-6">
                         <div className="flex justify-between items-start mb-4">
@@ -238,7 +238,7 @@ export default function FindBranches() {
                     </CardContent>
                   </Card>
                 ) : (
-                  atmsList.map((atm: any) => (
+                  atmsList.map((atm: ATM) => (
                     <Card key={atm.id} className="hover:shadow-sm transition-shadow" data-testid={`atm-card-${atm.id}`}>
                       <CardContent className="p-4">
                         <div className="flex justify-between items-center">
@@ -279,17 +279,17 @@ export default function FindBranches() {
                   <div className="font-medium mb-2">Services</div>
                   <div className="space-y-2">
                     <label className="flex items-center">
-                      <input type="checkbox" className="mr-2" defaultChecked />
+                      <input type="checkbox" aria-label="ATM Available filter" className="mr-2" defaultChecked />
                       <Banknote className="w-4 h-4 mr-1" />
                       <span className="text-sm">ATM Available</span>
                     </label>
                     <label className="flex items-center">
-                      <input type="checkbox" className="mr-2" />
+                      <input type="checkbox" aria-label="Teller Services filter" className="mr-2" />
                       <Users className="w-4 h-4 mr-1" />
                       <span className="text-sm">Teller Services</span>
                     </label>
                     <label className="flex items-center">
-                      <input type="checkbox" className="mr-2" />
+                      <input type="checkbox" aria-label="Business Banking filter" className="mr-2" />
                       <CreditCard className="w-4 h-4 mr-1" />
                       <span className="text-sm">Business Banking</span>
                     </label>
