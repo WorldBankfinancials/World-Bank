@@ -3,51 +3,15 @@
  * Track who's online in real-time
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
-interface PresenceUser {
-  user_id?: string;
-  online_at?: string;
-  [key: string]: unknown;
-}
-
 export function usePresence() {
-  const [isPresent, setIsPresent] = useState(false);
-
-  useEffect(() => {
-    const channel = supabase.channel('presence');
-
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const presenceState = channel.presenceState();
-        setIsPresent(Object.keys(presenceState).length > 0);
-      })
-      .on('presence', { event: 'join' }, () => {
-        setIsPresent(true);
-      })
-      .on('presence', { event: 'leave' }, () => {
-        const presenceState = channel.presenceState();
-        setIsPresent(Object.keys(presenceState).length > 0);
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({ online_at: new Date().toISOString() });
-          setIsPresent(true);
-        }
-      });
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, []);
-
-  return { isPresent };
+  return null;
 }
 
-export function useOnlineUsers(callback?: (users: PresenceUser[]) => void, enabled?: boolean) {
-  const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+export function useOnlineUsers(callback?: (users: any[]) => void, enabled?: boolean) {
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -58,19 +22,14 @@ export function useOnlineUsers(callback?: (users: PresenceUser[]) => void, enabl
       channel
         .on('presence', { event: 'sync' }, () => {
           const presenceState = channel.presenceState();
-          const users = Object.values(presenceState).flat() as PresenceUser[];
-          setOnlineUsers(users);
-          callback?.(users);
+          const onlineUsers = Object.values(presenceState).flat();
+          callback?.(onlineUsers as Array<Record<string, unknown>>);
         })
-        .on('presence', { event: 'join' }, () => {
-          const users = Object.values(channel.presenceState()).flat() as PresenceUser[];
-          setOnlineUsers(users);
-          callback?.(users);
+        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+          callback?.(Object.values(channel.presenceState()).flat() as Array<Record<string, unknown>>);
         })
-        .on('presence', { event: 'leave' }, () => {
-          const users = Object.values(channel.presenceState()).flat() as PresenceUser[];
-          setOnlineUsers(users);
-          callback?.(users);
+        .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+          callback?.(Object.values(channel.presenceState()).flat() as Array<Record<string, unknown>>);
         })
         .subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
@@ -83,7 +42,7 @@ export function useOnlineUsers(callback?: (users: PresenceUser[]) => void, enabl
 
       channelRef.current = channel;
     } catch (error) {
-      // Silently handle subscription errors
+      console.error('Presence subscription error:', error);
     }
 
     return () => {
@@ -91,23 +50,14 @@ export function useOnlineUsers(callback?: (users: PresenceUser[]) => void, enabl
     };
   }, [callback, enabled]);
 
-  return { onlineUsers };
+  return null;
 }
 
 /**
  * ADMIN REALTIME SUBSCRIPTION
  * Listen for admin changes that need to broadcast to all users
  */
-interface AdminUpdate {
-  id?: string;
-  action?: string;
-  created_at?: string;
-  [key: string]: unknown;
-}
-
-export function useAdminUpdates(onUpdate?: (action: AdminUpdate) => void, enabled?: boolean) {
-  const [lastUpdate, setLastUpdate] = useState<AdminUpdate | null>(null);
-
+export function useAdminUpdates(onUpdate?: (action: any) => void, enabled?: boolean) {
   useEffect(() => {
     if (!enabled) return;
 
@@ -122,10 +72,8 @@ export function useAdminUpdates(onUpdate?: (action: AdminUpdate) => void, enable
           table: 'admin_actions'
         },
         (payload) => {
-          const update = payload.new as AdminUpdate;
-          setLastUpdate(update);
-          onUpdate?.(update);
-          window.dispatchEvent(new CustomEvent('admin-update', { detail: update }));
+          onUpdate?.(payload.new);
+          window.dispatchEvent(new CustomEvent('admin-update', { detail: payload.new }));
         }
       )
       .subscribe();
@@ -135,5 +83,5 @@ export function useAdminUpdates(onUpdate?: (action: AdminUpdate) => void, enable
     };
   }, [onUpdate, enabled]);
 
-  return { lastUpdate };
+  return null;
 }
