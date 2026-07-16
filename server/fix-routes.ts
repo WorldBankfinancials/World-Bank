@@ -82,7 +82,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/user - Get current user profile
   app.get('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express) {
   // PATCH /api/user - Update user profile
   app.patch('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -116,7 +116,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/user/accounts - Get user accounts
   app.get('/api/user/accounts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -130,7 +130,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/accounts - Get user accounts (alias)
   app.get('/api/accounts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -144,7 +144,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/transactions - Get user transactions
   app.get('/api/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -187,7 +187,7 @@ export async function registerRoutes(app: Express) {
       if (!pin || String(pin).length !== 4) {
         return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
       }
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
@@ -203,7 +203,7 @@ export async function registerRoutes(app: Express) {
   app.post('/api/verify-pin', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { pin } = req.body;
-      const email = req.user!.email;
+      const email = req.user?.email;
       if (!email || !pin) {
         return res.status(400).json({ error: 'Email and PIN required' });
       }
@@ -228,7 +228,7 @@ export async function registerRoutes(app: Express) {
       if (!currentPin || !newPin || String(newPin).length !== 4) {
         return res.status(400).json({ error: 'Current PIN and new PIN (4 digits) required' });
       }
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user || !user.transferPin) {
         return res.status(401).json({ error: 'PIN not set on account' });
       }
@@ -286,7 +286,7 @@ export async function registerRoutes(app: Express) {
       if (!updatedUser) {
         return res.status(404).json({ error: 'Customer not found' });
       }
-      const admin = await storage.getUserByEmail(req.user!.email);
+      const admin = await storage.getUserByEmail(req.user?.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -314,7 +314,7 @@ export async function registerRoutes(app: Express) {
       if (!updatedUser) {
         return res.status(404).json({ error: 'Customer not found' });
       }
-      const admin = await storage.getUserByEmail(req.user!.email);
+      const admin = await storage.getUserByEmail(req.user?.email);
       if (admin) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -358,7 +358,7 @@ export async function registerRoutes(app: Express) {
       const id = req.params.id;
       const updates = req.body;
       const updatedTicket = await storage.updateSupportTicket(id, updates);
-      const admin = await storage.getUserByEmail(req.user!.email);
+      const admin = await storage.getUserByEmail(req.user?.email);
       if (admin && updatedTicket) {
         await storage.createAdminAction({
           adminId: admin.id,
@@ -397,7 +397,7 @@ export async function registerRoutes(app: Express) {
 
       // Log admin action
       await supabase.from('admin_actions').insert({
-        admin_id: req.user!.id,
+        admin_id: req.user?.id,
         action_type: 'ticket_respond',
         target_id: id,
         description: `Responded to support ticket ${id}`,
@@ -587,7 +587,7 @@ export async function registerRoutes(app: Express) {
 
       // Verify current password by signing in
       const { error: signInError } = await supabaseClient.auth.signInWithPassword({
-        email: req.user!.email,
+        email: req.user?.email,
         password: currentPassword
       });
       if (signInError) return res.status(401).json({ error: 'Current password is incorrect' });
@@ -644,7 +644,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/payment-requests
   app.get('/api/payment-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) return res.json([]);
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.json([]);
@@ -669,7 +669,7 @@ export async function registerRoutes(app: Express) {
       }
       const reference = `PR-${Date.now()}-${randomUUID().substring(0, 8).toUpperCase()}`;
       const transactionData = {
-        fromUserId: req.user!.id,
+        fromUserId: req.user?.id,
         amount: String(amount),
         currency,
         transactionType: 'payment_request',
@@ -695,7 +695,7 @@ export async function registerRoutes(app: Express) {
 
       const amount = parseFloat(String((request as Record<string, unknown>).amount));
       // Check balance
-      const { data: userAccount } = await supabase.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      const { data: userAccount } = await supabase.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
       const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
       if (currentBalance < amount) return res.status(400).json({ error: 'Insufficient funds' });
@@ -708,12 +708,12 @@ export async function registerRoutes(app: Express) {
       await supabase.from('transactions').update({
         status: 'completed',
         completed_at: new Date().toISOString(),
-        from_user_id: req.user!.id
+        from_user_id: req.user?.id
       }).eq('id', req.params.id);
 
       // Create payment transaction
       await supabase.from('transactions').insert({
-        from_user_id: req.user!.id,
+        from_user_id: req.user?.id,
         to_user_id: (request as Record<string, unknown>).to_user_id,
         amount: amount.toFixed(2),
         currency: 'USD',
@@ -728,7 +728,7 @@ export async function registerRoutes(app: Express) {
 
       // Create alert
       await supabase.from('alerts').insert({
-        user_id: req.user!.id,
+        user_id: req.user?.id,
         title: 'Payment Sent',
         message: `Payment of ${amount.toFixed(2)} has been sent.`,
         type: 'success',
@@ -749,7 +749,7 @@ export async function registerRoutes(app: Express) {
       if (!method || !amount || isNaN(parseFloat(String(amount))) || parseFloat(String(amount)) <= 0) {
         return res.status(400).json({ error: 'Method and valid amount are required' });
       }
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) return res.status(404).json({ error: 'User not found' });
       const accounts = await storage.getUserAccounts(user.id);
       if (accounts.length === 0) return res.status(404).json({ error: 'No account found' });
@@ -781,7 +781,7 @@ export async function registerRoutes(app: Express) {
 
         // Auto-create alert on transaction
         await supabase.from('alerts').insert({
-          user_id: req.user!.id,
+          user_id: req.user?.id,
           title: 'Funds Added',
           message: `${parsedAmount.toFixed(2)} has been added to your account via ${method}.`,
           type: 'success',
@@ -804,7 +804,7 @@ export async function registerRoutes(app: Express) {
 
   app.get('/api/transactions/recent', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) return res.json([]);
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.json([]);
@@ -856,7 +856,7 @@ export async function registerRoutes(app: Express) {
 
   app.get('/api/card-transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) return res.json([]);
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.json([]);
@@ -873,7 +873,7 @@ export async function registerRoutes(app: Express) {
 
   app.get('/api/wallet-balance', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) return res.status(404).json({ error: 'User not found' });
       return res.json({
         balance: parseFloat(String(user.balance || '0')),
@@ -888,7 +888,7 @@ export async function registerRoutes(app: Express) {
 
   app.get('/api/wallet-transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) return res.json([]);
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.json([]);
@@ -901,7 +901,7 @@ export async function registerRoutes(app: Express) {
 
   app.get('/api/mobile-payments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) return res.json([]);
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.json([]);
@@ -927,7 +927,7 @@ export async function registerRoutes(app: Express) {
 
   app.get('/api/user/activity-log', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) return res.json([]);
       const accounts = await storage.getUserAccounts(user.id);
       const recentActivity: Record<string, unknown>[] = [];
@@ -994,7 +994,7 @@ export async function registerRoutes(app: Express) {
     try {
       const id = req.params.id;
       const { status, notes } = req.body;
-      const admin = await storage.getUserByEmail(req.user!.email);
+      const admin = await storage.getUserByEmail(req.user?.email);
       const adminId = admin?.id || 0;
       const transaction = await storage.updateTransactionStatus(id, status, adminId, notes);
       return res.json({ success: true, transaction });
@@ -1027,7 +1027,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase
         .from('recent_contacts')
         .select('*')
-        .eq('user_id', req.user!.id)
+        .eq('user_id', req.user?.id)
         .order('updated_at', { ascending: false })
         .limit(10);
       if (error) throw error;
@@ -1045,7 +1045,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase
         .from('loans')
         .select('*')
-        .eq('user_id', req.user!.id)
+        .eq('user_id', req.user?.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
@@ -1067,7 +1067,7 @@ export async function registerRoutes(app: Express) {
       if (isNaN(principal) || principal <= 0) return res.status(400).json({ error: 'Invalid principal amount' });
       if (isNaN(rate) || rate < 0 || rate > 100) return res.status(400).json({ error: 'Invalid interest rate' });
       if (isNaN(term) || term < 1 || term > 360) return res.status(400).json({ error: 'Invalid term (must be 1-360 months)' });
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) return res.status(404).json({ error: 'User not found' });
       if (!user.transferPin) return res.status(400).json({ error: 'PIN not set' });
       const pinMatch = await bcrypt.compare(String(transferPin), user.transferPin);
@@ -1081,7 +1081,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase
         .from('loans')
         .insert({
-          user_id: req.user!.id,
+          user_id: req.user?.id,
           loan_number: loanNumber,
           loan_type: loanType,
           principal_amount: String(principalAmount),
@@ -1102,7 +1102,7 @@ export async function registerRoutes(app: Express) {
         const adminAlerts = admins.map((admin: Record<string, unknown>) => ({
           user_id: admin.id,
           title: 'New Loan Application',
-          message: `Loan application for ${principalAmount} from ${req.user!.email} requires review.`,
+          message: `Loan application for ${principalAmount} from ${req.user?.email} requires review.`,
           type: 'warning',
           priority: 'high',
           is_read: false
@@ -1125,7 +1125,7 @@ export async function registerRoutes(app: Express) {
         .from('loans')
         .update({
           status: 'approved',
-          approved_by: req.user!.id,
+          approved_by: req.user?.id,
           approved_at: new Date().toISOString(),
           disbursement_date: new Date().toISOString(),
           maturity_date: new Date(Date.now() + (loan.term_months * 30 * 24 * 60 * 60 * 1000)).toISOString()
@@ -1517,7 +1517,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/cards - list user's cards
   app.get('/api/cards', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data, error } = await supabase.from('cards').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('cards').select('*').eq('user_id', req.user?.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
     } catch (error: unknown) {
@@ -1533,7 +1533,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('cards').update({
         status: locked ? 'locked' : 'active',
         updated_at: new Date().toISOString()
-      }).eq('id', cardId).eq('user_id', req.user!.id).select().single();
+      }).eq('id', cardId).eq('user_id', req.user?.id).select().single();
       if (error) throw error;
       return res.json(data);
     } catch (error: unknown) {
@@ -1553,7 +1553,7 @@ export async function registerRoutes(app: Express) {
         monthly_limit: monthlyLimit,
         is_contactless: isContactless,
         updated_at: new Date().toISOString()
-      }).eq('id', cardId).eq('user_id', req.user!.id).select().single();
+      }).eq('id', cardId).eq('user_id', req.user?.id).select().single();
       if (error) throw error;
       return res.json(data);
     } catch (error: unknown) {
@@ -1569,7 +1569,7 @@ export async function registerRoutes(app: Express) {
       const supabase = getAdminClient();
 
       // Get user's account
-      const { data: account } = await supabase.from('accounts').select('id').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      const { data: account } = await supabase.from('accounts').select('id').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
       if (!account) return res.status(404).json({ error: 'No active account found' });
 
       const cardNumber = '4' + Math.floor(Math.random() * 9000000000000000 + 1000000000000000).toString();
@@ -1577,7 +1577,7 @@ export async function registerRoutes(app: Express) {
       const expiryYear = new Date().getFullYear() + 4;
 
       const { data, error } = await supabase.from('cards').insert({
-        user_id: req.user!.id,
+        user_id: req.user?.id,
         account_id: (account as Record<string, unknown>).id,
         card_number: cardNumber,
         card_type: cardType,
@@ -1593,7 +1593,7 @@ export async function registerRoutes(app: Express) {
       if (error) throw error;
 
       await supabase.from('alerts').insert({
-        user_id: req.user!.id,
+        user_id: req.user?.id,
         title: 'New Card Created',
         message: `A new ${cardType} card has been created for your account.`,
         type: 'success',
@@ -1612,7 +1612,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/alerts - list user's alerts
   app.get('/api/alerts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data, error } = await supabase.from('alerts').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('alerts').select('*').eq('user_id', req.user?.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
     } catch (error: unknown) {
@@ -1626,7 +1626,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('alerts').update({
         is_read: true,
         read_at: new Date().toISOString()
-      }).eq('id', req.params.id).eq('user_id', req.user!.id).select().single();
+      }).eq('id', req.params.id).eq('user_id', req.user?.id).select().single();
       if (error) throw error;
       return res.json(data);
     } catch (error: unknown) {
@@ -1637,7 +1637,7 @@ export async function registerRoutes(app: Express) {
   // DELETE /api/alerts/:id - delete an alert
   app.delete('/api/alerts/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { error } = await supabase.from('alerts').delete().eq('id', req.params.id).eq('user_id', req.user!.id);
+      const { error } = await supabase.from('alerts').delete().eq('id', req.params.id).eq('user_id', req.user?.id);
       if (error) throw error;
       return res.json({ success: true });
     } catch (error: unknown) {
@@ -1650,7 +1650,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/investments - list user's investments
   app.get('/api/investments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data, error } = await supabase.from('investments').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('investments').select('*').eq('user_id', req.user?.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
     } catch (error: unknown) {
@@ -1687,21 +1687,21 @@ export async function registerRoutes(app: Express) {
       const convertedAmount = numAmount * exchangeRate;
 
       // Check balance first
-      const { data: userAccount } = await supabase.from('accounts').select('balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      const { data: userAccount } = await supabase.from('accounts').select('balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
       const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
       if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
 
       // Debit the amount
       const newBalance = (currentBalance - numAmount).toFixed(2);
-      await supabase.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', req.user!.id).eq('status', 'active');
+      await supabase.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', req.user?.id).eq('status', 'active');
 
       // Create transaction record
       const reference = `EXC${Date.now()}${Math.floor(Math.random() * 10000)}`;
       const { data: txn, error: txnError } = await supabase.from('transactions').insert({
         from_account_id: null,
         to_account_id: null,
-        from_user_id: req.user!.id,
+        from_user_id: req.user?.id,
         amount: numAmount.toFixed(2),
         currency: fromCurrency,
         exchange_rate: exchangeRate.toFixed(4),
@@ -1727,7 +1727,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/support-tickets - list user's support tickets
   app.get('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data, error } = await supabase.from('support_tickets').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('support_tickets').select('*').eq('user_id', req.user?.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
     } catch (error: unknown) {
@@ -1742,7 +1742,7 @@ export async function registerRoutes(app: Express) {
       if (!subject || !description) return res.status(400).json({ error: 'Subject and description required' });
       const ticketId = `TKT${Date.now()}${Math.floor(Math.random() * 10000)}`;
       const { data, error } = await supabase.from('support_tickets').insert({
-        user_id: req.user!.id,
+        user_id: req.user?.id,
         ticket_id: ticketId,
         subject,
         description,
@@ -1789,7 +1789,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('transactions').insert({
         from_account_id: accountId,
         to_account_id: null,
-        from_user_id: userId || req.user!.id,
+        from_user_id: userId || req.user?.id,
         amount: Number(amount).toFixed(2),
         transaction_type: type,
         category: 'admin',
@@ -1811,7 +1811,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/savings - list user's savings accounts
   app.get('/api/savings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data, error } = await supabase.from('savings').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('savings').select('*').eq('user_id', req.user?.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
     } catch (error: unknown) {
@@ -1829,18 +1829,18 @@ export async function registerRoutes(app: Express) {
 
       // Check balance if initial deposit
       if (deposit > 0) {
-        const { data: userAccount } = await supabaseClient.from('accounts').select('balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+        const { data: userAccount } = await supabaseClient.from('accounts').select('balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
         if (!userAccount) return res.status(404).json({ error: 'Account not found' });
         const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
         if (currentBalance < deposit) return res.status(400).json({ error: 'Insufficient funds for initial deposit' });
         // Debit from checking
         const newBalance = (currentBalance - deposit).toFixed(2);
-        await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', req.user!.id).eq('status', 'active');
+        await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', req.user?.id).eq('status', 'active');
       }
 
       const savingsNumber = `SAV${Date.now()}${Math.floor(Math.random() * 10000)}`;
       const { data, error } = await supabaseClient.from('savings').insert({
-        user_id: req.user!.id,
+        user_id: req.user?.id,
         account_number: savingsNumber,
         account_type: accountType || 'savings',
         balance: deposit.toFixed(2),
@@ -1853,8 +1853,8 @@ export async function registerRoutes(app: Express) {
 
       if (deposit > 0) {
         await supabaseClient.from('transactions').insert({
-          from_user_id: req.user!.id,
-          to_user_id: req.user!.id,
+          from_user_id: req.user?.id,
+          to_user_id: req.user?.id,
           amount: deposit.toFixed(2),
           currency: 'USD',
           transaction_type: 'savings_deposit',
@@ -1883,7 +1883,7 @@ export async function registerRoutes(app: Express) {
 
       const supabaseClient = getAdminClient();
       // Check and debit checking account
-      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
       const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
       if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
@@ -1892,14 +1892,14 @@ export async function registerRoutes(app: Express) {
       await supabaseClient.from('accounts').update({ balance: newCheckingBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
 
       // Credit savings account
-      const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user!.id).single();
+      const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user?.id).single();
       if (!savings) return res.status(404).json({ error: 'Savings account not found' });
       const newSavingsBalance = (parseFloat(String((savings as Record<string, unknown>).balance || '0')) + numAmount).toFixed(2);
       await supabaseClient.from('savings').update({ balance: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId);
 
       await supabaseClient.from('transactions').insert({
-        from_user_id: req.user!.id,
-        to_user_id: req.user!.id,
+        from_user_id: req.user?.id,
+        to_user_id: req.user?.id,
         amount: numAmount.toFixed(2),
         currency: 'USD',
         transaction_type: 'savings_deposit',
@@ -1926,7 +1926,7 @@ export async function registerRoutes(app: Express) {
       if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Amount must be greater than zero' });
 
       const supabaseClient = getAdminClient();
-      const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user!.id).single();
+      const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user?.id).single();
       if (!savings) return res.status(404).json({ error: 'Savings account not found' });
       const savingsBalance = parseFloat(String((savings as Record<string, unknown>).balance || '0'));
       if (savingsBalance < numAmount) return res.status(400).json({ error: 'Insufficient savings balance' });
@@ -1936,15 +1936,15 @@ export async function registerRoutes(app: Express) {
       await supabaseClient.from('savings').update({ balance: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId);
 
       // Credit checking
-      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
       if (userAccount) {
         const newCheckingBalance = (parseFloat(String((userAccount as Record<string, unknown>).balance || '0')) + numAmount).toFixed(2);
         await supabaseClient.from('accounts').update({ balance: newCheckingBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
       }
 
       await supabaseClient.from('transactions').insert({
-        from_user_id: req.user!.id,
-        to_user_id: req.user!.id,
+        from_user_id: req.user?.id,
+        to_user_id: req.user?.id,
         amount: numAmount.toFixed(2),
         currency: 'USD',
         transaction_type: 'savings_withdrawal',
@@ -1978,7 +1978,7 @@ export async function registerRoutes(app: Express) {
       const supabaseClient = getAdminClient();
 
       // Check balance
-      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
       const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
       if (currentBalance < totalCost) return res.status(400).json({ error: 'Insufficient funds' });
@@ -1988,7 +1988,7 @@ export async function registerRoutes(app: Express) {
       await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
 
       // Create or update investment
-      const { data: existing } = await supabaseClient.from('investments').select('id, shares, average_price').eq('user_id', req.user!.id).eq('symbol', symbol).limit(1);
+      const { data: existing } = await supabaseClient.from('investments').select('id, shares, average_price').eq('user_id', req.user?.id).eq('symbol', symbol).limit(1);
       if (existing && existing.length > 0) {
         const existingShares = parseFloat(String((existing[0] as Record<string, unknown>).shares || '0'));
         const existingAvg = parseFloat(String((existing[0] as Record<string, unknown>).average_price || '0'));
@@ -2002,7 +2002,7 @@ export async function registerRoutes(app: Express) {
         }).eq('id', (existing[0] as Record<string, unknown>).id);
       } else {
         await supabaseClient.from('investments').insert({
-          user_id: req.user!.id,
+          user_id: req.user?.id,
           symbol,
           asset_type: assetType || 'stock',
           shares: numShares.toString(),
@@ -2014,7 +2014,7 @@ export async function registerRoutes(app: Express) {
 
       // Create transaction
       await supabaseClient.from('transactions').insert({
-        from_user_id: req.user!.id,
+        from_user_id: req.user?.id,
         amount: totalCost.toFixed(2),
         currency: 'USD',
         transaction_type: 'investment_buy',
@@ -2046,13 +2046,13 @@ export async function registerRoutes(app: Express) {
       const supabaseClient = getAdminClient();
 
       // Check investment
-      const { data: investment } = await supabaseClient.from('investments').select('id, shares, average_price, symbol').eq('id', investmentId).eq('user_id', req.user!.id).single();
+      const { data: investment } = await supabaseClient.from('investments').select('id, shares, average_price, symbol').eq('id', investmentId).eq('user_id', req.user?.id).single();
       if (!investment) return res.status(404).json({ error: 'Investment not found' });
       const heldShares = parseFloat(String((investment as Record<string, unknown>).shares || '0'));
       if (heldShares < numShares) return res.status(400).json({ error: 'Insufficient shares' });
 
       // Credit account
-      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
       if (userAccount) {
         const newBalance = (parseFloat(String((userAccount as Record<string, unknown>).balance || '0')) + totalProceeds).toFixed(2);
         await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
@@ -2069,7 +2069,7 @@ export async function registerRoutes(app: Express) {
       const symbol = (investment as Record<string, unknown>).symbol as string;
       await supabaseClient.from('transactions').insert({
         from_user_id: null,
-        to_user_id: req.user!.id,
+        to_user_id: req.user?.id,
         amount: totalProceeds.toFixed(2),
         currency: 'USD',
         transaction_type: 'investment_sell',
@@ -2092,7 +2092,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/payments - list user's payments
   app.get('/api/payments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data, error } = await supabase.from('payments').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('payments').select('*').eq('user_id', req.user?.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
     } catch (error: unknown) {
@@ -2105,11 +2105,11 @@ export async function registerRoutes(app: Express) {
   // GET /api/kyc/status - get user's KYC verification status
   app.get('/api/kyc/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data, error } = await supabase.from('kyc').select('*').eq('user_id', req.user!.id).limit(1).single();
+      const { data, error } = await supabase.from('kyc').select('*').eq('user_id', req.user?.id).limit(1).single();
       if (error && error.code !== 'PGRST116') throw error;
       
       // Also get user's verification fields
-      const { data: user } = await supabase.from('users').select('is_verified, kyc_status, email, phone, full_name, address, city, country, profession, annual_income').eq('id', req.user!.id).single();
+      const { data: user } = await supabase.from('users').select('is_verified, kyc_status, email, phone, full_name, address, city, country, profession, annual_income').eq('id', req.user?.id).single();
       
       const verificationItems = [
         { id: 'identity', name: 'Identity Verification', status: user?.is_verified ? 'verified' : 'pending', completedAt: user?.is_verified ? new Date().toISOString() : null },
@@ -2134,7 +2134,7 @@ export async function registerRoutes(app: Express) {
       
       const supabaseClient = getAdminClient();
       const { data, error } = await supabaseClient.from('kyc').upsert({
-        user_id: req.user!.id,
+        user_id: req.user?.id,
         document_type: documentType,
         document_number: documentNumber || null,
         full_name: fullName,
@@ -2147,11 +2147,11 @@ export async function registerRoutes(app: Express) {
       if (error) throw error;
       
       // Update user's kyc_status
-      await supabaseClient.from('users').update({ kyc_status: 'in_review' }).eq('id', req.user!.id);
+      await supabaseClient.from('users').update({ kyc_status: 'in_review' }).eq('id', req.user?.id);
       
       // Create alert
       await supabaseClient.from('alerts').insert({
-        user_id: req.user!.id,
+        user_id: req.user?.id,
         title: 'KYC Submitted',
         message: 'Your KYC documents have been submitted for review.',
         type: 'info',
@@ -2168,7 +2168,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/user/preferences
   app.get('/api/user/preferences', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data, error } = await supabase.from('users').select('notification_preferences, privacy_preferences, display_preferences, security_preferences').eq('id', req.user!.id).single();
+      const { data, error } = await supabase.from('users').select('notification_preferences, privacy_preferences, display_preferences, security_preferences').eq('id', req.user?.id).single();
       if (error) throw error;
       return res.json({
         notificationPreferences: data?.notification_preferences || {},
@@ -2191,7 +2191,7 @@ export async function registerRoutes(app: Express) {
       if (displayPreferences) updateData.display_preferences = displayPreferences;
       if (securityPreferences) updateData.security_preferences = securityPreferences;
       
-      const { error } = await supabase.from('users').update(updateData).eq('id', req.user!.id);
+      const { error } = await supabase.from('users').update(updateData).eq('id', req.user?.id);
       if (error) throw error;
       return res.json({ success: true });
     } catch (error: unknown) {
@@ -2211,7 +2211,7 @@ export async function registerRoutes(app: Express) {
         security_answer_1: securityAnswer1,
         security_question_2: securityQuestion2,
         security_answer_2: securityAnswer2
-      }).eq('id', req.user!.id);
+      }).eq('id', req.user?.id);
       if (error) throw error;
       return res.json({ success: true });
     } catch (error: unknown) {
@@ -2222,7 +2222,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/transactions/export - export transactions as CSV
   app.get('/api/transactions/export', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data: accounts } = await supabase.from('accounts').select('id').eq('user_id', req.user!.id);
+      const { data: accounts } = await supabase.from('accounts').select('id').eq('user_id', req.user?.id);
       if (!accounts || accounts.length === 0) return res.status(404).json({ error: 'No accounts found' });
       
       const accountIds = accounts.map((a: Record<string, unknown>) => a.id);
@@ -2250,14 +2250,14 @@ export async function registerRoutes(app: Express) {
       if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Invalid amount' });
       
       const supabaseClient = getAdminClient();
-      const { data: loan } = await supabaseClient.from('loans').select('*').eq('id', req.params.id).eq('user_id', req.user!.id).single();
+      const { data: loan } = await supabaseClient.from('loans').select('*').eq('id', req.params.id).eq('user_id', req.user?.id).single();
       if (!loan) return res.status(404).json({ error: 'Loan not found' });
       if ((loan as Record<string, unknown>).status !== 'approved' && (loan as Record<string, unknown>).status !== 'active') {
         return res.status(400).json({ error: 'Loan is not active' });
       }
       
       // Check balance
-      const { data: account } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      const { data: account } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
       if (!account) return res.status(404).json({ error: 'Account not found' });
       const currentBalance = parseFloat(String((account as Record<string, unknown>).balance || '0'));
       if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
@@ -2276,7 +2276,7 @@ export async function registerRoutes(app: Express) {
       
       // Create transaction
       await supabaseClient.from('transactions').insert({
-        from_user_id: req.user!.id,
+        from_user_id: req.user?.id,
         amount: numAmount.toFixed(2),
         currency: 'USD',
         transaction_type: 'loan_repayment',
@@ -2290,7 +2290,7 @@ export async function registerRoutes(app: Express) {
       
       // Create alert
       await supabaseClient.from('alerts').insert({
-        user_id: req.user!.id,
+        user_id: req.user?.id,
         title: 'Loan Payment Made',
         message: `Payment of ${numAmount.toFixed(2)} applied to your loan. Remaining balance: ${remainingBalance.toFixed(2)}.`,
         type: 'success',
@@ -2307,7 +2307,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/loans/:id - get single loan
   app.get('/api/loans/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data, error } = await supabase.from('loans').select('*').eq('id', req.params.id).eq('user_id', req.user!.id).single();
+      const { data, error } = await supabase.from('loans').select('*').eq('id', req.params.id).eq('user_id', req.user?.id).single();
       if (error) throw error;
       return res.json(data);
     } catch (error: unknown) {
@@ -2318,7 +2318,7 @@ export async function registerRoutes(app: Express) {
   // GET /api/cards/:id - get single card
   app.get('/api/cards/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data: account } = await supabase.from('accounts').select('id').eq('user_id', req.user!.id);
+      const { data: account } = await supabase.from('accounts').select('id').eq('user_id', req.user?.id);
       if (!account) return res.status(404).json({ error: 'Account not found' });
       const { data, error } = await supabase.from('cards').select('*').eq('id', req.params.id).in('account_id', account.map((a: Record<string, unknown>) => a.id)).single();
       if (error) throw error;
@@ -2348,7 +2348,7 @@ export async function registerLiveChatRoutes(app: Express) {
       if (!message || !message.trim()) {
         return res.status(400).json({ error: 'Message is required' });
       }
-      const user = await storage.getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user?.email);
       if (!user) return res.status(404).json({ error: 'User not found' });
 
       let adminUserId = 1;
@@ -2402,7 +2402,7 @@ export async function registerLiveChatRoutes(app: Express) {
         const adminAlerts = admins.map((admin: Record<string, unknown>) => ({
           user_id: admin.id,
           title: 'New Chat Message',
-          message: `New message from ${req.user!.email}`,
+          message: `New message from ${req.user?.email}`,
           type: 'info',
           priority: 'normal',
           is_read: false
