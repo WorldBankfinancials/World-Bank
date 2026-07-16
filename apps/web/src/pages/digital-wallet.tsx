@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocation } from "wouter";
 import { 
@@ -37,7 +37,7 @@ export default function DigitalWallet() {
   const [showBalance, setShowBalance] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['/api/user'],
   });
 
@@ -54,10 +54,16 @@ export default function DigitalWallet() {
     staleTime: 30000
   });
 
+  useEffect(() => {
+    if (error) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [error]);
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">{t('loading')}</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -154,7 +160,7 @@ export default function DigitalWallet() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentTransactions && Array.isArray(recentTransactions) && (recentTransactions as any).map((transaction: any, index: number) => (
+              {(recentTransactions as unknown as Array<Record<string, unknown>>) && Array.isArray(recentTransactions) && (recentTransactions as unknown as Array<Record<string, unknown>>).map((transaction, index: number) => (
                 <div key={`item-${index}`} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -170,13 +176,13 @@ export default function DigitalWallet() {
                       <p className="font-medium text-sm">
                         {transaction.type === 'received' ? `From ${transaction.from}` : `To ${transaction.to}`}
                       </p>
-                      <p className="text-xs text-gray-500">{transaction.time}</p>
+                      <p className="text-xs text-gray-500">{String(transaction.time || '')}</p>
                     </div>
                   </div>
                   <span className={`font-medium ${
                     transaction.type === 'received' ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {transaction.amount}
+                    {String(transaction.amount || '')}
                   </span>
                 </div>
               ))}

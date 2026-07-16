@@ -15,6 +15,11 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Exchange() {
+  interface CurrencyRate {
+    code: string;
+    name: string;
+    flag: string;
+  }
   const { userProfile } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -118,7 +123,7 @@ export default function Exchange() {
   };
 
   // Fetch currencies from API
-  const { data: currencyList = [] } = useQuery<any[]>({
+  const { data: currencyList = [] } = useQuery<CurrencyRate[]>({
     queryKey: ['/api/currencies'],
     staleTime: 86400000
   });
@@ -183,22 +188,12 @@ export default function Exchange() {
               <div className="space-y-2">
                 <Label>{t('from') || 'From'}</Label>
                 <div className="flex space-x-2">
-                  <Input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="flex-1"
-                    placeholder="0.00"
-                  />
+                  <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="flex-1" placeholder="0.00" />
                   <Select value={fromCurrency} onValueChange={setFromCurrency}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {currencies.map(currency => (
-                        <SelectItem key={currency.code} value={currency.code}>
-                          {currency.flag} {currency.code}
-                        </SelectItem>
+                        <SelectItem key={currency.code} value={currency.code}>{currency.flag} {currency.code}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -207,12 +202,7 @@ export default function Exchange() {
 
               {/* Swap Button */}
               <div className="flex justify-center">
-                <Button 
-                  onClick={handleSwapCurrencies}
-                  variant="outline" 
-                  size="sm"
-                  className="rounded-full p-2"
-                >
+                <Button onClick={handleSwapCurrencies} variant="outline" size="sm" className="rounded-full p-2">
                   <ArrowUpDown className="w-4 h-4" />
                 </Button>
               </div>
@@ -221,21 +211,12 @@ export default function Exchange() {
               <div className="space-y-2">
                 <Label>{t('to') || 'To'}</Label>
                 <div className="flex space-x-2">
-                  <Input
-                    type="text"
-                    value={convertedAmount.toFixed(2)}
-                    disabled
-                    className="flex-1 bg-gray-50"
-                  />
+                  <Input type="text" value={convertedAmount.toFixed(2)} disabled className="flex-1 bg-gray-50" />
                   <Select value={toCurrency} onValueChange={setToCurrency}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {currencies.map(currency => (
-                        <SelectItem key={currency.code} value={currency.code}>
-                          {currency.flag} {currency.code}
-                        </SelectItem>
+                        <SelectItem key={currency.code} value={currency.code}>{currency.flag} {currency.code}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -255,11 +236,7 @@ export default function Exchange() {
                 </div>
               )}
 
-              <Button 
-                onClick={handleExchange} 
-                className="w-full bg-blue-600 text-white"
-                disabled={!amount || parseFloat(amount) <= 0}
-              >
+              <Button onClick={handleExchange} className="w-full bg-blue-600 text-white" disabled={!amount || parseFloat(amount) <= 0}>
                 {t('exchange_now') || 'Exchange Now'}
               </Button>
             </CardContent>
