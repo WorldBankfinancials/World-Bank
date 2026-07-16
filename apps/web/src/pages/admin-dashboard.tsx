@@ -91,7 +91,7 @@ interface PendingTransfer extends Transaction {
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [selectedTab, setSelectedTab] = useState("transfers");
-  const [adminNotes, setAdminNotes] = useState<{ [key: number]: string }>({});
+  const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
@@ -374,13 +374,13 @@ export default function AdminDashboard() {
   const handleApprove = (transferId: number) => {
     approveTransferMutation.mutate({
       transferId,
-      notes: (adminNotes as Record<number, string>)[transferId] || undefined
+      notes: adminNotes[String(transferId)] || undefined
     });
-    setAdminNotes(prev => ({ ...prev, [transferId]: '' }));
+    setAdminNotes(prev => ({ ...prev, [String(transferId)]: '' }));
   };
 
   const handleReject = (transferId: number) => {
-    const notes = (adminNotes as Record<number, string>)[transferId];
+    const notes = adminNotes[String(transferId)];
     if (!notes) {
       toast({
         title: 'Rejection Reason Required',
@@ -390,7 +390,7 @@ export default function AdminDashboard() {
       return;
     }
     rejectTransferMutation.mutate({ transferId, notes });
-    setAdminNotes(prev => ({ ...prev, [transferId]: '' }));
+    setAdminNotes(prev => ({ ...prev, [String(transferId)]: '' }));
   };
 
   const handleTicketUpdate = (ticketId: number, status: string, resolution?: string) => {
@@ -604,15 +604,15 @@ export default function AdminDashboard() {
                           <Textarea
                             id={`notes-${transfer.id}`}
                             placeholder="Add notes about this transfer..."
-                            value={(adminNotes as Record<number, string>)[transfer.id] || ''}
-                            onChange={(e) => setAdminNotes(prev => ({ ...prev, [transfer.id]: e.target.value } as Record<number, string>))}
+                            value={adminNotes[String(transfer.id)] || ''}
+                            onChange={(e) => setAdminNotes(prev => ({ ...prev, [String(transfer.id)]: e.target.value }))}
                             className="mt-1"
                           />
                         </div>
 
                         <div className="flex space-x-3">
                           <Button
-                            onClick={() => handleApprove(transfer.id)}
+                            onClick={() => handleApprove(Number(transfer.id))}
                             disabled={approveTransferMutation.isPending}
                             className="bg-green-600 hover:bg-green-700 text-white"
                           >
@@ -620,7 +620,7 @@ export default function AdminDashboard() {
                             Approve Transfer
                           </Button>
                           <Button
-                            onClick={() => handleReject(transfer.id)}
+                            onClick={() => handleReject(Number(transfer.id))}
                             disabled={rejectTransferMutation.isPending}
                             variant="destructive"
                           >

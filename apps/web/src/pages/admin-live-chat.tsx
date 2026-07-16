@@ -45,12 +45,12 @@ export default function AdminLiveChat() {
   });
 
   // Realtime chat messaging support
-  useRealtimeChat?.('admin_1', (incomingMessage: any) => {
+  useRealtimeChat?.('admin_1', (incomingMessage) => {
     if (incomingMessage) {
       const newMsg: Message = {
         id: incomingMessage.id || Date.now().toString(),
-        sender: incomingMessage.sender || 'admin',
-        text: incomingMessage.text || incomingMessage.message || '',
+        sender: incomingMessage.senderRole || 'admin',
+        text: incomingMessage.message || '',
         timestamp: incomingMessage.timestamp || new Date().toISOString()
       };
       setMessages((prev) => [...prev, newMsg]);
