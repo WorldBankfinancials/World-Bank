@@ -1,0 +1,36 @@
+name: Combine fix-routes parts
+
+on:
+  push:
+    branches:
+      - deep-scan-27-fixes
+    paths:
+      - 'server/fix-routes-part4.ts'
+
+jobs:
+  combine:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: deep-scan-27-fixes
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Combine parts
+        run: |
+          cat server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts > server/fix-routes.ts
+
+      - name: Remove parts
+        run: |
+          rm server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts
+
+      - name: Commit combined file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add server/fix-routes.ts
+          git rm server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts
+          git commit -m "Combine fix-routes parts into single file with 18 bug fixes"
+          git push
