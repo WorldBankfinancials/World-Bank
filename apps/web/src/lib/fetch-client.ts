@@ -1,81 +1,36 @@
 /**
- * UNIFIED FETCH CLIENT - Frontend
- * Handles both authenticated and public API calls
- * Automatically includes auth headers when available
+ * Fetch client utility for making API requests.
+ * Provides a thin wrapper around fetch with error handling.
  */
 
-import { getAccessToken } from './supabase';
-
-/**
- * Unauthenticated fetch for public endpoints (registration, login, etc)
- * @example
- * const response = await publicFetch('/api/auth/check-email', {
- *   method: 'POST',
- *   body: JSON.stringify({ email: 'test@example.com' })
- * });
- */
-export async function publicFetch(url: string, options?: RequestInit): Promise<Response> {
-  return fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
+export interface FetchOptions extends RequestInit {
+  skipAuth?: boolean;
 }
 
-/**
- * Authenticated fetch for protected endpoints
- * Automatically includes Bearer token from Supabase session
- * @example
- * const response = await authenticatedFetch('/api/user/profile');
- * @deprecated Use `authenticatedFetch` from `@/lib/queryClient` instead. This duplicate is kept for backwards compatibility.
- */
-export async function authenticatedFetch(
+export async function fetchClient<T = unknown>(
   url: string,
-  options?: RequestInit
-): Promise<Response> {
-  const token = await getAccessToken();
+  options: FetchOptions = {}
+): Promise<T> {
+  const { skipAuth, ...fetchOptions } = options;
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...fetchOptions.headers as Record<string, string>,
+  };
 
-  if (!token) {
-    throw new Error('Not authenticated. Please login first.');
+  if (!skipAuth) {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
   }
 
-  return fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...options?.headers,
-    },
-  });
-}
-
-/**
- * Helper to make authenticated POST requests
- */
-export async function authPost(url: string, data: any): Promise<Response> {
-  return authenticatedFetch(url, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-}
-
-/**
- * Helper to make authenticated GET requests
- */
-export async function authGet(url: string): Promise<Response> {
-  return authenticatedFetch(url, {
-    method: 'GET',
-  });
-}
-
-/**
- * Helper to make public POST requests
- */
-export async function publicPost(url: string, data: any): Promise<Response> {
-  return publicFetch(url, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
+  const response = await fetch(url, { ...fetchOptions, headers });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || `Request failed with status ${response.status}`);
+  }
+  
+  return response.json();
 }
