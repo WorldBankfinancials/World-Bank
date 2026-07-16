@@ -1234,7 +1234,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Create support ticket for the user explaining rejection
       await storage.createSupportTicket({
-        userId: registrationId,
+        userId: String(registrationId),
         subject: 'Registration Status - Action Required',
         description: `Your registration has been reviewed. ${reason || 'Please contact support for more information.'}`,
         // category removed,
