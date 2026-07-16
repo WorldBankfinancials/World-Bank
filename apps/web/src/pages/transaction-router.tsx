@@ -341,67 +341,73 @@ export default function TransactionRouter() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {routes.map((route) => (
-                <div key={route.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-medium text-gray-900">{route.name}</h3>
-                        <Badge variant="outline" className="text-blue-600 border-blue-200">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          {route.targetPage}
-                        </Badge>
+              {routes && routes.length > 0 ? (
+                routes.map((route) => (
+                  <div key={route.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="font-medium text-gray-900">{route.name}</h3>
+                          <Badge variant="outline" className="text-blue-600 border-blue-200">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {route.targetPage}
+                          </Badge>
+                        </div>
+                        
+                        <p className="text-sm text-gray-600 mb-2">{route.description}</p>
+                        
+                        {route.conditions && Object.keys(route.conditions).length > 0 && (
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            {route.conditions.accountType && (
+                              <Badge variant="secondary" className="text-xs">
+                                Account: {route.conditions.accountType}
+                              </Badge>
+                            )}
+                            {route.conditions.transactionType && (
+                              <Badge variant="secondary" className="text-xs">
+                                Type: {route.conditions.transactionType}
+                              </Badge>
+                            )}
+                            {route.conditions.amountMin && (
+                              <Badge variant="secondary" className="text-xs">
+                                Min: ${route.conditions.amountMin}
+                              </Badge>
+                            )}
+                            {route.conditions.amountMax && (
+                              <Badge variant="secondary" className="text-xs">
+                                Max: ${route.conditions.amountMax}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </div>
                       
-                      <p className="text-sm text-gray-600 mb-2">{route.description}</p>
-                      
-                      {route.conditions && Object.keys(route.conditions).length > 0 && (
-                        <div className="flex flex-wrap gap-2 text-xs">
-                          {route.conditions.accountType && (
-                            <Badge variant="secondary" className="text-xs">
-                              Account: {route.conditions.accountType}
-                            </Badge>
-                          )}
-                          {route.conditions.transactionType && (
-                            <Badge variant="secondary" className="text-xs">
-                              Type: {route.conditions.transactionType}
-                            </Badge>
-                          )}
-                          {route.conditions.amountMin && (
-                            <Badge variant="secondary" className="text-xs">
-                              Min: ${route.conditions.amountMin}
-                            </Badge>
-                          )}
-                          {route.conditions.amountMax && (
-                            <Badge variant="secondary" className="text-xs">
-                              Max: ${route.conditions.amountMax}
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleTestRoute(route.targetPage)}
-                      >
-                        <ArrowRight className="w-4 h-4 mr-1" />
-                        Test
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleDeleteRoute(route.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        Delete
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleTestRoute(route.targetPage)}
+                        >
+                          <ArrowRight className="w-4 h-4 mr-1" />
+                          Test
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleDeleteRoute(route.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No items found</p>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>

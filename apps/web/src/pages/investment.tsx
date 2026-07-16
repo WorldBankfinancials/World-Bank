@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
+import { useToast } from '@/hooks/use-toast';
 import { AccountData } from '@/types';
 
 export default function Investment() {
@@ -41,11 +42,20 @@ export default function Investment() {
   });
 
   // Fetch live market data
-  const { data: marketData } = useQuery<MarketData>({
+  const { data: marketData, error: marketError } = useQuery<MarketData>({
     queryKey: ['/api/market-rates'],
     staleTime: 60000, // 1 minute cache
     refetchInterval: 60000 // Auto refresh every minute
   });
+
+  const { toast } = useToast();
+
+  const queryError = error || marketError;
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [queryError]);
 
   // Show loading state
   if (isLoading) {

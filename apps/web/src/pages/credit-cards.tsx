@@ -18,7 +18,7 @@ export default function CreditCards() {
   
   // CRITICAL FIX: Move ALL hooks before ANY conditional returns
   // Prevents "Rendered more hooks than during the previous render" error
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading, error: userError } = useQuery<User>({
     queryKey: ['/api/user'],
   });
   
@@ -27,7 +27,7 @@ export default function CreditCards() {
     staleTime: 30000
   });
 
-  const { data: recentTransactions } = useQuery({
+  const { data: recentTransactions, error: transactionsError } = useQuery({
     queryKey: ['/api/card-transactions'],
     staleTime: 30000
   });
@@ -38,11 +38,12 @@ export default function CreditCards() {
 
   const { toast } = useToast();
 
+  const queryError = userError || cardsError || transactionsError;
   useEffect(() => {
-    if (cardsError) {
+    if (queryError) {
       toast({ title: 'Error loading data', variant: 'destructive' });
     }
-  }, [cardsError]);
+  }, [queryError]);
 
   // NOW safe to return early - all hooks are called
   if (isLoading) {

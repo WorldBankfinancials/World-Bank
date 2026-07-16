@@ -48,10 +48,16 @@ export default function Login() {
   const [showLiveChat, setShowLiveChat] = useState(false);
 
   // Fetch user data to get current PIN when PIN verification is shown
-  useQuery({
+  const { error: queryError } = useQuery({
     queryKey: ['/api/user'],
     enabled: showPinVerification, // Only fetch when PIN verification is needed
   });
+
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [queryError]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

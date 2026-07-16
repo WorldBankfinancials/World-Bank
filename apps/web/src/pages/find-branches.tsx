@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { User } from "@packages/shared/schema";
 
 import Header from "@/components/Header";
@@ -57,7 +57,7 @@ export default function FindBranches() {
   const { t } = useLanguage();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading, error: userError } = useQuery<User>({
     queryKey: ['/api/user'],
   });
 
@@ -69,6 +69,13 @@ export default function FindBranches() {
   const { data: atms, isLoading: atmsLoading, error: atmsError } = useQuery<ATM[]>({
     queryKey: ['/api/atms'],
   });
+
+  const queryError = userError || branchesError || atmsError;
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [queryError]);
 
   if (isLoading || branchesLoading || atmsLoading) {
     return (

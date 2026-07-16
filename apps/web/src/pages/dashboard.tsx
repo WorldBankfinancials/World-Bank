@@ -111,12 +111,6 @@ export default function Dashboard() {
     }
   });
 
-  useEffect(() => {
-    if (transactionsError) {
-      toast({ title: 'Error loading transactions', variant: 'destructive' });
-    }
-  }, [transactionsError]);
-
   // Track user presence for real-time online/offline status
   // usePresence disabled for backend auth mode
   // usePresence(
@@ -125,7 +119,7 @@ export default function Dashboard() {
   // );
 
   // Fetch alerts
-  const { data: fetchedAlerts = [] } = useQuery<Alert[]>({
+  const { data: fetchedAlerts = [], error: alertsError } = useQuery<Alert[]>({
     queryKey: ['/api/alerts'],
     queryFn: async () => {
       try {
@@ -142,6 +136,12 @@ export default function Dashboard() {
     },
     refetchInterval: 10000
   });
+
+  useEffect(() => {
+    if (transactionsError || alertsError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [transactionsError, alertsError]);
 
   useEffect(() => {
     if (fetchedAlerts && fetchedAlerts.length > 0) {
