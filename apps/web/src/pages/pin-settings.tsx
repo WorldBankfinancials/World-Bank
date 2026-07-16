@@ -258,11 +258,11 @@ export default function PinSettings() {
                                 ? 'bg-yellow-500'
                                 : 'bg-green-500'
                               : 'bg-gray-200'
-                          }`
+                          }`}
                         />
                       ))}
                     </div>
-                    <span className={`text-sm ${pinStrength.color}`}>
+                    <span className={"text-sm " + pinStrength.color}>
                       {pinStrength.text}
                     </span>
                   </div>
