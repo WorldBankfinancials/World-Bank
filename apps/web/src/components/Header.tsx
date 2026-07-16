@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Avatar } from './Avatar';
+import { LanguageSelector } from './LanguageSelector';
 
 interface HeaderProps {
   user?: UserType;
@@ -141,6 +142,8 @@ export default function Header({}: HeaderProps) {
                 <span className="text-sm font-bold text-blue-900">${(() => { const balanceNum = parseFloat(String(displayBalance)); return isNaN(balanceNum) ? '0.00' : balanceNum.toLocaleString('en-US', { minimumFractionDigits: 2 }); })()}</span>
               </div>
             )}
+
+            <LanguageSelector />
 
             <div className="relative" ref={dropdownRef}>
               <button
