@@ -10,44 +10,41 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      actions: write
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: deep-scan-27-fixes
-          fetch-depth: 0
-
-      - name: Combine parts and push via API
+      - name: Combine and push
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ ! -f server/fix-routes-part1.ts ]; then
-            echo "Parts already combined, skipping"
-            exit 0
-          fi
-          cat server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts > server/fix-routes.ts
-          COMBINED=$(cat server/fix-routes.ts)
-          rm -f server/fix-routes-part1.ts server/fix-routes-part2.ts server/fix-routes-part3.ts server/fix-routes-part4.ts
+          REPO="WorldBankfinancials/World-Bank"
+          BRANCH="deep-scan-27-fixes"
           
-          # Get current file SHA
-          OLD_SHA=$(gh api repos/WorldBankfinancials/World-Bank/contents/server/fix-routes.ts?ref=deep-scan-27-fixes --jq '.sha')
+          # Fetch all 4 parts
+          PART1=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/contents/server/fix-routes-part1.ts?ref=$BRANCH" | jq -r '.content' | base64 -d)
+          PART2=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/contents/server/fix-routes-part2.ts?ref=$BRANCH" | jq -r '.content' | base64 -d)
+          PART3=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/contents/server/fix-routes-part3.ts?ref=$BRANCH" | jq -r '.content' | base64 -d)
+          PART4=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/contents/server/fix-routes-part4.ts?ref=$BRANCH" | jq -r '.content' | base64 -d)
           
-          # Update fix-routes.ts
-          gh api repos/WorldBankfinancials/World-Bank/contents/server/fix-routes.ts \
-            --method PUT \
-            -f message="Combine fix-routes parts into single file with 18 bug fixes" \
-            -f content="$(base64 -w0 server/fix-routes.ts)" \
-            -f sha="$OLD_SHA" \
-            -f branch="deep-scan-27-fixes"
+          COMBINED="$PART1$PART2$PART3$PART4"
+          ENCODED=$(echo -n "$COMBINED" | base64 -w0)
+          
+          # Get SHA of existing fix-routes.ts
+          OLD_SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/contents/server/fix-routes.ts?ref=$BRANCH" | jq -r '.sha')
+          
+          # Update fix-routes.ts with combined content
+          curl -s -X PUT \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"message\":\"Combine fix-routes parts with 18 bug fixes\",\"content\":\"$ENCODED\",\"sha\":\"$OLD_SHA\",\"branch\":\"$BRANCH\"}" \
+            "https://api.github.com/repos/$REPO/contents/server/fix-routes.ts"
           
           # Delete part files
           for i in 1 2 3 4; do
-            PART_SHA=$(gh api "repos/WorldBankfinancials/World-Bank/contents/server/fix-routes-part${i}.ts?ref=deep-scan-27-fixes" --jq '.sha')
-            gh api "repos/WorldBankfinancials/World-Bank/contents/server/fix-routes-part${i}.ts" \
-              --method DELETE \
-              -f message="Remove fix-routes-part${i}.ts" \
-              -f sha="$PART_SHA" \
-              -f branch="deep-scan-27-fixes" || true
+            PART_SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/contents/server/fix-routes-part${i}.ts?ref=$BRANCH" | jq -r '.sha')
+            curl -s -X DELETE \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"message\":\"Delete part $i\",\"sha\":\"$PART_SHA\",\"branch\":\"$BRANCH\"}" \
+              "https://api.github.com/repos/$REPO/contents/server/fix-routes-part${i}.ts" || true
           done
           
-          echo "Done combining files"
+          echo "Done"
