@@ -71,7 +71,7 @@ export async function getAccessToken(): Promise<string | null> {
  */
 export function subscribeToRealtimeUpdates(
   table: string,
-  callback: (payload: any) => void
+  callback: (payload: Record<string, unknown>) => void
 ) {
   try {
     const subscription = supabase

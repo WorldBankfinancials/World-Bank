@@ -7,9 +7,10 @@ import { setupGlobalErrorSuppression } from "./lib/globalErrorSuppression";
 setupGlobalErrorSuppression();
 
 // Global error handling to suppress noise and log properly
-const isViteWarning = (reason: any) => {
-  const msg = reason?.message || reason?.toString() || '';
-  const stack = reason?.stack || '';
+const isViteWarning = (reason: unknown) => {
+  const r = reason as { message?: string; stack?: string } | null;
+  const msg = r?.message || (reason as { toString?: () => string })?.toString?.() || '';
+  const stack = r?.stack || '';
   return msg.includes('did not match the expected pattern') ||
          msg.includes('HTTP Error') ||
          stack.includes('@vite/client') ||
