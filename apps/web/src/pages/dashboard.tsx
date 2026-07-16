@@ -94,18 +94,17 @@ export default function Dashboard() {
           return [];
         }
         const data = await response.json();
-        return Array.isArray(data) ? data.slice(0, 10).map((txn: Record<string, unknown>) => ({
-          id: txn.id,
-          type: txn.type || 'transfer',
-          amount: txn.amount,
-          status: txn.status || 'pending',
-          recipient: txn.recipientName || 'Recipient',
-          timestamp: txn.createdAt || new Date().toISOString(),
-          referenceId: txn.referenceNumber || txn.id,
-          description: txn.description || txn.recipientName || 'Transfer',
-          date: txn.createdAt || new Date().toISOString(),
-          created_at: txn.createdAt || new Date().toISOString()
-        })) : [];
+        return (Array.isArray(data) ? data.slice(0, 10) : []).map((txn: Record<string, unknown>) => ({
+          id: txn.id as string | number,
+          type: (txn.type as string) || 'transfer',
+          amount: txn.amount as string | number,
+          description: (txn.description as string) || (txn.recipientName as string) || 'Transfer',
+          date: (txn.createdAt as string) || new Date().toISOString(),
+          created_at: (txn.createdAt as string) || new Date().toISOString(),
+          createdAt: (txn.createdAt as string) || new Date().toISOString(),
+          status: (txn.status as string) || 'pending',
+          recipientName: (txn.recipientName as string) || undefined,
+        })) as TransactionData[];
       } catch (error) {
         return [];
       }
@@ -155,7 +154,7 @@ export default function Dashboard() {
   }, [fetchedAlerts]);
 
   // Subscribe to realtime user balance updates
-  useSupabaseRealtimeUserBalance((data) => setUserData(data), true);
+  useSupabaseRealtimeUserBalance((data) => setUserData(data as unknown as CustomerData), true);
 
   useEffect(() => {
     const handleToggleChat = () => setIsChatOpen(!isChatOpen);
@@ -175,13 +174,13 @@ export default function Dashboard() {
   }>>([]);
 
   // Subscribe to realtime account updates
-  useSupabaseRealtimeAccounts((accountsData: Array<Record<string, unknown>>) => {
+  useSupabaseRealtimeAccounts((accountsData) => {
     if (Array.isArray(accountsData) && accountsData.length > 0) {
-      const formattedAccounts = accountsData.map((account: Record<string, unknown>) => ({
+      const formattedAccounts = accountsData.map((account) => ({
         type: account.accountType ? String(account.accountType).charAt(0).toUpperCase() + String(account.accountType).slice(1) : 'Account',
         number: account.accountNumber ? `****${String(account.accountNumber).slice(-4)}` : '****0000',
         balance: account.balance ? parseFloat(String(account.balance)) : 0,
-        icon: account.accountType === 'checking' ? Wallet : 
+        icon: account.accountType === 'checking' ? Wallet :
               account.accountType === 'savings' ? Building2 : TrendingUp,
         id: Number(account.id)
       }));
@@ -190,7 +189,7 @@ export default function Dashboard() {
   }, true);
 
   // Subscribe to realtime transaction updates
-  useSupabaseRealtimeTransactions((transactions: Array<Record<string, unknown>>) => {
+  useSupabaseRealtimeTransactions((transactions) => {
     queryClient.setQueryData(['/api/transactions/recent'], transactions);
   }, true);
 
