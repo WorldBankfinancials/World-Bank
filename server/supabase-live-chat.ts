@@ -23,7 +23,7 @@ export async function getChatHistory(req: AuthenticatedRequest, res: Response) {
     if (error) throw error;
     return res.json(data || []);
   } catch (error: unknown) {
-    return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' });
+    return res.status(500).json({ error: 'An internal error occurred' });
   }
 }
 
@@ -40,7 +40,7 @@ export async function getActiveSessions(req: AuthenticatedRequest, res: Response
     if (error) throw error;
     return res.json(data || []);
   } catch (error: unknown) {
-    return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' });
+    return res.status(500).json({ error: 'An internal error occurred' });
   }
 }
 
@@ -67,6 +67,6 @@ export async function createTicketFromChat(req: AuthenticatedRequest, res: Respo
     if (error) throw error;
     return res.json(data);
   } catch (error: unknown) {
-    return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' });
+    return res.status(500).json({ error: 'An internal error occurred' });
   }
 }

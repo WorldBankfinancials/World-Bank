@@ -20,7 +20,7 @@ export function validateBody<T>(schema: z.ZodSchema<T>) {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = validateRequest(schema, req.body);
     if (!result.success) return res.status(400).json({ error: 'Validation failed', details: result.errors });
-    req.validatedBody = result.data;
+    (req as Request & { validatedBody?: unknown }).validatedBody = result.data;
     next();
   };
 }

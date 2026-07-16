@@ -15,7 +15,7 @@ export interface TransactionStep {
 export class BankingTransaction {
   private steps: TransactionStep[] = [];
   private executedSteps: TransactionStep[] = [];
-  private results: any[] = [];
+  private results: unknown[] = [];
 
   /**
    * Add a step to the transaction
@@ -139,7 +139,7 @@ export async function atomicBalanceUpdate(
       if (error.message?.includes('insufficient') || error.message?.includes('negative')) {
         return { success: false, error: 'Insufficient funds' };
       }
-      return { success: false, error: error.message };
+      return { success: false, error: 'Transaction failed' };
     }
 
     if (!data || data.length === 0) {
@@ -209,7 +209,7 @@ async function fallbackAtomicUpdate(
     return { success: true, newBalance: newBalance.toString() };
 
   } catch (error: unknown) {
-    return { success: false, error: (error instanceof Error ? error.message : 'Internal server error') };
+    return { success: false, error: 'Transaction failed' };
   }
 }
 
@@ -224,10 +224,10 @@ export async function atomicTransfer(params: {
   description: string;
   recipientName?: string;
   recipientCountry?: string;
-}): Promise<{ success: boolean; transaction?: any; error?: string }> {
+}): Promise<{ success: boolean; transaction?: Record<string, unknown>; error?: string }> {
   
   const tx = new BankingTransaction();
-  let createdTransaction: any = null;
+  let createdTransaction: Record<string, unknown> | null = null;
 
   // Step 1: Deduct from sender
   tx.addStep({
@@ -318,7 +318,7 @@ export async function atomicTransfer(params: {
   const result = await tx.execute();
   
   if (result.success) {
-    return { success: true, transaction: createdTransaction };
+    return { success: true, transaction: createdTransaction ?? undefined };
   } else {
     return { success: false, error: result.error };
   }

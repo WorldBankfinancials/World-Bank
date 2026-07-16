@@ -1,40 +1,31 @@
-import type { Express } from 'express';
-import path from 'path';
-import fs from 'fs';
+import express, { type Express } from "express";
+import fs from "fs";
+import path from "path";
+import { createServer, type InlineConfig } from "vite";
 
-// Use __dirname for path resolution (works in both ESM and CJS contexts with proper config)
-const __dirname_safe = typeof __dirname !== 'undefined' ? __dirname : path.resolve();
+// __dirname is available natively in CommonJS
 
-export function log(message: string, source?: string) {
-  const formattedTime = new Date().toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true,
-  });
-  console.info(`${formattedTime} [express] ${source || 'server'}: ${message}`);
+export function log(message: string, source = "express") {
+  const formattedTime = new Date().toLocaleTimeString("en-US", { hour12: false });
+  console.info(`${formattedTime} [${source}] ${message}`);
+}
+
+export async function setupVite(app: Express, server: { on: (event: string, cb: (...args: unknown[]) => void) => void }) {
+  const serverOptions = {
+    middlewareMode: true,
+    appType: "custom",
+    server: { middlewareMode: true }
+  };
+
+  const vite = await createServer(serverOptions as unknown as InlineConfig);
+  app.use(vite.middlewares);
+  app.use(express.static(path.resolve(__dirname, "..", "dist")));
 }
 
 export function serveStatic(app: Express) {
-  const clientBuildPath = path.resolve(__dirname_safe, '..', 'dist', 'public');
-  
-  if (fs.existsSync(clientBuildPath)) {
-    app.use(express.static(clientBuildPath));
-    
-    // SPA fallback: serve index.html for non-API routes
-    app.get('*', (req, res) => {
-      if (!req.path.startsWith('/api/')) {
-        res.sendFile(path.join(clientBuildPath, 'index.html'));
-      } else {
-        res.status(404).json({ error: 'API endpoint not found' });
-      }
-    });
+  const distPath = path.resolve(__dirname, "..", "dist");
+  if (!fs.existsSync(distPath)) {
+    throw new Error(`Could not find dist directory at ${distPath}`);
   }
+  app.use(express.static(distPath));
 }
-
-// Cast for Vite config compatibility
-export const viteConfig = {
-  server: {
-    middlewareMode: true,
-  },
-} as unknown as import('vite').InlineConfig;
