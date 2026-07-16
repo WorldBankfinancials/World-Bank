@@ -39,7 +39,7 @@ export default function InternationalTransfer() {
   const [showPendingStatus, setShowPendingStatus] = useState(false);
   const [transferReference2, setTransferReference2] = useState("");
   const [transferStatus, setTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Cleanup polling interval on unmount
   useEffect(() => {
