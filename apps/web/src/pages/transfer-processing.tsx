@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2, Clock, Shield } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { authenticatedFetch } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface TransferStatusResponse {
   status: string;
@@ -21,13 +22,14 @@ export default function TransferProcessing() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [progress, setProgress] = useState(0);
 
   const searchParams = new URLSearchParams(search);
   const transactionId = searchParams.get("id") || "";
 
   // Poll the backend for transfer status
-  const { data: statusData } = useQuery<TransferStatusResponse>({
+  const { data: statusData, isLoading, error: queryError } = useQuery<TransferStatusResponse>({
     queryKey: ['/api/transfers', transactionId, 'status'],
     queryFn: async () => {
       if (!transactionId) return { status: "processing" };
@@ -40,6 +42,20 @@ export default function TransferProcessing() {
     enabled: !!transactionId,
     refetchInterval: 3000,
   });
+
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading transfer status', variant: 'destructive' });
+    }
+  }, [queryError]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   // Navigate based on status
   useEffect(() => {

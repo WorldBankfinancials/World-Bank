@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Clock, AlertCircle, Phone, Mail } from "lucide-react";
 import { authenticatedFetch } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface TransferStatusResponse {
   status: string;
@@ -20,12 +21,13 @@ interface TransferStatusResponse {
 export default function TransferPending() {
   const [, setLocation] = useLocation();
   const search = useSearch();
+  const { toast } = useToast();
 
   const searchParams = new URLSearchParams(search);
   const transactionId = searchParams.get("id") || "";
 
   // Poll the backend for transfer status every 5 seconds
-  const { data: statusData } = useQuery<TransferStatusResponse>({
+  const { data: statusData, isLoading, error: queryError } = useQuery<TransferStatusResponse>({
     queryKey: ['/api/transfers', transactionId, 'status'],
     queryFn: async () => {
       if (!transactionId) return { status: "pending" };
@@ -38,6 +40,20 @@ export default function TransferPending() {
     enabled: !!transactionId,
     refetchInterval: 5000,
   });
+
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading transfer status', variant: 'destructive' });
+    }
+  }, [queryError]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   // Navigate based on status
   useEffect(() => {

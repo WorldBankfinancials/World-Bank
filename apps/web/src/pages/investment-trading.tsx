@@ -124,6 +124,7 @@ export default function InvestmentTrading() {
             <input
               type="text"
               placeholder="Symbol (e.g. AAPL)"
+              aria-label="Stock symbol"
               value={selectedSymbol}
               onChange={(e) => setSelectedSymbol(e.target.value.toUpperCase())}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -131,6 +132,7 @@ export default function InvestmentTrading() {
             <input
               type="number"
               placeholder="Shares"
+              aria-label="Number of shares"
               value={tradeAmount}
               onChange={(e) => setTradeAmount(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
