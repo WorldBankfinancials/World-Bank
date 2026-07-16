@@ -182,6 +182,9 @@ export default function Header({}: HeaderProps) {
                         {section.items.map((item, itemIndex) => (
                           <Link key={itemIndex} href={item.href}>
                             <div
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.click(); }}
                               onClick={() => setShowProfileMenu(false)}
                               className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors cursor-pointer"
                             >

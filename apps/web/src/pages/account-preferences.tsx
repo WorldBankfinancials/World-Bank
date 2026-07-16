@@ -36,10 +36,24 @@ export default function AccountPreferences() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: userData } = useQuery<UserData & UserPreferences>({
+  const { data: userData, isLoading, error: queryError } = useQuery<UserData & UserPreferences>({
     queryKey: ['/api/user'],
     staleTime: 60000,
   });
+
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading preferences', variant: 'destructive' });
+    }
+  }, [queryError]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   const [preferences, setPreferences] = useState({
     notifications: { email: true, sms: true, push: true, marketing: false },

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { authenticatedFetch, queryClient } from "@/lib/queryClient";
@@ -15,13 +15,19 @@ import { CreditCard, Banknote, Building, Smartphone, Plus, CheckCircle, Clock, W
 export default function AddMoney() {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading, error: queryError } = useQuery<User>({
     queryKey: ['/api/user'],
   });
-  
+
   const [selectedMethod, setSelectedMethod] = useState("");
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading account data', variant: 'destructive' });
+    }
+  }, [queryError]);
 
   if (isLoading) {
     return (
