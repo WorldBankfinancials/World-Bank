@@ -371,16 +371,16 @@ export default function AdminDashboard() {
     },
   });
 
-  const handleApprove = (transferId: any) => {
+  const handleApprove = (transferId: number) => {
     approveTransferMutation.mutate({
       transferId,
-      notes: (adminNotes as any)[transferId] || undefined
+      notes: (adminNotes as Record<number, string>)[transferId] || undefined
     });
     setAdminNotes(prev => ({ ...prev, [transferId]: '' }));
   };
 
-  const handleReject = (transferId: any) => {
-    const notes = (adminNotes as any)[transferId];
+  const handleReject = (transferId: number) => {
+    const notes = (adminNotes as Record<number, string>)[transferId];
     if (!notes) {
       toast({
         title: 'Rejection Reason Required',
@@ -397,7 +397,7 @@ export default function AdminDashboard() {
     updateTicketMutation.mutate({ ticketId, status, resolution });
   };
 
-  const adminUser: any = {
+  const adminUser: User = {
     id: 1,
     username: "admin",
     firstName: "World",
@@ -428,7 +428,7 @@ export default function AdminDashboard() {
     isActive: true,
     createdAt: new Date(),
     updatedAt: null
-  };
+  } as unknown as User;
 
   // Show loading state
   if (customersLoading || transfersLoading || ticketsLoading) {
@@ -485,7 +485,7 @@ export default function AdminDashboard() {
                 <Users className="w-5 h-5 text-blue-600" />
                 <div>
                   <p className="text-sm text-gray-600">Customers</p>
-                  <p className="text-xl font-bold">{(adminStats as any)?.totalCustomers || 0}</p>
+                  <p className="text-xl font-bold">{String((adminStats as Record<string, unknown>)?.totalCustomers || 0)}</p>
                 </div>
               </div>
             </CardContent>
@@ -497,7 +497,7 @@ export default function AdminDashboard() {
                 <CreditCard className="w-5 h-5 text-green-600" />
                 <div>
                   <p className="text-sm text-gray-600">Today's Volume</p>
-                  <p className="text-xl font-bold">${(adminStats as any)?.todayVolume || 0}</p>
+                  <p className="text-xl font-bold">${String((adminStats as Record<string, unknown>)?.todayVolume || 0)}</p>
                 </div>
               </div>
             </CardContent>
@@ -604,8 +604,8 @@ export default function AdminDashboard() {
                           <Textarea
                             id={`notes-${transfer.id}`}
                             placeholder="Add notes about this transfer..."
-                            value={(adminNotes as any)[transfer.id] || ''}
-                            onChange={(e) => setAdminNotes(prev => ({ ...prev, [transfer.id]: e.target.value } as any))}
+                            value={(adminNotes as Record<number, string>)[transfer.id] || ''}
+                            onChange={(e) => setAdminNotes(prev => ({ ...prev, [transfer.id]: e.target.value } as Record<number, string>))}
                             className="mt-1"
                           />
                         </div>
