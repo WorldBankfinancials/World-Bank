@@ -19,7 +19,7 @@ interface Transaction {
 
 export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (transaction: Transaction) => void) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleTransactionUpdate = useCallback(
     (transaction: Transaction) => {
@@ -61,7 +61,7 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
       )
       .subscribe((status: string) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          if (pollIntervalRef.current) clearTimeout(pollIntervalRef.current);
           pollIntervalRef.current = setInterval(async () => {
             try {
               const res = await authenticatedFetch('/api/transactions');
@@ -82,7 +82,7 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
 
     return () => {
       channel.unsubscribe();
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (pollIntervalRef.current) clearTimeout(pollIntervalRef.current);
     };
   }, [userId, handleTransactionUpdate]);
 
