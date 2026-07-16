@@ -76,7 +76,7 @@ export type TransferInput    = z.infer<typeof transferSchema>;
 export type VerifyPinInput   = z.infer<typeof verifyPinSchema>;
 
 // ============================================================
-// CORE TABLE: user_profiles
+// CORE TABLE: users
 // ============================================================
 
 export const users = pgTable('users', {
@@ -239,9 +239,12 @@ export const messages = pgTable('messages', {
   sessionId:    text('session_id'),
   senderRole:   text('sender_role').default('customer'),
   recipientRole: text('recipient_role').default('admin'),
-  content:      text('content').notNull(),
+  message:      text('message').notNull(),
   messageType:  text('message_type').default('text'),
   isRead:       boolean('is_read').default(false),
+  conversationId: uuid('conversation_id'),
+  replyTo:      uuid('reply_to'),
+  metadata:     jsonb('metadata'),
   createdAt:    timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
@@ -386,7 +389,7 @@ export interface InsertSavingsGoal {
 }
 
 // ============================================================
-// DRIZZLE SELECT ROW TYPES (no Insert* here — canonical interfaces below)
+// DRIZZLE SELECT ROW TYPES
 // ============================================================
 
 export type UserProfileRow      = typeof users.$inferSelect;
@@ -401,7 +404,6 @@ export type AlertRow            = typeof alerts.$inferSelect;
 
 // ============================================================
 // CANONICAL APPLICATION TYPES
-// These are the interfaces imported by client and server code.
 // ============================================================
 
 export interface User {
@@ -619,7 +621,7 @@ export interface Message {
   sessionId?: string | null;
   senderRole?: string;
   recipientRole?: string;
-  content: string;
+  message: string;
   messageType?: string;
   isRead?: boolean;
   createdAt?: string | Date | null;
@@ -631,7 +633,7 @@ export interface InsertMessage {
   sessionId?: string;
   senderRole?: string;
   recipientRole?: string;
-  content: string;
+  message: string;
   isRead?: boolean;
 }
 
@@ -697,7 +699,7 @@ export const forex = pgTable('forex', {
   id:              uuid('id').primaryKey(),
   fromCurrency:    text('from_currency').notNull(),
   toCurrency:      text('to_currency').notNull(),
-  rate:             numeric('rate', { precision: 18, scale: 8 }).notNull(),
+  rate:            numeric('rate', { precision: 18, scale: 8 }).notNull(),
   margin:          numeric('margin', { precision: 6, scale: 4 }).default('0.0000'),
   buyRate:         numeric('buy_rate', { precision: 18, scale: 8 }),
   sellRate:        numeric('sell_rate', { precision: 18, scale: 8 }),
@@ -741,7 +743,7 @@ export const kyc = pgTable('kyc', {
   documentType:    text('document_type'),
   documentNumber:  text('document_number'),
   documentFront:   text('document_front'),
-  documentBack:     text('document_back'),
+  documentBack:    text('document_back'),
   selfieImage:     text('selfie_image'),
   verifiedBy:      uuid('verified_by'),
   verifiedAt:      timestamp('verified_at', { withTimezone: true }),
