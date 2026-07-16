@@ -34,33 +34,34 @@ import {
 
 /**
  * Minimal IStorage implementation using Supabase REST helpers.
+ * Uses 'users' table (not 'user_profiles') to match the actual database schema.
  */
 class SupabasePublicStorage implements IStorage {
   async getUser(id: string) {
-    return getRecord('user_profiles', id) as Promise<User | undefined>;
+    return getRecord('users', id) as Promise<User | undefined>;
   }
   async getUserByEmail(email: string) {
-    const rows = await listRecords('user_profiles', { email }) as Array<Record<string, unknown>>;
+    const rows = await listRecords('users', { email }) as Array<Record<string, unknown>>;
     return rows[0] as unknown as User | undefined;
   }
   async getUserByUsername(username: string) {
-    const rows = await listRecords('user_profiles', { username }) as Array<Record<string, unknown>>;
+    const rows = await listRecords('users', { username }) as Array<Record<string, unknown>>;
     return rows[0] as unknown as User | undefined;
   }
   async getAllUsers() {
-    return listRecords('user_profiles') as Promise<User[]>;
+    return listRecords('users') as Promise<User[]>;
   }
   async createUser(user: InsertUser) {
-    return insertRecord('user_profiles', user as unknown as Record<string, unknown>) as Promise<User>;
+    return insertRecord('users', user as unknown as Record<string, unknown>) as Promise<User>;
   }
   async updateUser(id: string, updates: Partial<InsertUser>) {
-    return updateRecord('user_profiles', id, updates as unknown as Record<string, unknown>) as Promise<User | undefined>;
+    return updateRecord('users', id, updates as unknown as Record<string, unknown>) as Promise<User | undefined>;
   }
   async updateUserBalance(id: string, delta: number) {
     const user = await this.getUser(id);
     if (!user) return undefined;
     const newBalance = (Number(user.balance) || 0) + delta;
-    return updateRecord('user_profiles', id, { balance: String(newBalance) }) as Promise<User | undefined>;
+    return updateRecord('users', id, { balance: String(newBalance) }) as Promise<User | undefined>;
   }
 
   async getUserAccounts(userId: string) {
@@ -77,8 +78,16 @@ class SupabasePublicStorage implements IStorage {
   }
 
   async getAccountTransactions(accountId: string, limit?: number) {
-    const rows = await listRecords('transactions', { account_id: accountId }) as Array<Record<string, unknown>>;
-    return (limit ? rows.slice(0, limit) : rows) as unknown as Transaction[];
+    const { getAdminClient } = await import('./supabase-public-storage');
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient
+      .from('transactions')
+      .select('*')
+      .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
+      .order('created_at', { ascending: false })
+      .limit(limit || 100);
+    if (error) throw error;
+    return (data || []) as unknown as Transaction[];
   }
   async getAllTransactions() {
     return listRecords('transactions') as Promise<Transaction[]>;
@@ -118,7 +127,20 @@ class SupabasePublicStorage implements IStorage {
   }
 
   async getUserCards(userId: string) {
-    return listRecords('cards', { user_id: userId }) as Promise<Card[]>;
+    // Cards are linked to accounts, not directly to users.
+    // First get the user's accounts, then get cards for those accounts.
+    const accounts = await this.getUserAccounts(userId);
+    if (!accounts || accounts.length === 0) return [];
+    const accountIds = accounts.map(a => a.id);
+    const { getAdminClient } = await import('./supabase-public-storage');
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient
+      .from('cards')
+      .select('*')
+      .in('account_id', accountIds)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as unknown as Card[];
   }
   async getCard(id: string) {
     return getRecord('cards', id) as Promise<Card | undefined>;
@@ -145,7 +167,7 @@ class SupabasePublicStorage implements IStorage {
 
   async getMessages(conversationId?: string) {
     return conversationId
-      ? listRecords('messages', { conversation_id: conversationId }) as Promise<Message[]>
+      ? listRecords('messages', { ticket_id: conversationId }) as Promise<Message[]>
       : listRecords('messages') as Promise<Message[]>;
   }
   async getUserMessages(userId: string) {
@@ -155,29 +177,32 @@ class SupabasePublicStorage implements IStorage {
     return insertRecord('messages', message as unknown as Record<string, unknown>) as Promise<Message>;
   }
   async markMessageAsRead(id: string) {
-    return updateRecord('messages', id, { read: true }) as Promise<Message | undefined>;
+    return updateRecord('messages', id, { is_read: true }) as Promise<Message | undefined>;
   }
 
   async getUserAlerts(userId: string) {
     return listRecords('alerts', { user_id: userId }) as Promise<Alert[]>;
   }
   async getUnreadAlerts(userId: string) {
-    return listRecords('alerts', { user_id: userId }) as Promise<Alert[]>;
+    const all = await this.getUserAlerts(userId);
+    return (all as Array<Record<string, unknown>>).filter(a => !a.is_read) as unknown as Alert[];
   }
   async createAlert(alert: InsertAlert) {
     return insertRecord('alerts', alert as unknown as Record<string, unknown>) as Promise<Alert>;
   }
   async markAlertAsRead(id: string) {
-    return updateRecord('alerts', id, { read: true }) as Promise<Alert | undefined>;
+    return updateRecord('alerts', id, { is_read: true, read_at: new Date().toISOString() }) as Promise<Alert | undefined>;
   }
   async deleteAlert(id: string) {
     await deleteRecord('alerts', id);
   }
 
-  async getBranches() { return listRecords('branches') as Promise<Record<string, unknown>[]>; }
-  async getAtms() { return listRecords('atms') as Promise<Record<string, unknown>[]>; }
-  async getExchangeRates() { return listRecords('exchange_rates') as Promise<Record<string, unknown>[]>; }
-  async getMarketRates() { return listRecords('market_rates') as Promise<Record<string, unknown>[]>; }
+  async getBranches() { return [] as Array<Record<string, unknown>>; }
+  async getAtms() { return [] as Array<Record<string, unknown>>; }
+  async getExchangeRates() {
+    return listRecords('forex') as Promise<Array<Record<string, unknown>>>;
+  }
+  async getMarketRates() { return [] as Array<Record<string, unknown>>; }
   async getStatementsByUserId(_userId: string) { return [] as Array<Record<string, unknown>>; }
 }
 
