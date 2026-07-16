@@ -10,7 +10,6 @@ interface LanguageContextType {
 
 const translations = {
   en: {
-    // Login & Auth
     'world_bank': 'WORLD BANK',
     'international_banking_solutions': 'International Banking Solutions',
     'sign_in': 'Sign In',
@@ -31,8 +30,6 @@ const translations = {
     'security_center': 'Security Center',
     'new_customer': 'New customer?',
     'create_account': 'Create Account',
-
-    // Dashboard
     'dashboard': 'Dashboard',
     'dashboard.title': 'Dashboard',
     'dashboard.balance': 'Total Balance',
@@ -53,8 +50,6 @@ const translations = {
     'pay_bill': 'Pay Bill',
     'recent_activity': 'Recent Activity',
     'view_all': 'View All',
-
-    // Transfer
     'transfer': 'Transfer',
     'transfer.title': 'Transfer Money',
     'transfer.amount': 'Amount',
@@ -101,8 +96,6 @@ const translations = {
     'transaction_completed': 'Successfully Completed',
     'pending': 'Awaiting Approval',
     'failed': 'Transaction Declined',
-
-    // Navigation
     'nav.home': 'Home',
     'nav.transfer': 'Transfer',
     'nav.cards': 'Cards',
@@ -113,8 +106,6 @@ const translations = {
     'profile': 'Profile',
     'support': 'Support',
     'history': 'History',
-
-    // Cards
     'my_cards': 'My Cards',
     'manage_cards': 'Manage your credit and debit cards',
     'add_card': 'Add Card',
@@ -123,8 +114,6 @@ const translations = {
     'unlock_card': 'Unlock Card',
     'view_details': 'View Details',
     'manage': 'Manage',
-
-    // Common
     'loading': 'Loading...',
     'common.loading': 'Loading...',
     'pin_verification_required': 'PIN Verification Required',
@@ -153,8 +142,6 @@ const translations = {
     'success': 'Success',
     'warning': 'Warning',
     'info': 'Information',
-
-    // International Banking
     'international_banking': 'International Banking',
     'international_transfers': 'International Transfers',
     'international_money_transfer': 'International Money Transfer',
@@ -192,8 +179,6 @@ const translations = {
     'know_your_customer': 'Know Your Customer (KYC)',
     'sanctions_screening': 'Sanctions Screening',
     'regulatory_reporting': 'Regulatory Reporting',
-
-    // Account & Profile
     'verified_account': 'Verified Account',
     'account_preferences': 'Account Preferences',
     'manage_account_settings': 'Manage your account settings and preferences',
@@ -256,8 +241,6 @@ const translations = {
     'annual_income': 'Annual Income',
     'country': 'Country',
     'select_country': 'Select country',
-
-    // Transfer Details
     'transfer_details': 'Transfer Details',
     'transfer_amount': 'Transfer Amount (USD)',
     'recipient_name': 'Recipient Name',
@@ -278,8 +261,6 @@ const translations = {
     'time': 'Time',
     'limit': 'Limit',
     'select_transfer_method': 'Select Transfer Method',
-
-    // Business Banking
     'business_banking_title': 'Business Banking Solutions',
     'get_started': 'Get Started',
     'contact_specialist': 'Contact Specialist',
@@ -296,8 +277,6 @@ const translations = {
     'international_trade_financing': 'International trade financing solutions',
     'treasury_services_title': 'Treasury Services',
     'cash_management_desc': 'Cash management and liquidity solutions',
-
-    // Banking Services
     'banking_services': 'Banking Services',
     'personal_banking': 'Personal Banking',
     'business_banking': 'Business Banking',
@@ -369,8 +348,6 @@ const translations = {
     'learn_more': 'Learn More',
     'explore_options': 'Explore Options',
     'comprehensive_solutions': 'Comprehensive financial solutions designed for individuals and businesses operating globally',
-
-    // Admin Tools
     'create_transaction': 'Create Transaction',
     'create_transactions_description': 'Manually create transactions for customer accounts',
     'manual_adjustment': 'Manual Adjustment',
@@ -380,8 +357,6 @@ const translations = {
     'bonus_action': 'Bonus',
     'refund_action': 'Refund',
     'correction_action': 'Correction',
-
-    // Add Money Methods
     'debit_card': 'Debit Card',
     'debit_card_desc': 'Instant transfer from your debit card',
     'bank_transfer': 'Bank Transfer',
@@ -400,8 +375,6 @@ const translations = {
     'add_money_failed': 'Failed to add money. Please try again.',
     'select_payment_method': 'Select Payment Method',
     'enter_amount': 'Enter Amount',
-
-    // Industries
     'industry_technology': 'Technology',
     'technology_desc': 'Fintech and software companies',
     'industry_healthcare': 'Healthcare',
@@ -455,8 +428,6 @@ const translations = {
     'reason': 'Reason:',
     'status': 'Status:',
     'security_verification_required': 'Security verification required',
-
-    // Support & Help
     'help_center': 'Help Center',
     'contact_us': 'Contact Us',
     'privacy_policy': 'Privacy Policy',
@@ -487,16 +458,12 @@ const translations = {
     'support_ticket_submission_failed': 'Support Ticket Submission Failed',
     'your_support_ticket_could_not_be_submitted': 'Your support ticket could not be submitted. Please try again or contact us directly.',
     'preferences_saved': 'Preferences saved successfully.',
-
-    // Add Money / Payment Methods
     'payment_method': 'Payment Method',
     'mobile_money': 'Mobile Money',
     'mobile_money_desc': 'Send to mobile numbers',
     'digital_wallet': 'Digital Wallet',
     'digital_wallet_desc': 'Secure digital payments',
     'add_money': 'Add Money',
-
-    // Investment Portfolio
     'investment_portfolio': 'Investment Portfolio',
     'manage_investments': 'Manage Your Investments',
     'invest_now': 'Invest Now',
@@ -512,8 +479,6 @@ const translations = {
     'portfolio_review': 'Portfolio Review',
     'market_analysis': 'Market Analysis',
     'rebalance': 'Rebalance Portfolio',
-
-    // Verification Center
     'manage_account_verification_status': 'Manage Account Verification Status',
     'account_security_level': 'Account Security Level',
     'fully_verified': 'Fully Verified',
@@ -544,20 +509,15 @@ const translations = {
     'anti_money_laundering_aml': 'Anti-Money Laundering (AML)',
     'combating_financing_terrorism_cft': 'Combating Financing of Terrorism (CFT)',
     'international_banking_regulations': 'International Banking Regulations',
-
-    // Banking Services (missing labels)
     'cash_management': 'Cash Management',
     'treasury_services': 'Treasury Services',
     'loan_services': 'Loan Services',
     'education_financing': 'Education Financing',
     'insurance_services': 'Insurance Services',
-
-    // Business Banking
     'corporate_clients_label': 'Corporate Clients',
     'assets_under_mgmt_label': 'Assets Under Management',
   },
   zh: {
-    // Login & Auth
     'world_bank': '世界银行',
     'international_banking_solutions': '国际银行解决方案',
     'sign_in': '登录',
@@ -579,8 +539,6 @@ const translations = {
     'security_center': '安全中心',
     'new_customer': '新客户？',
     'create_account': '创建账户',
-
-    // Dashboard
     'dashboard': '仪表板',
     'dashboard.title': '仪表板',
     'dashboard.balance': '总余额',
@@ -602,8 +560,6 @@ const translations = {
     'pay_bill': '缴费',
     'recent_activity': '最近活动',
     'view_all': '查看全部',
-
-    // Transfer
     'transfer': '转账',
     'transfer.title': '转账',
     'transfer.amount': '金额',
@@ -650,8 +606,6 @@ const translations = {
     'completed': '已完成',
     'pending': '待处理',
     'failed': '已失败',
-
-    // Navigation
     'nav.home': '首页',
     'nav.transfer': '转账',
     'nav.cards': '卡片',
@@ -662,8 +616,6 @@ const translations = {
     'profile': '个人资料',
     'support': '客服',
     'history': '历史记录',
-
-    // Cards
     'my_cards': '我的卡片',
     'manage_cards': '管理您的信用卡和借记卡',
     'add_card': '添加卡片',
@@ -672,8 +624,6 @@ const translations = {
     'unlock_card': '解锁卡片',
     'view_details': '查看详情',
     'manage': '管理',
-
-    // Common
     'loading': '加载中...',
     'common.loading': '加载中...',
     'pin_verification_required': 'PIN验证必需',
@@ -702,8 +652,6 @@ const translations = {
     'success': '成功',
     'warning': '警告',
     'info': '信息',
-
-    // International Banking
     'international_banking': '国际银行',
     'international_transfers': '国际转账',
     'currency_exchange': '外汇兑换',
@@ -721,8 +669,6 @@ const translations = {
     'know_your_customer': '了解您的客户 (KYC)',
     'sanctions_screening': '制裁筛查',
     'regulatory_reporting': '监管报告',
-
-    // Account & Profile
     'verified_account': '已验证账户',
     'account_preferences': '账户偏好设置',
     'manage_account_settings': '管理您的账户设置和偏好',
@@ -785,8 +731,6 @@ const translations = {
     'full_name': '全名',
     'nationality': '国籍',
     'annual_income': '年收入',
-
-    // Transfer Details
     'transfer_details': '转账详情',
     'transfer_amount': '转账金额 (美元)',
     'recipient_information': '收款人信息',
@@ -808,8 +752,6 @@ const translations = {
     'time': '时间',
     'limit': '限额',
     'select_transfer_method': '选择转账方式',
-
-    // Business Banking
     'business_banking_title': '商业银行解决方案',
     'get_started': '开始使用',
     'contact_specialist': '联系专家',
@@ -826,8 +768,6 @@ const translations = {
     'international_trade_financing': '国际贸易融资解决方案',
     'treasury_services_title': '资金库服务',
     'cash_management_desc': '现金管理和流动性解决方案',
-
-    // Banking Services
     'banking_services': '银行服务',
     'personal_banking': '个人银行业务',
     'business_banking': '企业银行业务',
@@ -899,8 +839,6 @@ const translations = {
     'learn_more': '了解更多',
     'explore_options': '探索选项',
     'comprehensive_solutions': '为在全球范围内开展业务的个人和企业设计的全面金融解决方案',
-
-    // Admin Tools
     'create_transaction': '创建交易',
     'create_transactions_description': '为客户账户手动创建交易',
     'manual_adjustment': '手动调整',
@@ -910,8 +848,6 @@ const translations = {
     'bonus_action': '奖金',
     'refund_action': '退款',
     'correction_action': '更正',
-
-    // Add Money Methods
     'debit_card': '借记卡',
     'debit_card_desc': '从您的借记卡即时转账',
     'bank_transfer': '银行转账',
@@ -932,8 +868,6 @@ const translations = {
     'add_money_failed': '添加资金失败。请重试。',
     'select_payment_method': '选择支付方式',
     'enter_amount': '输入金额',
-
-    // Investment Portfolio
     'investment_portfolio': '投资组合',
     'manage_investments': '管理您的投资',
     'invest_now': '立即投资',
@@ -949,8 +883,6 @@ const translations = {
     'portfolio_review': '投资组合评论',
     'market_analysis': '市场分析',
     'rebalance': '重新平衡投资组合',
-
-    // Verification Center
     'manage_account_verification_status': '管理账户验证状态',
     'account_security_level': '账户安全级别',
     'fully_verified': '完全验证',
@@ -981,19 +913,13 @@ const translations = {
     'anti_money_laundering_aml': '反洗钱 (AML)',
     'combating_financing_terrorism_cft': '打击恐怖融资 (CFT)',
     'international_banking_regulations': '国际银行法规',
-
-    // Banking Services (missing labels)
     'cash_management': '现金管理',
     'treasury_services': '资金库服务',
     'loan_services': '贷款服务',
     'education_financing': '教育融资',
     'insurance_services': '保险服务',
-
-    // Business Banking
     'corporate_clients_label': '企业客户',
     'assets_under_mgmt_label': '管理资产',
-
-    // Industries
     'industry_technology': '科技',
     'technology_desc': '金融科技和软件公司',
     'industry_healthcare': '医疗',
@@ -1048,8 +974,6 @@ const translations = {
     'reason': '原因:',
     'status': '状态:',
     'security_verification_required': '需要安全验证',
-
-    // Support & Help
     'help_center': '帮助中心',
     'contact_us': '联系我们',
     'privacy_policy': '隐私政策',
@@ -1079,36 +1003,28 @@ const translations = {
     'go_to_dashboard': '转到仪表板',
     'support_ticket_submission_failed': '支持工单提交失败',
     'your_support_ticket_could_not_be_submitted': '您的支持工单未能提交。请重试或直接联系我们。',
-    'preferences_saved': '偏好设置已保存。'
+    'preferences_saved': '偏好设置已保存。',
+    'payment_method': '支付方式',
+    'mobile_money_desc': '发送到手机号码',
+    'digital_wallet': '数字钱包',
+    'digital_wallet_desc': '安全数字支付',
   }
 };
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
-// Auto-detect user's region and language
 function detectUserLanguage(): Language {
   const urlParams = new URLSearchParams(window.location.search);
   const urlLang = urlParams.get('lang');
-  if (urlLang === 'zh' || urlLang === 'en') {
-    return urlLang as Language;
-  }
+  if (urlLang === 'zh' || urlLang === 'en') return urlLang as Language;
 
   const savedLang = localStorage.getItem('worldbank_language');
-  if (savedLang === 'zh' || savedLang === 'en') {
-    return savedLang as Language;
-  }
+  if (savedLang === 'zh' || savedLang === 'en') return savedLang as Language;
 
   const browserLang = navigator.language.toLowerCase();
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  if (browserLang.includes('zh') || 
-      timezone.includes('Shanghai') || 
-      timezone.includes('Beijing') || 
-      timezone.includes('Chongqing') ||
-      timezone.includes('Hong_Kong') ||
-      timezone.includes('Macau') ||
-      timezone.includes('Asia/Shanghai') ||
-      timezone.includes('Asia/Hong_Kong')) {
+  if (browserLang.includes('zh') || timezone.includes('Shanghai') || timezone.includes('Beijing') || timezone.includes('Chongqing') || timezone.includes('Hong_Kong') || timezone.includes('Macau') || timezone.includes('Asia/Shanghai') || timezone.includes('Asia/Hong_Kong')) {
     return 'zh';
   }
 
@@ -1124,7 +1040,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   };
 
   const t = (key: string): string => {
-    return (translations[language] as any)[key] || key;
+    return (translations[language] as Record<string, string>)[key] || key;
   };
 
   return (
@@ -1136,8 +1052,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
 export function useLanguage() {
   const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
-  }
+  if (!context) throw new Error('useLanguage must be used within a LanguageProvider');
   return context;
 }
