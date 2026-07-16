@@ -128,6 +128,23 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to fetch accounts' }); }
   }));
 
+  api.post('/api/user/profile', wrapAsync(requireAuth), wrapAsync(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await storage.getUserByEmail(req.user?.email || '');
+      if (!user) return res.status(404).json({ message: 'User not found' });
+      return res.json(user);
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to get user profile' }); }
+  }));
+
+  api.post('/api/accounts/user', wrapAsync(requireAuth), wrapAsync(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await storage.getUserByEmail(req.user?.email || '');
+      if (!user) return res.status(404).json({ message: 'User not found' });
+      const accounts = await storage.getUserAccounts(user.id);
+      return res.json(accounts);
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to get user accounts' }); }
+  }));
+
   api.get('/api/accounts', wrapAsync(requireAuth), wrapAsync(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
@@ -664,7 +681,7 @@ export async function registerRoutes(app: Express) {
       const totalPayable = Number(principalAmount) + totalInterest;
       const loanNumber = `LN${Date.now()}${Math.floor(Math.random() * 10000)}`;
       const { data, error } = await supabase.from('loans').insert({ user_id: req.user?.id || '' as string, loan_number: loanNumber, loan_type: loanType, principal_amount: String(principalAmount), interest_rate: String(interestRate), term_months: termMonths, monthly_payment: monthlyPayment.toFixed(2), remaining_balance: String(principalAmount), total_interest: totalInterest.toFixed(2), total_payable: totalPayable.toFixed(2), status: 'pending' }).select().single();
-      if (error) throw data;
+      if (error) throw error;
       const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin').eq('is_active', true);
       if (admins && admins.length > 0) { const adminAlerts = admins.map((admin: Record<string, unknown>) => ({ user_id: admin.id, title: 'New Loan Application', message: `Loan application for ${principalAmount} from ${req.user?.email} requires review.`, type: 'warning', priority: 'high', is_read: false })); await supabase.from('alerts').insert(adminAlerts); }
       return res.json(data);
@@ -812,7 +829,7 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to fetch statements' }); }
   });
 
-  api.post('/api/objects/upload', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  api.post('/api/objects/upload', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { file, fileName, fileType } = req.body;
       if (!file || !fileName) return res.status(400).json({ error: 'Missing file or fileName' });
