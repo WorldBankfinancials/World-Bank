@@ -142,7 +142,7 @@ export function validateRequest<T>(schema: z.ZodSchema<T>, data: any):
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errors = error.errors.map(err => 
-        `${err.path.join('.')}: ${err.message}`
+        `Invalid value at ${err.path.join('.')}`
       );
       return { success: false, errors };
     }

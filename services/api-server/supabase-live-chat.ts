@@ -194,7 +194,7 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
       } catch (error: unknown) {
         ws.send(JSON.stringify({
           type: 'error',
-          message: (error instanceof Error ? error.message : 'Internal server error')
+          message: 'An internal error occurred'
         }));
       }
     });
@@ -230,7 +230,7 @@ export async function getChatHistory(req: Request, res: Response) {
 
     res.json({ success: true, messages, total: messages?.length || 0 });
   } catch (error: unknown) {
-    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 }
 
@@ -250,7 +250,7 @@ export async function getActiveSessions(req: Request, res: Response) {
 
     res.json({ success: true, sessions });
   } catch (error: unknown) {
-    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 }
 
@@ -283,6 +283,6 @@ export async function createTicketFromChat(req: Request, res: Response) {
 
     res.json({ success: true, ticket });
   } catch (error: unknown) {
-    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    res.status(500).json({ error: 'An internal error occurred' });
   }
 }
