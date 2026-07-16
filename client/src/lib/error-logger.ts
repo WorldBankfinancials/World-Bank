@@ -13,6 +13,7 @@ export function logError(error: Error | string, context?: string) {
   }
 }
 
-export function logApiError(url: string, error: any) {
-  logError(error, `API: ${url}`);
+export function logApiError(url: string, error: Error | string | { message?: string }) {
+  const message = typeof error === 'string' ? error : error.message;
+  logError(message, `API: ${url}`);
 }

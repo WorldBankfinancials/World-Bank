@@ -7,6 +7,7 @@ import { CheckCircle, Download, Share, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { authenticatedFetch } from "@/lib/queryClient";
+import { useEffect } from "react";
 
 interface TransferStatusResponse {
   status: string;
@@ -30,7 +31,7 @@ export default function TransferSuccess() {
   const transactionId = searchParams.get("id") || "";
 
   // Fetch real transaction data from the backend
-  const { data: transaction, isLoading } = useQuery<TransferStatusResponse>({
+  const { data: transaction, isLoading, error: queryError } = useQuery<TransferStatusResponse>({
     queryKey: ['/api/transfers', transactionId, 'status'],
     queryFn: async () => {
       if (!transactionId) throw new Error('No transaction ID');
@@ -42,6 +43,12 @@ export default function TransferSuccess() {
     },
     enabled: !!transactionId,
   });
+
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [queryError]);
 
   const amount = transaction?.amount ?? 0;
   const currency = transaction?.currency || 'USD';

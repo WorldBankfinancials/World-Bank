@@ -103,17 +103,23 @@ export default function Verification() {
         </div>
 
         <div className="space-y-4 mb-6">
-          {items.map((item: VerificationItem) => (
-            <div key={item.id} className="bg-white rounded-xl shadow p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {item.status === 'verified' ? <CheckCircle className="w-6 h-6 text-green-500" /> : item.status === 'pending' ? <Clock className="w-6 h-6 text-yellow-500" /> : <AlertCircle className="w-6 h-6 text-red-500" />}
-                <span className="font-medium">{item.name}</span>
+          {items && items.length > 0 ? (
+            items.map((item: VerificationItem) => (
+              <div key={item.id} className="bg-white rounded-xl shadow p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {item.status === 'verified' ? <CheckCircle className="w-6 h-6 text-green-500" /> : item.status === 'pending' ? <Clock className="w-6 h-6 text-yellow-500" /> : <AlertCircle className="w-6 h-6 text-red-500" />}
+                  <span className="font-medium">{item.name}</span>
+                </div>
+                <span className={`text-sm ${item.status === 'verified' ? 'text-green-600' : item.status === 'pending' ? 'text-yellow-600' : 'text-red-600'}`}>
+                  {item.status === 'verified' ? t('verified') : item.status === 'pending' ? t('pending') : t('unverified')}
+                </span>
               </div>
-              <span className={`text-sm ${item.status === 'verified' ? 'text-green-600' : item.status === 'pending' ? 'text-yellow-600' : 'text-red-600'}`}>
-                {item.status === 'verified' ? t('verified') : item.status === 'pending' ? t('pending') : t('unverified')}
-              </span>
+            ))
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p>No items found</p>
             </div>
-          ))}
+          )}
         </div>
 
         <div className="bg-white rounded-xl shadow p-6">

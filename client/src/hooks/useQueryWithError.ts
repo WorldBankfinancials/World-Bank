@@ -20,12 +20,14 @@ export function useQueryWithErrorHandling<TData = unknown>(
 
   useEffect(() => {
     if (query.error) {
-      const errorMessage = query.error instanceof Error
+      const rawMsg = query.error instanceof Error
         ? query.error.message
         : 'An error occurred while fetching data';
+      // Only show safe, concise error messages to avoid leaking backend details
+      const safeMessage = rawMsg.length > 100 ? 'An error occurred' : rawMsg;
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: safeMessage,
         variant: 'destructive',
       });
     }

@@ -20,13 +20,15 @@ export function useQueryError<TData = unknown, TError = unknown>(
 
   useEffect(() => {
     if (result.isError && result.error) {
-      const errorMsg = result.error instanceof Error
+      const rawMsg = result.error instanceof Error
         ? result.error.message
         : String(result.error);
-      if (!errorMsg.includes('abort') && !errorMsg.includes('WebSocket') && errorMsg.length > 0) {
+      if (!rawMsg.includes('abort') && !rawMsg.includes('WebSocket') && rawMsg.length > 0) {
+        // Only show safe, concise error messages to avoid leaking backend details
+        const safeMessage = rawMsg.length > 100 ? 'An error occurred' : rawMsg;
         toast({
           title: 'Error Loading Data',
-          description: errorMsg || 'An error occurred',
+          description: safeMessage || 'An error occurred',
           variant: 'destructive',
         });
       }

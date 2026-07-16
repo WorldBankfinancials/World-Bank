@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { XCircle, RefreshCw, Phone, Mail, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { authenticatedFetch } from "@/lib/queryClient";
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface TransferStatusResponse {
   status: string;
@@ -25,7 +27,7 @@ export default function TransferFailed() {
   const transactionId = searchParams.get("id") || "";
 
   // Fetch the real failure reason from the backend
-  const { data: transaction, isLoading } = useQuery<TransferStatusResponse>({
+  const { data: transaction, isLoading, error: queryError } = useQuery<TransferStatusResponse>({
     queryKey: ['/api/transfers', transactionId, 'status'],
     queryFn: async () => {
       if (!transactionId) throw new Error('No transaction ID');
@@ -37,6 +39,14 @@ export default function TransferFailed() {
     },
     enabled: !!transactionId,
   });
+
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [queryError]);
 
   const reference = transaction?.reference || transactionId;
   const failureReason = transaction?.failureReason || 'The transfer could not be completed.';
