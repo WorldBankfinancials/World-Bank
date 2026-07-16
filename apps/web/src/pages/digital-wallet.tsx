@@ -42,13 +42,13 @@ export default function DigitalWallet() {
   });
 
   // Fetch real wallet data from Supabase
-  const { data: walletData } = useQuery<{ balance: number }>({
+  const { data: walletData, error: walletError } = useQuery<{ balance: number }>({
     queryKey: ['/api/wallet-balance'],
     enabled: !!user,
     staleTime: 30000
   });
 
-  const { data: recentTransactions } = useQuery({
+  const { data: recentTransactions, error: transactionsError } = useQuery({
     queryKey: ['/api/wallet-transactions'],
     enabled: !!user,
     staleTime: 30000
@@ -59,6 +59,18 @@ export default function DigitalWallet() {
       toast({ title: 'Error loading data', variant: 'destructive' });
     }
   }, [error]);
+
+  useEffect(() => {
+    if (walletError) {
+      toast({ title: 'Error loading wallet balance', variant: 'destructive' });
+    }
+  }, [walletError]);
+
+  useEffect(() => {
+    if (transactionsError) {
+      toast({ title: 'Error loading transactions', variant: 'destructive' });
+    }
+  }, [transactionsError]);
 
   if (isLoading) {
     return (
@@ -160,7 +172,8 @@ export default function DigitalWallet() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {(recentTransactions as unknown as Array<Record<string, unknown>>) && Array.isArray(recentTransactions) && (recentTransactions as unknown as Array<Record<string, unknown>>).map((transaction, index: number) => (
+              {recentTransactions && (recentTransactions as unknown as Array<Record<string, unknown>>).length > 0 ? (
+                (recentTransactions as unknown as Array<Record<string, unknown>>).map((transaction, index: number) => (
                 <div key={`item-${index}`} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -185,7 +198,12 @@ export default function DigitalWallet() {
                     {String(transaction.amount || '')}
                   </span>
                 </div>
-              ))}
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No recent transactions yet</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

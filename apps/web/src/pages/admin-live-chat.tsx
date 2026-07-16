@@ -211,6 +211,9 @@ export default function AdminLiveChat() {
                 (chatSessions as ChatSession[]).map((session: ChatSession) => (
                   <div
                     key={session.id}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.click(); }}
                     onClick={() => setSelectedSession(session)}
                     className={`p-3 border rounded-lg cursor-pointer transition ${
                       selectedSession?.id === session.id

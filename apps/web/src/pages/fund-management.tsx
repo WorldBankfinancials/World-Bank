@@ -195,6 +195,9 @@ export default function FundManagement() {
                 (customers as Customer[]).map((customer: Customer) => (
                   <div
                     key={customer.id}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.click(); }}
                     onClick={() => setSelectedCustomer(customer)}
                     className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition"
                   >
