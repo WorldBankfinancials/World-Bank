@@ -339,7 +339,7 @@ export async function registerRoutes(app: Express) {
       const accessToken = data.session?.access_token;
       if (!accessToken) return res.status(500).json({ error: 'Failed to generate authentication token' });
       return res.json({ token: accessToken, refreshToken: data.session?.refresh_token, user: sanitizeUser(dbUser) });
-    } catch (error: unknown) { return res.status(500).json({ error: 'Login failed', details: (error instanceof Error ? error.message : 'Internal server error') || 'Unknown error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'Login failed', details: 'An internal error occurred' }); }
   });
 
   app.post('/api/auth/logout', async (req: Request, res: Response) => {
@@ -386,7 +386,7 @@ export async function registerRoutes(app: Express) {
       const { error: updateError } = await supabaseClient.auth.updateUser({ password: newPassword });
       if (updateError) throw updateError;
       return res.json({ success: true, message: 'Password changed successfully' });
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/admin/login', authRateLimiter, async (req: Request, res: Response) => {
@@ -438,15 +438,18 @@ export async function registerRoutes(app: Express) {
       const amount = parseFloat(String((request as Record<string, unknown>).amount));
       const { data: userAccount } = await supabase.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
-      if (currentBalance < amount) return res.status(400).json({ error: 'Insufficient funds' });
-      const newBalance = (currentBalance - amount).toFixed(2);
-      await supabase.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
+      // ATOMIC BALANCE UPDATE: prevents race condition where concurrent requests both pass the balance check
+      const accountId = (userAccount as Record<string, unknown>).id as number;
+      const balanceResult = await atomicBalanceUpdate(accountId, -amount, `Payment for request ${req.params.id}`);
+      if (!balanceResult.success) {
+        return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
+      }
+      const newBalance = balanceResult.newBalance || '0';
       await supabase.from('transactions').update({ status: 'completed', completed_at: new Date().toISOString(), from_user_id: req.user?.id }).eq('id', req.params.id);
       await supabase.from('transactions').insert({ from_user_id: req.user?.id, to_user_id: (request as Record<string, unknown>).to_user_id, amount: amount.toFixed(2), currency: 'USD', transaction_type: 'payment', category: 'payment', status: 'completed', description: `Payment for request ${req.params.id}`, reference_number: `PAY${Date.now()}${Math.floor(Math.random() * 10000)}`, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() });
       await supabase.from('alerts').insert({ user_id: req.user?.id, title: 'Payment Sent', message: `Payment of ${amount.toFixed(2)} has been sent.`, type: 'success', priority: 'normal', is_read: false });
       return res.json({ success: true, newBalance });
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/add-funds', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
@@ -462,8 +465,18 @@ export async function registerRoutes(app: Express) {
       try {
         const updated = await storage.updateUserBalance(user.id, parsedAmount);
         if (!updated) return res.status(500).json({ error: 'Failed to update balance' });
+        // ATOMIC BALANCE UPDATE: credit account atomically (prevents race condition on concurrent deposits)
+        const { data: account } = await supabase.from('accounts').select('id').eq('user_id', user.id).eq('status', 'active').limit(1).single();
+        if (account) {
+          const accountId = (account as Record<string, unknown>).id as number;
+          const balanceResult = await atomicBalanceUpdate(accountId, parsedAmount, `Funds added via ${sanitizedMethod}`);
+          if (!balanceResult.success) {
+            // Rollback the user balance update since the account update failed
+            await storage.updateUserBalance(user.id, -parsedAmount);
+            return res.status(500).json({ error: balanceResult.error || 'Failed to update account balance' });
+          }
+        }
         const newBalance = (parseFloat(String(updated.balance || '0'))).toFixed(2);
-        await supabase.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', user.id).eq('status', 'active');
         const transaction = await storage.createTransaction({ fromAccountId: accounts[0].id, type: 'deposit', amount: parsedAmount.toString(), description: `Funds added via ${sanitizedMethod}`, status: 'completed', currency: 'USD', referenceNumber: `DEP-${Date.now()}`, createdAt: new Date() });
         await supabase.from('alerts').insert({ user_id: req.user?.id, title: 'Funds Added', message: `${parsedAmount.toFixed(2)} has been added to your account via ${sanitizedMethod}.`, type: 'success', priority: 'normal', is_read: false });
         return res.json({ success: true, transaction, amount: parsedAmount, newBalance: updated.balance });
@@ -602,7 +615,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('recent_contacts').select('*').eq('user_id', req.user?.id).order('updated_at', { ascending: false }).limit(10);
       if (error) throw error;
       return res.json(data || []);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   // ==================== LOANS ENDPOINTS ====================
@@ -611,7 +624,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('loans').select('*').eq('user_id', req.user?.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/loans/apply', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
@@ -638,7 +651,7 @@ export async function registerRoutes(app: Express) {
       const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin').eq('is_active', true);
       if (admins && admins.length > 0) { const adminAlerts = admins.map((admin: Record<string, unknown>) => ({ user_id: admin.id, title: 'New Loan Application', message: `Loan application for ${principalAmount} from ${req.user?.email} requires review.`, type: 'warning', priority: 'high', is_read: false })); await supabase.from('alerts').insert(adminAlerts); }
       return res.json(data);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/loans/:id/approve', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -650,13 +663,15 @@ export async function registerRoutes(app: Express) {
       if (error) throw error;
       const { data: account } = await supabase.from('accounts').select('id, balance').eq('user_id', loan.user_id).eq('status', 'active').limit(1).single();
       if (account) {
-        const newBalance = (parseFloat(String((account as Record<string, unknown>).balance || '0')) + parseFloat(String(loan.principal_amount))).toFixed(2);
-        await supabase.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (account as Record<string, unknown>).id);
-        await supabase.from('transactions').insert({ from_account_id: null, to_account_id: (account as Record<string, unknown>).id, from_user_id: null, to_user_id: loan.user_id, amount: parseFloat(String(loan.principal_amount)).toFixed(2), currency: 'USD', transaction_type: 'loan_disbursement', category: 'loan', status: 'completed', description: `Loan disbursement - ${loan.loan_type} - ${loan.loan_number}`, reference_number: `LOAN${Date.now()}${Math.floor(Math.random() * 10000)}`, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() });
-        await supabase.from('alerts').insert({ user_id: loan.user_id, title: 'Loan Approved', message: `Your ${loan.loan_type} loan of ${parseFloat(String(loan.principal_amount)).toFixed(2)} has been approved and disbursed to your account.`, type: 'success', priority: 'high', is_read: false });
+        // ATOMIC BALANCE UPDATE: credit loan principal atomically (prevents race condition on concurrent disbursements)
+        const accountId = (account as Record<string, unknown>).id as number;
+        const principalAmount = parseFloat(String(loan.principal_amount));
+        await atomicBalanceUpdate(accountId, principalAmount, `Loan disbursement - ${loan.loan_type} - ${loan.loan_number}`);
+        await supabase.from('transactions').insert({ from_account_id: null, to_account_id: (account as Record<string, unknown>).id, from_user_id: null, to_user_id: loan.user_id, amount: principalAmount.toFixed(2), currency: 'USD', transaction_type: 'loan_disbursement', category: 'loan', status: 'completed', description: `Loan disbursement - ${loan.loan_type} - ${loan.loan_number}`, reference_number: `LOAN${Date.now()}${Math.floor(Math.random() * 10000)}`, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() });
+        await supabase.from('alerts').insert({ user_id: loan.user_id, title: 'Loan Approved', message: `Your ${loan.loan_type} loan of ${principalAmount.toFixed(2)} has been approved and disbursed to your account.`, type: 'success', priority: 'high', is_read: false });
       }
       return res.json(data);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/loans/:id/reject', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -667,7 +682,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('loans').update({ status: 'rejected' }).eq('id', req.params.id).select().single();
       if (error) throw error;
       return res.json(data);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/admin/pending-loans', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -675,7 +690,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('loans').select('*').eq('status', 'pending').order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   // ==================== ADMIN USER MANAGEMENT ====================
@@ -689,7 +704,7 @@ export async function registerRoutes(app: Express) {
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } });
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({ email, password, email_confirm: true, app_metadata: { role: 'admin' }, user_metadata: {} });
-      if (authError || !authData.user) return res.status(500).json({ error: authError?.message || 'Failed to create admin auth account' });
+      if (authError || !authData.user) return res.status(500).json({ error: 'Failed to create admin auth account' });
       const adminPin = generateTransferPin();
       const adminPinHash = await bcrypt.hash(adminPin, 12);
       try {
@@ -698,7 +713,7 @@ export async function registerRoutes(app: Express) {
         const adminUser = await storage.createUser({ username: email.split('@')[0] + '_admin', firstName, lastName, email, phone: '+1-000-000-0000', accountNumber: `ADMIN-${generateAccountNumber()}`, accountId: randomUUID(), password: randomUUID(), transferPin: adminPinHash, role: 'admin', isVerified: true, isActive: true, balance: '0', dateOfBirth: '1990-01-01', address: 'World Bank HQ', city: 'Washington', state: 'DC', country: 'United States', postalCode: '20001', profession: 'Administrator', annualIncome: 'N/A', idType: 'Staff ID', idNumber: 'ADMIN-001' });
         return res.status(201).json({ success: true, message: 'Admin user created successfully', user: { id: adminUser.id, email: adminUser.email, fullName: `${adminUser.firstName} ${adminUser.lastName}`, role: adminUser.role }, credentials: { email, note: 'Password was provided during creation' } });
       } catch (dbError: unknown) { await supabaseAdmin.auth.admin.deleteUser(authData.user.id); throw dbError; }
-    } catch (error: unknown) { return res.status(500).json({ error: 'Admin user creation failed', details: (error instanceof Error ? error.message : 'Internal server error') || 'Unknown error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'Admin user creation failed', details: 'An internal error occurred' }); }
   });
 
   app.post('/api/admin/set-user-role', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -711,11 +726,11 @@ export async function registerRoutes(app: Express) {
       let supabaseUserId = userId;
       if (!supabaseUserId && email) { const { data: users } = await supabaseAdmin.auth.admin.listUsers(); const found = users?.users?.find((u: { id?: string; email?: string }) => u.email === email); if (!found) return res.status(404).json({ error: 'User not found in Supabase Auth' }); supabaseUserId = found.id; }
       const { error: supabaseError } = await supabaseAdmin.auth.admin.updateUserById(supabaseUserId, { app_metadata: { role } });
-      if (supabaseError) return res.status(500).json({ error: 'Failed to update Supabase role', details: supabaseError.message });
+      if (supabaseError) return res.status(500).json({ error: 'Failed to update Supabase role', details: 'An internal error occurred' });
       const targetUser = email ? await storage.getUserByEmail(email) : await storage.getUser(supabaseUserId);
       if (targetUser) { await storage.updateUser(targetUser.id, { role }); }
       return res.json({ success: true, message: `User role updated to ${role}` });
-    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to set user role', details: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to set user role', details: 'An internal error occurred' }); }
   });
 
   app.post('/api/admin/reset-password', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -732,9 +747,9 @@ export async function registerRoutes(app: Express) {
       const userToUpdate = users.users.find((u: { id?: string; email?: string }) => u.email === email);
       if (!userToUpdate) return res.status(404).json({ error: 'User not found in Supabase Auth' });
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userToUpdate.id, { password: newPassword });
-      if (updateError) return res.status(500).json({ error: 'Failed to reset password', details: updateError.message });
+      if (updateError) return res.status(500).json({ error: 'Failed to reset password', details: 'An internal error occurred' });
       return res.json({ success: true, message: `Password reset successfully for ${email}.`, email });
-    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to reset password', details: (error instanceof Error ? error.message : 'Internal server error') || 'Unknown error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to reset password', details: 'An internal error occurred' }); }
   });
 
   app.post('/api/admin/delete-user/:email', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -750,7 +765,7 @@ export async function registerRoutes(app: Express) {
       const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userToDelete.id);
       if (deleteAuthError) return res.status(500).json({ error: 'Failed to delete from authentication system' });
       return res.json({ success: true, message: `User ${email} deleted successfully`, deleted_email: email });
-    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to delete user', details: (error instanceof Error ? error.message : 'Internal server error') || 'Unknown error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to delete user', details: 'An internal error occurred' }); }
   });
 
   app.post('/api/transactions/:id/reverse', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -768,7 +783,7 @@ export async function registerRoutes(app: Express) {
       const reversalTxn = await storage.createTransaction({ fromAccountId: transaction.toAccountId || transaction.fromAccountId, toAccountId: transaction.fromAccountId, type: 'reversal', amount: String(transaction.amount), status: 'reversed', description: `Reversal of transaction #${txnId}. Reason: ${sanitizedReason}`, currency: transaction.currency || 'USD' });
       await storage.updateTransactionStatus(txnId, 'reversed', req.user?.id ? (typeof req.user.id === 'number' ? req.user.id : req.user.id) : 1, sanitizedReason);
       return res.json({ success: true, message: 'Transaction reversed successfully', reversalTransactionId: reversalTxn.id, amountRefunded: transaction.amount });
-    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to reverse transaction', details: (error instanceof Error ? error.message : 'Internal server error') || 'Unknown error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to reverse transaction', details: 'An internal error occurred' }); }
   });
 
   app.get('/api/statements', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -794,9 +809,9 @@ export async function registerRoutes(app: Express) {
   app.get('/api/admin/list-users', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { data, error } = await supabase.auth.admin.listUsers();
-      if (error) return res.status(500).json({ error: 'Failed to list users', details: (error instanceof Error ? error.message : 'Internal server error') || 'Unknown error' });
+      if (error) return res.status(500).json({ error: 'Failed to list users', details: 'An internal error occurred' });
       return res.json({ total: data.users.length, users: data.users.map((u: { id?: string; email?: string; app_metadata?: { role?: string }; email_confirmed_at?: string }) => ({ id: u.id, email: u.email, role: u.app_metadata?.role || 'customer', verified: u.email_confirmed_at ? 'yes' : 'no' })) });
-    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to list users', details: (error instanceof Error ? error.message : 'Internal server error') || 'Unknown error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to list users', details: 'An internal error occurred' }); }
   });
 
   app.post('/api/admin/users/:id/profile-photo', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -811,7 +826,7 @@ export async function registerRoutes(app: Express) {
       const updatedUser = await storage.updateUser(id, { profilePhoto: photoUrl });
       if (!updatedUser) return res.status(404).json({ error: 'User not found' });
       return res.json({ success: true, message: 'Profile photo updated successfully', user: updatedUser });
-    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to upload profile photo', details: (error instanceof Error ? error.message : 'Internal server error') || 'Unknown error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to upload profile photo', details: 'An internal error occurred' }); }
   });
 
   // ==================== MISSING API ENDPOINTS ====================
@@ -820,7 +835,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('cards').select('*').eq('user_id', req.user?.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/cards/lock', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -830,7 +845,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('cards').update({ status: locked ? 'locked' : 'active', updated_at: new Date().toISOString() }).eq('id', cardId).eq('user_id', req.user?.id).select().single();
       if (error) throw error;
       return res.json(data);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/cards/settings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -842,7 +857,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('cards').update({ daily_limit: dailyLimit, monthly_limit: monthlyLimit, is_contactless: isContactless, updated_at: new Date().toISOString() }).eq('id', cardId).eq('user_id', req.user?.id).select().single();
       if (error) throw error;
       return res.json(data);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/cards', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -859,7 +874,7 @@ export async function registerRoutes(app: Express) {
       if (error) throw error;
       await supabase.from('alerts').insert({ user_id: req.user?.id, title: 'New Card Created', message: `A new ${cardType} card has been created for your account.`, type: 'success', priority: 'normal', is_read: false });
       return res.json(data);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/alerts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -867,7 +882,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('alerts').select('*').eq('user_id', req.user?.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.patch('/api/alerts/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -875,7 +890,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('alerts').update({ is_read: true, read_at: new Date().toISOString() }).eq('id', req.params.id).eq('user_id', req.user?.id).select().single();
       if (error) throw error;
       return res.json(data);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.delete('/api/alerts/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -883,7 +898,7 @@ export async function registerRoutes(app: Express) {
       const { error } = await supabase.from('alerts').delete().eq('id', req.params.id).eq('user_id', req.user?.id);
       if (error) throw error;
       return res.json({ success: true });
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/investments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -891,7 +906,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('investments').select('*').eq('user_id', req.user?.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/market-rates', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -899,7 +914,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('forex').select('*').order('currency', { ascending: true });
       if (error) throw error;
       return res.json(data || []);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/currency-exchange', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
@@ -914,17 +929,19 @@ export async function registerRoutes(app: Express) {
       if (rateError || !rate) return res.status(400).json({ error: 'Exchange rate not found' });
       const exchangeRate = parseFloat(String((rate as Record<string, unknown>).rate));
       const convertedAmount = numAmount * exchangeRate;
-      const { data: userAccount } = await supabase.from('accounts').select('balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
+      const { data: userAccount } = await supabase.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
-      if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
-      const newBalance = (currentBalance - numAmount).toFixed(2);
-      await supabase.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', req.user?.id).eq('status', 'active');
+      const accountId = (userAccount as Record<string, unknown>).id as number;
+      // ATOMIC BALANCE UPDATE: prevents race condition where concurrent requests both pass the balance check
+      const balanceResult = await atomicBalanceUpdate(accountId, -numAmount, `Currency exchange: ${numAmount} ${sanitizedFromCurrency} to ${sanitizedToCurrency}`);
+      if (!balanceResult.success) {
+        return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
+      }
       const reference = `EXC${Date.now()}${Math.floor(Math.random() * 10000)}`;
       const { data: txn, error: txnError } = await supabase.from('transactions').insert({ from_account_id: null, to_account_id: null, from_user_id: req.user?.id, amount: numAmount.toFixed(2), currency: sanitizedFromCurrency, exchange_rate: exchangeRate.toFixed(4), converted_amount: convertedAmount.toFixed(2), transaction_type: 'currency_exchange', category: 'exchange', status: 'completed', description: `Currency exchange: ${numAmount} ${sanitizedFromCurrency} to ${convertedAmount.toFixed(2)} ${sanitizedToCurrency}`, reference_number: reference, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() }).select().single();
       if (txnError) throw txnError;
       return res.json({ transaction: txn, convertedAmount: convertedAmount.toFixed(2), rate: exchangeRate });
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -932,7 +949,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('support_tickets').select('*').eq('user_id', req.user?.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -943,7 +960,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('support_tickets').insert({ user_id: req.user?.id, ticket_id: ticketId, subject, description, priority: priority || 'medium', status: 'open' }).select().single();
       if (error) throw error;
       return res.json(data);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/admin/support-tickets', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -951,7 +968,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('support_tickets').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/admin/transactions', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -959,7 +976,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('transactions').select('*').order('created_at', { ascending: false }).limit(100);
       if (error) throw error;
       return res.json(data || []);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/admin/transactions', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -970,7 +987,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('transactions').insert({ from_account_id: accountId, to_account_id: null, from_user_id: userId || req.user?.id, amount: Number(amount).toFixed(2), transaction_type: type, category: 'admin', status: 'completed', description: description || 'Admin transaction', reference_number: reference, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() }).select().single();
       if (error) throw error;
       return res.json(data);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/savings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -978,7 +995,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('savings').select('*').eq('user_id', req.user?.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/savings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -993,7 +1010,7 @@ export async function registerRoutes(app: Express) {
       if (error) throw error;
       if (deposit > 0) { await supabaseClient.from('transactions').insert({ from_user_id: req.user?.id, to_user_id: req.user?.id, amount: deposit.toFixed(2), currency: 'USD', transaction_type: 'savings_deposit', category: 'savings', status: 'completed', description: `Initial deposit to savings account ${savingsNumber}`, reference_number: `SAV${Date.now()}${Math.floor(Math.random() * 10000)}`, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() }); }
       return res.json(data);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/savings/deposit', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
@@ -1005,17 +1022,19 @@ export async function registerRoutes(app: Express) {
       const supabaseClient = getAdminClient();
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
-      if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
-      const newCheckingBalance = (currentBalance - numAmount).toFixed(2);
-      await supabaseClient.from('accounts').update({ balance: newCheckingBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
+      const accountId = (userAccount as Record<string, unknown>).id as number;
+      // ATOMIC BALANCE UPDATE: prevents race condition where concurrent requests both pass the balance check
+      const balanceResult = await atomicBalanceUpdate(accountId, -numAmount, 'Deposit to savings account');
+      if (!balanceResult.success) {
+        return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
+      }
       const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user?.id).single();
       if (!savings) return res.status(404).json({ error: 'Savings account not found' });
       const newSavingsBalance = (parseFloat(String((savings as Record<string, unknown>).balance || '0')) + numAmount).toFixed(2);
       await supabaseClient.from('savings').update({ balance: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId);
       await supabaseClient.from('transactions').insert({ from_user_id: req.user?.id, to_user_id: req.user?.id, amount: numAmount.toFixed(2), currency: 'USD', transaction_type: 'savings_deposit', category: 'savings', status: 'completed', description: `Deposit to savings account`, reference_number: `SAV${Date.now()}${Math.floor(Math.random() * 10000)}`, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() });
       return res.json({ success: true, newSavingsBalance });
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/savings/withdraw', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
@@ -1027,15 +1046,23 @@ export async function registerRoutes(app: Express) {
       const supabaseClient = getAdminClient();
       const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user?.id).single();
       if (!savings) return res.status(404).json({ error: 'Savings account not found' });
-      const savingsBalance = parseFloat(String((savings as Record<string, unknown>).balance || '0')));
+      const savingsBalance = parseFloat(String((savings as Record<string, unknown>).balance || '0'));
       if (savingsBalance < numAmount) return res.status(400).json({ error: 'Insufficient savings balance' });
       const newSavingsBalance = (savingsBalance - numAmount).toFixed(2);
-      await supabaseClient.from('savings').update({ balance: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId);
+      // RACE CONDITION FIX: Optimistic lock on savings decrement - only update if balance hasn't changed
+      const { data: updatedSavings, error: savingsUpdateError } = await supabaseClient.from('savings').update({ balance: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId).eq('balance', savingsBalance).select().single();
+      if (savingsUpdateError || !updatedSavings) {
+        return res.status(409).json({ error: 'Savings balance was modified by another transaction. Please try again.' });
+      }
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
-      if (userAccount) { const newCheckingBalance = (parseFloat(String((userAccount as Record<string, unknown>).balance || '0')) + numAmount).toFixed(2); await supabaseClient.from('accounts').update({ balance: newCheckingBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id); }
+      if (userAccount) {
+        // ATOMIC BALANCE UPDATE: credit checking account atomically
+        const accountId = (userAccount as Record<string, unknown>).id as number;
+        await atomicBalanceUpdate(accountId, numAmount, 'Withdrawal from savings account');
+      }
       await supabaseClient.from('transactions').insert({ from_user_id: req.user?.id, to_user_id: req.user?.id, amount: numAmount.toFixed(2), currency: 'USD', transaction_type: 'savings_withdrawal', category: 'savings', status: 'completed', description: `Withdrawal from savings account`, reference_number: `SAW${Date.now()}${Math.floor(Math.random() * 10000)}`, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() });
       return res.json({ success: true, newSavingsBalance });
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/investments/buy', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
@@ -1051,15 +1078,18 @@ export async function registerRoutes(app: Express) {
       const supabaseClient = getAdminClient();
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
-      if (currentBalance < totalCost) return res.status(400).json({ error: 'Insufficient funds' });
-      const newBalance = (currentBalance - totalCost).toFixed(2);
-      await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
+      const accountId = (userAccount as Record<string, unknown>).id as number;
+      // ATOMIC BALANCE UPDATE: prevents race condition where concurrent requests both pass the balance check
+      const balanceResult = await atomicBalanceUpdate(accountId, -totalCost, `Bought ${numShares} shares of ${sanitizedSymbol} at ${numPrice.toFixed(2)}`);
+      if (!balanceResult.success) {
+        return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
+      }
+      const newBalance = balanceResult.newBalance || '0';
       const { data: existing } = await supabaseClient.from('investments').select('id, shares, average_price').eq('user_id', req.user?.id).eq('symbol', sanitizedSymbol).limit(1);
       if (existing && existing.length > 0) { const existingShares = parseFloat(String((existing[0] as Record<string, unknown>).shares || '0')); const existingAvg = parseFloat(String((existing[0] as Record<string, unknown>).average_price || '0')); const newTotalShares = existingShares + numShares; const newAvgPrice = ((existingAvg * existingShares) + (numPrice * numShares)) / newTotalShares; await supabaseClient.from('investments').update({ shares: newTotalShares.toString(), average_price: newAvgPrice.toFixed(2), current_price: numPrice.toFixed(2), updated_at: new Date().toISOString() }).eq('id', (existing[0] as Record<string, unknown>).id); } else { await supabaseClient.from('investments').insert({ user_id: req.user?.id, symbol: sanitizedSymbol, asset_type: assetType || 'stock', shares: numShares.toString(), average_price: numPrice.toFixed(2), current_price: numPrice.toFixed(2), status: 'active' }); }
       await supabaseClient.from('transactions').insert({ from_user_id: req.user?.id, amount: totalCost.toFixed(2), currency: 'USD', transaction_type: 'investment_buy', category: 'investment', status: 'completed', description: `Bought ${numShares} shares of ${sanitizedSymbol} at ${numPrice.toFixed(2)}`, reference_number: `INV${Date.now()}${Math.floor(Math.random() * 10000)}`, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() });
       return res.json({ success: true, totalCost: totalCost.toFixed(2), newBalance });
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/investments/sell', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
@@ -1074,16 +1104,28 @@ export async function registerRoutes(app: Express) {
       const supabaseClient = getAdminClient();
       const { data: investment } = await supabaseClient.from('investments').select('id, shares, average_price, symbol').eq('id', investmentId).eq('user_id', req.user?.id).single();
       if (!investment) return res.status(404).json({ error: 'Investment not found' });
-      const heldShares = parseFloat(String((investment as Record<string, unknown>).shares || '0')));
+      const heldShares = parseFloat(String((investment as Record<string, unknown>).shares || '0'));
       if (heldShares < numShares) return res.status(400).json({ error: 'Insufficient shares' });
-      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
-      if (userAccount) { const newBalance = (parseFloat(String((userAccount as Record<string, unknown>).balance || '0')) + totalProceeds).toFixed(2); await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id); }
       const remainingShares = heldShares - numShares;
-      if (remainingShares > 0) { await supabaseClient.from('investments').update({ shares: remainingShares.toString(), current_price: numPrice.toFixed(2), updated_at: new Date().toISOString() }).eq('id', investmentId); } else { await supabaseClient.from('investments').update({ shares: '0', status: 'sold', updated_at: new Date().toISOString() }).eq('id', investmentId); }
+      // RACE CONDITION FIX: Optimistic lock on shares decrement - only update if shares haven't changed
+      const newSharesValue = remainingShares > 0 ? remainingShares.toString() : '0';
+      const newStatus = remainingShares > 0 ? undefined : 'sold';
+      const updatePayload: Record<string, unknown> = { shares: newSharesValue, current_price: numPrice.toFixed(2), updated_at: new Date().toISOString() };
+      if (newStatus) updatePayload.status = newStatus;
+      const { data: updatedInvestment, error: investmentUpdateError } = await supabaseClient.from('investments').update(updatePayload).eq('id', investmentId).eq('shares', heldShares).select().single();
+      if (investmentUpdateError || !updatedInvestment) {
+        return res.status(409).json({ error: 'Investment shares were modified by another transaction. Please try again.' });
+      }
+      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
+      if (userAccount) {
+        // ATOMIC BALANCE UPDATE: credit account atomically
+        const accountId = (userAccount as Record<string, unknown>).id as number;
+        await atomicBalanceUpdate(accountId, totalProceeds, `Sold ${numShares} shares of ${(investment as Record<string, unknown>).symbol} at ${numPrice.toFixed(2)}`);
+      }
       const symbol = (investment as Record<string, unknown>).symbol as string;
       await supabaseClient.from('transactions').insert({ from_user_id: null, to_user_id: req.user?.id, amount: totalProceeds.toFixed(2), currency: 'USD', transaction_type: 'investment_sell', category: 'investment', status: 'completed', description: `Sold ${numShares} shares of ${symbol} at ${numPrice.toFixed(2)}`, reference_number: `SEL${Date.now()}${Math.floor(Math.random() * 10000)}`, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() });
       return res.json({ success: true, totalProceeds: totalProceeds.toFixed(2) });
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/payments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -1091,7 +1133,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('payments').select('*').eq('user_id', req.user?.id).order('created_at', { ascending: false });
       if (error) throw error;
       return res.json(data || []);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/kyc/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -1101,7 +1143,7 @@ export async function registerRoutes(app: Express) {
       const { data: user } = await supabase.from('users').select('is_verified, kyc_status, email, phone, full_name, address, city, country, profession, annual_income').eq('id', req.user?.id).single();
       const verificationItems = [{ id: 'identity', name: 'Identity Verification', status: user?.is_verified ? 'verified' : 'pending', completedAt: user?.is_verified ? new Date().toISOString() : null }, { id: 'email', name: 'Email Verification', status: user?.email ? 'verified' : 'pending', completedAt: user?.email ? new Date().toISOString() : null }, { id: 'phone', name: 'Phone Verification', status: user?.phone ? 'verified' : 'pending', completedAt: null }, { id: 'address', name: 'Address Verification', status: user?.address ? 'verified' : 'required', completedAt: null }, { id: 'income', name: 'Income Verification', status: user?.annual_income ? 'verified' : 'required', completedAt: null }, { id: 'kyc', name: 'KYC Compliance', status: user?.kyc_status || 'pending', completedAt: user?.kyc_status === 'approved' ? new Date().toISOString() : null }];
       return res.json({ kycRecord: data, verificationItems, user: { isVerified: user?.is_verified, kycStatus: user?.kyc_status } });
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/kyc/submit', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -1114,7 +1156,7 @@ export async function registerRoutes(app: Express) {
       await supabaseClient.from('users').update({ kyc_status: 'in_review' }).eq('id', req.user?.id);
       await supabaseClient.from('alerts').insert({ user_id: req.user?.id, title: 'KYC Submitted', message: 'Your KYC documents have been submitted for review.', type: 'info', priority: 'normal', is_read: false });
       return res.json(data);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/user/preferences', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -1122,7 +1164,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('users').select('notification_preferences, privacy_preferences, display_preferences, security_preferences').eq('id', req.user?.id).single();
       if (error) throw error;
       return res.json({ notificationPreferences: data?.notification_preferences || {}, privacyPreferences: data?.privacy_preferences || {}, displayPreferences: data?.display_preferences || {}, securityPreferences: data?.security_preferences || {} });
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.put('/api/user/preferences', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -1136,7 +1178,7 @@ export async function registerRoutes(app: Express) {
       const { error } = await supabase.from('users').update(updateData).eq('id', req.user?.id);
       if (error) throw error;
       return res.json({ success: true });
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.put('/api/user/security-questions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -1149,7 +1191,7 @@ export async function registerRoutes(app: Express) {
       const { error } = await supabase.from('users').update({ security_question_1: securityQuestion1, security_answer_1: hashedAnswer1, security_question_2: securityQuestion2, security_answer_2: hashedAnswer2 }).eq('id', req.user?.id);
       if (error) throw error;
       return res.json({ success: true });
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/transactions/export', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -1172,7 +1214,7 @@ export async function registerRoutes(app: Express) {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', 'attachment; filename=transactions.csv');
       return res.send(csvHeader + csvRows);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.post('/api/loans/:id/repay', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
@@ -1187,16 +1229,19 @@ export async function registerRoutes(app: Express) {
       if ((loan as Record<string, unknown>).status !== 'approved' && (loan as Record<string, unknown>).status !== 'active') return res.status(400).json({ error: 'Loan is not active' });
       const { data: account } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id).eq('status', 'active').limit(1).single();
       if (!account) return res.status(404).json({ error: 'Account not found' });
-      const currentBalance = parseFloat(String((account as Record<string, unknown>).balance || '0')));
-      if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
-      const newBalance = (currentBalance - numAmount).toFixed(2);
-      await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (account as Record<string, unknown>).id);
-      const remainingBalance = parseFloat(String((loan as Record<string, unknown>).remaining_balance || (loan as Record<string, unknown>).principal_amount || '0'))) - numAmount;
+      const accountId = (account as Record<string, unknown>).id as number;
+      // ATOMIC BALANCE UPDATE: prevents race condition where concurrent requests both pass the balance check
+      const balanceResult = await atomicBalanceUpdate(accountId, -numAmount, `Loan repayment for loan ${req.params.id}`);
+      if (!balanceResult.success) {
+        return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
+      }
+      const newBalance = balanceResult.newBalance || '0';
+      const remainingBalance = parseFloat(String((loan as Record<string, unknown>).remaining_balance || (loan as Record<string, unknown>).principal_amount || '0')) - numAmount;
       await supabaseClient.from('loans').update({ remaining_balance: remainingBalance.toFixed(2), status: remainingBalance <= 0 ? 'completed' : 'active', updated_at: new Date().toISOString() }).eq('id', req.params.id);
       await supabaseClient.from('transactions').insert({ from_user_id: req.user?.id, amount: numAmount.toFixed(2), currency: 'USD', transaction_type: 'loan_repayment', category: 'loan', status: 'completed', description: `Loan repayment for loan ${req.params.id}`, reference_number: `LRP${Date.now()}${Math.floor(Math.random() * 10000)}`, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() });
       await supabaseClient.from('alerts').insert({ user_id: req.user?.id, title: 'Loan Payment Made', message: `Payment of ${numAmount.toFixed(2)} applied to your loan. Remaining balance: ${remainingBalance.toFixed(2)}.`, type: 'success', priority: 'normal', is_read: false });
       return res.json({ success: true, newBalance, remainingBalance: remainingBalance.toFixed(2) });
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/loans/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -1204,7 +1249,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('loans').select('*').eq('id', req.params.id).eq('user_id', req.user?.id).single();
       if (error) throw error;
       return res.json(data);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   app.get('/api/cards/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -1214,7 +1259,7 @@ export async function registerRoutes(app: Express) {
       const { data, error } = await supabase.from('cards').select('*').eq('id', req.params.id).in('account_id', account.map((a: Record<string, unknown>) => a.id)).single();
       if (error) throw error;
       return res.json(data);
-    } catch (error: unknown) { return res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
   const httpServer = createServer(app);
@@ -1256,6 +1301,6 @@ export async function registerLiveChatRoutes(app: Express) {
       const channel = supabase.channel(`notifications:${userId}`);
       channel.send({ type: 'broadcast', event: type, payload: { message, timestamp: new Date() } });
       return res.json({ success: true });
-    } catch (error: unknown) { return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') || 'Unknown error' }); }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 }
