@@ -144,7 +144,17 @@ const mapCard = (row: Record<string, any>): Card => ({
 const mapInvestment = (row: Record<string, any>): Investment => ({
   id: row.id,
   userId: row.user_id ?? 0,
+  accountId: row.account_id ?? '',
+  investmentType: row.investment_type || row.type || 'stock',
+  assetType: row.asset_type ?? null,
   type: row.type || '',
+  symbol: row.symbol || '',
+  shares: String(row.shares ?? '0'),
+  purchasePrice: String(row.purchase_price ?? row.amount ?? '0'),
+  averagePrice: row.average_price ? String(row.average_price) : null,
+  currentPrice: String(row.current_price ?? '0'),
+  totalValue: row.total_value ?? null,
+  gainLoss: row.gain_loss ?? null,
   amount: String(row.amount ?? '0'),
   rate: row.rate !== null && row.rate !== undefined ? String(row.rate) : null,
   status: row.status || 'active',
@@ -161,7 +171,7 @@ async function withRetry<T>(fn: () => Promise<T>, maxAttempts: number = 3): Prom
     } catch (error) {
       lastError = error;
       if (attempt < maxAttempts) {
-        const delayMs = Math.pow(2, attempt) * 100; // 200ms, 400ms, 800ms
+        const delayMs = Math.pow(2, attempt) * 100;
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
@@ -214,8 +224,6 @@ export class SupabasePublicStorage implements IStorage {
 
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
     try {
-      // Supabase auth IDs are UUIDs — look up the auth user to get their email,
-      // then find the matching user_profiles record by email
       const { data: authData, error } = await supabase.auth.admin.getUserById(supabaseUserId);
       if (error || !authData?.user?.email) return undefined;
       return this.getUserByEmail(authData.user.email);
@@ -343,7 +351,6 @@ export class SupabasePublicStorage implements IStorage {
         if (!user) throw new Error('No user returned after balance update');
         return user;
       });
-      // Keep accounts in sync
       const accounts = await this.getUserAccounts(id);
       if (accounts.length > 0) {
         const primary = accounts[0];
@@ -440,7 +447,6 @@ export class SupabasePublicStorage implements IStorage {
   async createTransaction(data: InsertTransaction): Promise<Transaction> {
     try {
       const transaction = await withRetry(async () => {
-        // Map camelCase fields to snake_case for database
         const dbData: Record<string, unknown> = {
           from_user_id: data.fromUserId,
           from_account_id: data.fromAccountId,
@@ -459,7 +465,6 @@ export class SupabasePublicStorage implements IStorage {
           transfer_purpose: data.transferPurpose,
           reference_number: data.referenceNumber
         };
-        // Remove undefined fields
         Object.keys(dbData).forEach(key => dbData[key] === undefined && delete dbData[key]);
         
         const { data: transaction, error } = await supabase.from('transactions').insert(dbData).select().single();
@@ -587,7 +592,6 @@ export class SupabasePublicStorage implements IStorage {
 
   async updateSupportTicket(id: string, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
     try {
-      // Map camelCase TypeScript fields to snake_case DB columns
       const dbUpdates: Record<string, any> = {};
       const fieldMap: Record<string, string> = {
         adminNotes: 'admin_notes',
@@ -767,7 +771,6 @@ export class SupabasePublicStorage implements IStorage {
 
   async createMessage(data: InsertMessage): Promise<Message> {
     try {
-      // Explicitly map camelCase Drizzle fields to snake_case Supabase REST column names
       const row = {
         sender_id: data.senderId,
         sender_role: data.senderRole || 'customer',
