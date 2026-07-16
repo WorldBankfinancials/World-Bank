@@ -3,6 +3,7 @@
  * Zod schemas. accountId/userId are UUID strings, not integers.
  */
 import { z } from 'zod';
+import type { Request, Response, NextFunction } from 'express';
 
 export function validateRequest<T>(schema: z.ZodSchema<T>, data: unknown):
   | { success: true; data: T }
@@ -16,7 +17,7 @@ export function validateRequest<T>(schema: z.ZodSchema<T>, data: unknown):
 }
 
 export function validateBody<T>(schema: z.ZodSchema<T>) {
-  return (req: any, res: any, next: any) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     const result = validateRequest(schema, req.body);
     if (!result.success) return res.status(400).json({ error: 'Validation failed', details: result.errors });
     req.validatedBody = result.data;

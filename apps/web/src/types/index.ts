@@ -37,8 +37,10 @@ export interface AccountData {
   accountType?: string;
   account_type?: string;
   accountName?: string;
+  account_number?: string;
   balance: number | string;
   currency?: string;
+  interest_rate?: number | string;
   isActive?: boolean;
 }
 

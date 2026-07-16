@@ -3,9 +3,9 @@ import { Request } from 'express';
 declare global {
   namespace Express {
     interface Request {
-      session?: any;
-      params: any;
-      body: any;
+      session?: Record<string, unknown>;
+      params: Record<string, unknown>;
+      body: Record<string, unknown>;
     }
   }
 }
