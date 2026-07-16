@@ -33,6 +33,19 @@ export default function MobilePay() {
     queryKey: ['/api/user'],
   });
 
+  // Fetch real payment data from Supabase
+  const { data: recentPayments, isLoading: paymentsLoading, error: paymentsError } = useQuery({
+    queryKey: ['/api/mobile-payments'],
+    staleTime: 30000
+  });
+
+  // Fetch nearby merchants from API
+  const { data: nearbyMerchants = [], isLoading: merchantsLoading, error: merchantsError } = useQuery<any[]>({
+    queryKey: ['/api/mobile-pay/merchants'],
+    enabled: !!user,
+    staleTime: 60000
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-wb-gray flex items-center justify-center">
@@ -62,18 +75,8 @@ export default function MobilePay() {
     }
   ];
 
-  // Fetch real payment data from Supabase
-  const { data: recentPayments } = useQuery({
-    queryKey: ['/api/mobile-payments'],
-    staleTime: 30000
-  });
-
-  // Fetch nearby merchants from API
-  const { data: nearbyMerchants = [] } = useQuery<any[]>({
-    queryKey: ['/api/mobile-pay/merchants'],
-    enabled: !!user,
-    staleTime: 60000
-  });
+  // Fetch real payment data from Supabase (declared above with loading/error states)
+  // Fetch nearby merchants from API (declared above with loading/error states)
 
   return (
     <div className="min-h-screen bg-wb-gray">
@@ -141,7 +144,15 @@ export default function MobilePay() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentPayments && Array.isArray(recentPayments) && recentPayments.length > 0 ? recentPayments.map((payment: any, index: number) => (
+                  {paymentsError ? (
+                    <div className="text-center py-8 text-red-600">
+                      Failed to load payments. Please try again.
+                    </div>
+                  ) : paymentsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
+                  ) : recentPayments && Array.isArray(recentPayments) && recentPayments.length > 0 ? recentPayments.map((payment: any, index: number) => (
                     <div key={`item-${index}`} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                       <div className="flex items-center space-x-4">
                         <div className="w-12 h-12 bg-wb-blue-light rounded-full flex items-center justify-center">
@@ -159,7 +170,7 @@ export default function MobilePay() {
                     </div>
                   )) : (
                     <div className="text-center py-8 text-gray-500">
-                      <p>No recent payments available</p>
+                      <p>No mobile payments yet.</p>
                     </div>
                   )}
                 </div>
@@ -171,7 +182,7 @@ export default function MobilePay() {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Shield className="w-5 h-5 mr-2" />
-                  Advanced Security
+                  Advanced security
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -253,7 +264,15 @@ export default function MobilePay() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {nearbyMerchants.map((merchant, index) => (
+                {merchantsError ? (
+                  <div className="text-center py-4 text-red-600 text-sm">Failed to load merchants.</div>
+                ) : merchantsLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : nearbyMerchants.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500 text-sm">No nearby merchants found.</div>
+                ) : nearbyMerchants.map((merchant, index) => (
                   <div key={`item-${index}`} className="p-3 border rounded-lg">
                     <div className="flex justify-between items-start mb-2">
                       <div>
