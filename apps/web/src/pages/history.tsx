@@ -317,9 +317,9 @@ export default function History() {
                       </div>
                       
                       <div className="text-right">
-                        <div className={`text-lg font-semibold ${
+                        <div className={"text-lg font-semibold " + (
                           transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'
-                        }">
+                        )}>
                           {formatAmount(transaction.amount, transaction.type)}
                         </div>
                         <div className="text-xs text-gray-500">

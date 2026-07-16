@@ -76,8 +76,11 @@ export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps)
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-50" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-50" onClick={onClose} role="button" tabIndex={-1} aria-label="Close menu">
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation menu"
         className="fixed right-0 top-0 h-full w-80 bg-white shadow-lg overflow-y-auto transform transition-transform duration-300 ease-in-out"
         onClick={(e) => e.stopPropagation()}
       >
