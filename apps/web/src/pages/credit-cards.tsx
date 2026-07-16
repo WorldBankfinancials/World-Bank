@@ -54,146 +54,144 @@ export default function CreditCards() {
   }
   
   const quickActions = [
-    { icon: Lock, label: t('lock_card'), action: () => { toast({ title: 'Please use the Cards page for this action' }); setLocation('/cards'); } },
-    { icon: Smartphone, label: t('mobile_pay'), action: () => { toast({ title: 'Please use the Cards page for this action' }); setLocation('/cards'); } },
-    { icon: DollarSign, label: t('pay_bill'), action: () => { toast({ title: 'Please use the Cards page for this action' }); setLocation('/cards'); } },
-    { icon: Settings, label: t('settings'), action: () => { toast({ title: 'Please use the Cards page for this action' }); setLocation('/cards'); } }
+    { icon: Lock, label: t('lock_card'), action: () => setLocation('/card-management') },
+    { icon: Settings, label: t('card_settings'), action: () => setLocation('/card-management') },
+    { icon: Smartphone, label: t('mobile_payment'), action: () => setLocation('/card-management') },
+    { icon: Plus, label: t('request_new_card'), action: () => setLocation('/card-management') },
   ];
 
+  const cards = (creditCards as Array<Record<string, unknown>>) || [];
+  const transactions = (recentTransactions as Array<Record<string, unknown>>) || [];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <Header user={user as unknown as User || undefined} />
       
-      <div className="px-4 py-6 pb-20">
-        {/* Header Section */}
+      <div className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-semibold text-gray-900">{t('my_cards')}</h1>
-          <Button size="sm" className="bg-blue-600 text-white" onClick={() => setLocation('/cards')}">
-            <Plus className="w-4 h-4 mr-1" />
-            {t('add_card')}
+          <h1 className="text-2xl font-bold text-gray-900">{t('credit_cards')}</h1>
+          <Button variant="outline" size="sm" onClick={() => setLocation('/dashboard')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            {t('back')}
           </Button>
         </div>
-        {/* Credit Cards */}
-        <div className="space-y-4">
-          {cardsError ? (
-            <div className="text-center py-12">
-              <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
-              <p className="text-red-600 mb-2">Failed to load cards. Please try again.</p>
-            </div>
-          ) : cardsLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : creditCards && Array.isArray(creditCards) && creditCards.length > 0 ? creditCards.map((card: Record<string, unknown>) => (
-            <Card key={String(card.id)} className={`bg-gradient-to-r ${String(card.color) || ''} text-white relative overflow-hidden`}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-6">
-                  <div>
-                    <p className="text-blue-100 text-sm mb-1">{String(card.name)}</p>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-lg font-mono">
-                        {showCardNumbers ? String(card.number) : String(card.maskedNumber)}
-                      </span>
-                      <button
-                        onClick={() => setShowCardNumbers(!showCardNumbers)}
-                        className="text-blue-100 hover:text-white"
-                      >
-                        {showCardNumbers ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
+
+        {/* Credit Cards Display */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {cards.length > 0 ? (
+            cards.map((card, index) => (
+              <Card key={index} className="relative overflow-hidden bg-gradient-to-br from-blue-900 to-blue-700 text-white border-0">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start mb-8">
+                    <div>
+                      <p className="text-sm opacity-80">{t('card_holder')}</p>
+                      <p className="font-semibold">{String(card.cardHolder || user?.firstName + ' ' + user?.lastName || 'Card Holder')}</p>
+                    </div>
+                    <CreditCard className="w-8 h-8" />
+                  </div>
+                  
+                  <div className="mb-6">
+                    <p className="text-lg font-mono tracking-wider">
+                      {showCardNumbers ? String(card.cardNumber || '**** **** **** ****') : '**** **** **** ****'}
+                    </p>
+                  </div>
+                  
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-xs opacity-80">{t('expires')}</p>
+                      <p className="text-sm font-medium">{String(card.expiryDate || 'MM/YY')}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs opacity-80">{t('cvv')}</p>
+                      <p className="text-sm font-medium">{showCardNumbers ? String(card.cvv || '***') : '***'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs opacity-80">{t('balance')}</p>
+                      <p className="text-sm font-medium">${String(card.balance || '0.00')}</p>
                     </div>
                   </div>
-                  <MoreHorizontal className="w-5 h-5 text-blue-100" />
-                </div>
-
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-blue-100 text-xs">Valid Thru</p>
-                    <p className="text-sm font-medium">{String(card.expiry)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-blue-100 text-xs">Available Credit</p>
-                    <p className="text-lg font-semibold">${((parseFloat(String(card.availableCredit)) || 0) >= 0 ? parseFloat(String(card.availableCredit)) || 0 : 0).toLocaleString()}</p>
-                  </div>
-                </div>
-
-                {/* Credit utilization bar */}
-                <div className="mt-4">
-                  <div className="flex justify-between text-xs text-blue-100 mb-1">
-                    <span>Used: ${((parseFloat(String(card.balance)) || 0) >= 0 ? parseFloat(String(card.balance)) || 0 : 0).toLocaleString()}</span>
-                    <span>Limit: ${((parseFloat(String(card.limit)) || 0) >= 0 ? parseFloat(String(card.limit)) || 0 : 0).toLocaleString()}</span>
-                  </div>
-                  <div className="w-full bg-blue-800 rounded-full h-2">
-                    <div 
-                      className="bg-white rounded-full h-2" 
-                      style={{width: `${((parseFloat(String(card.balance)) || 0) / (parseFloat(String(card.limit)) || 1)) * 100}%`}}
-                    ></div>
-                  </div>
-                </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <Card className="col-span-2">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <CreditCard className="w-16 h-16 text-gray-400 mb-4" />
+                <p className="text-gray-500 mb-4">{t('no_cards_yet')}</p>
+                <Button onClick={() => setLocation('/card-management')}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {t('request_new_card')}
+                </Button>
               </CardContent>
             </Card>
-          )) : (
-            <div className="text-center py-12">
-              <CreditCard className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">{t('no_credit_cards')}</h3>
-              <p className="text-gray-500 mb-6">{t('you_dont_have_any_credit_cards_yet')}</p>
-              <Button className="bg-blue-600 text-white" onClick={() => setLocation('/cards')}>
-                <Plus className="w-4 h-4 mr-2" />
-                {t('apply_for_card')}
-              </Button>
-            </div>
           )}
         </div>
 
         {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{t('quick_actions')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-4 gap-3">
-              {quickActions.map((action, index) => (
-                <Button 
-                  key={`item-${index}`}
-                  variant="outline" 
-                  onClick={action.action}
-                  className="h-16 flex flex-col items-center space-y-2"
-                >
-                  <action.icon className="w-5 h-5" />
-                  <span className="text-xs">{action.label}</span>
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {quickActions.map((action, index) => (
+            <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow" onClick={action.action}>
+              <CardContent className="p-4 text-center">
+                <action.icon className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                <p className="text-sm font-medium">{action.label}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Show/Hide Card Numbers Toggle */}
+        <div className="flex items-center justify-center mb-6">
+          <Button variant="outline" onClick={() => setShowCardNumbers(!showCardNumbers)}>
+            {showCardNumbers ? (
+              <>
+                <EyeOff className="w-4 h-4 mr-2" />
+                {t('hide_card_numbers')}
+              </>
+            ) : (
+              <>
+                <Eye className="w-4 h-4 mr-2" />
+                {t('show_card_numbers')}
+              </>
+            )}
+          </Button>
+        </div>
 
         {/* Recent Transactions */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">{t('recent_transactions')}</CardTitle>
+            <CardTitle className="flex items-center justify-between">
+              <span>{t('recent_transactions')}</span>
+              <Button variant="ghost" size="sm" onClick={() => setShowTransactions(!showTransactions)}>
+                {showTransactions ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </Button>
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentTransactions && Array.isArray(recentTransactions) && recentTransactions.length > 0 ? recentTransactions.map((transaction: Record<string, unknown>, index: number) => (
-                <div key={`item-${index}`} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                      <CreditCard className="w-5 h-5 text-gray-600" />
+          {showTransactions && (
+            <CardContent>
+              {transactions.length > 0 ? (
+                <div className="space-y-3">
+                  {transactions.map((txn, index) => (
+                    <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                          <DollarSign className="w-5 h-5 text-gray-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{String(txn.description || 'Transaction')}</p>
+                          <p className="text-xs text-gray-500">{String(txn.date || '')}</p>
+                        </div>
+                      </div>
+                      <p className={`font-semibold ${String(txn.amount || '').startsWith('-') ? 'text-red-600' : 'text-green-600'}`}>
+                        {String(txn.amount || '$0.00')}
+                      </p>
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">{String(transaction.description)}</p>
-                      <p className="text-xs text-gray-500">{String(transaction.category)} • {String(transaction.date)}</p>
-                    </div>
-                  </div>
-                  <span className="font-medium text-red-600">-${String(transaction.amount)}</span>
+                  ))}
                 </div>
-              )) : (
-                <div className="text-center py-8 text-gray-500">
-                  <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>{t('no_recent_transactions_available')}</p>
-                </div>
+              ) : (
+                <p className="text-center text-gray-500 py-8">{t('no_recent_transactions')}</p>
               )}
-            </div>
-          </CardContent>
+            </CardContent>
+          )}
         </Card>
       </div>
       

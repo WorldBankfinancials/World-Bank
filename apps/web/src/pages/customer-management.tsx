@@ -56,8 +56,8 @@ export default function CustomerManagement() {
   const [onlineUserIds, setOnlineUserIds] = useState<Set<number>>(new Set());
 
   // Subscribe to real-time presence updates
-  useOnlineUsers((onlineUsers: Array<{ user_id: number }>) => {
-    const userIds = new Set<number>(onlineUsers.map((u) => u.user_id));
+  useOnlineUsers((onlineUsers) => {
+    const userIds = new Set<number>(onlineUsers.map((u) => Number(u.user_id)).filter((n) => !isNaN(n)));
     setOnlineUserIds(userIds);
   });
 
