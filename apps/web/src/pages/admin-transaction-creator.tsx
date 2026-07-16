@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,20 @@ export default function AdminTransactionCreator() {
   const [description, setDescription] = useState("");
   const [transactionType, setTransactionType] = useState("deposit");
   const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    if (accountsError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [accountsError]);
+
+  if (accountsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   const handleCreateTransaction = async () => {
     if (!selectedAccountId || !amount || !description) {
