@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
+import { authenticatedFetch } from "@/lib/queryClient";
 
 interface ChatMessage {
   id: string;
@@ -100,12 +101,12 @@ export default function QuickActions() {
           if (data.type === 'typing_indicator') {
             setIsTyping(data.isTyping);
           }
-        } catch (error) {}
+        } catch (error) { console.error('QuickActions error:', error); }
       };
 
       ws.onclose = () => { setIsConnected(false); };
       ws.onerror = (error) => { setIsConnected(false); };
-    } catch (error) {}
+    } catch (error) { console.error('QuickActions error:', error); }
 
     return () => {
       if (wsRef.current) { wsRef.current.close(); }
@@ -117,7 +118,6 @@ export default function QuickActions() {
     queryKey: ['/api/alerts'],
     queryFn: async () => {
       try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
         const response = await authenticatedFetch('/api/alerts');
         if (!response.ok) return [];
         return response.json();
@@ -179,13 +179,12 @@ export default function QuickActions() {
     };
     setChatMessages(prev => [...prev, message]);
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       await authenticatedFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: currentMessage, recipientId: 1, sessionId: 'session_1' })
       });
-    } catch (error) {}
+    } catch (error) { console.error('QuickActions error:', error); }
     setCurrentMessage("");
   };
 
@@ -277,7 +276,7 @@ export default function QuickActions() {
               </div>
               <div className="border-t p-4">
                 <div className="flex space-x-2">
-                  <Input value={currentMessage} onChange={(e) => setCurrentMessage(e.target.value)} placeholder="Type your message..." onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} className="flex-1" />
+                  <Input value={currentMessage} onChange={(e) => setCurrentMessage(e.target.value)} placeholder="Type your message..." onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} className="flex-1" />
                   <Button onClick={handleSendMessage} disabled={!currentMessage.trim() || !isConnected} className="bg-blue-600 hover:bg-blue-700"><Send className="w-4 h-4" /></Button>
                 </div>
               </div>

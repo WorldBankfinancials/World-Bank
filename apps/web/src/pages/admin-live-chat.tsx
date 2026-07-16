@@ -254,7 +254,7 @@ export default function AdminLiveChat() {
                     placeholder="Type your message..."
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                   />
                   <Button
                     onClick={handleSendMessage}

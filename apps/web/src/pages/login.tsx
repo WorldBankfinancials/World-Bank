@@ -412,7 +412,7 @@ export default function Login() {
                 maxLength={4}
                 className="wb-input text-center text-lg tracking-widest"
                 placeholder="••••"
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter' && loginPin.length === 4) {
                     handlePinVerification();
                   }
