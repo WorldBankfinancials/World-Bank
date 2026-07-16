@@ -100,7 +100,7 @@ const routesReady = registerFixedRoutes(app).catch(err => {
 // Vercel serverless handler
 const handler = async (req: Request, res: Response) => {
   await routesReady;
-  (app as any)(req, res);
+  (app as unknown as (req: Request, res: Response) => void)(req, res);
 };
 
 export default handler;

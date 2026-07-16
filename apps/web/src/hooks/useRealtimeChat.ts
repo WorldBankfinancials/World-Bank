@@ -83,7 +83,7 @@ export function useRealtimeChat(
                 if (Array.isArray(data)) {
                   setMessages(prev => {
                     const existingIds = new Set(prev.map(m => m.id));
-                    const newMsgs = data.filter((msg: any) => !existingIds.has(msg.id));
+                    const newMsgs = data.filter((msg: ChatMessage) => !existingIds.has(msg.id));
                     return [...prev, ...newMsgs];
                   });
                 }

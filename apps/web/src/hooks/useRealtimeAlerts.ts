@@ -64,7 +64,7 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
                 if (Array.isArray(data)) {
                   setAlerts(prev => {
                     const existingIds = new Set(prev.map(a => a.id));
-                    const newAlerts = data.filter((alert: any) => !existingIds.has(alert.id));
+                    const newAlerts = data.filter((alert: Alert) => !existingIds.has(alert.id));
                     return [...prev, ...newAlerts];
                   });
                 }

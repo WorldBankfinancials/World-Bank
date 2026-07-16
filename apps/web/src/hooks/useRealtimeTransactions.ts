@@ -70,7 +70,7 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
                 if (Array.isArray(data)) {
                   setTransactions(prev => {
                     const existingIds = new Set(prev.map(t => t.id));
-                    const newTxs = data.filter((tx: any) => !existingIds.has(tx.id));
+                    const newTxs = data.filter((tx: Transaction) => !existingIds.has(tx.id));
                     return [...prev, ...newTxs];
                   });
                 }

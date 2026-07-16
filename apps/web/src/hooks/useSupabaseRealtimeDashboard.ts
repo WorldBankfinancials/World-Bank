@@ -36,7 +36,7 @@ export function useSupabaseRealtime<T>(
     table: string;
     presenceKey: string;
     onDataChange: (data: T) => void;
-    transform?: (raw: any) => T;
+    transform?: (raw: unknown) => T;
     enabled?: boolean;
   }
 ) {
@@ -141,14 +141,17 @@ export function useSupabaseRealtimeTransactions(
     onDataChange: (data) => {
       if (Array.isArray(data)) onTransactionsChange(data);
     },
-    transform: (data: any) => data.slice(0, 10).map((txn: any) => ({
-      id: txn.id,
-      amount: txn.amount,
-      status: txn.status || 'pending',
-      description: txn.description || txn.recipientName || 'Transfer',
-      createdAt: txn.createdAt || new Date().toISOString(),
-      date: txn.createdAt || new Date().toISOString(),
-    })),
+    transform: (data: unknown) => (data as unknown[]).slice(0, 10).map((txn) => {
+      const t = txn as Record<string, unknown>;
+      return {
+        id: t.id as number,
+        amount: t.amount as string,
+        status: (t.status as string) || 'pending',
+        description: (t.description as string) || (t.recipientName as string) || 'Transfer',
+        createdAt: (t.createdAt as string) || new Date().toISOString(),
+        date: (t.createdAt as string) || new Date().toISOString(),
+      };
+    }),
     enabled,
   });
 }
@@ -157,10 +160,10 @@ export function useSupabaseRealtimeTransactions(
  * Supabase Realtime for user balance (backward-compatible wrapper)
  */
 export function useSupabaseRealtimeUserBalance(
-  onBalanceChange: (balance: any) => void,
+  onBalanceChange: (balance: Record<string, unknown>) => void,
   enabled = true
 ) {
-  return useSupabaseRealtime<any>({
+  return useSupabaseRealtime<Record<string, unknown>>({
     endpoint: '/api/user',
     channelName: 'users_realtime',
     table: 'users',

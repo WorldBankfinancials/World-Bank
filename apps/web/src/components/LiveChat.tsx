@@ -28,7 +28,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
   const [isConnected, setIsConnected] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const subscriptionRef = useRef<any>(null);
+  const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
   const initializedRef = useRef(false);
 
@@ -43,10 +43,10 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setMessages(parsed.map((m: any) => ({
-              ...m,
-              timestamp: new Date(m.timestamp)
-            })));
+            setMessages(parsed.map((m: Record<string, unknown>) => ({
+              ...(m as object),
+              timestamp: new Date(m.timestamp as string)
+            } as Message)));
             return;
           }
         } catch {
@@ -101,12 +101,13 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
               schema: 'public',
               table: 'messages'
             },
-            (payload: any) => {
+            (payload: Record<string, unknown>) => {
+              const newRecord = payload.new as Record<string, unknown>;
               const newMessage: Message = {
-                id: payload.new.id?.toString() || Date.now().toString(),
-                sender: (payload.new.sender_role === 'customer' ? 'user' : 'agent') as 'user' | 'agent',
-                text: payload.new.message || '',
-                timestamp: new Date(payload.new.created_at || new Date())
+                id: newRecord.id?.toString() || Date.now().toString(),
+                sender: (newRecord.sender_role === 'customer' ? 'user' : 'agent') as 'user' | 'agent',
+                text: (newRecord.message as string) || '',
+                timestamp: new Date((newRecord.created_at as string) || new Date())
               };
               setMessages(prev => {
                 if (prev.some(m => m.id === newMessage.id)) return prev; // Dedup
