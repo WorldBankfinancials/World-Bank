@@ -5,6 +5,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authenticatedFetch } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 import { TrendingUp, TrendingDown, PieChart, DollarSign } from "lucide-react";
 
 interface Investment {
@@ -22,8 +24,9 @@ export default function InvestmentPortfolio() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  const { data: investments = [] } = useQuery<Investment[]>({
+  const { data: investments = [], isLoading, error } = useQuery<Investment[]>({
     queryKey: ['/api/investments'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/investments');
@@ -31,6 +34,20 @@ export default function InvestmentPortfolio() {
       return response.json();
     }
   });
+
+  useEffect(() => {
+    if (error) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [error]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   const totalValue = investments.reduce((sum: number, inv: Investment) =>
     sum + (parseFloat(inv.shares) * parseFloat(inv.current_price)), 0);

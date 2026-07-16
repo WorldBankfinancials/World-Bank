@@ -1,4 +1,5 @@
 import Header from "@/components/Header";
+import type { User } from "@packages/shared/schema";
 import BottomNavigation from "@/components/BottomNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,20 +13,13 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { COUNTRIES } from "@/data/countries";
 import { Globe, Shield, Clock, CheckCircle, AlertCircle } from "lucide-react";
-
-interface User {
-  id: number;
-  email: string;
-  fullName?: string;
-  balance?: number;
-  transferPin?: string;
-}
+import { authenticatedFetch } from '@/lib/queryClient';
 
 export default function InternationalTransfer() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
   const { toast } = useToast();
-  const user = (userProfile as any as User) || null;
+  const user = (userProfile as unknown as User) || null;
 
   const [transferAmount, setTransferAmount] = useState("");
   const [recipientFullName, setRecipientFullName] = useState("");
@@ -94,6 +88,15 @@ export default function InternationalTransfer() {
         return;
       }
 
+      if (!recipientCountry) { toast({ title: 'Country is required', variant: 'destructive' }); return; }
+      if (!recipientStreet) { toast({ title: 'Street address is required', variant: 'destructive' }); return; }
+      if (!recipientCity) { toast({ title: 'City is required', variant: 'destructive' }); return; }
+      if (!transferPurpose) { toast({ title: 'Transfer purpose is required', variant: 'destructive' }); return; }
+      const amount = parseFloat(transferAmount);
+      if (isNaN(amount) || amount <= 0) { toast({ title: 'Please enter a valid amount', variant: 'destructive' }); return; }
+      if (amount > 500000) { toast({ title: 'Maximum international transfer is $500,000', variant: 'destructive' }); return; }
+      if (!/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(swiftCode.toUpperCase())) { toast({ title: 'Invalid SWIFT code format', variant: 'destructive' }); return; }
+
       // Show PIN verification modal - let backend validate balance
       setShowPinVerification(true);
     } catch (error) {
@@ -118,12 +121,11 @@ export default function InternationalTransfer() {
     }
 
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const pinResponse = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: userProfile?.email || user?.email!,
+          email: userProfile?.email || user?.email || '',
           pin: transferPin
         })
       });
@@ -166,8 +168,6 @@ export default function InternationalTransfer() {
         transferPin: transferPin
       };
       
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-
       const response = await authenticatedFetch('/api/international-transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -194,7 +194,7 @@ export default function InternationalTransfer() {
         
         // Refresh user data to reflect balance changes - immediately and cached
         try {
-          const { authenticatedFetch, queryClient } = await import('@/lib/queryClient');
+          const { queryClient } = await import('@/lib/queryClient');
           // Force fresh fetch of updated user balance
           const userResponse = await authenticatedFetch('/api/user');
           if (userResponse.ok) {
@@ -213,7 +213,6 @@ export default function InternationalTransfer() {
         
         const interval = setInterval(async () => {
           try {
-            const { authenticatedFetch } = await import('@/lib/queryClient');
             const statusResponse = await authenticatedFetch(`/api/international-transfers/${txnId}/status`);
             if (statusResponse.ok) {
               const statusData = await statusResponse.json();
@@ -226,6 +225,7 @@ export default function InternationalTransfer() {
               }
             }
           } catch (error) {
+            console.error('Transfer status polling error:', error);
           }
         }, 3000);
         
@@ -329,7 +329,7 @@ export default function InternationalTransfer() {
 
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header user={(userProfile as any) || undefined} />
+        <Header user={(userProfile as unknown as User) || undefined} />
         
         <div className="px-4 py-6 pb-20">
           <div className="max-w-md mx-auto">
@@ -404,7 +404,7 @@ export default function InternationalTransfer() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={(userProfile || user) as any} />
+      <Header user={(userProfile || user) as unknown as User} />
       
       <div className="px-4 py-6 pb-20">
         {/* Header Section */}

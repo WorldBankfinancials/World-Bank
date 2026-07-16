@@ -1,12 +1,14 @@
 import Header from "@/components/Header";
+import type { User } from "@packages/shared/schema";
 import Footer from "@/components/Footer";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authenticatedFetch } from "@/lib/queryClient";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TrendingUp, TrendingDown, Search } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface MarketRate {
   currency: string;
@@ -31,8 +33,9 @@ export default function InvestmentTrading() {
   const [tradeAmount, setTradeAmount] = useState('');
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
   const [selectedSymbol, setSelectedSymbol] = useState('');
+  const { toast } = useToast();
 
-  const { data: marketRates = [] } = useQuery<MarketRate[]>({
+  const { data: marketRates = [], isLoading: ratesLoading, error: ratesError } = useQuery<MarketRate[]>({
     queryKey: ['/api/market-rates'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/market-rates');
@@ -41,7 +44,7 @@ export default function InvestmentTrading() {
     }
   });
 
-  const { data: investments = [] } = useQuery<Investment[]>({
+  const { data: investments = [], isLoading: investmentsLoading, error: investmentsError } = useQuery<Investment[]>({
     queryKey: ['/api/investments'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/investments');
@@ -49,6 +52,23 @@ export default function InvestmentTrading() {
       return response.json();
     }
   });
+
+  const isLoading = ratesLoading || investmentsLoading;
+  const queryError = ratesError || investmentsError;
+
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [queryError]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   const handleTrade = async () => {
     if (!selectedSymbol || !tradeAmount) return;
@@ -80,7 +100,7 @@ export default function InvestmentTrading() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={userProfile as any || undefined} />
+      <Header user={(userProfile as unknown as User) || undefined} />
       <main className="container mx-auto px-4 py-6 max-w-4xl pb-20">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('investment_portfolio')}</h1>
 
