@@ -10,8 +10,8 @@ export function usePresence() {
   return null;
 }
 
-export function useOnlineUsers(callback?: (users: any[]) => void, enabled?: boolean) {
-  const channelRef = useRef<any>(null);
+export function useOnlineUsers(callback?: (users: Array<Record<string, unknown>>) => void, enabled?: boolean) {
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -57,7 +57,7 @@ export function useOnlineUsers(callback?: (users: any[]) => void, enabled?: bool
  * ADMIN REALTIME SUBSCRIPTION
  * Listen for admin changes that need to broadcast to all users
  */
-export function useAdminUpdates(onUpdate?: (action: any) => void, enabled?: boolean) {
+export function useAdminUpdates(onUpdate?: (action: Record<string, unknown>) => void, enabled?: boolean) {
   useEffect(() => {
     if (!enabled) return;
 

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
@@ -41,7 +41,7 @@ interface Alert {
 export default function Alerts() {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading, error: userError } = useQuery<User>({
     queryKey: ['/api/user'],
   });
 
@@ -49,7 +49,7 @@ export default function Alerts() {
   useRealtimeAlerts(String(user?.id), !!user);
 
   // Fetch real alerts from database
-  const { data: alerts = [], isLoading: alertsLoading } = useQuery<Alert[]>({
+  const { data: alerts = [], isLoading: alertsLoading, error: alertsError } = useQuery<Alert[]>({
     queryKey: ['/api/alerts'],
     queryFn: async () => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -59,6 +59,13 @@ export default function Alerts() {
     },
     enabled: !!user,
   });
+
+  const queryError = userError || alertsError;
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [queryError]);
   
   const [notifications, setNotifications] = useState({
     transactions: true,
@@ -256,7 +263,7 @@ export default function Alerts() {
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start space-x-3">
-                          <div className={`w-10 h-10 ${bgColor} rounded-full flex items-center justify-center`}>
+                          <div className={`w-10 h-10 ${bgColor} rounded-full flex items-center justify-center">
                             <IconComponent className={`w-5 h-5 ${color}`} />
                           </div>
                           <div className="flex-1">

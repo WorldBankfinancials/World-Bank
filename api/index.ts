@@ -79,16 +79,23 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   res.on('finish', () => {
     if (req.path.startsWith('/api/')) {
-      console.log(`[api] ${req.method} ${req.path} ${res.statusCode} ${Date.now() - start}ms`);
+      console.info(`[api] ${req.method} ${req.path} ${res.statusCode} ${Date.now() - start}ms`);
     }
   });
   next();
 });
 
 // ---- Global error handler ----
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  const status = err.status || err.statusCode || 500;
-  const message = process.env.NODE_ENV === 'production' ? 'Internal server error' : (err.message || 'Internal server error');
+interface AppError {
+  status?: number;
+  statusCode?: number;
+  message: string;
+}
+app.use((err: AppError | Error, _req: Request, res: Response, _next: NextFunction) => {
+  const status = (err as AppError).status || (err as AppError).statusCode || 500;
+  const message = process.env.NODE_ENV === 'production'
+    ? 'Internal server error'
+    : (err instanceof Error ? err.message : 'Internal server error');
   res.status(status).json({ error: message });
 });
 
@@ -100,7 +107,7 @@ const routesReady = registerFixedRoutes(app).catch(err => {
 // Vercel serverless handler
 const handler = async (req: Request, res: Response) => {
   await routesReady;
-  (app as unknown as (req: Request, res: Response) => void)(req, res);
+  (app as (req: Request, res: Response) => void)(req, res);
 };
 
 export default handler;

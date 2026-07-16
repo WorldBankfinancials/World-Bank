@@ -58,7 +58,7 @@ export default function AdminLiveChat() {
   });
   
   // Fetch messages from API when session is selected
-  const { data: queryMessages = [] } = useQuery<Message[]>({
+  const { data: queryMessages = [], error: messagesError } = useQuery<Message[]>({
     queryKey: [`/api/chat/history/${selectedSession?.id}`],
     queryFn: async () => {
       if (!selectedSession?.id) return [];
@@ -99,7 +99,7 @@ export default function AdminLiveChat() {
   // Query client for cache invalidation
   const queryClient = require('@tanstack/react-query').useQueryClient?.() || null;
 
-  const { data: chatSessions = [] } = useQuery<ChatSession[]>({
+  const { data: chatSessions = [], error: sessionsError } = useQuery<ChatSession[]>({
     queryKey: ['/api/chat/sessions'],
     queryFn: async () => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -107,6 +107,13 @@ export default function AdminLiveChat() {
       return response.ok ? response.json() : [];
     }
   });
+
+  const queryError = messagesError || sessionsError;
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [queryError]);
 
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

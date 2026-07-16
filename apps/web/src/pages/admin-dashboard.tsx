@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -108,31 +108,38 @@ export default function AdminDashboard() {
   useRealtimeTransactions();
 
   // Fetch real customer data from API
-  const { data: customers = [], isLoading: customersLoading } = useQuery<CustomerData[]>({
+  const { data: customers = [], isLoading: customersLoading, error: customersError } = useQuery<CustomerData[]>({
     queryKey: ['/api/admin/customers'],
     staleTime: 30000,
   });
 
   // Fetch pending transfers
-  const { data: pendingTransfers = [], isLoading: transfersLoading } = useQuery<PendingTransfer[]>({
+  const { data: pendingTransfers = [], isLoading: transfersLoading, error: transfersError } = useQuery<PendingTransfer[]>({
     queryKey: ['/api/admin/pending-transfers'],
   });
 
   // Fetch support tickets
-  const { data: supportTickets = [], isLoading: ticketsLoading } = useQuery<SupportTicket[]>({
+  const { data: supportTickets = [], isLoading: ticketsLoading, error: ticketsError } = useQuery<SupportTicket[]>({
     queryKey: ['/api/admin/support-tickets'],
   });
 
   // Fetch admin statistics
-  const { data: adminStats = {} } = useQuery({
+  const { data: adminStats = {}, error: statsError } = useQuery({
     queryKey: ['/api/admin/stats'],
   });
 
   // Fetch all transactions (admin) for the reversal feature
-  const { data: allTransactions = [], isLoading: transactionsLoading } = useQuery<Transaction[]>({
+  const { data: allTransactions = [], isLoading: transactionsLoading, error: transactionsError } = useQuery<Transaction[]>({
     queryKey: ['/api/admin/transaction-routes'],
     staleTime: 30000,
   });
+
+  const queryError = customersError || transfersError || ticketsError || statsError || transactionsError;
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [queryError]);
 
 
   // Profile picture upload mutation

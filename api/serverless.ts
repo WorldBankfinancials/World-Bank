@@ -1,6 +1,7 @@
 import { processScheduledTransactions, sendTransactionAlert, generateMonthlyStatements, reconcileBalances } from '../server/serverless';
+import type { Request, Response } from 'express';
 
-export default async (req: any, res: any) => {
+export default async (req: Request, res: Response) => {
   const secret = process.env.SERVERLESS_SECRET;
   const authHeader = req.headers.authorization || '';
   const providedToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
