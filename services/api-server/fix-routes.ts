@@ -898,7 +898,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           event: 'balance_update',
           payload: { userId: customerId, newBalance, oldBalance, delta, timestamp: new Date().toISOString() }
         });
-      } catch (_) {}
+      } catch (err) {
+        console.error('Error in endpoint:', err);
+      }
 
       return res.json({ 
         success: true, 
@@ -2171,7 +2173,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== ADMIN ACTIONS LOG ====================
   app.get('/api/admin/actions', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const actions = await (storage as any).getAdminActions?.() || [];
+      const actions = await (storage as unknown as { getAdminActions?: () => Promise<unknown[]> }).getAdminActions?.() || [];
       return res.json(actions);
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to fetch admin actions' });
