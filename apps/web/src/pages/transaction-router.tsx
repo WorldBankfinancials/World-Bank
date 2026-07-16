@@ -120,10 +120,12 @@ export default function TransactionRouter() {
       conditions: {}
     };
 
-    if (newRoute.accountType) route.conditions!.accountType = newRoute.accountType;
-    if (newRoute.transactionType) route.conditions!.transactionType = newRoute.transactionType;
-    if (newRoute.amountMin) route.conditions!.amountMin = parseFloat(newRoute.amountMin);
-    if (newRoute.amountMax) route.conditions!.amountMax = parseFloat(newRoute.amountMax);
+    const conditions = route.conditions || {};
+    if (newRoute.accountType) conditions.accountType = newRoute.accountType;
+    if (newRoute.transactionType) conditions.transactionType = newRoute.transactionType;
+    if (newRoute.amountMin) conditions.amountMin = parseFloat(newRoute.amountMin);
+    if (newRoute.amountMax) conditions.amountMax = parseFloat(newRoute.amountMax);
+    route.conditions = conditions;
 
     // Create route via API
     const createRoute = async () => {

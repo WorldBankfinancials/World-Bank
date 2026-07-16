@@ -29,6 +29,7 @@ export async function publicFetch(url: string, options?: RequestInit): Promise<R
  * Automatically includes Bearer token from Supabase session
  * @example
  * const response = await authenticatedFetch('/api/user/profile');
+ * @deprecated Use `authenticatedFetch` from `@/lib/queryClient` instead. This duplicate is kept for backwards compatibility.
  */
 export async function authenticatedFetch(
   url: string,
