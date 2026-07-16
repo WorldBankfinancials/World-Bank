@@ -508,8 +508,11 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div 
+          <div
             key="quick-action-qa-4-live-chat"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.click(); }}
             onClick={() => setIsChatOpen(true)}
             className="p-4 bg-white rounded-lg border hover:border-green-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
@@ -525,8 +528,11 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div 
+          <div
             key="quick-action-qa-5-banking-alerts"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.click(); }}
             onClick={() => setShowNotifications(true)}
             className="p-4 bg-white rounded-lg border hover:border-orange-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
@@ -544,8 +550,11 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div 
+          <div
             key="quick-action-qa-6-statements"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.click(); }}
             onClick={() => toast({ title: 'Account Statement', description: 'Generating account statement...' })}
             className="p-4 bg-white rounded-lg border hover:border-indigo-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
@@ -560,8 +569,11 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div 
+          <div
             key="quick-action-qa-7-currency-exchange"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.click(); }}
             onClick={() => toast({ title: 'Currency Exchange', description: 'USD 1.00 = CNY 7.24, EUR 1.00 = CNY 7.85' })}
             className="p-4 bg-white rounded-lg border hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
@@ -576,8 +588,11 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div 
+          <div
             key="quick-action-qa-8-portfolio-investments"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.click(); }}
             onClick={() => setLocation('/investment')}
             className="p-4 bg-white rounded-lg border hover:border-amber-500 hover:shadow-md transition-all cursor-pointer h-full"
           >
