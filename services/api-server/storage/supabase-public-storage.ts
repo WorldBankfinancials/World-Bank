@@ -145,7 +145,17 @@ const mapCard = (row: Record<string, any>): Card => ({
 const mapInvestment = (row: Record<string, any>): Investment => ({
   id: row.id,
   userId: row.user_id ?? 0,
+  accountId: row.account_id ?? '',
+  investmentType: row.investment_type || row.type || 'stock',
+  assetType: row.asset_type ?? null,
   type: row.type || '',
+  symbol: row.symbol || '',
+  shares: String(row.shares ?? '0'),
+  purchasePrice: String(row.purchase_price ?? row.amount ?? '0'),
+  averagePrice: row.average_price ? String(row.average_price) : null,
+  currentPrice: String(row.current_price ?? '0'),
+  totalValue: row.total_value ?? null,
+  gainLoss: row.gain_loss ?? null,
   amount: String(row.amount ?? '0'),
   rate: row.rate !== null && row.rate !== undefined ? String(row.rate) : null,
   status: row.status || 'active',
@@ -162,7 +172,7 @@ async function withRetry<T>(fn: () => Promise<T>, maxAttempts: number = 3): Prom
     } catch (error) {
       lastError = error;
       if (attempt < maxAttempts) {
-        const delayMs = Math.pow(2, attempt) * 100; // 200ms, 400ms, 800ms
+        const delayMs = Math.pow(2, attempt) * 100;
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
