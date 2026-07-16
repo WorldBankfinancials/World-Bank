@@ -1,188 +1,68 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient, type QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    const errorMsg = text.substring(0, 200);
-    throw new Error(`${res.status}: ${errorMsg}`);
+    const text = await res.text();
+    throw new Error(`${res.status}: ${text || res.statusText}`);
   }
 }
 
-/**
- * Get authorization headers from Supabase JWT token
- */
-export async function getAuthHeaders(): Promise<Record<string, string>> {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    return {};
-  }
-  return { 'Authorization': `Bearer ${token}` };
-}
-
-let csrfToken: string | null = null;
-
-async function getCsrfToken(): Promise<string> {
-  if (csrfToken) return csrfToken;
-  try {
-    const response = await fetch('/api/csrf-token');
-    const data = await response.json();
-    csrfToken = data.token;
-    return csrfToken!;
-  } catch {
-    return '';
-  }
-}
-
-/**
- * CRITICAL FIX: Authenticated fetch wrapper
- * Use this instead of raw fetch() to ensure authentication headers are included
- * Automatically waits for Supabase session with retry logic
- */
-export async function authenticatedFetch(
-  url: string,
-  options?: RequestInit
-): Promise<Response> {
-  try {
-    const authHeaders = await getAuthHeaders();
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
-    try {
-      const method = options?.method?.toUpperCase() || 'GET';
-      const headers: Record<string, string> = {
-        ...authHeaders,
-        ...(options?.headers as Record<string, string>),
-        'Accept-Encoding': 'gzip, deflate',
-      };
-      
-      if (method !== 'GET') {
-        const token = await getCsrfToken();
-        headers['x-csrf-token'] = token;
-      }
-      
-      const response = await fetch(url, {
-        ...options,
-        headers,
-        credentials: "include",
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.status === 401) {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (refreshToken && !url.includes('/api/auth/refresh')) {
-          try {
-            const refreshResponse = await fetch('/api/auth/refresh', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ refreshToken })
-            });
-            if (refreshResponse.ok) {
-              const newTokens = await refreshResponse.json();
-              localStorage.setItem('token', newTokens.token);
-              localStorage.setItem('refresh_token', newTokens.refreshToken || '');
-              const headers = new Headers(options?.headers);
-              headers.set('Authorization', `Bearer ${newTokens.token}`);
-              return fetch(url, { ...options, headers });
-            }
-          } catch {
-            // Refresh failed, fall through to logout
-          }
-        }
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('userProfile');
-        localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
-        return response;
-      }
-
-      return response;
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Request timeout after 10s');
-    }
-    throw error;
-  }
-}
-
-export async function apiRequest(
+export async function apiRequest<T = unknown>(
   method: string,
   url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  const authHeaders = await getAuthHeaders();
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
-  
-  try {
-    const res = await fetch(url, {
-      method,
-      headers: {
-        ...authHeaders,
-        ...(data ? { "Content-Type": "application/json" } : {}),
-        'Accept-Encoding': 'gzip, deflate',
-      },
-      body: data ? JSON.stringify(data) : undefined,
-      credentials: "include",
-      signal: controller.signal,
-    });
+  data?: unknown
+): Promise<T> {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(url, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: data ? JSON.stringify(data) : undefined,
+    credentials: 'include',
+  });
 
-    clearTimeout(timeoutId);
-    await throwIfResNotOk(res);
-    return res;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Request timeout after 10s');
-    }
-    throw error;
-  }
+  await throwIfResNotOk(res);
+  return res.json();
 }
 
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
+export const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+    credentials: 'include',
+  });
+
+  await throwIfResNotOk(res);
+  return res;
+};
+
+type UnauthorizedBehavior = "redirect" | "returnNull";
+
+export const getQueryFn: <T>(options?: { on401?: UnauthorizedBehavior }) => QueryFunction<T> =
+  (options) =>
   async ({ queryKey }) => {
-    const url = queryKey[0] as string;
-    const authHeaders = await getAuthHeaders();
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
-    try {
-      const res = await fetch(url, {
-        headers: {
-          ...authHeaders,
-          'Accept-Encoding': 'gzip, deflate',
-        },
-        credentials: "include",
-        signal: controller.signal,
-      });
+    const token = localStorage.getItem('accessToken');
+    const res = await fetch(queryKey[0] as string, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: 'include',
+    });
 
-      clearTimeout(timeoutId);
-
-      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-        return null;
-      }
-
-      await throwIfResNotOk(res);
-      return await res.json();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Request timeout after 10s');
-      }
-      throw error;
+    if (options?.on401 === "redirect" && res.status === 401) {
+      window.location.href = '/login';
+      return null as T;
     }
+
+    await throwIfResNotOk(res);
+    return res.json();
   };
 
 export const queryClient = new QueryClient({
@@ -191,14 +71,11 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: 60000,
-      gcTime: 5 * 60 * 1000,
+      staleTime: 60 * 1000,
       retry: 1,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     },
     mutations: {
-      retry: 1,
-      retryDelay: 1000,
+      retry: false,
     },
   },
 });
