@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
+import { authenticatedFetch, queryClient } from "@/lib/queryClient";
 import { CreditCard, Banknote, Building, Smartphone, Plus, CheckCircle, Clock, Wallet, ArrowUpRight } from "lucide-react";
 
 export default function AddMoney() {
@@ -86,10 +87,13 @@ export default function AddMoney() {
       });
       return;
     }
+    if (parsedAmount > 100000) {
+      toast({ title: 'Maximum deposit amount is $100,000', variant: 'destructive' });
+      return;
+    }
 
     setLoading(true);
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/add-funds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,7 +103,6 @@ export default function AddMoney() {
       if (!response.ok) throw new Error('Failed to add money');
 
       // Invalidate wallet balance and related queries to refresh the UI
-      const { queryClient } = await import('@/lib/queryClient');
       queryClient.invalidateQueries({ queryKey: ['/api/wallet-balance'] });
       queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
@@ -172,6 +175,9 @@ export default function AddMoney() {
                 <div
                   key={method.id}
                   onClick={() => setSelectedMethod(method.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedMethod(method.id); } }}
                   className={`p-4 border-2 rounded-lg cursor-pointer transition ${
                     selectedMethod === method.id
                       ? 'border-blue-500 bg-blue-50'

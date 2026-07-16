@@ -1177,7 +1177,7 @@ export default function SimpleAdmin() {
                           <h3 className="font-semibold text-lg">{ticket.subject}</h3>
                           <p className="text-gray-600">Customer: {ticket.customerName}</p>
                         </div>
-                        <Badge className={`${
+                        <Badge className={`$ {
                           ticket.priority === 'High' ? 'bg-red-100 text-red-800' :
                           ticket.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-green-100 text-green-800'
@@ -1451,7 +1451,7 @@ export default function SimpleAdmin() {
                   placeholder="Type your message..."
                   value={chatMessage}
                   onChange={(e) => setChatMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                   className="flex-1"
                 />
                 <Button onClick={handleSendMessage}>

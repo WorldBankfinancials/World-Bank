@@ -74,6 +74,17 @@ function LoadingSpinner() {
   );
 }
 
+// Per-route error boundary wrapper for lazy-loaded components
+function LazyRoute({ Component }: { Component: React.LazyExoticComponent<React.ComponentType> }) {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<LoadingSpinner />}>
+        <Component />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -84,67 +95,67 @@ function App() {
               <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
                 <Suspense fallback={<LoadingSpinner />}>
                 <Switch>
-                  <Route path="/about" component={About} />
+                  <Route path="/about" component={() => <LazyRoute Component={About} />} />
                   <Route path="/login" component={Login} />
                   {/* /register redirects to multi-step register */}
                   <Route path="/register"><Redirect to="/register-multi" /></Route>
                   <Route path="/register-multi" component={MultiStepRegister} />
-                  <Route path="/admin-login" component={AdminLogin} />
+                  <Route path="/admin-login" component={() => <LazyRoute Component={AdminLogin} />} />
                   <Route path="/admin-dashboard">
                     <ProtectedRoute requireAdmin>
-                      <AdminDashboard />
+                      <LazyRoute Component={AdminDashboard} />
                     </ProtectedRoute>
                   </Route>
                   {/* /simple-admin redirects to /admin-dashboard */}
                   <Route path="/simple-admin"><Redirect to="/admin-dashboard" /></Route>
                   <Route path="/admin-live-chat">
                     <ProtectedRoute requireAdmin>
-                      <AdminLiveChat />
+                      <LazyRoute Component={AdminLiveChat} />
                     </ProtectedRoute>
                   </Route>
                   <Route path="/customer-service">
                     <ProtectedRoute requireAdmin>
-                      <CustomerServicePortal />
+                      <LazyRoute Component={CustomerServicePortal} />
                     </ProtectedRoute>
                   </Route>
                   <Route path="/admin-transaction-dashboard">
                     <ProtectedRoute requireAdmin>
-                      <AdminTransactionDashboard />
+                      <LazyRoute Component={AdminTransactionDashboard} />
                     </ProtectedRoute>
                   </Route>
                   <Route path="/admin-transaction-creator">
                     <ProtectedRoute requireAdmin>
-                      <AdminTransactionCreator />
+                      <LazyRoute Component={AdminTransactionCreator} />
                     </ProtectedRoute>
                   </Route>
                   <Route path="/customer-management">
                     <ProtectedRoute requireAdmin>
-                      <CustomerManagement />
+                      <LazyRoute Component={CustomerManagement} />
                     </ProtectedRoute>
                   </Route>
                   <Route path="/fund-management">
                     <ProtectedRoute requireAdmin>
-                      <FundManagement />
+                      <LazyRoute Component={FundManagement} />
                     </ProtectedRoute>
                   </Route>
                   <Route path="/transfer-processing">
                     <ProtectedRoute>
-                      <TransferProcessing />
+                      <LazyRoute Component={TransferProcessing} />
                     </ProtectedRoute>
                   </Route>
                   <Route path="/transfer-pending">
                     <ProtectedRoute>
-                      <TransferPending />
+                      <LazyRoute Component={TransferPending} />
                     </ProtectedRoute>
                   </Route>
                   <Route path="/transfer-success">
                     <ProtectedRoute>
-                      <TransferSuccess />
+                      <LazyRoute Component={TransferSuccess} />
                     </ProtectedRoute>
                   </Route>
                   <Route path="/transfer-failed">
                     <ProtectedRoute>
-                      <TransferFailed />
+                      <LazyRoute Component={TransferFailed} />
                     </ProtectedRoute>
                   </Route>
 
@@ -154,38 +165,38 @@ function App() {
                         <Switch>
                           <Route path="/" component={Dashboard} />
                           <Route path="/dashboard" component={Dashboard} />
-                          <Route path="/transfer-funds" component={TransferFunds} />
+                          <Route path="/transfer-funds" component={() => <LazyRoute Component={TransferFunds} />} />
                           {/* /transfer redirects to /transfer-funds */}
                           <Route path="/transfer"><Redirect to="/transfer-funds" /></Route>
-                          <Route path="/profile-settings" component={ProfileSettings} />
-                          <Route path="/security-settings" component={SecuritySettings} />
-                          <Route path="/pin-settings" component={PinSettings} />
-                          <Route path="/credit-cards" component={CreditCards} />
-                          <Route path="/transaction-history" component={TransactionHistory} />
-                          <Route path="/history" component={History} />
-                          <Route path="/statements-reports" component={StatementsReports} />
-                          <Route path="/investment-portfolio" component={InvestmentPortfolio} />
-                          <Route path="/wealth-management" component={WealthManagement} />
-                          <Route path="/support-center" component={SupportCenter} />
-                          <Route path="/customer-support" component={CustomerSupport} />
-                          <Route path="/banking-services" component={BankingServices} />
-                          <Route path="/digital-wallet" component={DigitalWallet} />
-                          <Route path="/mobile-pay" component={MobilePay} />
-                          <Route path="/security-center" component={SecurityCenter} />
-                          <Route path="/find-branches" component={FindBranches} />
-                          <Route path="/international-transfer" component={InternationalTransfer} />
-                          <Route path="/investment-trading" component={InvestmentTrading} />
-                          <Route path="/business-banking" component={BusinessBanking} />
-                          <Route path="/cards" component={Cards} />
-                          <Route path="/receive" component={Receive} />
-                          <Route path="/add-money" component={AddMoney} />
-                          <Route path="/alerts" component={Alerts} />
-                          <Route path="/verification" component={VerificationCenter} />
-                          <Route path="/account-preferences" component={AccountPreferences} />
-                          <Route path="/transaction-router" component={TransactionRouter} />
-                          <Route path="/investment" component={Investment} />
-                          <Route path="/exchange" component={Exchange} />
-                          <Route path="/loans" component={Loans} />
+                          <Route path="/profile-settings" component={() => <LazyRoute Component={ProfileSettings} />} />
+                          <Route path="/security-settings" component={() => <LazyRoute Component={SecuritySettings} />} />
+                          <Route path="/pin-settings" component={() => <LazyRoute Component={PinSettings} />} />
+                          <Route path="/credit-cards" component={() => <LazyRoute Component={CreditCards} />} />
+                          <Route path="/transaction-history" component={() => <LazyRoute Component={TransactionHistory} />} />
+                          <Route path="/history" component={() => <LazyRoute Component={History} />} />
+                          <Route path="/statements-reports" component={() => <LazyRoute Component={StatementsReports} />} />
+                          <Route path="/investment-portfolio" component={() => <LazyRoute Component={InvestmentPortfolio} />} />
+                          <Route path="/wealth-management" component={() => <LazyRoute Component={WealthManagement} />} />
+                          <Route path="/support-center" component={() => <LazyRoute Component={SupportCenter} />} />
+                          <Route path="/customer-support" component={() => <LazyRoute Component={CustomerSupport} />} />
+                          <Route path="/banking-services" component={() => <LazyRoute Component={BankingServices} />} />
+                          <Route path="/digital-wallet" component={() => <LazyRoute Component={DigitalWallet} />} />
+                          <Route path="/mobile-pay" component={() => <LazyRoute Component={MobilePay} />} />
+                          <Route path="/security-center" component={() => <LazyRoute Component={SecurityCenter} />} />
+                          <Route path="/find-branches" component={() => <LazyRoute Component={FindBranches} />} />
+                          <Route path="/international-transfer" component={() => <LazyRoute Component={InternationalTransfer} />} />
+                          <Route path="/investment-trading" component={() => <LazyRoute Component={InvestmentTrading} />} />
+                          <Route path="/business-banking" component={() => <LazyRoute Component={BusinessBanking} />} />
+                          <Route path="/cards" component={() => <LazyRoute Component={Cards} />} />
+                          <Route path="/receive" component={() => <LazyRoute Component={Receive} />} />
+                          <Route path="/add-money" component={() => <LazyRoute Component={AddMoney} />} />
+                          <Route path="/alerts" component={() => <LazyRoute Component={Alerts} />} />
+                          <Route path="/verification" component={() => <LazyRoute Component={VerificationCenter} />} />
+                          <Route path="/account-preferences" component={() => <LazyRoute Component={AccountPreferences} />} />
+                          <Route path="/transaction-router" component={() => <LazyRoute Component={TransactionRouter} />} />
+                          <Route path="/investment" component={() => <LazyRoute Component={Investment} />} />
+                          <Route path="/exchange" component={() => <LazyRoute Component={Exchange} />} />
+                          <Route path="/loans" component={() => <LazyRoute Component={Loans} />} />
                           <Route component={NotFound} />
                         </Switch>
                       </div>
