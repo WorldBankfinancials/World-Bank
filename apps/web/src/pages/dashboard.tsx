@@ -63,6 +63,13 @@ import { Link, useLocation } from "wouter";
 import { CustomerData, TransactionData } from "@/types";
 import { useSupabaseRealtimeAccounts, useSupabaseRealtimeTransactions, useSupabaseRealtimeUserBalance } from "@/hooks/useSupabaseRealtimeDashboard";
 
+interface Alert {
+  id: string | number;
+  title: string;
+  message: string;
+  type?: string;
+}
+
 export default function Dashboard() {
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -72,7 +79,7 @@ export default function Dashboard() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Array<{ title: string; message: string; type: string }>>([]);
   const [userData, setUserData] = useState<CustomerData | null>(null);
   const queryClient = useQueryClient();
 
@@ -87,7 +94,7 @@ export default function Dashboard() {
           return [];
         }
         const data = await response.json();
-        return Array.isArray(data) ? data.slice(0, 10).map((txn: any) => ({
+        return Array.isArray(data) ? data.slice(0, 10).map((txn: Record<string, unknown>) => ({
           id: txn.id,
           type: txn.type || 'transfer',
           amount: txn.amount,
@@ -119,7 +126,7 @@ export default function Dashboard() {
   // );
 
   // Fetch alerts
-  const { data: fetchedAlerts = [] } = useQuery<any[]>({
+  const { data: fetchedAlerts = [] } = useQuery<Alert[]>({
     queryKey: ['/api/alerts'],
     queryFn: async () => {
       try {
@@ -163,27 +170,27 @@ export default function Dashboard() {
     type: string;
     number: string;
     balance: number;
-    icon: any;
+    icon: typeof Wallet;
     id: number;
   }>>([]);
 
   // Subscribe to realtime account updates
-  useSupabaseRealtimeAccounts((accountsData: any[]) => {
+  useSupabaseRealtimeAccounts((accountsData: Array<Record<string, unknown>>) => {
     if (Array.isArray(accountsData) && accountsData.length > 0) {
-      const formattedAccounts = accountsData.map((account: any) => ({
-        type: account.accountType ? account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1) : 'Account',
-        number: account.accountNumber ? `****${account.accountNumber.slice(-4)}` : '****0000',
-        balance: account.balance ? parseFloat(account.balance.toString()) : 0,
+      const formattedAccounts = accountsData.map((account: Record<string, unknown>) => ({
+        type: account.accountType ? String(account.accountType).charAt(0).toUpperCase() + String(account.accountType).slice(1) : 'Account',
+        number: account.accountNumber ? `****${String(account.accountNumber).slice(-4)}` : '****0000',
+        balance: account.balance ? parseFloat(String(account.balance)) : 0,
         icon: account.accountType === 'checking' ? Wallet : 
               account.accountType === 'savings' ? Building2 : TrendingUp,
-        id: account.id
+        id: Number(account.id)
       }));
       setAccounts(formattedAccounts);
     }
   }, true);
 
   // Subscribe to realtime transaction updates
-  useSupabaseRealtimeTransactions((transactions: any[]) => {
+  useSupabaseRealtimeTransactions((transactions: Array<Record<string, unknown>>) => {
     queryClient.setQueryData(['/api/transactions/recent'], transactions);
   }, true);
 
