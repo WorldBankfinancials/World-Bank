@@ -1,5 +1,5 @@
 import type { User } from "@packages/shared/schema";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -19,15 +19,29 @@ export default function CustomerSupport() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['/api/user'],
   });
-  
+
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState('technical');
   const [priority, setPriority] = useState('medium');
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (error) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [error]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   const handleSubmitTicket = async () => {
     if (!subject || !category || !priority || !description) {
@@ -44,12 +58,7 @@ export default function CustomerSupport() {
       const response = await authenticatedFetch('/api/support-tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject,
-          category,
-          priority,
-          description
-        })
+        body: JSON.stringify({ subject, category, priority, description })
       });
 
       if (response.ok) {
@@ -92,13 +101,11 @@ export default function CustomerSupport() {
   return (
     <div className="min-h-screen bg-wb-gray">
       <Header user={user} />
-      
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold wb-dark">Customer Support</h1>
           <p className="text-wb-text mt-2">Submit a support request or contact our team directly</p>
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <Card>
             <CardHeader>
@@ -110,20 +117,12 @@ export default function CustomerSupport() {
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium wb-dark">Subject</label>
-                <Input 
-                  placeholder="Brief description of your issue" 
-                  className="mt-1"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                />
+                <Input placeholder="Brief description of your issue" className="mt-1" value={subject} onChange={(e) => setSubject(e.target.value)} />
               </div>
-              
               <div>
                 <label className="text-sm font-medium wb-dark">Category</label>
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select issue category" />
-                  </SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select issue category" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="account">Account Issues</SelectItem>
                     <SelectItem value="transactions">Transaction Problems</SelectItem>
@@ -133,13 +132,10 @@ export default function CustomerSupport() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div>
                 <label className="text-sm font-medium wb-dark">Priority</label>
                 <Select value={priority} onValueChange={setPriority}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select priority level" />
-                  </SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select priority level" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="low">Low</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
@@ -148,30 +144,16 @@ export default function CustomerSupport() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div>
                 <label className="text-sm font-medium wb-dark">Description</label>
-                <Textarea 
-                  placeholder="Please provide detailed information about your issue..."
-                  className="mt-1 min-h-[120px]"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
+                <Textarea placeholder="Please provide detailed information about your issue..." className="mt-1 min-h-[120px]" value={description} onChange={(e) => setDescription(e.target.value)} />
               </div>
-
-              <Button 
-                type="button"
-                className="bg-wb-blue text-white w-full font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-                onClick={handleSubmitTicket}
-                disabled={isSubmitting}
-                data-testid="button-submit-support"
-              >
+              <Button type="button" className="bg-wb-blue text-white w-full font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors" onClick={handleSubmitTicket} disabled={isSubmitting} data-testid="button-submit-support">
                 <Send className="w-4 h-4 mr-2" />
                 {isSubmitting ? (t('submitting') || 'Submitting...') : 'Submit Request'}
               </Button>
             </CardContent>
           </Card>
-
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -186,7 +168,6 @@ export default function CustomerSupport() {
                   <p className="wb-dark font-semibold">1-800-WORLD-BANK</p>
                   <p className="text-sm text-wb-text">Available 24/7</p>
                 </div>
-                
                 <div className="p-4 bg-green-50 rounded-lg">
                   <h3 className="font-semibold text-green-800 mb-2">Email Support</h3>
                   <p className="text-green-700">support@worldbank.com</p>
@@ -194,7 +175,6 @@ export default function CustomerSupport() {
                 </div>
               </CardContent>
             </Card>
-
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -203,22 +183,14 @@ export default function CustomerSupport() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50" onClick={() => setLocation('/cards')}>
-                  Report Lost/Stolen Card
-                </Button>
-                <Button variant="outline" className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50" onClick={() => setLocation('/history')}>
-                  Dispute Transaction
-                </Button>
-                <Button variant="outline" className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50" onClick={() => setLocation('/security-settings')}>
-                  Freeze Account
-                </Button>
+                <Button variant="outline" className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50" onClick={() => setLocation('/cards')}>Report Lost/Stolen Card</Button>
+                <Button variant="outline" className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50" onClick={() => setLocation('/history')}>Dispute Transaction</Button>
+                <Button variant="outline" className="w-full justify-start border-red-300 text-red-600 hover:bg-red-50" onClick={() => setLocation('/security-settings')}>Freeze Account</Button>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
-
       <Footer />
     </div>
   );
-}

@@ -56,16 +56,22 @@ export default function CustomerManagement() {
   const [onlineUserIds, setOnlineUserIds] = useState<Set<number>>(new Set());
 
   // Subscribe to real-time presence updates
-  useOnlineUsers((onlineUsers: any) => {
-    const userIds = new Set<number>(onlineUsers.map((u: any) => u.user_id));
+  useOnlineUsers((onlineUsers: Array<{ user_id: number }>) => {
+    const userIds = new Set<number>(onlineUsers.map((u) => u.user_id));
     setOnlineUserIds(userIds);
   });
 
   // Fetch customers
-  const { data: customersData = [], isLoading } = useQuery<Customer[]>({
+  const { data: customersData = [], isLoading, error } = useQuery<Customer[]>({
     queryKey: ["/api/admin/customers"],
     enabled: user?.role === "admin"
   });
+
+  useEffect(() => {
+    if (error) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [error]);
 
   // Merge customer data with real-time online status
   const customers = customersData.map(customer => ({
@@ -87,7 +93,7 @@ export default function CustomerManagement() {
         description: "Customer information updated successfully"
       });
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to update customer information",
@@ -129,7 +135,6 @@ export default function CustomerManagement() {
 
   const handleSaveCustomer = () => {
     if (!editingCustomer) return;
-    
     updateCustomerMutation.mutate({
       customerId: editingCustomer.id,
       updates: editingCustomer
@@ -140,10 +145,18 @@ export default function CustomerManagement() {
     verifyCustomerMutation.mutate(customerId);
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   if (user?.role !== "admin") {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header user={(user as any) || undefined} />
+        <Header user={user as unknown as User || undefined} />
         <div className="container mx-auto px-4 py-8">
           <Card>
             <CardContent className="flex items-center justify-center h-32">
@@ -160,7 +173,7 @@ export default function CustomerManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={(user as any) || undefined} />
+      <Header user={user as unknown as User || undefined} />
       
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
@@ -168,7 +181,6 @@ export default function CustomerManagement() {
           <p className="text-gray-600">Manage customer information and verification status</p>
         </div>
 
-        {/* Search Bar */}
         <Card className="mb-6">
           <CardContent className="p-4">
             <div className="relative">
@@ -183,7 +195,6 @@ export default function CustomerManagement() {
           </CardContent>
         </Card>
 
-        {/* Customer List */}
         <div className="grid gap-4">
           {isLoading ? (
             <Card>
@@ -212,52 +223,24 @@ export default function CustomerManagement() {
                           {customer.isOnline ? "Online" : "Offline"}
                         </Badge>
                       </div>
-                      
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
-                        <div>
-                          <strong>Email:</strong> {customer.email}
-                        </div>
-                        <div>
-                          <strong>Phone:</strong> {customer.phone}
-                        </div>
-                        <div>
-                          <strong>Account:</strong> {customer.accountNumber}
-                        </div>
-                        <div>
-                          <strong>Balance:</strong> ${customer.balance?.toLocaleString() || "0"}
-                        </div>
-                        <div>
-                          <strong>Profession:</strong> {customer.profession}
-                        </div>
-                        <div>
-                          <strong>Location:</strong> {customer.city}, {customer.country}
-                        </div>
-                        <div>
-                          <strong>ID Type:</strong> {customer.idType}
-                        </div>
-                        <div>
-                          <strong>Joined:</strong> {new Date(customer.createdAt).toLocaleDateString()}
-                        </div>
+                        <div><strong>Email:</strong> {customer.email}</div>
+                        <div><strong>Phone:</strong> {customer.phone}</div>
+                        <div><strong>Account:</strong> {customer.accountNumber}</div>
+                        <div><strong>Balance:</strong> ${customer.balance?.toLocaleString() || "0"}</div>
+                        <div><strong>Profession:</strong> {customer.profession}</div>
+                        <div><strong>Location:</strong> {customer.city}, {customer.country}</div>
+                        <div><strong>ID Type:</strong> {customer.idType}</div>
+                        <div><strong>Joined:</strong> {new Date(customer.createdAt).toLocaleDateString()}</div>
                       </div>
                     </div>
-                    
                     <div className="flex gap-2 ml-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditCustomer(customer)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => handleEditCustomer(customer)}>
                         <Edit3 className="w-4 h-4 mr-1" />
                         Edit
                       </Button>
-                      
                       {!customer.isVerified && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => handleVerifyCustomer(customer.id)}
-                          disabled={verifyCustomerMutation.isPending}
-                        >
+                        <Button variant="default" size="sm" onClick={() => handleVerifyCustomer(customer.id)} disabled={verifyCustomerMutation.isPending}>
                           <UserCheck className="w-4 h-4 mr-1" />
                           Verify
                         </Button>
@@ -270,14 +253,12 @@ export default function CustomerManagement() {
           )}
         </div>
 
-        {/* Edit Customer Dialog */}
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Customer Information</DialogTitle>
               <DialogDescription>Edit customer personal, contact, financial, and verification information</DialogDescription>
             </DialogHeader>
-            
             {editingCustomer && (
               <Tabs defaultValue="personal" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
@@ -286,54 +267,24 @@ export default function CustomerManagement() {
                   <TabsTrigger value="financial">Financial</TabsTrigger>
                   <TabsTrigger value="verification">Verification</TabsTrigger>
                 </TabsList>
-                
                 <TabsContent value="personal" className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="fullName">Full Name</Label>
-                      <Input
-                        id="fullName"
-                        value={editingCustomer.fullName}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          fullName: e.target.value
-                        })}
-                      />
+                      <Input id="fullName" value={editingCustomer.fullName} onChange={(e) => setEditingCustomer({ ...editingCustomer, fullName: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="username">Username</Label>
-                      <Input
-                        id="username"
-                        value={editingCustomer.username}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          username: e.target.value
-                        })}
-                      />
+                      <Input id="username" value={editingCustomer.username} onChange={(e) => setEditingCustomer({ ...editingCustomer, username: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="profession">Profession</Label>
-                      <Input
-                        id="profession"
-                        value={editingCustomer.profession}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          profession: e.target.value
-                        })}
-                      />
+                      <Input id="profession" value={editingCustomer.profession} onChange={(e) => setEditingCustomer({ ...editingCustomer, profession: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="annualIncome">Annual Income</Label>
-                      <Select
-                        value={editingCustomer.annualIncome}
-                        onValueChange={(value) => setEditingCustomer({
-                          ...editingCustomer,
-                          annualIncome: value
-                        })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
+                      <Select value={editingCustomer.annualIncome} onValueChange={(value) => setEditingCustomer({ ...editingCustomer, annualIncome: value })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="under_25k">Under $25,000</SelectItem>
                           <SelectItem value="25k_50k">$25,000 - $50,000</SelectItem>
@@ -346,143 +297,60 @@ export default function CustomerManagement() {
                     </div>
                   </div>
                 </TabsContent>
-                
                 <TabsContent value="contact" className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={editingCustomer.email}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          email: e.target.value
-                        })}
-                      />
+                      <Input id="email" type="email" value={editingCustomer.email} onChange={(e) => setEditingCustomer({ ...editingCustomer, email: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        value={editingCustomer.phone}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          phone: e.target.value
-                        })}
-                      />
+                      <Input id="phone" value={editingCustomer.phone} onChange={(e) => setEditingCustomer({ ...editingCustomer, phone: e.target.value })} />
                     </div>
                     <div className="col-span-2">
                       <Label htmlFor="address">Address</Label>
-                      <Textarea
-                        id="address"
-                        value={editingCustomer.address}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          address: e.target.value
-                        })}
-                      />
+                      <Textarea id="address" value={editingCustomer.address} onChange={(e) => setEditingCustomer({ ...editingCustomer, address: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        value={editingCustomer.city}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          city: e.target.value
-                        })}
-                      />
+                      <Input id="city" value={editingCustomer.city} onChange={(e) => setEditingCustomer({ ...editingCustomer, city: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="state">State/Province</Label>
-                      <Input
-                        id="state"
-                        value={editingCustomer.state}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          state: e.target.value
-                        })}
-                      />
+                      <Input id="state" value={editingCustomer.state} onChange={(e) => setEditingCustomer({ ...editingCustomer, state: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="country">Country</Label>
-                      <Input
-                        id="country"
-                        value={editingCustomer.country}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          country: e.target.value
-                        })}
-                      />
+                      <Input id="country" value={editingCustomer.country} onChange={(e) => setEditingCustomer({ ...editingCustomer, country: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="postalCode">Postal Code</Label>
-                      <Input
-                        id="postalCode"
-                        value={editingCustomer.postalCode}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          postalCode: e.target.value
-                        })}
-                      />
+                      <Input id="postalCode" value={editingCustomer.postalCode} onChange={(e) => setEditingCustomer({ ...editingCustomer, postalCode: e.target.value })} />
                     </div>
                   </div>
                 </TabsContent>
-                
                 <TabsContent value="financial" className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="accountNumber">Account Number</Label>
-                      <Input
-                        id="accountNumber"
-                        value={editingCustomer.accountNumber}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          accountNumber: e.target.value
-                        })}
-                      />
+                      <Input id="accountNumber" value={editingCustomer.accountNumber} onChange={(e) => setEditingCustomer({ ...editingCustomer, accountNumber: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="accountId">Account ID</Label>
-                      <Input
-                        id="accountId"
-                        value={editingCustomer.accountId}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          accountId: e.target.value
-                        })}
-                      />
+                      <Input id="accountId" value={editingCustomer.accountId} onChange={(e) => setEditingCustomer({ ...editingCustomer, accountId: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="balance">Account Balance</Label>
-                      <Input
-                        id="balance"
-                        type="number"
-                        value={editingCustomer.balance}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          balance: parseFloat(e.target.value) || 0
-                        })}
-                      />
+                      <Input id="balance" type="number" value={editingCustomer.balance} onChange={(e) => setEditingCustomer({ ...editingCustomer, balance: parseFloat(e.target.value) || 0 })} />
                     </div>
                   </div>
                 </TabsContent>
-                
                 <TabsContent value="verification" className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="idType">ID Type</Label>
-                      <Select
-                        value={editingCustomer.idType}
-                        onValueChange={(value) => setEditingCustomer({
-                          ...editingCustomer,
-                          idType: value
-                        })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
+                      <Select value={editingCustomer.idType} onValueChange={(value) => setEditingCustomer({ ...editingCustomer, idType: value })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="passport">Passport</SelectItem>
                           <SelectItem value="drivers_license">Driver's License</SelectItem>
@@ -493,27 +361,12 @@ export default function CustomerManagement() {
                     </div>
                     <div>
                       <Label htmlFor="idNumber">ID Number</Label>
-                      <Input
-                        id="idNumber"
-                        value={editingCustomer.idNumber}
-                        onChange={(e) => setEditingCustomer({
-                          ...editingCustomer,
-                          idNumber: e.target.value
-                        })}
-                      />
+                      <Input id="idNumber" value={editingCustomer.idNumber} onChange={(e) => setEditingCustomer({ ...editingCustomer, idNumber: e.target.value })} />
                     </div>
                     <div>
                       <Label htmlFor="isVerified">Verification Status</Label>
-                      <Select
-                        value={editingCustomer.isVerified ? "verified" : "unverified"}
-                        onValueChange={(value) => setEditingCustomer({
-                          ...editingCustomer,
-                          isVerified: value === "verified"
-                        })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
+                      <Select value={editingCustomer.isVerified ? "verified" : "unverified"} onValueChange={(value) => setEditingCustomer({ ...editingCustomer, isVerified: value === "verified" })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="verified">{t('verified')}</SelectItem>
                           <SelectItem value="unverified">{t('unverified')}</SelectItem>
@@ -522,19 +375,12 @@ export default function CustomerManagement() {
                     </div>
                   </div>
                 </TabsContent>
-                
                 <div className="flex justify-end gap-2 mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowEditDialog(false)}
-                  >
+                  <Button variant="outline" onClick={() => setShowEditDialog(false)}>
                     <X className="w-4 h-4 mr-1" />
                     Cancel
                   </Button>
-                  <Button
-                    onClick={handleSaveCustomer}
-                    disabled={updateCustomerMutation.isPending}
-                  >
+                  <Button onClick={handleSaveCustomer} disabled={updateCustomerMutation.isPending}>
                     <Save className="w-4 h-4 mr-1" />
                     {updateCustomerMutation.isPending ? t('saving') : t('save_changes')}
                   </Button>
