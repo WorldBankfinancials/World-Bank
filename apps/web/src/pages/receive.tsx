@@ -22,6 +22,7 @@ import {
   Wallet
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { authenticatedFetch, queryClient } from "@/lib/queryClient";
 
 
 export default function Receive() {
@@ -41,7 +42,6 @@ export default function Receive() {
     queryKey: ['/api/payment-requests'],
     queryFn: async () => {
       try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
         const response = await authenticatedFetch('/api/payment-requests');
         if (!response.ok) {
           toast({ title: 'Failed to load requests', description: 'Unable to fetch payment requests', variant: 'destructive' });
@@ -85,14 +85,17 @@ export default function Receive() {
   };
 
   const handleRequestMoney = async () => {
-    if (!requestAmount) {
-      toast({ title: 'Error', description: 'Please enter an amount', variant: 'destructive' });
+    const amount = parseFloat(String(requestAmount));
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: 'Please enter a valid amount', variant: 'destructive' });
+      return;
+    }
+    if (amount > 100000) {
+      toast({ title: 'Maximum request amount is $100,000', variant: 'destructive' });
       return;
     }
 
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const { queryClient } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/payment-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

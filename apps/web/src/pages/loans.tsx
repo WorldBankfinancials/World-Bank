@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Landmark, Plus, CheckCircle, XCircle, Clock, BadgeCheck, Wallet } from "lucide-react";
 import Header from "@/components/Header";
@@ -71,7 +71,7 @@ export default function Loans() {
   const [transferPin, setTransferPin] = useState("");
 
   // Fetch the user's loans
-  const { data: loans = [], isLoading } = useQuery<Loan[]>({
+  const { data: loans = [], isLoading, isError: loansError } = useQuery<Loan[]>({
     queryKey: ['/api/loans'],
     queryFn: async () => {
       const res = await authenticatedFetch('/api/loans');
@@ -80,7 +80,7 @@ export default function Loans() {
   });
 
   // Fetch pending loans for admin
-  const { data: pendingLoans = [] } = useQuery<Loan[]>({
+  const { data: pendingLoans = [], isError: pendingLoansError } = useQuery<Loan[]>({
     queryKey: ['/api/admin/pending-loans'],
     queryFn: async () => {
       const res = await authenticatedFetch('/api/admin/pending-loans');
@@ -88,6 +88,15 @@ export default function Loans() {
     },
     enabled: isAdmin,
   });
+
+  useEffect(() => {
+    if (loansError) {
+      toast({ title: 'Error loading loans', variant: 'destructive' });
+    }
+    if (pendingLoansError) {
+      toast({ title: 'Error loading pending loans', variant: 'destructive' });
+    }
+  }, [loansError, pendingLoansError]);
 
   // Apply for a loan
   const applyMutation = useMutation({
@@ -164,6 +173,16 @@ export default function Loans() {
     e.preventDefault();
     if (!principalAmount || !interestRate || !termMonths || !transferPin) {
       toast({ variant: "destructive", title: "Missing fields", description: "Please fill in all fields." });
+      return;
+    }
+    const principal = parseFloat(String(principalAmount));
+    if (principal > 500000) {
+      toast({ title: 'Maximum loan amount is $500,000', variant: 'destructive' });
+      return;
+    }
+    const parsedTermMonths = parseInt(String(termMonths));
+    if (parsedTermMonths > 360) {
+      toast({ title: 'Maximum term is 360 months (30 years)', variant: 'destructive' });
       return;
     }
     applyMutation.mutate({
