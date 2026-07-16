@@ -23,7 +23,7 @@ export function useRealtimeChat(
   onMessageReceived?: (message: ChatMessage) => void
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleMessage = useCallback(
     (payload: { new: Record<string, unknown> }) => {
@@ -74,7 +74,7 @@ export function useRealtimeChat(
       )
       .subscribe((status: string) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+          if (pollIntervalRef.current) clearTimeout(pollIntervalRef.current);
           pollIntervalRef.current = setInterval(async () => {
             try {
               const res = await authenticatedFetch('/api/chat/history');
@@ -95,7 +95,7 @@ export function useRealtimeChat(
 
     return () => {
       channel.unsubscribe();
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (pollIntervalRef.current) clearTimeout(pollIntervalRef.current);
     };
   }, [userId, handleMessage]);
 
