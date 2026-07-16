@@ -2,7 +2,7 @@
  * server/auth-middleware.ts
  *
  * Verifies Supabase JWTs server-side.
- * Looks up user in user_profiles (primary user table).
+ * Looks up user in users (primary user table).
  * req.user = { id: UUID string, email: string, role: UserRole }
  */
 import { Request, Response, NextFunction } from 'express';
