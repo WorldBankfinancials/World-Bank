@@ -299,7 +299,7 @@ export interface InsertCard {
 // ============================================================
 
 export type InvestmentType = 'stock' | 'bond' | 'etf' | 'mutual_fund';
-export type InvestmentStatus = 'active' | 'sold';
+export type InvestmentStatus = 'active' | 'sold' | 'pending';
 
 export interface Investment {
   id: string;
