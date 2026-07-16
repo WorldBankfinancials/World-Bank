@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { RefreshCw, TrendingUp, TrendingDown, ArrowUpDown, Calculator, Clock, Globe } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,18 +25,27 @@ export default function Exchange() {
   const queryClient = useQueryClient();
 
   // Fetch live exchange rates from Supabase/API
-  const { data: exchangeRates, isLoading: ratesLoading, refetch } = useQuery<Record<string, number>>({
+  const { data: exchangeRates, isLoading: ratesLoading, isError: ratesError, refetch } = useQuery<Record<string, number>>({
     queryKey: ['/api/exchange-rates'],
     staleTime: 30000, // 30 seconds cache
     refetchInterval: 60000 // Auto refresh every minute
   });
 
   // Fetch 24h change data from API (falls back to empty when unavailable)
-  const { data: rateChanges } = useQuery<Record<string, number>>({
+  const { data: rateChanges, isError: changesError } = useQuery<Record<string, number>>({
     queryKey: ['/api/exchange-rates/changes'],
     staleTime: 30000,
     refetchInterval: 60000
   });
+
+  useEffect(() => {
+    if (ratesError) {
+      toast({ title: 'Error loading exchange rates', variant: 'destructive' });
+    }
+    if (changesError) {
+      toast({ title: 'Error loading rate changes', variant: 'destructive' });
+    }
+  }, [ratesError, changesError]);
 
   // Calculate converted amount
   useEffect(() => {

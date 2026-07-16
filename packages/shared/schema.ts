@@ -113,6 +113,14 @@ export const userProfiles = pgTable('users', {
   updatedAt:            timestamp('updated_at', { withTimezone: true }).defaultNow(),
   preferredLanguage:    text('preferred_language').default('en'),
   passwordHash:         text('password_hash'),
+  notificationPreferences: jsonb('notification_preferences').default({}),
+  privacyPreferences:      jsonb('privacy_preferences').default({}),
+  displayPreferences:      jsonb('display_preferences').default({}),
+  securityPreferences:     jsonb('security_preferences').default({}),
+  securityQuestion1:       text('security_question_1'),
+  securityAnswer1:         text('security_answer_1'),
+  securityQuestion2:       text('security_question_2'),
+  securityAnswer2:         text('security_answer_2'),
 });
 
 export const bankAccounts = pgTable('accounts', {
@@ -169,6 +177,9 @@ export const transactions = pgTable('transactions', {
   accountNumber:    text('account_number'),
   transferPurpose:  text('transfer_purpose'),
   adminNotes:       text('admin_notes'),
+  deviceInfo:       jsonb('device_info'),
+  ipAddress:        text('ip_address'),
+  updatedAt:        timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
 export const adminActions = pgTable('admin_actions', {
@@ -196,19 +207,21 @@ export const supportTickets = pgTable('support_tickets', {
 });
 
 export const cards = pgTable('cards', {
-  id:                 uuid('id').primaryKey(),
-  userId:             uuid('user_id').notNull(),
-  accountId:          uuid('account_id').notNull(),
-  cardNumber:         text('card_number'),
-  cardHolder:         text('card_holder'),
-  expiryDate:         text('expiry_date'),
-  cvv:                text('cvv'),
-  type:               text('type').default('debit'),
-  status:             text('status').default('active'),
-  isLocked:           boolean('is_locked').default(false),
-  dailyLimit:         numeric('daily_limit', { precision: 15, scale: 2 }).default('1000.00'),
-  contactlessEnabled: boolean('contactless_enabled').default(true),
-  createdAt:          timestamp('created_at', { withTimezone: true }).defaultNow(),
+  id:               uuid('id').primaryKey().defaultRandom(),
+  accountId:        uuid('account_id').notNull(),
+  cardNumber:       text('card_number').notNull(),
+  cardholderName:   text('cardholder_name').notNull(),
+  cardType:         text('card_type').notNull(),
+  brand:            text('brand'),
+  expiryMonth:      integer('expiry_month'),
+  expiryYear:       integer('expiry_year'),
+  cvv:              text('cvv'),
+  status:           text('status').notNull().default('active'),
+  monthlyLimit:     numeric('monthly_limit').default('5000'),
+  isContactless:    boolean('is_contactless').default(true),
+  pinSet:           boolean('pin_set').default(false),
+  createdAt:        timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt:        timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const investments = pgTable('investments', {
@@ -250,6 +263,42 @@ export const alerts = pgTable('alerts', {
   isRead:    boolean('is_read').default(false),
   status:    text('status').default('unread'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const loans = pgTable('loans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  accountId: uuid('account_id'),
+  loanNumber: text('loan_number'),
+  loanType: text('loan_type').notNull(),
+  principalAmount: numeric('principal_amount').notNull(),
+  interestRate: numeric('interest_rate').notNull(),
+  termMonths: integer('term_months').notNull(),
+  monthlyPayment: numeric('monthly_payment'),
+  remainingBalance: numeric('remaining_balance').default('0'),
+  totalInterest: numeric('total_interest'),
+  totalPayable: numeric('total_payable'),
+  status: text('status').notNull().default('pending'),
+  approvedBy: uuid('approved_by'),
+  approvedAt: timestamp('approved_at', { withTimezone: true }),
+  disbursementDate: timestamp('disbursement_date', { withTimezone: true }),
+  maturityDate: timestamp('maturity_date', { withTimezone: true }),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const savings = pgTable('savings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  accountType: text('account_type').notNull(),
+  balance: numeric('balance').notNull().default('0'),
+  interestRate: numeric('interest_rate').default('0'),
+  targetAmount: numeric('target_amount'),
+  targetDate: timestamp('target_date', { withTimezone: true }),
+  status: text('status').notNull().default('active'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // ============================================================
