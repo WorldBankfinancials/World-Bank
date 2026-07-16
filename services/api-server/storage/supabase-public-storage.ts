@@ -179,7 +179,7 @@ export class SupabasePublicStorage implements IStorage {
           .select('*')
           .eq('id', id)
           .single();
-        if (error) throw new Error(`Supabase error: ${error.message}`);
+        if (error) throw new Error('Database operation failed');
         return user;
       });
       if (!user) return undefined;
@@ -197,7 +197,7 @@ export class SupabasePublicStorage implements IStorage {
           .from('user_profiles')
           .select('*')
           .eq('email', email);
-        if (error) throw new Error(`Supabase error: ${error.message}`);
+        if (error) throw new Error('Database operation failed');
         if (!user || user.length === 0) return null;
         return user[0];
       });
@@ -215,8 +215,6 @@ export class SupabasePublicStorage implements IStorage {
 
   async getUserBySupabaseId(supabaseUserId: string): Promise<User | undefined> {
     try {
-      // Supabase auth IDs are UUIDs — look up the auth user to get their email,
-      // then find the matching user_profiles record by email
       const { data: authData, error } = await supabase.auth.admin.getUserById(supabaseUserId);
       if (error || !authData?.user?.email) return undefined;
       return this.getUserByEmail(authData.user.email);
@@ -322,7 +320,6 @@ export class SupabasePublicStorage implements IStorage {
   async updateUserBalance(id: string, amountDelta: number): Promise<User | undefined> {
     try {
       const delta = parseFloat(String(amountDelta));
-      // Get current balance from accounts table (source of truth)
       const accounts = await this.getUserAccounts(id);
       if (!accounts || accounts.length === 0) {
         throw new Error('No account found for user');
@@ -333,21 +330,19 @@ export class SupabasePublicStorage implements IStorage {
       if (newBalance < 0) {
         throw new Error('Insufficient funds');
       }
-      // Update the accounts table balance (source of truth)
       await withRetry(async () => {
         const { error } = await supabase
           .from('accounts')
           .update({ balance: newBalance.toFixed(2), available_balance: newBalance.toFixed(2) })
           .eq('id', primaryAccount.id);
-        if (error) throw new Error(`Supabase error: ${error.message}`);
+        if (error) throw new Error('Database operation failed');
       });
-      // Also update user_profiles balance to keep in sync
       await withRetry(async () => {
         const { error } = await supabase
           .from('user_profiles')
           .update({ balance: newBalance.toFixed(2), available_balance: newBalance.toFixed(2), updated_at: new Date().toISOString() })
           .eq('id', id);
-        if (error) throw new Error(`Supabase error: ${error.message}`);
+        if (error) throw new Error('Database operation failed');
       });
       return this.getUser(id);
     } catch (error) {
@@ -364,7 +359,7 @@ export class SupabasePublicStorage implements IStorage {
           .select('*')
           .eq('user_id', userId)
           .order('id');
-        if (error) throw new Error(`Supabase error: ${error.message}`);
+        if (error) throw new Error('Database operation failed');
         return accounts || [];
       });
       return accounts.map(acc => ({ id: acc.id, userId: acc.user_id, accountNumber: acc.account_number, accountType: acc.account_type, balance: acc.balance?.toString() || '0', currency: acc.currency, status: acc.status || 'active', createdAt: acc.created_at, updatedAt: acc.updated_at } as unknown as Account));
@@ -436,7 +431,6 @@ export class SupabasePublicStorage implements IStorage {
   async createTransaction(data: InsertTransaction): Promise<Transaction> {
     try {
       const transaction = await withRetry(async () => {
-        // Map camelCase fields to snake_case for database
         const dbData: any = {
           from_user_id: data.fromUserId,
           from_account_id: data.fromAccountId,
@@ -455,11 +449,10 @@ export class SupabasePublicStorage implements IStorage {
           transfer_purpose: data.transferPurpose,
           reference_number: data.referenceNumber || `TXN-${Date.now()}-${randomUUID().substring(0, 8).toUpperCase()}`
         };
-        // Remove undefined fields
         Object.keys(dbData).forEach(key => dbData[key] === undefined && delete dbData[key]);
         
         const { data: transaction, error } = await supabase.from('transactions').insert(dbData).select().single();
-        if (error) throw new Error(`Supabase error: ${error.message}`);
+        if (error) throw new Error('Database operation failed');
         if (!transaction) throw new Error('Failed to create transaction');
         return transaction;
       });
@@ -594,7 +587,6 @@ export class SupabasePublicStorage implements IStorage {
 
   async updateSupportTicket(id: string, updates: Partial<SupportTicket>): Promise<SupportTicket | undefined> {
     try {
-      // Map camelCase TypeScript fields to snake_case DB columns
       const dbUpdates: Record<string, any> = {};
       const fieldMap: Record<string, string> = {
         adminNotes: 'admin_notes',
@@ -774,7 +766,6 @@ export class SupabasePublicStorage implements IStorage {
 
   async createMessage(data: InsertMessage): Promise<Message> {
     try {
-      // Explicitly map camelCase Drizzle fields to snake_case Supabase REST column names
       const row = {
         sender_id: data.senderId,
         sender_role: data.senderRole || 'customer',
