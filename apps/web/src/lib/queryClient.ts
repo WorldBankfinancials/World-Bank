@@ -12,7 +12,7 @@ export async function apiRequest<T = Response>(
   url: string,
   data?: unknown
 ): Promise<T> {
-  const token = localStorage.getItem('accessToken');
+  const token = localStorage.getItem('token');
   const res = await fetch(url, {
     method,
     headers: {
@@ -24,11 +24,19 @@ export async function apiRequest<T = Response>(
   });
 
   await throwIfResNotOk(res);
+
+  if (res.status === 204 || res.headers.get('content-length') === '0') {
+    return undefined as unknown as T;
+  }
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    return undefined as unknown as T;
+  }
   return res.json();
 }
 
 export const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem('accessToken');
+  const token = localStorage.getItem('token');
   const res = await fetch(url, {
     ...options,
     headers: {
@@ -48,7 +56,7 @@ type UnauthorizedBehavior = "redirect" | "returnNull" | "throw";
 export const getQueryFn: <T>(options?: { on401?: UnauthorizedBehavior }) => QueryFunction<T> =
   (options) =>
   async ({ queryKey }) => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('token');
     const res = await fetch(queryKey[0] as string, {
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { randomUUID } from 'crypto';
 import { log } from './vite';
 
 // Use service role key for server-side operations (bypasses RLS)
@@ -12,11 +11,16 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
 
-// Admin client (service role key) - bypasses RLS
+// Admin client (service role key) - bypasses RLS - cached singleton
+let _adminClient: ReturnType<typeof createClient> | null = null;
+
 export function getAdminClient() {
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
+  if (!_adminClient) {
+    _adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+  }
+  return _adminClient;
 }
 
 // Storage helpers

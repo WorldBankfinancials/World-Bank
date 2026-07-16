@@ -1,22 +1,29 @@
 /**
- * Error filtering for known non-critical errors that don't require user notification.
- * This suppresses console noise from expected network failures and browser quirks.
+ * Error filtering for known non-critical browser quirks.
+ * Network errors are NOT suppressed — they may indicate real API failures.
  */
 
 const SUPPRESSED_ERROR_PATTERNS = [
   'ResizeObserver loop',
-  'Network request failed',
-  'Failed to fetch',
-  'Load failed',
   'Non-Error promise rejection captured',
-  'chunk',
+];
+
+const CHUNK_ERROR_PATTERNS = [
   'ChunkLoadError',
+  'Loading chunk',
+  'Loading CSS chunk',
 ];
 
 export function shouldSuppressError(message: string): boolean {
-  return SUPPRESSED_ERROR_PATTERNS.some(pattern =>
-    message.toLowerCase().includes(pattern.toLowerCase())
-  );
+  const lower = message.toLowerCase();
+  if (SUPPRESSED_ERROR_PATTERNS.some(p => lower.includes(p.toLowerCase()))) return true;
+  if (CHUNK_ERROR_PATTERNS.some(p => lower.includes(p.toLowerCase()))) {
+    if (typeof window !== 'undefined' && window.location) {
+      window.location.reload();
+    }
+    return true;
+  }
+  return false;
 }
 
 export function setupGlobalErrorSuppression() {

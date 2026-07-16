@@ -8,9 +8,22 @@ function createRateLimiter(options: {
 }): RequestHandler {
   const hits = new Map<string, { count: number; resetTime: number }>();
 
+  // Periodic cleanup of expired entries to prevent unbounded memory growth
+  const CLEANUP_INTERVAL = Math.max(options.windowMs, 60000);
+  const lastCleanup = { time: Date.now() };
+
   return (req, res, next) => {
     const key = req.ip || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
+
+    // Lazy cleanup: remove expired entries on each request
+    if (now - lastCleanup.time > CLEANUP_INTERVAL) {
+      lastCleanup.time = now;
+      for (const [k, v] of hits) {
+        if (now > v.resetTime) hits.delete(k);
+      }
+    }
+
     let entry = hits.get(key);
 
     if (!entry || now > entry.resetTime) {
