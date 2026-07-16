@@ -7,7 +7,7 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest<T = unknown>(
+export async function apiRequest<T = Response>(
   method: string,
   url: string,
   data?: unknown
@@ -43,7 +43,7 @@ export const authenticatedFetch = async (url: string, options: RequestInit = {})
   return res;
 };
 
-type UnauthorizedBehavior = "redirect" | "returnNull";
+type UnauthorizedBehavior = "redirect" | "returnNull" | "throw";
 
 export const getQueryFn: <T>(options?: { on401?: UnauthorizedBehavior }) => QueryFunction<T> =
   (options) =>
@@ -58,7 +58,7 @@ export const getQueryFn: <T>(options?: { on401?: UnauthorizedBehavior }) => Quer
 
     if (options?.on401 === "redirect" && res.status === 401) {
       window.location.href = '/login';
-      return null as T;
+      return null as unknown;
     }
 
     await throwIfResNotOk(res);

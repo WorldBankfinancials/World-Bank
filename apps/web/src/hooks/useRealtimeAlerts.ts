@@ -39,9 +39,9 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          const event = (payload as any).eventType;
+          const event = (payload as { eventType?: string }).eventType;
           if (event === 'DELETE') {
-            setAlerts(prev => prev.filter(a => a.id !== (payload as any).old?.id));
+            setAlerts(prev => prev.filter(a => a.id !== (payload as { old?: { id?: string } }).old?.id));
             return;
           }
           // Only add for INSERT

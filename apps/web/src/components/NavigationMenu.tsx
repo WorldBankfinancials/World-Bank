@@ -76,7 +76,7 @@ export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps)
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-50" onClick={onClose} role="button" tabIndex={-1} aria-label="Close menu">
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-50" onClick={onClose} role="button" tabIndex={0} aria-label="Close menu" onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') onClose(); }}>
       <div
         role="dialog"
         aria-modal="true"

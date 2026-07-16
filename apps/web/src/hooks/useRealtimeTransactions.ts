@@ -46,7 +46,7 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
           filter: `from_user_id=eq.${userId}`
         },
         (payload) => {
-          const event = (payload as any).eventType;
+          const event = (payload as { eventType?: string }).eventType;
           if (event === 'INSERT') {
             setTransactions(prev => {
               if (prev.some(t => t.id === (payload.new as Transaction).id)) return prev;
@@ -55,7 +55,7 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
           } else if (event === 'UPDATE') {
             setTransactions(prev => prev.map(t => t.id === (payload.new as Transaction).id ? payload.new as Transaction : t));
           } else if (event === 'DELETE') {
-            setTransactions(prev => prev.filter(t => t.id !== (payload as any).old?.id));
+            setTransactions(prev => prev.filter(t => t.id !== (payload as { old?: { id?: string } }).old?.id));
           }
         }
       )

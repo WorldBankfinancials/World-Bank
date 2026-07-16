@@ -1,10 +1,10 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import { setupErrorFiltering } from "./lib/globalErrorSuppression";
+import { setupGlobalErrorSuppression } from "./lib/globalErrorSuppression";
 
 // Setup error filtering to suppress noise
-setupErrorFiltering();
+setupGlobalErrorSuppression();
 
 // Global error handling to suppress noise and log properly
 const isViteWarning = (reason: any) => {
