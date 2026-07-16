@@ -982,7 +982,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         .select()
         .single();
 
-      if (error) throw new Error(error.message);
+      if (error) throw new Error('Database operation failed');
       return res.json({ success: true, transaction: data, message: 'Transaction updated' });
     } catch (error: unknown) {
       return res.status(500).json({ error: 'Failed to update transaction' });
