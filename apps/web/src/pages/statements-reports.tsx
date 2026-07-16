@@ -5,6 +5,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { authenticatedFetch } from "@/lib/queryClient";
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { FileText, Download, Calendar } from "lucide-react";
 
 interface Statement {
@@ -19,7 +21,7 @@ export default function StatementsReports() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
 
-  const { data: statements = [] } = useQuery<Statement[]>({
+  const { data: statements = [], isLoading, error } = useQuery<Statement[]>({
     queryKey: ['/api/statements'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/statements');
@@ -27,6 +29,22 @@ export default function StatementsReports() {
       return response.json();
     }
   });
+
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (error) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [error]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

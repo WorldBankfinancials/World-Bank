@@ -5,8 +5,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authenticatedFetch } from '@/lib/queryClient';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User as UserIcon, Mail, Phone, MapPin, Shield, Lock, Bell, Save, Key } from 'lucide-react';
+import type { User } from '@packages/shared/schema';
 
 interface UserProfile {
   id: string | number;
@@ -32,7 +33,7 @@ export default function ProfileSettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: profile } = useQuery<UserProfile>({
+  const { data: profile, isLoading, error } = useQuery<UserProfile>({
     queryKey: ['/api/user'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/user');
@@ -94,9 +95,23 @@ export default function ProfileSettings() {
 
   const displayProfile = profile || userProfile as UserProfile;
 
+  useEffect(() => {
+    if (error) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [error]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={displayProfile as any || undefined} />
+      <Header user={(displayProfile as unknown as User) || undefined} />
       <main className="container mx-auto px-4 py-6 max-w-4xl pb-20">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('profile_settings')}</h1>
         <p className="text-gray-600 mb-6">{t('view_your_profile_information_and_account_details')}</p>

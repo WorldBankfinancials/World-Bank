@@ -28,7 +28,7 @@ import { authenticatedFetch, queryClient } from "@/lib/queryClient";
 export default function Receive() {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['/api/user'],
   });
   
@@ -38,7 +38,7 @@ export default function Receive() {
   const [copied, setCopied] = useState(false);
   
   // Fetch real pending requests from API
-  const { data: pendingRequests = [] } = useQuery({
+  const { data: pendingRequests = [], error: requestsError } = useQuery({
     queryKey: ['/api/payment-requests'],
     queryFn: async () => {
       try {
@@ -55,10 +55,18 @@ export default function Receive() {
     }
   });
 
+  const queryError = error || requestsError;
+
+  useEffect(() => {
+    if (queryError) {
+      toast({ title: 'Error loading data', variant: 'destructive' });
+    }
+  }, [queryError]);
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">{t('loading')}</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
