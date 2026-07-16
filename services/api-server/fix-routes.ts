@@ -279,7 +279,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       if (!users) { return res.status(500).json({ error: "Failed to fetch users" }); }
 
       if (!error && users) {
-        const emailExists = users.users.some((u: any) => u.email === email);
+        const emailExists = users.users.some((u) => u.email === email);
         if (emailExists) {
           return res.json({
             available: false,
@@ -333,7 +333,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to list users' });
       }
 
-      const user = users.users.find((u: any) => u.email === email);
+      const user = users.users.find((u) => u.email === email);
       if (!user) {
         return res.status(404).json({ error: 'User not found in authentication system' });
       }
@@ -402,7 +402,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const { data: users, error: authError } = await supabase.auth.admin.listUsers();
 
       if (!authError && users) {
-        const emailExistsInSupabase = users.users.some((u: any) => u.email === userData.email);
+        const emailExistsInSupabase = users.users.some((u) => u.email === userData.email);
         if (emailExistsInSupabase) {
           // This case should ideally be caught by the /api/auth/check-email endpoint,
           // but if it reaches here, it means the user is in Supabase Auth but not in our DB.
@@ -665,7 +665,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/accounts', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const allUsers = await storage.getAllUsers();
-      const allAccounts: any[] = [];
+      const allAccounts: Array<Record<string, unknown>> = [];
       for (const user of allUsers) {
         const userAccounts = await storage.getUserAccounts(user.id);
         userAccounts.forEach(acc => allAccounts.push({ ...acc, ownerEmail: user.email, ownerName: (user as unknown as Record<string, unknown>).fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() }));
@@ -1365,7 +1365,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to retrieve user' });
       }
 
-      const supabaseUser = users.users.find((u: any) => u.email === req.user?.email);
+      const supabaseUser = users.users.find((u) => u.email === req.user?.email);
       if (!supabaseUser) {
         return res.status(404).json({ error: 'User not found in authentication system' });
       }
@@ -1480,7 +1480,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'Access denied' });
       }
 
-      const updates: any = {};
+      const updates: Record<string, unknown> = {};
       if (dailyLimit !== undefined) updates.dailyLimit = dailyLimit;
       if (contactlessEnabled !== undefined) updates.contactlessEnabled = contactlessEnabled;
 
@@ -1614,10 +1614,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const assetAllocation: Record<string, { value: number, allocation: number, change: number }> = {};
       let totalValue = 0;
 
-      investments.forEach((inv: any) => {
-        const assetType = inv.asset_type || inv.assetType || 'Other';
-        const value = parseFloat(String(inv.total_value || inv.totalValue || 0));
-        const gainLoss = parseFloat(String(inv.gain_loss || inv.gainLoss || 0));
+      investments.forEach((inv) => {
+        const assetType = inv.assetType || 'Other';
+        const value = parseFloat(String(inv.totalValue || 0));
+        const gainLoss = parseFloat(String(inv.gainLoss || 0));
 
         totalValue += value;
 
@@ -1788,7 +1788,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         .limit(20);
       
       if (error) throw error;
-      const sessions = (data || []).map((u: any) => ({
+      const sessions = (data || []).map((u: Record<string, unknown>) => ({
         id: `session_${u.id}`,
         customerId: u.id,
         customerName: u.full_name || u.email,
@@ -1892,7 +1892,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
 
       // Verify alert belongs to user before deleting
       const alerts = await storage.getUserAlerts(user.id);
-      const alert = alerts.find((a: any) => String(a.id) === String(id));
+      const alert = alerts.find((a) => String(a.id) === String(id));
 
       if (!alert) {
         return res.status(403).json({ error: 'Access denied' });
@@ -2017,7 +2017,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== TRANSFER ENDPOINTS ====================
   
   // Idempotency cache for transfer requests
-  const transferIdempotencyCache = new Map<string, { response: any; timestamp: number }>();
+  const transferIdempotencyCache = new Map<string, { response: unknown; timestamp: number }>();
   const IDEMPOTENCY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   // Create a new transfer - PROTECTED with JWT authentication and rate limiting
@@ -2095,7 +2095,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         console.error('Balance update failed after transfer:', balanceError);
       }
 
-      const response: any = {
+      const response: Record<string, unknown> = {
         id: transfer.id,
         transactionId: transfer.referenceNumber || String(transfer.id),
         status: 'processing'
@@ -2119,7 +2119,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       
       const allTransactions = await storage.getAllTransactions();
       
-      const transfer = allTransactions.find((t: any) => {
+      const transfer = allTransactions.find((t) => {
         const idMatch = t.id?.toString() === id?.toString();
         const refMatch = t.referenceNumber === id;
         return idMatch || refMatch;
@@ -2156,7 +2156,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
         return res.json({ balance: '0.00', currency: 'USD' });
       }
 
-      const totalBalance = accounts.reduce((sum: number, acc: any) => {
+      const totalBalance = accounts.reduce((sum: number, acc) => {
         return sum + parseFloat(String(acc.balance || '0'));
       }, 0);
 
@@ -2187,10 +2187,10 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
       const transactions = await storage.getAllTransactions();
       
       const totalUsers = users.length;
-      const activeUsers = users.filter((u: any) => u.isActive).length;
-      const pendingUsers = users.filter((u: any) => !u.isActive && u.role === 'customer').length;
+      const activeUsers = users.filter((u) => u.isActive).length;
+      const pendingUsers = users.filter((u) => !u.isActive && u.role === 'customer').length;
       const totalTransactions = transactions.length;
-      const totalVolume = transactions.reduce((sum: number, t: any) => {
+      const totalVolume = transactions.reduce((sum: number, t) => {
         return sum + parseFloat(String(t.amount || '0'));
       }, 0);
 
@@ -2242,7 +2242,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           .limit(20);
 
         if (error) throw error;
-        const sessions = (data || []).map((u: any) => ({
+        const sessions = (data || []).map((u: Record<string, unknown>) => ({
           id: `session_${u.id}`,
           customerId: u.id,
           customerName: u.full_name || u.email,
@@ -2306,7 +2306,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
   // ==================== STARTUP HEALTH CHECK ====================
   app.get('/api/health/detailed', async (req: Request, res: Response) => {
     try {
-      const checks: any = {
+      const checks: Record<string, unknown> = {
         server: 'OK',
         database: 'unknown',
         supabase: 'unknown',
