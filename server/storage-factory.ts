@@ -185,7 +185,7 @@ class SupabasePublicStorage implements IStorage {
   }
   async getUnreadAlerts(userId: string) {
     const all = await this.getUserAlerts(userId);
-    return (all as Array<Record<string, unknown>>).filter(a => !a.is_read) as unknown as Alert[];
+    return (all as unknown as Array<Record<string, unknown>>).filter(a => !a.is_read) as unknown as Alert[];
   }
   async createAlert(alert: InsertAlert) {
     return insertRecord('alerts', alert as unknown as Record<string, unknown>) as Promise<Alert>;

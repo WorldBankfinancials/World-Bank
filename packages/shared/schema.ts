@@ -23,11 +23,13 @@ export interface User {
   firstName?: string | null;
   lastName?: string | null;
   username?: string | null;
+  password?: string | null;
   passwordHash?: string | null;
+  phone?: string | null;
   phoneNumber?: string | null;
   countryCode?: string | null;
   dateOfBirth?: string | null;
-  address?: Record<string, unknown> | null;
+  address?: Record<string, unknown> | string | null;
   city?: string | null;
   state?: string | null;
   postalCode?: string | null;
@@ -37,7 +39,9 @@ export interface User {
   annualIncome?: string | null;
   profession?: string | null;
   identificationType?: string | null;
+  idType?: string | null;
   identificationNumber?: string | null;
+  idNumber?: string | null;
   kycStatus?: string | null;
   accountType?: string | null;
   preferredLanguage?: string | null;
@@ -45,11 +49,16 @@ export interface User {
   phoneVerified?: boolean;
   identityVerified?: boolean;
   accountNumber?: string | null;
+  accountId?: string | null;
   balance?: string | number;
   role: UserRole;
+  status?: string | null;
   isActive: boolean;
   isVerified: boolean;
   transferPin?: string | null;
+  lastLogin?: string | null;
+  profilePhoto?: string | null;
+  avatarUrl?: string | null;
   notificationPreferences?: Record<string, unknown> | null;
   privacyPreferences?: Record<string, unknown> | null;
   displayPreferences?: Record<string, unknown> | null;
@@ -69,11 +78,13 @@ export interface InsertUser {
   firstName?: string | null;
   lastName?: string | null;
   username?: string | null;
+  password?: string | null;
   passwordHash?: string | null;
+  phone?: string | null;
   phoneNumber?: string | null;
   countryCode?: string | null;
   dateOfBirth?: string | null;
-  address?: Record<string, unknown> | null;
+  address?: Record<string, unknown> | string | null;
   city?: string | null;
   state?: string | null;
   postalCode?: string | null;
@@ -83,7 +94,9 @@ export interface InsertUser {
   annualIncome?: string | null;
   profession?: string | null;
   identificationType?: string | null;
+  idType?: string | null;
   identificationNumber?: string | null;
+  idNumber?: string | null;
   kycStatus?: string | null;
   accountType?: string | null;
   preferredLanguage?: string | null;
@@ -91,11 +104,16 @@ export interface InsertUser {
   phoneVerified?: boolean;
   identityVerified?: boolean;
   accountNumber?: string | null;
+  accountId?: string | null;
   balance?: string | number;
   role?: UserRole;
+  status?: string | null;
   isActive?: boolean;
   isVerified?: boolean;
   transferPin?: string | null;
+  lastLogin?: string | null;
+  profilePhoto?: string | null;
+  avatarUrl?: string | null;
   notificationPreferences?: Record<string, unknown> | null;
   privacyPreferences?: Record<string, unknown> | null;
   displayPreferences?: Record<string, unknown> | null;
@@ -124,12 +142,12 @@ export interface Account {
   accountType: AccountType;
   currency: Currency;
   balance: string;
-  availableBalance: string;
+  availableBalance?: string;
   status: AccountStatus;
-  interestRate: string;
-  minimumBalance: string;
+  interestRate?: string;
+  minimumBalance?: string;
   accountNickname?: string | null;
-  isPrimary: boolean;
+  isPrimary?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -161,29 +179,38 @@ export type TransactionType =
   | 'loan_disbursement' | 'loan_repayment' | 'currency_exchange'
   | 'savings_deposit' | 'savings_withdrawal'
   | 'investment_buy' | 'investment_sell'
-  | 'payment_request' | 'fee' | 'refund' | 'reversal' | 'admin_adjustment';
+  | 'payment_request' | 'fee' | 'refund' | 'reversal' | 'admin_adjustment'
+  | 'international' | 'debit' | 'credit' | 'mobile_pay' | 'exchange';
 
-export type TransactionStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'reversed' | 'cancelled';
+export type TransactionStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'reversed' | 'cancelled' | 'success';
 export type TransactionCategory = 'food' | 'transport' | 'shopping' | 'healthcare' | 'entertainment' | 'utilities' | 'salary' | 'other';
 
 export interface Transaction {
   id: string;
   fromAccountId?: string | null;
   toAccountId?: string | null;
+  fromUserId?: string | null;
+  toUserId?: string | null;
   amount: string;
   currency: string;
   exchangeRate?: string | null;
   convertedAmount?: string | null;
   transactionType: TransactionType;
-  category?: TransactionCategory | null;
+  type?: string | null;
+  category?: TransactionCategory | string | null;
   status: TransactionStatus;
   description?: string | null;
   merchantName?: string | null;
   merchantCategory?: string | null;
   referenceNumber?: string | null;
   recipientName?: string | null;
+  recipientAccount?: string | null;
   recipientCountry?: string | null;
+  bankName?: string | null;
+  swiftCode?: string | null;
+  transferPurpose?: string | null;
   feeAmount?: string | null;
+  fee?: string | number | null;
   metadata?: Record<string, unknown> | null;
   reversedBy?: string | null;
   reversalReason?: string | null;
@@ -196,21 +223,30 @@ export interface InsertTransaction {
   id?: string;
   fromAccountId?: string | null;
   toAccountId?: string | null;
+  fromUserId?: string | null;
+  toUserId?: string | null;
   amount: string | number;
   currency?: string;
   exchangeRate?: string | null;
   convertedAmount?: string | null;
   transactionType: TransactionType;
-  category?: TransactionCategory | null;
+  type?: string | null;
+  category?: TransactionCategory | string | null;
   status?: TransactionStatus;
   description?: string | null;
   merchantName?: string | null;
   merchantCategory?: string | null;
   referenceNumber?: string | null;
   recipientName?: string | null;
+  recipientAccount?: string | null;
   recipientCountry?: string | null;
+  bankName?: string | null;
+  swiftCode?: string | null;
+  transferPurpose?: string | null;
   feeAmount?: string | null;
+  fee?: string | number | null;
   metadata?: Record<string, unknown> | null;
+  createdAt?: string | Date;
 }
 
 // ============================================================
@@ -218,13 +254,15 @@ export interface InsertTransaction {
 // ============================================================
 
 export type CardType = 'debit' | 'credit' | 'prepaid';
-export type CardStatus = 'active' | 'frozen' | 'expired' | 'cancelled';
+export type CardStatus = 'active' | 'frozen' | 'expired' | 'cancelled' | 'locked';
 
 export interface Card {
   id: string;
   accountId: string;
+  userId?: string;
   cardNumber: string;
   cardType: CardType;
+  type?: string | null;
   brand?: string | null;
   expiryMonth?: number | null;
   expiryYear?: number | null;
@@ -241,8 +279,10 @@ export interface Card {
 export interface InsertCard {
   id?: string;
   accountId: string;
+  userId?: string;
   cardNumber: string;
   cardType: CardType;
+  type?: string | null;
   brand?: string | null;
   expiryMonth?: number | null;
   expiryYear?: number | null;
@@ -266,10 +306,17 @@ export interface Investment {
   userId: string;
   accountId: string;
   investmentType: InvestmentType;
+  assetType?: string | null;
+  type?: string | null;
   symbol: string;
   shares: string;
   purchasePrice: string;
+  averagePrice?: string | null;
   currentPrice: string;
+  totalValue?: string | number | null;
+  gainLoss?: string | number | null;
+  amount?: string | number | null;
+  rate?: string | number | null;
   status: InvestmentStatus;
   soldAt?: string | null;
   salePrice?: string | null;
@@ -280,12 +327,19 @@ export interface Investment {
 export interface InsertInvestment {
   id?: string;
   userId: string;
-  accountId: string;
-  investmentType: InvestmentType;
+  accountId?: string;
+  investmentType?: InvestmentType;
+  assetType?: string | null;
+  type?: string | null;
   symbol: string;
   shares: string | number;
   purchasePrice: string | number;
+  averagePrice?: string | number | null;
   currentPrice?: string | number;
+  totalValue?: string | number | null;
+  gainLoss?: string | number | null;
+  amount?: string | number | null;
+  rate?: string | number | null;
   status?: InvestmentStatus;
   soldAt?: string | null;
   salePrice?: string | null;
@@ -299,9 +353,12 @@ export interface AdminAction {
   id: string;
   adminId: string;
   action: string;
+  actionType?: string | null;
   targetType?: string | null;
   targetId?: string | null;
-  details?: Record<string, unknown>;
+  description?: string | null;
+  details?: Record<string, unknown> | string;
+  metadata?: Record<string, unknown> | null;
   createdAt: string;
 }
 
@@ -309,9 +366,12 @@ export interface InsertAdminAction {
   id?: string;
   adminId: string;
   action: string;
+  actionType?: string | null;
   targetType?: string | null;
   targetId?: string | null;
-  details?: Record<string, unknown>;
+  description?: string | null;
+  details?: Record<string, unknown> | string;
+  metadata?: Record<string, unknown> | null;
 }
 
 // ============================================================
@@ -341,10 +401,11 @@ export interface InsertSupportTicket {
   id?: string;
   userId: string;
   ticketNumber?: string;
+  ticketId?: string | null;
   subject: string;
   description: string;
-  status?: TicketStatus;
-  priority?: TicketPriority;
+  status?: TicketStatus | string;
+  priority?: TicketPriority | string;
   category?: string | null;
   assignedTo?: string | null;
 }
@@ -358,6 +419,11 @@ export interface Message {
   userId: string;
   ticketId?: string | null;
   senderType: 'user' | 'admin' | 'system';
+  senderId?: string | null;
+  senderRole?: string | null;
+  recipientId?: string | null;
+  recipientRole?: string | null;
+  sessionId?: string | null;
   content: string;
   isRead: boolean;
   createdAt: string;
@@ -365,9 +431,14 @@ export interface Message {
 
 export interface InsertMessage {
   id?: string;
-  userId: string;
+  userId?: string;
   ticketId?: string | null;
-  senderType: 'user' | 'admin' | 'system';
+  senderType?: 'user' | 'admin' | 'system';
+  senderId?: string | null;
+  senderRole?: string | null;
+  recipientId?: string | null;
+  recipientRole?: string | null;
+  sessionId?: string | null;
   content: string;
   isRead?: boolean;
 }
