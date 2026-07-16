@@ -23,6 +23,51 @@ import {
 } from "@shared/schema";
 import { IStorage } from "./storage";
 
+// Type extensions for fields that the Insert* types don't expose
+type CamelCaseInsert = {
+  username?: string;
+  isVerified?: boolean;
+  isActive?: boolean;
+  accountNumber?: string;
+  accountId?: string;
+  annualIncome?: string;
+};
+
+type CamelCaseInsertCard = {
+  accountId: string;
+  cardNumber: string;
+  cardType: string;
+  expiryMonth: number;
+  expiryYear: number;
+};
+
+type CamelCaseInsertAdminAction = {
+  adminId: string;
+  targetId: string;
+  targetType: string;
+};
+
+type CamelCaseInsertSupportTicket = {
+  userId: string;
+  resolvedAt?: string;
+};
+
+type CamelCaseInsertInvestment = {
+  userId: string;
+  symbol: string;
+  shares: number;
+  assetType: string;
+};
+
+type CamelCaseInsertMessage = {
+  recipientRole?: string;
+};
+
+type CamelCaseInsertAlert = {
+  userId: string;
+  isRead?: boolean;
+};
+
 if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
   throw new Error('SUPABASE_URL or VITE_SUPABASE_URL environment variable is required');
 }
@@ -245,7 +290,7 @@ export class SupabasePublicStorage implements IStorage {
       };
       if (data.firstName !== undefined) row.first_name = data.firstName;
       if (data.lastName !== undefined) row.last_name = data.lastName;
-      if ((data as any).username !== undefined) row.username = (data as any).username;
+      if ((data as CamelCaseInsert).username !== undefined) row.username = (data as CamelCaseInsert).username;
       if (data.phone !== undefined) row.phone = data.phone;
       if (data.address !== undefined) row.address = data.address;
       if (data.city !== undefined) row.city = data.city;
@@ -258,11 +303,11 @@ export class SupabasePublicStorage implements IStorage {
       if (data.idNumber !== undefined) row.id_number = data.idNumber;
       if (data.transferPin !== undefined) row.transfer_pin = data.transferPin;
       if (data.role !== undefined) row.role = data.role;
-      if ((data as any).isVerified !== undefined) row.is_verified = (data as any).isVerified;
-      if ((data as any).isActive !== undefined) row.is_active = (data as any).isActive;
-      if ((data as any).accountNumber !== undefined) row.account_number = (data as any).accountNumber;
-      if ((data as any).accountId !== undefined) row.account_id = (data as any).accountId;
-      if ((data as any).annualIncome !== undefined) row.annual_income = (data as any).annualIncome;
+      if ((data as CamelCaseInsert).isVerified !== undefined) row.is_verified = (data as CamelCaseInsert).isVerified;
+      if ((data as CamelCaseInsert).isActive !== undefined) row.is_active = (data as CamelCaseInsert).isActive;
+      if ((data as CamelCaseInsert).accountNumber !== undefined) row.account_number = (data as CamelCaseInsert).accountNumber;
+      if ((data as CamelCaseInsert).accountId !== undefined) row.account_id = (data as CamelCaseInsert).accountId;
+      if ((data as CamelCaseInsert).annualIncome !== undefined) row.annual_income = (data as CamelCaseInsert).annualIncome;
       const { data: user, error } = await supabase
         .from('users')
         .insert(row)
@@ -371,7 +416,7 @@ export class SupabasePublicStorage implements IStorage {
         if (error) throw new Error(`Supabase error: ${error.message}`);
         return accounts || [];
       });
-      return accounts.map(acc => ({ id: acc.id, userId: acc.user_id, accountNumber: acc.account_number, accountType: acc.account_type, balance: acc.balance?.toString() || '0', currency: acc.currency, status: acc.status || 'active', createdAt: acc.created_at, updatedAt: acc.updated_at } as any));
+      return accounts.map(acc => ({ id: acc.id, userId: acc.user_id, accountNumber: acc.account_number, accountType: acc.account_type, balance: acc.balance?.toString() || '0', currency: acc.currency, status: acc.status || 'active', createdAt: acc.created_at, updatedAt: acc.updated_at } as Record<string, unknown>));
     } catch (error) {
       console.error('getUserAccounts error:', error);
       return [];
@@ -530,10 +575,10 @@ export class SupabasePublicStorage implements IStorage {
   async createAdminAction(data: InsertAdminAction): Promise<AdminAction> {
     try {
       const row = {
-        admin_id: (data as any).adminId ?? (data as any).admin_id,
+        admin_id: (data as CamelCaseInsertAdminAction).adminId ?? (data as Record<string, unknown>).admin_id,
         action: data.action,
-        target_id: (data as any).targetId ?? (data as any).target_id,
-        target_type: (data as any).targetType ?? (data as any).target_type,
+        target_id: (data as CamelCaseInsertAdminAction).targetId ?? (data as Record<string, unknown>).target_id,
+        target_type: (data as CamelCaseInsertAdminAction).targetType ?? (data as Record<string, unknown>).target_type,
         details: data.details,
       };
       const { data: action, error } = await supabase.from('admin_actions').insert(row).select().single();
@@ -559,13 +604,13 @@ export class SupabasePublicStorage implements IStorage {
   async createSupportTicket(data: InsertSupportTicket): Promise<SupportTicket> {
     try {
       const row: Record<string, any> = {
-        user_id: (data as any).userId ?? (data as any).user_id,
+        user_id: (data as CamelCaseInsertSupportTicket).userId ?? (data as Record<string, unknown>).user_id,
         subject: data.subject,
         description: data.description,
         status: data.status || 'open',
         priority: data.priority || 'medium',
       };
-      if ((data as any).resolvedAt !== undefined) row.resolved_at = (data as any).resolvedAt;
+      if ((data as CamelCaseInsertSupportTicket).resolvedAt !== undefined) row.resolved_at = (data as CamelCaseInsertSupportTicket).resolvedAt;
       const { data: ticket, error } = await supabase.from('support_tickets').insert(row).select().single();
       if (error || !ticket) throw error;
       return ticket;
@@ -633,13 +678,13 @@ export class SupabasePublicStorage implements IStorage {
   async createCard(data: InsertCard): Promise<Card> {
     try {
       const row: Record<string, any> = {
-        account_id: (data as any).accountId ?? (data as any).account_id,
-        card_number: (data as any).cardNumber ?? (data as any).card_number,
-        card_type: (data as any).cardType ?? (data as any).card_type,
+        account_id: (data as CamelCaseInsertCard).accountId ?? (data as Record<string, unknown>).account_id,
+        card_number: (data as CamelCaseInsertCard).cardNumber ?? (data as Record<string, unknown>).card_number,
+        card_type: (data as CamelCaseInsertCard).cardType ?? (data as Record<string, unknown>).card_type,
         status: data.status || 'active',
       };
-      if ((data as any).expiryMonth !== undefined) row.expiry_month = (data as any).expiryMonth;
-      if ((data as any).expiryYear !== undefined) row.expiry_year = (data as any).expiryYear;
+      if ((data as CamelCaseInsertCard).expiryMonth !== undefined) row.expiry_month = (data as CamelCaseInsertCard).expiryMonth;
+      if ((data as CamelCaseInsertCard).expiryYear !== undefined) row.expiry_year = (data as CamelCaseInsertCard).expiryYear;
       const { data: card, error } = await supabase.from('cards').insert(row).select().single();
       if (error || !card) throw error;
       return card;
@@ -690,7 +735,7 @@ export class SupabasePublicStorage implements IStorage {
   async createInvestment(data: InsertInvestment): Promise<Investment> {
     try {
       const row = {
-        user_id: (data as any).userId ?? (data as any).user_id,
+        user_id: (data as CamelCaseInsertInvestment).userId ?? (data as Record<string, unknown>).user_id,
         type: data.type,
         amount: String(data.amount),
         rate: data.rate !== undefined ? String(data.rate) : undefined,
@@ -717,14 +762,14 @@ export class SupabasePublicStorage implements IStorage {
   async updateInvestment(id: number, updates: Partial<Investment>): Promise<Investment | undefined> {
     try {
       const dbUpdates: Record<string, any> = {};
-      if ((updates as any).userId !== undefined) dbUpdates.user_id = (updates as any).userId;
+      if ((updates as CamelCaseInsertInvestment).userId !== undefined) dbUpdates.user_id = (updates as CamelCaseInsertInvestment).userId;
       if (updates.type !== undefined) dbUpdates.type = updates.type;
       if (updates.amount !== undefined) dbUpdates.amount = String(updates.amount);
       if (updates.rate !== undefined) dbUpdates.rate = String(updates.rate);
       if (updates.status !== undefined) dbUpdates.status = updates.status;
-      if ((updates as any).symbol !== undefined) dbUpdates.symbol = (updates as any).symbol;
-      if ((updates as any).shares !== undefined) dbUpdates.shares = (updates as any).shares;
-      if ((updates as any).assetType !== undefined) dbUpdates.asset_type = (updates as any).assetType;
+      if ((updates as CamelCaseInsertInvestment).symbol !== undefined) dbUpdates.symbol = (updates as CamelCaseInsertInvestment).symbol;
+      if ((updates as CamelCaseInsertInvestment).shares !== undefined) dbUpdates.shares = (updates as CamelCaseInsertInvestment).shares;
+      if ((updates as CamelCaseInsertInvestment).assetType !== undefined) dbUpdates.asset_type = (updates as CamelCaseInsertInvestment).assetType;
       const { data, error } = await supabase.from('investments').update(dbUpdates).eq('id', id).select().single();
       if (error) return undefined;
       return data ? mapInvestment(data) : undefined;
@@ -771,7 +816,7 @@ export class SupabasePublicStorage implements IStorage {
         sender_id: data.senderId,
         sender_role: data.senderRole || 'customer',
         recipient_id: data.recipientId,
-        recipient_role: (data as any).recipientRole || 'admin',
+        recipient_role: (data as CamelCaseInsertMessage).recipientRole || 'admin',
         content: data.content,
         is_read: data.isRead ?? false,
         session_id: data.sessionId,
@@ -817,11 +862,11 @@ export class SupabasePublicStorage implements IStorage {
   async createAlert(data: InsertAlert): Promise<Alert> {
     try {
       const row = {
-        user_id: (data as any).userId ?? (data as any).user_id,
+        user_id: (data as CamelCaseInsertAlert).userId ?? (data as Record<string, unknown>).user_id,
         title: data.title,
         message: data.message,
         type: data.type,
-        is_read: (data as any).isRead ?? (data as any).is_read ?? false,
+        is_read: (data as CamelCaseInsertAlert).isRead ?? (data as Record<string, unknown>).is_read ?? false,
       };
       const { data: alert, error } = await supabase.from('alerts').insert(row).select().single();
       if (error || !alert) throw error;
@@ -845,6 +890,7 @@ export class SupabasePublicStorage implements IStorage {
     try {
       await supabase.from('alerts').delete().eq('id', id);
     } catch (error) {
+      console.error('Error deleting alert:', error);
     }
   }
 

@@ -31,7 +31,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       }
     }
     return originalSend(body);
-  } as any;
+  } as unknown as typeof res.send;
   next();
 });
 
