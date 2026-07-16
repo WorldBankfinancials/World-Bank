@@ -1,323 +1,124 @@
 import type { User } from "@packages/shared/schema";
-
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
+import BottomNavigation from "@/components/BottomNavigation";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useLocation } from "wouter";
-import { useToast } from "@/hooks/use-toast";
-import { 
-  Smartphone, 
-  QrCode, 
-  Nfc, 
-  Wifi, 
-  Shield, 
-  Zap, 
-  Store, 
-  Users,
-  CreditCard,
-  MapPin,
-  Clock,
-  CheckCircle
-} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { authenticatedFetch } from "@/lib/queryClient";
+import { Smartphone, Send, Plus } from "lucide-react";
+import { useState } from "react";
 
+interface Merchant {
+  id: number;
+  name: string;
+  logo: string;
+  category: string;
+}
+
+interface MobilePayment {
+  id: number;
+  amount: string;
+  description: string;
+  status: string;
+  created_at: string;
+}
 
 export default function MobilePay() {
   const { t } = useLanguage();
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  const { data: user, isLoading } = useQuery<User>({
-    queryKey: ['/api/user'],
-  });
+  const { userProfile } = useAuth();
+  const queryClient = useQueryClient();
+  const [amount, setAmount] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [pin, setPin] = useState('');
 
-  // Fetch real payment data from Supabase
-  const { data: recentPayments, isLoading: paymentsLoading, error: paymentsError } = useQuery({
-    queryKey: ['/api/mobile-payments'],
-    staleTime: 30000
-  });
-
-  // Fetch nearby merchants from API
-  const { data: nearbyMerchants = [], isLoading: merchantsLoading, error: merchantsError } = useQuery<any[]>({
+  const { data: merchants = [] } = useQuery<Merchant[]>({
     queryKey: ['/api/mobile-pay/merchants'],
-    enabled: !!user,
-    staleTime: 60000
+    queryFn: async () => {
+      const response = await authenticatedFetch('/api/mobile-pay/merchants');
+      if (!response.ok) return [];
+      return response.json();
+    }
   });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-wb-gray flex items-center justify-center">
-        <div className="text-wb-dark">{t('loading')}</div>
-      </div>
-    );
-  }
-
-  const paymentMethods = [
-    {
-      icon: QrCode,
-      title: "QR Code Payments",
-      description: "Scan and pay instantly at any merchant",
-      features: ["Instant scanning", "Secure authentication", "Receipt tracking"]
-    },
-    {
-      icon: Nfc,
-      title: "Contactless Pay",
-      description: "Tap your phone to pay at NFC terminals",
-      features: ["No physical contact", "Fast transactions", "Global acceptance"]
-    },
-    {
-      icon: Wifi,
-      title: "Online Payments",
-      description: "Seamless online shopping experience",
-      features: ["One-click checkout", "Saved payment methods", "Purchase protection"]
+  const { data: payments = [] } = useQuery<MobilePayment[]>({
+    queryKey: ['/api/mobile-payments'],
+    queryFn: async () => {
+      const response = await authenticatedFetch('/api/mobile-payments');
+      if (!response.ok) return [];
+      return response.json();
     }
-  ];
+  });
 
-  // Fetch real payment data from Supabase (declared above with loading/error states)
-  // Fetch nearby merchants from API (declared above with loading/error states)
+  const handleSendPayment = async () => {
+    if (!amount || !phoneNumber || !pin) return;
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) return;
+    if (numAmount > 10000) { alert('Maximum mobile payment is $10,000'); return; }
+
+    try {
+      const verifyRes = await authenticatedFetch('/api/verify-pin', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userProfile?.email, pin })
+      });
+      if (!verifyRes.ok) { alert('Invalid PIN'); return; }
+
+      const txnRes = await authenticatedFetch('/api/transactions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: numAmount, currency: 'USD', transaction_type: 'payment', description: `Mobile payment to ${phoneNumber}`, recipient_name: phoneNumber, status: 'completed' })
+      });
+      if (txnRes.ok) {
+        queryClient.invalidateQueries({ queryKey: ['/api/mobile-payments'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        setAmount(''); setPhoneNumber(''); setPin('');
+      }
+    } catch (error) {
+      console.error('Payment failed:', error);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-wb-gray">
-      <Header />
-      
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold wb-dark mb-4">Mobile Pay</h1>
-          <p className="text-xl text-wb-text max-w-3xl mx-auto">
-            Pay anywhere, anytime with your mobile device. Fast, secure, and convenient.
-          </p>
-          <div className="flex justify-center mt-6 space-x-4">
-            <Badge variant="outline" className="flex items-center">
-              <Shield className="w-4 h-4 mr-1" />
-              Bank-Grade Security
-            </Badge>
-            <Badge variant="outline" className="flex items-center">
-              <Zap className="w-4 h-4 mr-1" />
-              Instant Payments
-            </Badge>
-            <Badge variant="outline" className="flex items-center">
-              <Store className="w-4 h-4 mr-1" />
-              50M+ Merchants
-            </Badge>
+    <div className="min-h-screen bg-gray-50">
+      <Header user={userProfile as User | undefined} />
+      <main className="container mx-auto px-4 py-6 max-w-4xl pb-20">
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('mobile_pay')}</h1>
+
+        <div className="bg-white rounded-xl shadow p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4"><Smartphone className="w-6 h-6 text-blue-600" /><h2 className="text-lg font-semibold">Send Payment</h2></div>
+          <div className="space-y-4">
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('phone_number')}</label><input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="+1 234 567 8900" className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('amount')}</label><input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" max="10000" className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('transfer_pin')}</label><input type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="••••" maxLength={4} className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
+            <button onClick={handleSendPayment} disabled={!amount || !phoneNumber || !pin} className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"><Send className="w-4 h-4" />{t('send_payment')}</button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2">
-            {/* Payment Methods */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold wb-dark mb-6">Payment Methods</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {paymentMethods.map((method, index) => (
-                  <Card key={`item-${index}`} className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="text-center">
-                      <method.icon className="w-12 h-12 wb-blue mx-auto mb-3" />
-                      <CardTitle className="text-lg">{method.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-wb-text text-center mb-4">{method.description}</p>
-                      <ul className="space-y-2">
-                        {method.features.map((feature, idx) => (
-                          <li key={idx} className="text-sm text-wb-text flex items-center">
-                            <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
+        <div className="bg-white rounded-xl shadow mb-6">
+          <div className="p-4 border-b"><h2 className="text-lg font-semibold">Merchants</h2></div>
+          <div className="p-4">
+            {merchants.length === 0 ? <p className="text-center text-gray-500 py-4">No merchants available</p> : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {merchants.map((merchant: Merchant) => (
+                  <div key={merchant.id} className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50"><span className="text-3xl mb-2">{merchant.logo}</span><p className="font-medium text-sm">{merchant.name}</p><p className="text-xs text-gray-500">{merchant.category}</p></div>
                 ))}
               </div>
-            </div>
-
-            {/* Recent Payments */}
-            <Card className="mb-8">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Clock className="w-5 h-5 mr-2" />
-                  Recent Payments
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {paymentsError ? (
-                    <div className="text-center py-8 text-red-600">
-                      Failed to load payments. Please try again.
-                    </div>
-                  ) : paymentsLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    </div>
-                  ) : recentPayments && Array.isArray(recentPayments) && recentPayments.length > 0 ? recentPayments.map((payment: any, index: number) => (
-                    <div key={`item-${index}`} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-wb-blue-light rounded-full flex items-center justify-center">
-                          <Store className="w-6 h-6 wb-blue" />
-                        </div>
-                        <div>
-                          <div className="font-medium wb-dark">{payment.merchant}</div>
-                          <div className="text-sm text-wb-text">{payment.time}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold wb-dark">{payment.amount}</div>
-                        <Badge variant="secondary" className="text-xs">{payment.method}</Badge>
-                      </div>
-                    </div>
-                  )) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>No mobile payments yet.</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Security Features */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Shield className="w-5 h-5 mr-2" />
-                  Advanced security
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium">Biometric Authentication</div>
-                        <div className="text-sm text-wb-text">Fingerprint and Face ID</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium">End-to-End Encryption</div>
-                        <div className="text-sm text-wb-text">256-bit SSL encryption</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium">Real-time Fraud Detection</div>
-                        <div className="text-sm text-wb-text">AI-powered monitoring</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium">Transaction Alerts</div>
-                        <div className="text-sm text-wb-text">Instant notifications</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div>
-            {/* Quick Actions */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button className="w-full justify-start" onClick={() => toast({ title: 'QR scanning coming soon' })}>
-                  <QrCode className="w-4 h-4 mr-2" />
-                  Scan QR Code
-                </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => setLocation('/cards')}>
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Pay with Card
-                </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => setLocation('/transfer-funds')}>
-                  <Users className="w-4 h-4 mr-2" />
-                  Split Bill
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Nearby Merchants */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <MapPin className="w-5 h-5 mr-2" />
-                  Nearby Merchants
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {merchantsError ? (
-                  <div className="text-center py-4 text-red-600 text-sm">Failed to load merchants.</div>
-                ) : merchantsLoading ? (
-                  <div className="flex items-center justify-center py-4">
-                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                  </div>
-                ) : nearbyMerchants.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500 text-sm">No nearby merchants found.</div>
-                ) : nearbyMerchants.map((merchant, index) => (
-                  <div key={`item-${index}`} className="p-3 border rounded-lg">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <div className="font-medium">{merchant.name}</div>
-                        <div className="text-sm text-wb-text">{merchant.category}</div>
-                      </div>
-                      <div className="text-sm text-wb-text">{merchant.distance}</div>
-                    </div>
-                    <div className="flex space-x-1">
-                      {merchant.accepts.map((method: string, idx: number) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
-                          {method}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Stats</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold wb-blue">142</div>
-                  <div className="text-sm text-wb-text">Payments This Month</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold wb-green">$2,847</div>
-                  <div className="text-sm text-wb-text">Total Amount</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">89%</div>
-                  <div className="text-sm text-wb-text">Contactless Payments</div>
-                </div>
-              </CardContent>
-            </Card>
+            )}
           </div>
         </div>
-      </div>
 
-      <Footer />
+        <div className="bg-white rounded-xl shadow">
+          <div className="p-4 border-b"><h2 className="text-lg font-semibold">Recent Payments</h2></div>
+          <div className="p-4">
+            {payments.length === 0 ? <p className="text-center text-gray-500 py-4">No recent payments</p> : (
+              <div className="space-y-2">
+                {payments.map((payment: MobilePayment) => (
+                  <div key={payment.id} className="flex items-center justify-between p-3 border rounded-lg"><div><p className="font-medium">{payment.description}</p><p className="text-sm text-gray-500">{new Date(payment.created_at).toLocaleDateString()}</p></div><p className="font-semibold">${payment.amount}</p></div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+      <BottomNavigation />
     </div>
   );
 }
