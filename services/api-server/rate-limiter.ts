@@ -115,7 +115,7 @@ export const transactionRateLimiter = createRateLimiter({
   message: 'Transaction limit exceeded, please wait before trying again',
   keyGenerator: (req: Request) => {
     // Rate limit by authenticated user email
-    const userEmail = (req as any).user?.email || req.ip;
+    const userEmail = (req as { user?: { email?: string } }).user?.email || req.ip;
     return `tx_${userEmail}`;
   }
 });

@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { storage } from '../storage/storage-factory';
 import { createClient } from '@supabase/supabase-js';
 import { generateAccountNumber } from '../crypto-utils';
@@ -13,8 +13,9 @@ const supabaseAdmin = createClient(
 );
 
 // AUTHENTICATION MIDDLEWARE: Verifies Supabase JWT tokens via getUser
+1e3
 export async function requireAuth(
-  req: any,
+  req: Request,
   res: Response,
   next: NextFunction
 ) {
@@ -93,7 +94,7 @@ export async function requireAuth(
 
 // Require admin role
 export async function requireAdmin(
-  req: any,
+  req: Request,
   res: Response,
   next: NextFunction
 ) {

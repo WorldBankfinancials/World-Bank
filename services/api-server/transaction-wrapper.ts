@@ -136,7 +136,7 @@ export async function atomicBalanceUpdate(
 
     if (error) {
       // Check if it's an insufficient funds error
-      if (error.message?.includes('insufficient') || error.message?.includes('negative')) {
+      if ((error as Error).message?.includes('insufficient') || (error as Error).message?.includes('negative')) {
         return { success: false, error: 'Insufficient funds' };
       }
       return { success: false, error: 'Transaction failed' };
