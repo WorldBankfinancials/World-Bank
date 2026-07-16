@@ -49,14 +49,6 @@ export default function TransferProcessing() {
     }
   }, [queryError]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   // Navigate based on status
   useEffect(() => {
     if (!statusData?.status) return;
@@ -80,6 +72,14 @@ export default function TransferProcessing() {
 
     return () => clearInterval(interval);
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
