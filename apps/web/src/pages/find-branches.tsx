@@ -27,6 +27,33 @@ import {
 
 
 export default function FindBranches() {
+  interface Branch {
+    id: string;
+    name: string;
+    address: string;
+    phone?: string;
+    contact_phone?: string;
+    hours?: string;
+    opening_hours?: string;
+    lat?: number;
+    lng?: number;
+    latitude?: number;
+    longitude?: number;
+    distance?: string;
+    services?: string[];
+    amenities?: string[];
+  }
+  interface ATM {
+    id: string;
+    name: string;
+    address: string;
+    location?: string;
+    available?: boolean;
+    lat?: number;
+    lng?: number;
+    distance?: string;
+    features?: string[];
+  }
   const { t } = useLanguage();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,11 +62,11 @@ export default function FindBranches() {
   });
 
   // Fetch branches and ATMs from real database
-  const { data: branches, isLoading: branchesLoading, error: branchesError } = useQuery<any[]>({
+  const { data: branches, isLoading: branchesLoading, error: branchesError } = useQuery<Branch[]>({
     queryKey: ['/api/branches'],
   });
 
-  const { data: atms, isLoading: atmsLoading, error: atmsError } = useQuery<any[]>({
+  const { data: atms, isLoading: atmsLoading, error: atmsError } = useQuery<ATM[]>({
     queryKey: ['/api/atms'],
   });
 

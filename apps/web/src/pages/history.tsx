@@ -92,7 +92,22 @@ export default function History() {
         variant: 'destructive',
       });
     }
-  }, [accountsError, toast]);
+    if (transactionsError) {
+      toast({
+        title: 'Error loading transactions',
+        description: 'Unable to load transaction history. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  }, [accountsError, transactionsError, toast]);
+
+  if (accountsLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   // Refresh handler - invalidate query cache
   const handleRefresh = () => {
