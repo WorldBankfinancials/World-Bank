@@ -105,6 +105,12 @@ export default function Dashboard() {
     }
   });
 
+  useEffect(() => {
+    if (transactionsError) {
+      toast({ title: 'Error loading transactions', variant: 'destructive' });
+    }
+  }, [transactionsError]);
+
   // Track user presence for real-time online/offline status
   // usePresence disabled for backend auth mode
   // usePresence(
@@ -594,7 +600,7 @@ export default function Dashboard() {
                 recentTransactions.map((tx, idx) => (
                   <div key={`dashboard-tx-${idx}-${tx.id}`} className="flex items-start justify-between">
                     <div className="flex items-start space-x-3 flex-1">
-                      <div className={`w-10 h-10 ${tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center flex-shrink-0 mt-1`}>
+                      <div className={`w-10 h-10 ${tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                         {tx.type === 'credit' ? (
                           <ArrowDownRight className="w-5 h-5 text-green-600" />
                         ) : (

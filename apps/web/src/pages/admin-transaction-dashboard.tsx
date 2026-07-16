@@ -23,7 +23,7 @@ export default function AdminTransactionDashboard() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   
-  const { data: transactions = [] } = useQuery<Transaction[]>({
+  const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
     queryKey: ['/api/admin/transactions'],
     queryFn: async () => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -31,6 +31,10 @@ export default function AdminTransactionDashboard() {
       return response.ok ? response.json() : [];
     }
   });
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
+  }
 
   const handleRefresh = async () => {
     try {
