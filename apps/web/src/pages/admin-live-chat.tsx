@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Send, MessageCircle } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useRealtimeChat } from '@/hooks/useRealtimeChat';
 
@@ -26,12 +26,12 @@ interface Message {
 export default function AdminLiveChat() {
   const { toast } = useToast();
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
   const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState<Message[]>(() => {
-    // Load messages from localStorage on mount
     const sessionId = selectedSession?.id ? `chat_session_${selectedSession.id}` : null;
     if (sessionId) {
       try {
@@ -44,8 +44,7 @@ export default function AdminLiveChat() {
     return [];
   });
 
-  // Realtime chat messaging support
-  useRealtimeChat?.('admin_1', (incomingMessage) => {
+  useRealtimeChat('admin_1', (incomingMessage) => {
     if (incomingMessage) {
       const newMsg: Message = {
         id: incomingMessage.id || Date.now().toString(),
@@ -56,8 +55,7 @@ export default function AdminLiveChat() {
       setMessages((prev) => [...prev, newMsg]);
     }
   });
-  
-  // Fetch messages from API when session is selected
+
   const { data: queryMessages = [], error: messagesError } = useQuery<Message[]>({
     queryKey: [`/api/chat/history/${selectedSession?.id}`],
     queryFn: async () => {
@@ -76,28 +74,22 @@ export default function AdminLiveChat() {
     enabled: !!selectedSession?.id
   });
 
-  // Update local messages state when query data changes + persist to localStorage
   useEffect(() => {
     if (queryMessages && Array.isArray(queryMessages)) {
       setMessages(queryMessages as Message[]);
-      // Persist to localStorage
       if (selectedSession?.id) {
         const sessionId = `chat_session_${selectedSession.id}`;
         localStorage.setItem(sessionId, JSON.stringify(queryMessages));
       }
     }
   }, [queryMessages, selectedSession?.id]);
-  
-  // Save messages whenever they change
+
   useEffect(() => {
     if (selectedSession?.id && messages.length > 0) {
       const sessionId = `chat_session_${selectedSession.id}`;
       localStorage.setItem(sessionId, JSON.stringify(messages));
     }
   }, [messages, selectedSession?.id]);
-
-  // Query client for cache invalidation
-  const queryClient = require('@tanstack/react-query').useQueryClient?.() || null;
 
   const { data: chatSessions = [], error: sessionsError } = useQuery<ChatSession[]>({
     queryKey: ['/api/chat/sessions'],
@@ -143,7 +135,6 @@ export default function AdminLiveChat() {
           setMessages((prev: Message[]) => [...prev, msg]);
         }
       } catch (error) {
-        // Error parsing chat message - skip
       }
     };
 
@@ -172,11 +163,10 @@ export default function AdminLiveChat() {
     };
 
     setMessages((prev: Message[]) => [...prev, message]);
-    
+
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const { queryClient } = await import('@/lib/queryClient');
-      
+
       const response = await authenticatedFetch('/api/chat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -187,8 +177,7 @@ export default function AdminLiveChat() {
         })
       });
 
-      // CRITICAL: Invalidate message cache so messages persist when returning to chat
-      if (queryClient && response.ok) {
+      if (response.ok) {
         queryClient.invalidateQueries({ queryKey: [`/api/chat/history/${selectedSession?.id}`] });
       }
     } catch (error) {
@@ -197,7 +186,6 @@ export default function AdminLiveChat() {
     setMessageText('');
   };
 
-  // Show loading state
   const isLoading = !chatSessions || chatSessions.length === 0;
 
   return (
