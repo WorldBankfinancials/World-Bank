@@ -18,7 +18,7 @@ interface Alert {
 
 export function useRealtimeAlerts(userId?: string | number | undefined, enabled?: boolean) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleAlertReceived = useCallback((alert: Alert) => {
     setAlerts((prev) => [...prev, alert]);
@@ -44,7 +44,6 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
             setAlerts(prev => prev.filter(a => a.id !== (payload as { old?: { id?: string } }).old?.id));
             return;
           }
-          // Only add for INSERT
           if (event === 'INSERT') {
             setAlerts(prev => {
               if (prev.some(a => a.id === (payload.new as Alert).id)) return prev;
