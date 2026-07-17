@@ -4,6 +4,7 @@ import { requireAuth, AuthenticatedRequest, getAdminClient } from './auth-middle
 import { transactionRateLimiter } from './rate-limiter';
 import { supabase } from './supabase-public-storage';
 import { atomicTransfer, atomicBalanceUpdate } from './transaction-wrapper';
+import { generateReferenceNumber } from './crypto-utils';
 import * as bcrypt from 'bcryptjs';
 
 function wrap(
@@ -48,31 +49,34 @@ export function setupTransferRoutes(app: Express) {
       const currentBalance = parseFloat(String(account.balance || '0'));
       if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
 
-      const reference = `TRF${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const reference = generateReferenceNumber();
 
       try {
         const result = await atomicTransfer({
           fromAccountId: String(account.id),
+          fromUserId: String(user.id),
           recipientAccountNumber: String(recipientAccount),
           amount: numAmount,
           transactionType: transferType || 'transfer',
           description: description || `Transfer to ${recipientName}`,
           recipientName,
+          currency: currency || 'USD',
+          referenceNumber: reference,
         });
 
         if (!result.success) {
           return res.status(400).json({ error: result.error || 'Transfer failed' });
         }
 
-        // Persist reference_number to the transaction record
-        if (result.transaction) {
-          const adminClient = getAdminClient();
-          await adminClient.from('transactions').update({
-            reference_number: reference,
-          }).eq('id', String(result.transaction.id));
-        }
-
-        return res.json({ success: true, reference, amount: numAmount });
+        return res.json({
+          success: true,
+          reference,
+          amount: numAmount,
+          isExternal: result.isExternal,
+          message: result.isExternal
+            ? 'External transfer initiated. Funds will arrive in 1-3 business days.'
+            : 'Transfer completed successfully'
+        });
       } catch (transferError) {
         return res.status(500).json({ error: transferError instanceof Error ? transferError.message : 'Transfer failed' });
       }
@@ -180,36 +184,37 @@ export function setupTransferRoutes(app: Express) {
       const currentBalance = parseFloat(String(account.balance || '0'));
       if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
 
-      const reference = `INT${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const reference = generateReferenceNumber();
 
       try {
         const result = await atomicTransfer({
           fromAccountId: String(account.id),
+          fromUserId: String(user.id),
           recipientAccountNumber: String(recipientAccount),
           amount: numAmount,
           transactionType: 'international',
           description: description || `International transfer to ${recipientName}`,
           recipientName,
           recipientCountry,
+          currency: currency || 'USD',
+          referenceNumber: reference,
+          bankName: recipientBank,
+          swiftCode,
         });
 
         if (!result.success) {
           return res.status(400).json({ error: result.error || 'Transfer failed' });
         }
 
-        // Update the transaction record with international transfer details
-        const adminClient = getAdminClient();
-        if (result.transaction) {
-          await adminClient.from('transactions').update({
-            recipient_name: recipientName,
-            recipient_country: recipientCountry,
-            bank_name: recipientBank,
-            swift_code: swiftCode,
-            reference_number: reference,
-          }).eq('id', String(result.transaction.id));
-        }
-
-        return res.json({ success: true, reference, amount: numAmount });
+        return res.json({
+          success: true,
+          reference,
+          amount: numAmount,
+          isExternal: result.isExternal,
+          message: result.isExternal
+            ? 'International transfer initiated. Funds will arrive in 3-5 business days via SWIFT.'
+            : 'Transfer completed successfully'
+        });
       } catch (transferError) {
         return res.status(500).json({ error: transferError instanceof Error ? transferError.message : 'Transfer failed' });
       }

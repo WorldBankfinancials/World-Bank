@@ -33,7 +33,7 @@ export async function getActiveSessions(req: AuthenticatedRequest, res: Response
     const adminClient = getAdminClient();
     const { data, error } = await adminClient
       .from('messages')
-      .select('sender_id, sender_role, content, created_at')
+      .select('sender_id, sender_role, message, created_at')
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -54,10 +54,10 @@ export async function createTicketFromChat(req: AuthenticatedRequest, res: Respo
     if (!subject || !description) return res.status(400).json({ error: 'Subject and description required' });
 
     const adminClient = getAdminClient();
-    const ticketId = `TKT${Date.now()}${Math.floor(Math.random() * 10000)}`;
+    const ticketNumber = `TKT${Date.now()}${Math.floor(Math.random() * 10000)}`;
     const { data, error } = await adminClient.from('support_tickets').insert({
       user_id: userId,
-      ticket_id: ticketId,
+      ticket_number: ticketNumber,
       subject,
       description,
       priority: priority || 'medium',
