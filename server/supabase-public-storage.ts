@@ -19,6 +19,18 @@ export function getAdminClient() {
   });
 }
 
+function toSnakeCase(str: string): string {
+  return str.replace(/([A-Z])/g, '_$1').toLowerCase();
+}
+
+function convertKeysToSnakeCase(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    result[toSnakeCase(key)] = value;
+  }
+  return result;
+}
+
 // Storage helpers
 export async function uploadFile(bucket: string, path: string, file: Buffer, contentType: string) {
   const adminClient = getAdminClient();
@@ -52,14 +64,16 @@ export async function listFiles(bucket: string, prefix?: string) {
 // Database helpers
 export async function insertRecord(table: string, record: Record<string, unknown>) {
   const adminClient = getAdminClient();
-  const { data, error } = await adminClient.from(table).insert(record).select().single();
+  const snakeCaseRecord = convertKeysToSnakeCase(record);
+  const { data, error } = await adminClient.from(table).insert(snakeCaseRecord).select().single();
   if (error) throw error;
   return data;
 }
 
 export async function updateRecord(table: string, id: string | number, updates: Record<string, unknown>) {
   const adminClient = getAdminClient();
-  const { data, error } = await adminClient.from(table).update(updates).eq('id', id).select().single();
+  const snakeCaseUpdates = convertKeysToSnakeCase(updates);
+  const { data, error } = await adminClient.from(table).update(snakeCaseUpdates).eq('id', id).select().single();
   if (error) throw error;
   return data;
 }
@@ -81,7 +95,8 @@ export async function listRecords(table: string, filters?: Record<string, unknow
   const adminClient = getAdminClient();
   let query = adminClient.from(table).select('*');
   if (filters) {
-    for (const [key, value] of Object.entries(filters)) {
+    const snakeCaseFilters = convertKeysToSnakeCase(filters);
+    for (const [key, value] of Object.entries(snakeCaseFilters)) {
       query = query.eq(key, value);
     }
   }
