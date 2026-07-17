@@ -1,5 +1,5 @@
 import { Express, RequestHandler } from 'express';
-import { requireAdmin, AuthenticatedRequest, getAdminClient } from './auth-middleware';
+import { requireAdmin, requireAuth, AuthenticatedRequest, getAdminClient } from './auth-middleware';
 import { storage } from './storage-factory';
 import { atomicBalanceUpdate } from './transaction-wrapper';
 
@@ -8,7 +8,6 @@ function wrap(handler: (req: AuthenticatedRequest, res: any) => Promise<any>): R
 }
 
 export function setupAdminExtra2Routes(app: Express) {
-  // ==================== ADMIN SUPPORT TICKETS (LIST) ====================
   app.get('/api/admin/support-tickets', requireAdmin, wrap(async (req: AuthenticatedRequest, res: any) => {
     try {
       const { data, error } = await getAdminClient().from('support_tickets')
@@ -39,7 +38,6 @@ export function setupAdminExtra2Routes(app: Express) {
     } catch { return res.status(500).json({ error: 'Failed to respond to ticket' }); }
   }));
 
-  // ==================== ADMIN PENDING TRANSFERS ====================
   app.get('/api/admin/pending-transfers', requireAdmin, wrap(async (req: AuthenticatedRequest, res: any) => {
     try {
       const { data, error } = await getAdminClient().from('transactions')
@@ -50,19 +48,19 @@ export function setupAdminExtra2Routes(app: Express) {
     } catch { return res.json([]); }
   }));
 
-  // ==================== ADMIN TRANSFER APPROVE/REJECT ====================
   app.post('/api/admin/transfers/:id/approve', requireAdmin, wrap(async (req: AuthenticatedRequest, res: any) => {
     try {
       const { data: txn, error } = await getAdminClient().from('transactions')
         .select('*').eq('id', req.params.id).single();
       if (error || !txn) return res.status(404).json({ error: 'Transfer not found' });
+      if (txn.status !== 'pending') return res.status(400).json({ error: 'Transfer is not pending' });
       const admin = await storage.getUserByEmail(req.user?.email || '');
-      await getAdminClient().from('transactions').update({
-        status: 'completed', approved_by: admin?.id, approved_at: new Date().toISOString(), completed_at: new Date().toISOString()
-      }).eq('id', req.params.id);
       if (txn.to_account_id) {
         await atomicBalanceUpdate(String(txn.to_account_id), parseFloat(String(txn.amount)), `Approved transfer credit`);
       }
+      await getAdminClient().from('transactions').update({
+        status: 'completed', approved_by: admin?.id, approved_at: new Date().toISOString(), completed_at: new Date().toISOString()
+      }).eq('id', req.params.id);
       return res.json({ success: true, message: 'Transfer approved' });
     } catch { return res.status(500).json({ error: 'Failed to approve transfer' }); }
   }));
@@ -73,17 +71,17 @@ export function setupAdminExtra2Routes(app: Express) {
       const { data: txn, error } = await getAdminClient().from('transactions')
         .select('*').eq('id', req.params.id).single();
       if (error || !txn) return res.status(404).json({ error: 'Transfer not found' });
-      await getAdminClient().from('transactions').update({
-        status: 'rejected', admin_notes: reason || 'Rejected by admin'
-      }).eq('id', req.params.id);
+      if (txn.status !== 'pending') return res.status(400).json({ error: 'Transfer is not pending' });
       if (txn.from_account_id) {
         await atomicBalanceUpdate(String(txn.from_account_id), parseFloat(String(txn.amount)), `Refund: rejected transfer`);
       }
+      await getAdminClient().from('transactions').update({
+        status: 'rejected', admin_notes: reason || 'Rejected by admin'
+      }).eq('id', req.params.id);
       return res.json({ success: true, message: 'Transfer rejected, funds refunded' });
     } catch { return res.status(500).json({ error: 'Failed to reject transfer' }); }
   }));
 
-  // ==================== ADMIN TRANSACTIONS (LIST/CREATE) ====================
   app.get('/api/admin/transactions', requireAdmin, wrap(async (req: AuthenticatedRequest, res: any) => {
     try {
       const { data, error } = await getAdminClient().from('transactions')
@@ -116,6 +114,10 @@ export function setupAdminExtra2Routes(app: Express) {
       const { data: txn, error } = await getAdminClient().from('transactions')
         .select('*').eq('id', req.params.id).single();
       if (error || !txn) return res.status(404).json({ error: 'Transaction not found' });
+      if (txn.status === 'reversed') return res.status(400).json({ error: 'Transaction already reversed' });
+      if (txn.status !== 'completed' && txn.status !== 'success') {
+        return res.status(400).json({ error: 'Only completed transactions can be reversed' });
+      }
       if (txn.from_account_id) {
         await atomicBalanceUpdate(String(txn.from_account_id), parseFloat(String(txn.amount)), `Reversal credit`);
       }
@@ -127,7 +129,6 @@ export function setupAdminExtra2Routes(app: Express) {
     } catch { return res.status(500).json({ error: 'Failed to reverse transaction' }); }
   }));
 
-  // ==================== ADMIN USER MANAGEMENT ====================
   app.post('/api/admin/reset-password', requireAdmin, wrap(async (req: AuthenticatedRequest, res: any) => {
     try {
       const { userId, newPassword } = req.body;
@@ -191,7 +192,6 @@ export function setupAdminExtra2Routes(app: Express) {
     } catch { return res.status(500).json({ error: 'Failed to upload profile photo' }); }
   }));
 
-  // ==================== ADMIN TRANSACTION ROUTES ====================
   app.get('/api/admin/transaction-routes', requireAdmin, wrap(async (req: AuthenticatedRequest, res: any) => {
     try {
       const { data, error } = await getAdminClient().from('transaction_routes')
@@ -229,20 +229,15 @@ export function setupAdminExtra2Routes(app: Express) {
     } catch { return res.status(500).json({ error: 'Failed to update transaction route' }); }
   }));
 
-  // ==================== FILE UPLOAD ====================
-  app.post('/api/objects/upload', (req: AuthenticatedRequest, res: any, next: any) => {
-    requireAuth(req, res, async () => {
-      try {
-        if (res.headersSent) return;
-        const { bucket, path: filePath, contentType, data } = req.body;
-        if (!bucket || !filePath || !data) return res.status(400).json({ error: 'bucket, path, and data required' });
-        const buffer = Buffer.from(data, 'base64');
-        const { uploadFile } = await import('./supabase-public-storage');
-        const result = await uploadFile(bucket, filePath, buffer, contentType || 'application/octet-stream');
-        const { getFileUrl } = await import('./supabase-public-storage');
-        const url = await getFileUrl(bucket, filePath);
-        return res.json({ success: true, path: result?.path || filePath, url });
-      } catch { return res.status(500).json({ error: 'Failed to upload file' }); }
-    });
-  });
+  app.post('/api/objects/upload', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: any) => {
+    try {
+      const { bucket, path: filePath, contentType, data } = req.body;
+      if (!bucket || !filePath || !data) return res.status(400).json({ error: 'bucket, path, and data required' });
+      const buffer = Buffer.from(data, 'base64');
+      const { uploadFile, getFileUrl } = await import('./supabase-public-storage');
+      const result = await uploadFile(bucket, filePath, buffer, contentType || 'application/octet-stream');
+      const url = await getFileUrl(bucket, filePath);
+      return res.json({ success: true, path: result?.path || filePath, url });
+    } catch { return res.status(500).json({ error: 'Failed to upload file' }); }
+  }));
 }
