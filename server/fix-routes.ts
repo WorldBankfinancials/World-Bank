@@ -478,22 +478,18 @@ export async function registerRoutes(app: Express) {
       if (accounts.length === 0) return res.status(404).json({ error: 'No account found' });
       const parsedAmount = parseFloat(String(amount));
       try {
-        const updated = await storage.updateUserBalance(user.id, parsedAmount);
-        if (!updated) return res.status(500).json({ error: 'Failed to update balance' });
-        const { data: account } = await supabase.from('accounts').select('id').eq('user_id', user.id).eq('status', 'active').limit(1).single();
-        if (account) {
-          const accountId = (account as Record<string, unknown>).id as string;
-          const balanceResult = await atomicBalanceUpdate(accountId, parsedAmount, `Funds added via ${sanitizedMethod}`);
-          if (!balanceResult.success) {
-            await storage.updateUserBalance(user.id, -parsedAmount);
-            return res.status(500).json({ error: balanceResult.error || 'Failed to update account balance' });
-          }
+        const { data: account } = await supabase.from('accounts').select('id, balance').eq('user_id', user.id).eq('status', 'active').limit(1).single();
+        if (!account) return res.status(404).json({ error: 'No active account found' });
+        const accountId = (account as Record<string, unknown>).id as string;
+        const balanceResult = await atomicBalanceUpdate(accountId, parsedAmount, `Funds added via ${sanitizedMethod}`);
+        if (!balanceResult.success) {
+          return res.status(500).json({ error: balanceResult.error || 'Failed to update account balance' });
         }
-        const newBalance = (parseFloat(String(updated.balance || '0'))).toFixed(2);
+        const newBalance = balanceResult.newBalance || '0';
         const transaction = await storage.createTransaction({ fromAccountId: accounts[0].id, type: 'deposit', amount: parsedAmount.toString(), description: `Funds added via ${sanitizedMethod}`, status: 'completed', currency: 'USD', referenceNumber: `DEP-${Date.now()}`, createdAt: new Date() } as unknown as InsertTransaction);
         await supabase.from('alerts').insert({ user_id: req.user?.id || '' as string, title: 'Funds Added', message: `${parsedAmount.toFixed(2)} has been added to your account via ${sanitizedMethod}.`, type: 'success', priority: 'normal', is_read: false });
-        return res.json({ success: true, transaction, amount: parsedAmount, newBalance: updated.balance });
-      } catch (error) { await storage.updateUserBalance(user.id, -parsedAmount); return res.status(500).json({ error: 'Failed to complete deposit' }); }
+        return res.json({ success: true, transaction, amount: parsedAmount, newBalance });
+      } catch (error) { return res.status(500).json({ error: 'Failed to complete deposit' }); }
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to add funds' }); }
   });
 
@@ -545,7 +541,10 @@ export async function registerRoutes(app: Express) {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
-      return res.json({ balance: parseFloat(String(user.balance || '0')), currency: 'USD', available: parseFloat(String(user.balance || '0')), pending: 0 });
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) return res.json({ balance: 0, currency: 'USD', available: 0, pending: 0 });
+      const accountBalance = parseFloat(String(accounts[0].balance || '0'));
+      return res.json({ balance: accountBalance, currency: 'USD', available: accountBalance, pending: 0 });
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to fetch wallet balance' }); }
   });
 
@@ -1519,8 +1518,8 @@ export async function registerLiveChatRoutes(app: Express) {
       if (!message || !message.trim()) return res.status(400).json({ error: 'Message is required' });
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
-      let adminUserId = 1;
-      try { const { data: adminUsers } = await supabase.from('users').select('id').eq('role', 'admin').limit(1).single(); if (adminUsers?.id) adminUserId = adminUsers.id; } catch (error: unknown) { console.warn('Failed to query admin users:', error instanceof Error ? error.message : 'Unknown error'); }
+      let adminUserId: string | null = null;
+      try { const { data: adminUsers } = await supabase.from('users').select('id').eq('role', 'admin').limit(1).single(); if (adminUsers?.id) adminUserId = adminUsers.id as string; } catch (error: unknown) { console.warn('Failed to query admin users:', error instanceof Error ? error.message : 'Unknown error'); }
       const { data: savedMsg, error } = await supabase.from('messages').insert({ sender_id: user.id, sender_name: `${user.firstName} ${user.lastName}`.trim(), sender_role: 'customer', recipient_id: adminUserId, message: message.trim(), conversation_id: `session_${user.id}`, is_read: false, created_at: new Date().toISOString() }).select().single();
       if (error) return res.json({ success: true, message: 'Message queued', persisted: false });
       const adminChannel = supabase.channel('admin-chat-inbox');
