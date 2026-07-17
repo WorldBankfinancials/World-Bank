@@ -414,33 +414,37 @@ export interface InsertSupportTicket {
 // MESSAGES TABLE
 // ============================================================
 
+export type MessageType = 'text' | 'image' | 'file' | 'system';
+export type MessageSenderRole = 'admin' | 'customer' | 'agent';
+
 export interface Message {
   id: string;
-  userId: string;
-  ticketId?: string | null;
-  senderType: 'user' | 'admin' | 'system';
-  senderId?: string | null;
-  senderRole?: string | null;
-  recipientId?: string | null;
-  recipientRole?: string | null;
-  sessionId?: string | null;
-  content: string;
+  senderId: string;
+  senderName: string;
+  senderRole: MessageSenderRole;
+  message: string;
+  messageType?: MessageType | null;
   isRead: boolean;
+  readAt?: string | null;
+  conversationId?: string | null;
+  replyTo?: string | null;
+  recipientId?: string | null;
+  metadata?: Record<string, unknown> | null;
   createdAt: string;
 }
 
 export interface InsertMessage {
   id?: string;
-  userId?: string;
-  ticketId?: string | null;
-  senderType?: 'user' | 'admin' | 'system';
-  senderId?: string | null;
-  senderRole?: string | null;
-  recipientId?: string | null;
-  recipientRole?: string | null;
-  sessionId?: string | null;
-  content: string;
+  senderId: string;
+  senderName: string;
+  senderRole?: MessageSenderRole;
+  message: string;
+  messageType?: MessageType | null;
   isRead?: boolean;
+  conversationId?: string | null;
+  replyTo?: string | null;
+  recipientId?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 // ============================================================
