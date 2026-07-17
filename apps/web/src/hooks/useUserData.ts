@@ -32,54 +32,31 @@ interface UserProfile {
 
 export function useUserData() {
   const { user } = useAuth();
-  
   return useQuery({
     queryKey: ['userData', user?.email],
     queryFn: async (): Promise<UserProfile | null> => {
       if (!user?.email) return null;
-      
-      // Fetch user profile from backend based on authenticated email
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/user/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch user profile');
-      }
-      
-      const userData = await response.json();
-      return userData;
+      const response = await authenticatedFetch('/api/user');
+      if (!response.ok) throw new Error('Failed to fetch user profile');
+      return await response.json();
     },
     enabled: !!user?.email,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     retry: 3
   });
 }
 
 export function useAccountData() {
   const { user } = useAuth();
-  
   return useQuery({
     queryKey: ['accounts', user?.email],
     queryFn: async () => {
       if (!user?.email) return [];
-      
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/accounts/user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch user accounts');
-      }
-      
-      const accounts = await response.json();
-      return accounts;
+      const response = await authenticatedFetch('/api/accounts');
+      if (!response.ok) throw new Error('Failed to fetch user accounts');
+      return await response.json();
     },
     enabled: !!user?.email,
     staleTime: 5 * 60 * 1000,
