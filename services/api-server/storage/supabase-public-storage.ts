@@ -105,10 +105,10 @@ const mapMessage = (row: Record<string, any>): Message => ({
   senderId: row.sender_id ?? null,
   senderRole: row.sender_role || 'customer',
   recipientId: row.recipient_id ?? null,
-  recipientRole: row.recipient_role ?? null,
-  content: row.content || '',
+  senderName: row.sender_name || '',
+  message: row.message || '',
   isRead: row.is_read ?? false,
-  sessionId: row.session_id ?? null,
+  conversationId: row.conversation_id ?? null,
   createdAt: row.created_at ?? null,
 } as unknown as Message);
 
@@ -163,7 +163,6 @@ const mapInvestment = (row: Record<string, any>): Investment => ({
   updatedAt: row.updated_at ?? null,
 });
 
-// Add retry logic with exponential backoff for network failures
 async function withRetry<T>(fn: () => Promise<T>, maxAttempts: number = 3): Promise<T> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -184,11 +183,7 @@ export class SupabasePublicStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     try {
       const user = await withRetry(async () => {
-        const { data: user, error } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', id)
-          .single();
+        const { data: user, error } = await supabase.from('user_profiles').select('*').eq('id', id).single();
         if (error) throw new Error('Database operation failed');
         return user;
       });
@@ -203,10 +198,7 @@ export class SupabasePublicStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
       const user = await withRetry(async () => {
-        const { data: user, error } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('email', email);
+        const { data: user, error } = await supabase.from('user_profiles').select('*').eq('email', email);
         if (error) throw new Error('Database operation failed');
         if (!user || user.length === 0) return null;
         return user[0];
@@ -235,10 +227,7 @@ export class SupabasePublicStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     try {
-      const { data: users, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data: users, error } = await supabase.from('user_profiles').select('*').order('created_at', { ascending: false });
       if (error || !users) return [];
       return users.map(user => mapUser(user));
     } catch (error) {
@@ -273,11 +262,7 @@ export class SupabasePublicStorage implements IStorage {
       if (data.state)        row.state = data.state;
       if (data.country)      row.country = data.country;
       if (data.postalCode)   row.postal_code = data.postalCode;
-      const { data: user, error } = await supabase
-        .from('user_profiles')
-        .insert(row)
-        .select('*')
-        .single();
+      const { data: user, error } = await supabase.from('user_profiles').insert(row).select('*').single();
       if (error) throw error;
       if (!user) throw new Error('Failed to create user in user_profiles');
       return mapUser(user);
@@ -314,12 +299,7 @@ export class SupabasePublicStorage implements IStorage {
       if (updates.dateOfBirth !== undefined) updateData.date_of_birth = updates.dateOfBirth;
       if ((updates as unknown as Record<string, unknown>).lastLogin !== undefined) updateData.last_login = (updates as unknown as Record<string, unknown>).lastLogin;
       if (Object.keys(updateData).length <= 1) return this.getUser(id);
-      const { data: user, error } = await supabase
-        .from('user_profiles')
-        .update(updateData)
-        .eq('id', id)
-        .select('*')
-        .single();
+      const { data: user, error } = await supabase.from('user_profiles').update(updateData).eq('id', id).select('*').single();
       if (error || !user) return undefined;
       return mapUser(user);
     } catch (error) {
@@ -341,17 +321,11 @@ export class SupabasePublicStorage implements IStorage {
         throw new Error('Insufficient funds');
       }
       await withRetry(async () => {
-        const { error } = await supabase
-          .from('accounts')
-          .update({ balance: newBalance.toFixed(2), available_balance: newBalance.toFixed(2) })
-          .eq('id', primaryAccount.id);
+        const { error } = await supabase.from('accounts').update({ balance: newBalance.toFixed(2), available_balance: newBalance.toFixed(2) }).eq('id', primaryAccount.id);
         if (error) throw new Error('Database operation failed');
       });
       await withRetry(async () => {
-        const { error } = await supabase
-          .from('user_profiles')
-          .update({ balance: newBalance.toFixed(2), available_balance: newBalance.toFixed(2), updated_at: new Date().toISOString() })
-          .eq('id', id);
+        const { error } = await supabase.from('user_profiles').update({ balance: newBalance.toFixed(2), available_balance: newBalance.toFixed(2), updated_at: new Date().toISOString() }).eq('id', id);
         if (error) throw new Error('Database operation failed');
       });
       return this.getUser(id);
@@ -364,11 +338,7 @@ export class SupabasePublicStorage implements IStorage {
   async getUserAccounts(userId: string): Promise<Account[]> {
     try {
       const accounts = await withRetry(async () => {
-        const { data: accounts, error } = await supabase
-          .from('accounts')
-          .select('*')
-          .eq('user_id', userId)
-          .order('id');
+        const { data: accounts, error } = await supabase.from('accounts').select('*').eq('user_id', userId).order('id');
         if (error) throw new Error('Database operation failed');
         return accounts || [];
       });
@@ -381,11 +351,7 @@ export class SupabasePublicStorage implements IStorage {
 
   async getAccount(id: string): Promise<Account | undefined> {
     try {
-      const { data: account, error } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data: account, error } = await supabase.from('accounts').select('*').eq('id', id).single();
       if (error || !account) return undefined;
       return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at };
     } catch (error) {
@@ -395,11 +361,7 @@ export class SupabasePublicStorage implements IStorage {
 
   async createAccount(data: InsertAccount): Promise<Account> {
     try {
-      const { data: account, error } = await supabase
-        .from('accounts')
-        .insert({ user_id: data.userId, account_number: data.accountNumber, account_type: data.accountType, balance: data.balance, currency: data.currency || 'USD', status: data.status || 'active' })
-        .select()
-        .single();
+      const { data: account, error } = await supabase.from('accounts').insert({ user_id: data.userId, account_number: data.accountNumber, account_type: data.accountType, balance: data.balance, currency: data.currency || 'USD', status: data.status || 'active' }).select().single();
       if (error || !account) throw error;
       return { id: account.id, userId: account.user_id, accountNumber: account.account_number, accountType: account.account_type, balance: account.balance?.toString() || '0', currency: account.currency, status: account.status || 'active', createdAt: account.created_at, updatedAt: account.updated_at };
     } catch (error) {
@@ -422,14 +384,8 @@ export class SupabasePublicStorage implements IStorage {
 
   async getAccountTransactions(accountId: string, limit?: number): Promise<Transaction[]> {
     try {
-      let query = supabase
-        .from('transactions')
-        .select('*')
-        .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
-        .order('created_at', { ascending: false });
-      if (limit && limit > 0) {
-        query = query.limit(limit);
-      }
+      let query = supabase.from('transactions').select('*').or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`).order('created_at', { ascending: false });
+      if (limit && limit > 0) { query = query.limit(limit); }
       const { data, error } = await query;
       if (error) return [];
       return (data || []);
@@ -460,7 +416,6 @@ export class SupabasePublicStorage implements IStorage {
           reference_number: data.referenceNumber || `TXN-${Date.now()}-${randomUUID().substring(0, 8).toUpperCase()}`
         };
         Object.keys(dbData).forEach(key => dbData[key] === undefined && delete dbData[key]);
-        
         const { data: transaction, error } = await supabase.from('transactions').insert(dbData).select().single();
         if (error) throw new Error('Database operation failed');
         if (!transaction) throw new Error('Failed to create transaction');
@@ -480,10 +435,7 @@ export class SupabasePublicStorage implements IStorage {
       if (adminId) updateData.admin_id = adminId;
       updateData.updated_at = new Date().toISOString();
       const { data, error } = await supabase.from('transactions').update(updateData).eq('id', id).select('*').single();
-      if (error) {
-        console.error('updateTransactionStatus error:', error);
-        return undefined;
-      }
+      if (error) { console.error('updateTransactionStatus error:', error); return undefined; }
       return data;
     } catch (error) {
       console.error('updateTransactionStatus exception:', error);
@@ -494,10 +446,7 @@ export class SupabasePublicStorage implements IStorage {
   async getPendingTransactions(): Promise<Transaction[]> {
     try {
       const { data, error } = await supabase.from('transactions').select('*').eq('status', 'processing');
-      if (error) {
-        console.error('getPendingTransactions error:', error);
-        return [];
-      }
+      if (error) { console.error('getPendingTransactions error:', error); return []; }
       return (data || []).map(mapTransaction);
     } catch (error) {
       console.error('getPendingTransactions exception:', error);
@@ -562,7 +511,7 @@ export class SupabasePublicStorage implements IStorage {
         subject: data.subject,
         description: data.description,
         status: data.status || 'open',
-        priority: data.priority || 'medium',
+        priority: data.priority || 'normal',
       };
       if ((data as unknown as Record<string, unknown>).resolvedAt !== undefined) row.resolved_at = (data as unknown as Record<string, unknown>).resolvedAt;
       const { data: ticket, error } = await supabase.from('support_tickets').insert(row).select().single();
@@ -745,13 +694,8 @@ export class SupabasePublicStorage implements IStorage {
 
   async getMessages(conversationId?: string): Promise<Message[]> {
     try {
-      let query = supabase
-        .from('messages')
-        .select('*')
-        .order('created_at', { ascending: true });
-      if (conversationId) {
-        query = query.eq('session_id', conversationId);
-      }
+      let query = supabase.from('messages').select('*').order('created_at', { ascending: true });
+      if (conversationId) { query = query.eq('conversation_id', conversationId); }
       const { data, error } = await query;
       if (error) return [];
       return (data || []).map(mapMessage);
@@ -762,11 +706,7 @@ export class SupabasePublicStorage implements IStorage {
 
   async getUserMessages(userId: string): Promise<Message[]> {
     try {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
-        .order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('messages').select('*').or(`sender_id.eq.${userId},recipient_id.eq.${userId}`).order('created_at', { ascending: true });
       if (error) return [];
       return (data || []).map(mapMessage);
     } catch (error) {
@@ -780,10 +720,10 @@ export class SupabasePublicStorage implements IStorage {
         sender_id: data.senderId,
         sender_role: data.senderRole || 'customer',
         recipient_id: data.recipientId,
-        recipient_role: (data as unknown as Record<string, unknown>).recipientRole || 'admin',
-        content: data.content,
+        sender_name: (data as unknown as Record<string, unknown>).senderName || '',
+        message: (data as unknown as Record<string, unknown>).message || '',
         is_read: data.isRead ?? false,
-        session_id: data.sessionId,
+        conversation_id: (data as unknown as Record<string, unknown>).conversationId,
       };
       const { data: message, error } = await supabase.from('messages').insert(row).select().single();
       if (error || !message) throw error;
