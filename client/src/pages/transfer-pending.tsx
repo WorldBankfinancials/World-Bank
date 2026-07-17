@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -6,6 +5,16 @@ import { Clock, AlertCircle, Phone, Mail } from "lucide-react";
 
 export default function TransferPending() {
   const [, setLocation] = useLocation();
+
+  const state = (window.history.state?.state || window.history.state || {}) as {
+    transferId?: string;
+    referenceNumber?: string;
+    amount?: number | string;
+    recipientName?: string;
+  };
+
+  const referenceId = state.referenceNumber || state.transferId || `WB${Date.now().toString().slice(-8)}`;
+  const hasDetails = !!(state.amount || state.recipientName);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -37,8 +46,24 @@ export default function TransferPending() {
               <div className="space-y-2 text-sm text-left">
                 <div className="flex justify-between">
                   <span>Reference ID:</span>
-                  <span className="font-mono">WB{Date.now().toString().slice(-8)}</span>
+                  <span className="font-mono">{referenceId}</span>
                 </div>
+                {hasDetails && (
+                  <>
+                    {state.amount && (
+                      <div className="flex justify-between">
+                        <span>Amount:</span>
+                        <span className="font-medium">{parseFloat(String(state.amount)).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {state.recipientName && (
+                      <div className="flex justify-between">
+                        <span>Recipient:</span>
+                        <span className="font-medium">{state.recipientName}</span>
+                      </div>
+                    )}
+                  </>
+                )}
                 <div className="flex justify-between">
                   <span>Status:</span>
                   <span className="text-yellow-600 font-medium">Pending Review</span>
@@ -53,10 +78,10 @@ export default function TransferPending() {
             <div className="border-t pt-4">
               <h4 className="font-medium mb-2">What happens next?</h4>
               <ul className="text-sm text-gray-600 text-left space-y-1">
-                <li>• Our team will verify all transfer details</li>
-                <li>• Security checks will be completed</li>
-                <li>• You'll receive an email once approved</li>
-                <li>• Funds will be transferred immediately upon approval</li>
+                <li>Our team will verify all transfer details</li>
+                <li>Security checks will be completed</li>
+                <li>You'll receive an email once approved</li>
+                <li>Funds will be transferred immediately upon approval</li>
               </ul>
             </div>
           </div>
