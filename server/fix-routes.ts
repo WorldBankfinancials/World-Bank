@@ -356,6 +356,9 @@ export async function registerRoutes(app: Express) {
       }
       const accessToken = data.session?.access_token;
       if (!accessToken) return res.status(500).json({ error: 'Failed to generate authentication token' });
+      if (!dbUser?.isActive) {
+        return res.status(403).json({ error: 'Your account is pending approval. Please contact support.', pendingApproval: true });
+      }
       return res.json({ token: accessToken, refreshToken: data.session?.refresh_token, user: sanitizeUser(dbUser as unknown as Record<string, unknown>) });
     } catch (error: unknown) { return res.status(500).json({ error: 'Login failed', details: 'An internal error occurred' }); }
   });
@@ -940,6 +943,7 @@ export async function registerRoutes(app: Express) {
       if (!balanceResult.success) {
         return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
       }
+      await atomicBalanceUpdate(accountId, convertedAmount, `Currency exchange credit: ${sanitizedToCurrency}`);
       const reference = `EXC${Date.now()}${Math.floor(Math.random() * 10000)}`;
       const { data: txn, error: txnError } = await supabase.from('transactions').insert({ from_account_id: null, to_account_id: null, from_user_id: req.user?.id || '' as string, amount: numAmount.toFixed(2), currency: sanitizedFromCurrency, exchange_rate: exchangeRate.toFixed(4), converted_amount: convertedAmount.toFixed(2), transaction_type: 'currency_exchange', category: 'exchange', status: 'completed', description: `Currency exchange: ${numAmount} ${sanitizedFromCurrency} to ${convertedAmount.toFixed(2)} ${sanitizedToCurrency}`, reference_number: reference, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() }).select().single();
       if (txnError) throw txnError;
