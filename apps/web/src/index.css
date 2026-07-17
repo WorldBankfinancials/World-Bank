@@ -217,6 +217,15 @@
   --wb-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --wb-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --wb-shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+
+  /* Aliases for utility classes that reference short names */
+  --wb-blue: hsl(207, 88%, 50%);
+  --wb-blue-light: hsl(207, 88%, 96%);
+  --wb-green: hsl(142, 76%, 36%);
+  --wb-green-light: hsl(142, 76%, 95%);
+  --wb-gray: hsl(215, 16%, 47%);
+  --wb-dark: hsl(222, 84%, 5%);
+  --wb-text: hsl(224, 71%, 4%);
 }
 
 .dark {

@@ -138,6 +138,11 @@ function App() {
                       <LazyRoute Component={FundManagement} />
                     </ProtectedRoute>
                   </Route>
+                  <Route path="/verification">
+                    <ProtectedRoute requireAdmin>
+                      <LazyRoute Component={VerificationCenter} />
+                    </ProtectedRoute>
+                  </Route>
                   <Route path="/transfer-processing">
                     <ProtectedRoute>
                       <LazyRoute Component={TransferProcessing} />
@@ -191,7 +196,6 @@ function App() {
                           <Route path="/receive" component={() => <LazyRoute Component={Receive} />} />
                           <Route path="/add-money" component={() => <LazyRoute Component={AddMoney} />} />
                           <Route path="/alerts" component={() => <LazyRoute Component={Alerts} />} />
-                          <Route path="/verification" component={() => <LazyRoute Component={VerificationCenter} />} />
                           <Route path="/account-preferences" component={() => <LazyRoute Component={AccountPreferences} />} />
                           <Route path="/transaction-router" component={() => <LazyRoute Component={TransactionRouter} />} />
                           <Route path="/investment" component={() => <LazyRoute Component={Investment} />} />
