@@ -128,7 +128,26 @@ export default function TransactionHistory() {
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Refresh
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={async () => {
+                try {
+                  const { authenticatedFetch } = await import('@/lib/queryClient');
+                  const response = await authenticatedFetch('/api/transactions/export');
+                  if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = window.document.createElement('a');
+                    a.href = url;
+                    a.download = 'transactions.csv';
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    toast({ title: 'Export downloaded' });
+                  } else {
+                    toast({ title: 'Export failed', variant: 'destructive' });
+                  }
+                } catch {
+                  toast({ title: 'Export failed', variant: 'destructive' });
+                }
+              }}>
                 <Download className="w-4 h-4 mr-2" />
                 Export
               </Button>
@@ -221,4 +240,3 @@ export default function TransactionHistory() {
     </div>
   );
 }
-

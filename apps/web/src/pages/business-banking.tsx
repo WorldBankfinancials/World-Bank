@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { Building, CreditCard, Landmark, TrendingUp, Users, Globe } from "lucide-react";
 
 interface BusinessService {
@@ -29,6 +30,7 @@ const stats = [
 export default function BusinessBanking() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
+  const { toast } = useToast();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -56,7 +58,10 @@ export default function BusinessBanking() {
                   <h2 className="text-lg font-semibold">{t(service.titleKey)}</h2>
                 </div>
                 <p className="text-sm text-gray-600 mb-4">{t(service.descKey)}</p>
-                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                <button
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  onClick={() => toast({ title: t(service.titleKey), description: t(service.descKey) })}
+                >
                   {t('get_started')}
                 </button>
               </div>
