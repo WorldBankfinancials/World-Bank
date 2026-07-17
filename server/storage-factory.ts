@@ -167,11 +167,19 @@ class SupabasePublicStorage implements IStorage {
 
   async getMessages(conversationId?: string) {
     return conversationId
-      ? listRecords('messages', { ticket_id: conversationId }) as Promise<Message[]>
+      ? listRecords('messages', { conversation_id: conversationId }) as Promise<Message[]>
       : listRecords('messages') as Promise<Message[]>;
   }
   async getUserMessages(userId: string) {
-    return listRecords('messages', { user_id: userId }) as Promise<Message[]>;
+    const { getAdminClient } = await import('./supabase-public-storage');
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient
+      .from('messages')
+      .select('*')
+      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as unknown as Message[];
   }
   async createMessage(message: InsertMessage) {
     return insertRecord('messages', message as unknown as Record<string, unknown>) as Promise<Message>;
@@ -206,8 +214,20 @@ class SupabasePublicStorage implements IStorage {
   async getExchangeRates() {
     return listRecords('forex') as Promise<Array<Record<string, unknown>>>;
   }
-  async getMarketRates() { return [] as Array<Record<string, unknown>>; }
-  async getStatementsByUserId(_userId: string) { return [] as Array<Record<string, unknown>>; }
+  async getMarketRates() {
+    return listRecords('forex') as Promise<Array<Record<string, unknown>>>;
+  }
+  async getStatementsByUserId(userId: string) {
+    const { getAdminClient } = await import('./supabase-public-storage');
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient
+      .from('statements')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as Array<Record<string, unknown>>;
+  }
 }
 
 let _instance: IStorage | null = null;
