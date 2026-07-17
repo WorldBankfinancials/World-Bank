@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const response = await authenticatedFetch(`/api/users/${authUser.id}`);
+      const response = await authenticatedFetch(`/api/user`);
       
       if (!response.ok) {
         return;
@@ -218,7 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      // ✅ CRITICAL: Notify backend to terminate session
+      // Notify backend to terminate session
       try {
         await authenticatedFetch('/api/auth/logout', {
           method: 'POST',
