@@ -1502,6 +1502,217 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
+  // GET /api/admin/pending-registrations - List users pending approval
+  api.get('/api/admin/pending-registrations', requireAdmin, wrapAsync(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name, phone, created_at, is_active, is_verified')
+        .eq('is_active', false)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      const registrations = (data || []).map((row: Record<string, unknown>) => ({
+        id: row.id,
+        email: row.email,
+        fullName: `${row.first_name || ''} ${row.last_name || ''}`.trim(),
+        phone: row.phone || '',
+        createdAt: row.created_at,
+        status: 'pending'
+      }));
+      return res.json(registrations);
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to fetch pending registrations' }); }
+  }));
+
+  // POST /api/admin/create-transaction - Admin creates a transaction for a customer
+  api.post('/api/admin/create-transaction', requireAdmin, wrapAsync(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { customerId, amount, type, description, currency, category, reference } = req.body;
+      if (!customerId || !amount || !type) return res.status(400).json({ error: 'Missing required fields: customerId, amount, type' });
+      const numAmount = parseFloat(String(amount));
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+      const admin = await storage.getUserByEmail(req.user?.email || '');
+      if (!admin) return res.status(403).json({ error: 'Admin not found' });
+      const targetUser = await storage.getUser(String(customerId));
+      if (!targetUser) return res.status(404).json({ error: 'Customer not found' });
+      const accounts = await storage.getUserAccounts(targetUser.id);
+      if (!accounts || accounts.length === 0) return res.status(404).json({ error: 'Customer has no account' });
+      const account = accounts[0];
+      const ref = reference || `ADM${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const isCredit = type === 'credit' || type === 'deposit' || type === 'add';
+      const balanceChange = isCredit ? numAmount : -numAmount;
+      const balanceResult = await atomicBalanceUpdate(String(account.id), balanceChange, description || `Admin ${type} transaction`);
+      if (!balanceResult.success) {
+        return res.status(400).json({ error: balanceResult.error || 'Failed to update balance' });
+      }
+      const { data: txn, error: txnError } = await getAdminClient().from('transactions').insert({
+        from_account_id: isCredit ? null : String(account.id),
+        to_account_id: isCredit ? String(account.id) : null,
+        from_user_id: isCredit ? null : targetUser.id,
+        to_user_id: isCredit ? targetUser.id : null,
+        amount: numAmount.toFixed(2),
+        currency: currency || 'USD',
+        transaction_type: type,
+        category: category || 'admin',
+        status: 'completed',
+        description: description || `Admin ${type} transaction`,
+        reference_number: ref,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      }).select().single();
+      if (txnError) throw txnError;
+      await getAdminClient().from('admin_actions').insert({
+        admin_id: admin.id,
+        action: 'create_transaction',
+        target_type: 'transaction',
+        target_id: String(txn.id),
+        details: { customerId, amount: numAmount, type, description }
+      });
+      await getAdminClient().from('alerts').insert({
+        user_id: targetUser.id,
+        title: 'Account Update',
+        message: `${isCredit ? 'Credit' : 'Debit'} of ${numAmount.toFixed(2)} ${currency || 'USD'} applied by admin.`,
+        type: isCredit ? 'success' : 'info',
+        priority: 'normal',
+        is_read: false
+      });
+      return res.json({ success: true, transaction: txn, newBalance: balanceResult.newBalance });
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to create transaction' }); }
+  }));
+
+  // POST /api/admin/customers/:id/balance - Admin adjusts customer balance
+  api.post('/api/admin/customers/:id/balance', requireAdmin, wrapAsync(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { amount, description } = req.body;
+      if (!amount || isNaN(parseFloat(String(amount)))) return res.status(400).json({ error: 'Valid amount required' });
+      const numAmount = parseFloat(String(amount));
+      const user = await storage.getUser(id);
+      if (!user) return res.status(404).json({ error: 'Customer not found' });
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) return res.status(404).json({ error: 'Customer has no account' });
+      const accountId = String(accounts[0].id);
+      const balanceResult = await atomicBalanceUpdate(accountId, numAmount, description || 'Admin balance adjustment');
+      if (!balanceResult.success) {
+        return res.status(400).json({ error: balanceResult.error || 'Failed to update balance' });
+      }
+      const admin = await storage.getUserByEmail(req.user?.email || '');
+      if (admin) {
+        await getAdminClient().from('admin_actions').insert({
+          admin_id: admin.id,
+          action: 'balance_adjustment',
+          target_type: 'account',
+          target_id: accountId,
+          details: { customerId: id, amount: numAmount, description }
+        });
+      }
+      const ref = `BAL${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      await getAdminClient().from('transactions').insert({
+        from_account_id: numAmount >= 0 ? null : accountId,
+        to_account_id: numAmount >= 0 ? accountId : null,
+        from_user_id: null,
+        to_user_id: numAmount >= 0 ? user.id : null,
+        amount: Math.abs(numAmount).toFixed(2),
+        currency: 'USD',
+        transaction_type: numAmount >= 0 ? 'admin_credit' : 'admin_debit',
+        category: 'admin',
+        status: 'completed',
+        description: description || 'Admin balance adjustment',
+        reference_number: ref,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      });
+      return res.json({ success: true, newBalance: balanceResult.newBalance });
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to adjust balance' }); }
+  }));
+
+  // POST /api/admin/accounts/:id/balance - Admin adjusts account balance directly
+  api.post('/api/admin/accounts/:id/balance', requireAdmin, wrapAsync(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { amount, description, type } = req.body;
+      if (!amount || isNaN(parseFloat(String(amount)))) return res.status(400).json({ error: 'Valid amount required' });
+      const numAmount = parseFloat(String(amount));
+      const { data: account, error: accError } = await getAdminClient().from('accounts').select('id, user_id').eq('id', id).single();
+      if (accError || !account) return res.status(404).json({ error: 'Account not found' });
+      const accountId = String((account as Record<string, unknown>).id);
+      const balanceResult = await atomicBalanceUpdate(accountId, numAmount, description || 'Admin account balance adjustment');
+      if (!balanceResult.success) {
+        return res.status(400).json({ error: balanceResult.error || 'Failed to update balance' });
+      }
+      const admin = await storage.getUserByEmail(req.user?.email || '');
+      if (admin) {
+        await getAdminClient().from('admin_actions').insert({
+          admin_id: admin.id,
+          action: 'account_balance_adjustment',
+          target_type: 'account',
+          target_id: accountId,
+          details: { accountId: id, amount: numAmount, type, description }
+        });
+      }
+      const ref = `ACC${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      await getAdminClient().from('transactions').insert({
+        from_account_id: numAmount >= 0 ? null : accountId,
+        to_account_id: numAmount >= 0 ? accountId : null,
+        from_user_id: null,
+        to_user_id: numAmount >= 0 ? (account as Record<string, unknown>).user_id : null,
+        amount: Math.abs(numAmount).toFixed(2),
+        currency: 'USD',
+        transaction_type: type || (numAmount >= 0 ? 'admin_credit' : 'admin_debit'),
+        category: 'admin',
+        status: 'completed',
+        description: description || 'Admin account balance adjustment',
+        reference_number: ref,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      });
+      return res.json({ success: true, newBalance: balanceResult.newBalance });
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to adjust account balance' }); }
+  }));
+
+  // POST /api/messages - Admin sends chat message to customer
+  api.post('/api/messages', requireAuth, wrapAsync(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { content, recipientId, sessionId } = req.body;
+      if (!content || !content.trim()) return res.status(400).json({ error: 'Message content required' });
+      if (!recipientId) return res.status(400).json({ error: 'Recipient ID required' });
+      const senderId = req.user?.id || '' as string;
+      const senderRole = req.user?.role === 'admin' ? 'admin' : 'customer';
+      const sender = await storage.getUserByEmail(req.user?.email || '');
+      const senderName = sender ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() : req.user?.email || 'User';
+      const session = sessionId || `session_${senderId}_${recipientId}`;
+      const { data, error } = await getAdminClient().from('messages').insert({
+        sender_id: senderId,
+        sender_name: senderName,
+        sender_role: senderRole,
+        recipient_id: recipientId,
+        message: content.trim(),
+        conversation_id: session,
+        is_read: false,
+        created_at: new Date().toISOString()
+      }).select().single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to send message' }); }
+  }));
+
+  // GET /api/messages/session/:sessionId - Get chat history for a session
+  api.get('/api/messages/session/:sessionId', requireAuth, wrapAsync(async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { sessionId } = req.params;
+      const userId = req.user?.id || '' as string;
+      const { data, error } = await getAdminClient().from('messages')
+        .select('*')
+        .eq('conversation_id', sessionId)
+        .order('created_at', { ascending: true })
+        .limit(100);
+      if (error) throw error;
+      const messages = (data || []).filter((msg: Record<string, unknown>) => {
+        return msg.sender_id === userId || msg.recipient_id === userId || req.user?.role === 'admin';
+      });
+      return res.json(messages);
+    } catch (error: unknown) { return res.status(500).json({ error: 'Failed to fetch messages' }); }
+  }));
+
   const httpServer = createServer(app);
   return httpServer;
 }
