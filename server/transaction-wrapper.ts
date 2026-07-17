@@ -111,27 +111,28 @@ export async function atomicBalanceUpdate(
       if ((error as Error).message?.includes('insufficient') || (error as Error).message?.includes('negative')) {
         return { success: false, error: 'Insufficient funds' };
       }
-      return { success: false, error: 'Transaction failed' };
+      // Fall through to fallback for any RPC error (including function not existing)
     }
 
-    if (!data || data.length === 0) {
-      return { success: false, error: 'Account not found or update failed' };
+    if (data && Array.isArray(data) && data.length > 0) {
+      const result = data[0];
+      return {
+        success: true,
+        newBalance: result.new_balance?.toString(),
+        previousBalance: result.previous_balance?.toString()
+      };
     }
 
-    const result = data[0];
-
-    return {
-      success: true,
-      newBalance: result.new_balance?.toString(),
-      previousBalance: result.previous_balance?.toString()
-    };
-  } catch (error: unknown) {
+    // RPC returned no data or errored — use fallback
+    return await fallbackAtomicUpdate(accountId, amountChange, description);
+  } catch {
     return await fallbackAtomicUpdate(accountId, amountChange, description);
   }
 }
 
 /**
  * Fallback atomic update using direct SQL (for when RPC is not available)
+ * Uses optimistic concurrency: re-reads after update to verify the row changed
  */
 async function fallbackAtomicUpdate(
   accountId: string,
@@ -156,13 +157,20 @@ async function fallbackAtomicUpdate(
       return { success: false, error: 'Insufficient funds' };
     }
 
-    const { error: updateError } = await supabase
+    const { data: updated, error: updateError } = await supabase
       .from('accounts')
       .update({ balance: newBalance.toFixed(2), updated_at: new Date().toISOString() })
       .eq('id', accountId)
-      .eq('balance', (account as Record<string, unknown>).balance);
+      .eq('balance', (account as Record<string, unknown>).balance)
+      .select('balance')
+      .single();
 
     if (updateError) {
+      return { success: false, error: 'Balance was modified by another transaction. Please try again.' };
+    }
+
+    // CRITICAL: verify the update actually affected a row
+    if (!updated) {
       return { success: false, error: 'Balance was modified by another transaction. Please try again.' };
     }
 
@@ -174,12 +182,19 @@ async function fallbackAtomicUpdate(
 
 /**
  * HELPER: Create transaction with balance deduction - ATOMIC
+ *
+ * Supports TWO transfer modes:
+ * 1. Internal transfer: recipientAccountNumber exists in our accounts table → debit sender, credit recipient
+ * 2. External transfer: recipientAccountNumber NOT found → debit sender only, record external bank metadata
+ *    (simulates SWIFT/ACH — in production this would call an external banking API)
+ *
  * Account IDs are UUIDs (text). For transfers to another user, pass either
  * toAccountId (UUID) or recipientAccountNumber (text) — the function will
  * look up the recipient's account UUID by account number.
  */
 export async function atomicTransfer(params: {
   fromAccountId: string;
+  fromUserId?: string;
   toAccountId?: string;
   recipientAccountNumber?: string;
   amount: number;
@@ -187,25 +202,36 @@ export async function atomicTransfer(params: {
   description: string;
   recipientName?: string;
   recipientCountry?: string;
-}): Promise<{ success: boolean; transaction?: Record<string, unknown>; error?: string }> {
+  currency?: string;
+  referenceNumber?: string;
+  bankName?: string;
+  swiftCode?: string;
+}): Promise<{ success: boolean; transaction?: Record<string, unknown>; error?: string; isExternal?: boolean }> {
 
   const tx = new BankingTransaction();
   let createdTransaction: Record<string, unknown> | null = null;
 
   // Resolve recipient account UUID from account number if needed
   let toAccountId = params.toAccountId;
+  let isExternal = false;
+
   if (!toAccountId && params.recipientAccountNumber) {
     const { data: recipientAccount, error: lookupError } = await supabase
       .from('accounts')
-      .select('id')
+      .select('id, user_id')
       .eq('account_number', params.recipientAccountNumber)
       .eq('status', 'active')
       .maybeSingle();
 
     if (lookupError || !recipientAccount) {
-      return { success: false, error: 'Recipient account not found' };
+      // EXTERNAL TRANSFER: recipient account not found in our bank
+      // Debit the sender, record the transaction with external bank metadata
+      // In production this would initiate a SWIFT/ACH transfer via an external API
+      isExternal = true;
+      toAccountId = undefined;
+    } else {
+      toAccountId = (recipientAccount as Record<string, unknown>).id as string;
     }
-    toAccountId = (recipientAccount as Record<string, unknown>).id as string;
   }
 
   // Step 1: Deduct from sender
@@ -235,19 +261,40 @@ export async function atomicTransfer(params: {
   tx.addStep({
     name: 'Create transaction record',
     execute: async () => {
+      const insertData: Record<string, unknown> = {
+        from_account_id: params.fromAccountId,
+        to_account_id: toAccountId || null,
+        from_user_id: params.fromUserId || null,
+        amount: params.amount,
+        currency: params.currency || 'USD',
+        transaction_type: params.transactionType,
+        description: params.description,
+        recipient_name: params.recipientName,
+        recipient_country: params.recipientCountry,
+        recipient_account_number: params.recipientAccountNumber || null,
+        bank_name: params.bankName || null,
+        swift_code: params.swiftCode || null,
+        reference_number: params.referenceNumber || null,
+        status: 'completed',
+        created_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+      };
+
+      // For internal transfers, resolve to_user_id from the recipient account
+      if (toAccountId && !isExternal) {
+        const { data: recipientAccount } = await supabase
+          .from('accounts')
+          .select('user_id')
+          .eq('id', toAccountId)
+          .single();
+        if (recipientAccount) {
+          insertData.to_user_id = (recipientAccount as Record<string, unknown>).user_id;
+        }
+      }
+
       const { data, error } = await supabase
         .from('transactions')
-        .insert({
-          from_account_id: params.fromAccountId,
-          to_account_id: toAccountId || null,
-          amount: params.amount,
-          transaction_type: params.transactionType,
-          description: params.description,
-          recipient_name: params.recipientName,
-          recipient_country: params.recipientCountry,
-          status: 'success',
-          created_at: new Date().toISOString()
-        })
+        .insert(insertData)
         .select()
         .single();
 
@@ -265,8 +312,9 @@ export async function atomicTransfer(params: {
     }
   });
 
-  // Step 3: Credit recipient (if internal transfer to a known account)
-  if (toAccountId) {
+  // Step 3: Credit recipient (ONLY for internal transfers — external transfers
+  // would credit the recipient via an external banking network, not our DB)
+  if (toAccountId && !isExternal) {
     tx.addStep({
       name: 'Credit recipient account',
       execute: async () => {
@@ -293,8 +341,8 @@ export async function atomicTransfer(params: {
   const result = await tx.execute();
 
   if (result.success) {
-    return { success: true, transaction: createdTransaction ?? undefined };
+    return { success: true, transaction: createdTransaction ?? undefined, isExternal };
   } else {
-    return { success: false, error: result.error };
+    return { success: false, error: result.error, isExternal };
   }
 }
