@@ -61,6 +61,7 @@ import type { Transaction, User } from "@packages/shared/schema";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useRealtimeTransactions } from "@/hooks/useRealtimeTransactions";
+import { useAuth } from "@/contexts/AuthContext";
 import { CustomerData } from "@/types";
 
 
@@ -95,7 +96,6 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Admin user-management + transaction-reversal dialog state
   const [resetPasswordTarget, setResetPasswordTarget] = useState<CustomerData | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [setRoleTarget, setSetRoleTarget] = useState<CustomerData | null>(null);
@@ -104,33 +104,57 @@ export default function AdminDashboard() {
   const [reverseTxnTarget, setReverseTxnTarget] = useState<Transaction | null>(null);
   const [reverseReason, setReverseReason] = useState("");
 
-  // Real-time updates via Supabase Realtime
   useRealtimeTransactions();
 
-  // Fetch real customer data from API
   const { data: customers = [], isLoading: customersLoading, error: customersError } = useQuery<CustomerData[]>({
     queryKey: ['/api/admin/customers'],
+    queryFn: async ({ queryKey }) => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch(queryKey[0] as string);
+      if (!res.ok) throw new Error('Failed to fetch customers');
+      return res.json();
+    },
     staleTime: 30000,
   });
 
-  // Fetch pending transfers
   const { data: pendingTransfers = [], isLoading: transfersLoading, error: transfersError } = useQuery<PendingTransfer[]>({
     queryKey: ['/api/admin/pending-transfers'],
+    queryFn: async ({ queryKey }) => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch(queryKey[0] as string);
+      if (!res.ok) throw new Error('Failed to fetch pending transfers');
+      return res.json();
+    },
   });
 
-  // Fetch support tickets
   const { data: supportTickets = [], isLoading: ticketsLoading, error: ticketsError } = useQuery<SupportTicket[]>({
     queryKey: ['/api/admin/support-tickets'],
+    queryFn: async ({ queryKey }) => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch(queryKey[0] as string);
+      if (!res.ok) throw new Error('Failed to fetch support tickets');
+      return res.json();
+    },
   });
 
-  // Fetch admin statistics
   const { data: adminStats = {}, error: statsError } = useQuery({
     queryKey: ['/api/admin/stats'],
+    queryFn: async ({ queryKey }) => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch(queryKey[0] as string);
+      if (!res.ok) throw new Error('Failed to fetch admin stats');
+      return res.json();
+    },
   });
 
-  // Fetch all transactions (admin) for the reversal feature
   const { data: allTransactions = [], isLoading: transactionsLoading, error: transactionsError } = useQuery<Transaction[]>({
     queryKey: ['/api/admin/transaction-routes'],
+    queryFn: async ({ queryKey }) => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch(queryKey[0] as string);
+      if (!res.ok) throw new Error('Failed to fetch transactions');
+      return res.json();
+    },
     staleTime: 30000,
   });
 
@@ -142,22 +166,18 @@ export default function AdminDashboard() {
   }, [queryError]);
 
 
-  // Profile picture upload mutation
   const uploadProfilePicMutation = useMutation({
     mutationFn: async ({ userId, imageFile }: { userId: number | string; imageFile: File }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const formData = new FormData();
       formData.append('profilePic', imageFile);
-      
       const response = await authenticatedFetch(`/api/admin/users/${userId}/profile-photo`, {
         method: 'POST',
         body: formData,
       });
-      
       if (!response.ok) {
         throw new Error('Failed to upload profile picture');
       }
-      
       return response.json();
     },
     onSuccess: () => {
@@ -165,7 +185,6 @@ export default function AdminDashboard() {
     },
   });
 
-  // Customer query response mutation
   const respondToQueryMutation = useMutation({
     mutationFn: async ({ ticketId, response }: { ticketId: number; response: string }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -181,7 +200,6 @@ export default function AdminDashboard() {
     },
   });
 
-  // Customer verification mutation
   const verifyCustomerMutation = useMutation({
     mutationFn: async ({ userId, verified }: { userId: number | string; verified: boolean }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -197,7 +215,6 @@ export default function AdminDashboard() {
     },
   });
 
-  // Transfer approval mutation
   const approveTransferMutation = useMutation({
     mutationFn: async ({ transferId, notes }: { transferId: number; notes?: string }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -214,7 +231,6 @@ export default function AdminDashboard() {
     },
   });
 
-  // Transfer rejection mutation
   const rejectTransferMutation = useMutation({
     mutationFn: async ({ transferId, notes }: { transferId: number; notes: string }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -231,7 +247,6 @@ export default function AdminDashboard() {
     },
   });
 
-  // Support ticket update mutation
   const updateTicketMutation = useMutation({
     mutationFn: async ({ ticketId, status, resolution }: { ticketId: number; status: string; resolution?: string }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -247,7 +262,6 @@ export default function AdminDashboard() {
     },
   });
 
-  // Admin: reset a user's password
   const resetUserPasswordMutation = useMutation({
     mutationFn: async ({ email, newPassword }: { email: string; newPassword: string }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -279,7 +293,6 @@ export default function AdminDashboard() {
     },
   });
 
-  // Admin: set a user's role (customer/admin)
   const setUserRoleMutation = useMutation({
     mutationFn: async ({ userId, email, role }: { userId?: string | number; email?: string; role: string }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -311,7 +324,6 @@ export default function AdminDashboard() {
     },
   });
 
-  // Admin: delete a user by email
   const deleteUserMutation = useMutation({
     mutationFn: async ({ email }: { email: string }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -343,7 +355,6 @@ export default function AdminDashboard() {
     },
   });
 
-  // Admin: reverse a transaction
   const reverseTransactionMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string | number; reason?: string }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -404,40 +415,18 @@ export default function AdminDashboard() {
     updateTicketMutation.mutate({ ticketId, status, resolution });
   };
 
-  const adminUser: User = {
-    id: 1,
-    username: "admin",
-    firstName: "World",
-    lastName: "Bank",
+  const { userProfile } = useAuth();
+  const adminUser: User = (userProfile as unknown as User) ?? ({
+    id: "admin",
     email: "admin@worldbank.com",
-    password: "",
-    accountNumber: "ADMIN-001",
-    accountId: 1,
-    profession: "Banking Administrator",
-    isVerified: true,
     role: "admin",
-    fullName: "World Bank",
-    idType: null,
-    idNumber: null,
-    transferPin: null,
-    annualIncome: null,
-    address: null,
-    city: null,
-    state: null,
-    postalCode: null,
-    country: null,
-    dateOfBirth: null,
-    mothersMaidenName: null,
-    citizenship: null,
-    taxId: null,
-    industry: null,
-    phone: null,
     isActive: true,
-    createdAt: new Date(),
-    updatedAt: null
-  } as unknown as User;
+    isVerified: true,
+    fullName: "World Bank",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  } as unknown as User);
 
-  // Show loading state
   if (customersLoading || transfersLoading || ticketsLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -452,9 +441,9 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header user={adminUser} />
+      {!userProfile && <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 text-sm text-yellow-700">Loading admin profile...</div>}
       
       <div className="px-4 py-6">
-        {/* Admin Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
@@ -472,7 +461,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardContent className="p-4">
@@ -523,7 +511,6 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/customer-management")}>
             <CardContent className="p-4">
@@ -562,7 +549,6 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        {/* Main Content Tabs */}
         <Tabs value={selectedTab} onValueChange={setSelectedTab}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="transfers">Transfer Approvals</TabsTrigger>
@@ -571,7 +557,6 @@ export default function AdminDashboard() {
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
           </TabsList>
 
-          {/* Transfer Approvals Tab */}
           <TabsContent value="transfers" className="space-y-4">
             <Card>
               <CardHeader>
@@ -643,7 +628,6 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Customer Support Tab */}
           <TabsContent value="support" className="space-y-4">
             <Card>
               <CardHeader>
@@ -715,7 +699,6 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Profile Management Tab */}
           <TabsContent value="profiles" className="space-y-4">
             <Card>
               <CardHeader>
@@ -847,7 +830,6 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Transactions tab — transaction reversal feature */}
           <TabsContent value="transactions" className="space-y-4">
             <Card>
               <CardHeader>
@@ -913,7 +895,6 @@ export default function AdminDashboard() {
           </TabsContent>
         </Tabs>
 
-        {/* Reset Password dialog */}
         <Dialog
           open={!!resetPasswordTarget}
           onOpenChange={(open) => {
@@ -969,7 +950,6 @@ export default function AdminDashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* Set Role dialog */}
         <Dialog
           open={!!setRoleTarget}
           onOpenChange={(open) => {
@@ -1017,7 +997,6 @@ export default function AdminDashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* Delete User confirmation */}
         <AlertDialog
           open={!!deleteUserTarget}
           onOpenChange={(open) => {
@@ -1050,7 +1029,6 @@ export default function AdminDashboard() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Reverse Transaction confirmation */}
         <AlertDialog
           open={!!reverseTxnTarget}
           onOpenChange={(open) => {
