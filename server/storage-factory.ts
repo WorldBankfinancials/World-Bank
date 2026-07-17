@@ -197,8 +197,12 @@ class SupabasePublicStorage implements IStorage {
     await deleteRecord('alerts', id);
   }
 
-  async getBranches() { return [] as Array<Record<string, unknown>>; }
-  async getAtms() { return [] as Array<Record<string, unknown>>; }
+  async getBranches() {
+    return listRecords('branches', { is_active: true }) as Promise<Array<Record<string, unknown>>>;
+  }
+  async getAtms() {
+    return listRecords('atms', { is_active: true }) as Promise<Array<Record<string, unknown>>>;
+  }
   async getExchangeRates() {
     return listRecords('forex') as Promise<Array<Record<string, unknown>>>;
   }
