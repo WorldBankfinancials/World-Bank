@@ -338,7 +338,7 @@ export async function registerRoutes(app: Express) {
       const existingNotes = (ticket as Record<string, unknown>)?.admin_notes || '';
       const newNotes = existingNotes ? `${existingNotes}\n---\n[${new Date().toISOString()}] ${responseText}` : `[${new Date().toISOString()}] ${responseText}`;
       await supabase.from('support_tickets').update({ admin_notes: newNotes, status: status || 'responded', updated_at: new Date().toISOString() }).eq('id', id);
-      await supabase.from('admin_actions').insert({ admin_id: req.user?.id || '' as string, action_type: 'ticket_respond', target_id: id, description: `Responded to support ticket ${id}`, metadata: { response: responseText } });
+      await supabase.from('admin_actions').insert({ admin_id: req.user?.id || '' as string, action: 'ticket_respond', target_id: id, details: { description: `Responded to support ticket ${id}`, response: responseText } });
       return res.json({ success: true, message: 'Reply sent successfully' });
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to respond to ticket' }); }
   });
@@ -829,7 +829,7 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to fetch statements' }); }
   });
 
-  api.post('/api/objects/upload', async (req: AuthenticatedRequest, res: Response) => {
+  api.post('/api/objects/upload', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { file, fileName, fileType } = req.body;
       if (!file || !fileName) return res.status(400).json({ error: 'Missing file or fileName' });
@@ -991,7 +991,7 @@ export async function registerRoutes(app: Express) {
       const { subject, description, priority } = req.body;
       if (!subject || !description) return res.status(400).json({ error: 'Subject and description required' });
       const ticketId = `TKT${Date.now()}${Math.floor(Math.random() * 10000)}`;
-      const { data, error } = await supabase.from('support_tickets').insert({ user_id: req.user?.id || '' as string, ticket_id: ticketId, subject, description, priority: priority || 'medium', status: 'open' }).select().single();
+      const { data, error } = await supabase.from('support_tickets').insert({ user_id: req.user?.id || '' as string, subject, description, priority: priority || 'normal', status: 'open' }).select().single();
       if (error) throw error;
       return res.json(data);
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
@@ -1316,7 +1316,7 @@ export async function registerLiveChatRoutes(app: Express) {
       if (!user) return res.status(404).json({ error: 'User not found' });
       let adminUserId = 1;
       try { const { data: adminUsers } = await supabase.from('users').select('id').eq('role', 'admin').limit(1).single(); if (adminUsers?.id) adminUserId = adminUsers.id; } catch (error: unknown) { console.warn('Failed to query admin users:', error instanceof Error ? error.message : 'Unknown error'); }
-      const { data: savedMsg, error } = await supabase.from('messages').insert({ sender_id: user.id, sender_role: 'customer', recipient_id: adminUserId, recipient_role: 'admin', content: message.trim(), session_id: `session_${user.id}`, is_read: false, created_at: new Date().toISOString() }).select().single();
+      const { data: savedMsg, error } = await supabase.from('messages').insert({ sender_id: user.id, sender_name: `${user.firstName} ${user.lastName}`.trim(), sender_role: 'customer', recipient_id: adminUserId, message: message.trim(), conversation_id: `session_${user.id}`, is_read: false, created_at: new Date().toISOString() }).select().single();
       if (error) return res.json({ success: true, message: 'Message queued', persisted: false });
       const adminChannel = supabase.channel('admin-chat-inbox');
       adminChannel.send({ type: 'broadcast', event: 'new_customer_message', payload: { userId: user.id, userName: `${user.firstName} ${user.lastName}`, message: message.trim(), messageId: savedMsg?.id, timestamp: new Date().toISOString() } });
