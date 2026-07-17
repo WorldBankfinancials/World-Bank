@@ -454,7 +454,7 @@ export async function registerRoutes(app: Express) {
       const amount = parseFloat(String((request as Record<string, unknown>).amount));
       const { data: userAccount } = await supabase.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string || '' as string).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const accountId = (userAccount as Record<string, unknown>).id as number;
+      const accountId = (userAccount as Record<string, unknown>).id as string;
       const balanceResult = await atomicBalanceUpdate(accountId, -amount, `Payment for request ${req.params.id}`);
       if (!balanceResult.success) {
         return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
@@ -482,7 +482,7 @@ export async function registerRoutes(app: Express) {
         if (!updated) return res.status(500).json({ error: 'Failed to update balance' });
         const { data: account } = await supabase.from('accounts').select('id').eq('user_id', user.id).eq('status', 'active').limit(1).single();
         if (account) {
-          const accountId = (account as Record<string, unknown>).id as number;
+          const accountId = (account as Record<string, unknown>).id as string;
           const balanceResult = await atomicBalanceUpdate(accountId, parsedAmount, `Funds added via ${sanitizedMethod}`);
           if (!balanceResult.success) {
             await storage.updateUserBalance(user.id, -parsedAmount);
@@ -673,7 +673,7 @@ export async function registerRoutes(app: Express) {
       if (error) throw error;
       const { data: account } = await supabase.from('accounts').select('id, balance').eq('user_id', loan.user_id).eq('status', 'active').limit(1).single();
       if (account) {
-        const accountId = (account as Record<string, unknown>).id as number;
+        const accountId = (account as Record<string, unknown>).id as string;
         const principalAmount = parseFloat(String(loan.principal_amount));
         await atomicBalanceUpdate(accountId, principalAmount, `Loan disbursement - ${loan.loan_type} - ${loan.loan_number}`);
         await supabase.from('transactions').insert({ from_account_id: null, to_account_id: (account as Record<string, unknown>).id, from_user_id: null, to_user_id: loan.user_id, amount: principalAmount.toFixed(2), currency: 'USD', transaction_type: 'loan_disbursement', category: 'loan', status: 'completed', description: `Loan disbursement - ${loan.loan_type} - ${loan.loan_number}`, reference_number: `LOAN${Date.now()}${Math.floor(Math.random() * 10000)}`, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() });
@@ -936,7 +936,7 @@ export async function registerRoutes(app: Express) {
       const convertedAmount = numAmount * exchangeRate;
       const { data: userAccount } = await supabase.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string || '' as string).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const accountId = (userAccount as Record<string, unknown>).id as number;
+      const accountId = (userAccount as Record<string, unknown>).id as string;
       const balanceResult = await atomicBalanceUpdate(accountId, -numAmount, `Currency exchange: ${numAmount} ${sanitizedFromCurrency} to ${sanitizedToCurrency}`);
       if (!balanceResult.success) {
         return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
@@ -1026,7 +1026,7 @@ export async function registerRoutes(app: Express) {
       const supabaseClient = getAdminClient();
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const accountId = (userAccount as Record<string, unknown>).id as number;
+      const accountId = (userAccount as Record<string, unknown>).id as string;
       const balanceResult = await atomicBalanceUpdate(accountId, -numAmount, 'Deposit to savings account');
       if (!balanceResult.success) {
         return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
@@ -1058,7 +1058,7 @@ export async function registerRoutes(app: Express) {
       }
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string).eq('status', 'active').limit(1).single();
       if (userAccount) {
-        const accountId = (userAccount as Record<string, unknown>).id as number;
+        const accountId = (userAccount as Record<string, unknown>).id as string;
         await atomicBalanceUpdate(accountId, numAmount, 'Withdrawal from savings account');
       }
       await supabaseClient.from('transactions').insert({ from_user_id: req.user?.id || '' as string, to_user_id: req.user?.id || '' as string, amount: numAmount.toFixed(2), currency: 'USD', transaction_type: 'savings_withdrawal', category: 'savings', status: 'completed', description: `Withdrawal from savings account`, reference_number: `SAW${Date.now()}${Math.floor(Math.random() * 10000)}`, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() });
@@ -1079,7 +1079,7 @@ export async function registerRoutes(app: Express) {
       const supabaseClient = getAdminClient();
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      const accountId = (userAccount as Record<string, unknown>).id as number;
+      const accountId = (userAccount as Record<string, unknown>).id as string;
       const balanceResult = await atomicBalanceUpdate(accountId, -totalCost, `Bought ${numShares} shares of ${sanitizedSymbol} at ${numPrice.toFixed(2)}`);
       if (!balanceResult.success) {
         return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
@@ -1117,7 +1117,7 @@ export async function registerRoutes(app: Express) {
       }
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string).eq('status', 'active').limit(1).single();
       if (userAccount) {
-        const accountId = (userAccount as Record<string, unknown>).id as number;
+        const accountId = (userAccount as Record<string, unknown>).id as string;
         await atomicBalanceUpdate(accountId, totalProceeds, `Sold ${numShares} shares of ${(investment as Record<string, unknown>).symbol} at ${numPrice.toFixed(2)}`);
       }
       const symbol = (investment as Record<string, unknown>).symbol as string;
@@ -1226,7 +1226,7 @@ export async function registerRoutes(app: Express) {
       if ((loan as Record<string, unknown>).status !== 'approved' && (loan as Record<string, unknown>).status !== 'active') return res.status(400).json({ error: 'Loan is not active' });
       const { data: account } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string).eq('status', 'active').limit(1).single();
       if (!account) return res.status(404).json({ error: 'Account not found' });
-      const accountId = (account as Record<string, unknown>).id as number;
+      const accountId = (account as Record<string, unknown>).id as string;
       const balanceResult = await atomicBalanceUpdate(accountId, -numAmount, `Loan repayment for loan ${req.params.id}`);
       if (!balanceResult.success) {
         return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
@@ -1466,8 +1466,8 @@ export async function registerRoutes(app: Express) {
       const reference = `INT${Date.now()}${Math.floor(Math.random() * 10000)}`;
       try {
         const result = await atomicTransfer({
-          fromAccountId: Number(account.id),
-          toAccountId: undefined,
+          fromAccountId: String(account.id),
+          recipientAccountNumber: String(accountNumber || ''),
           amount: numAmount,
           transactionType: 'international',
           description: `International transfer to ${recipientName} - ${bankName || ''} ${swiftCode || ''}`,
