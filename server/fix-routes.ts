@@ -25,7 +25,6 @@ function wrapAsync(fn: AsyncRequestHandler) {
   };
 }
 
-// SECURITY: Strip sensitive fields from user objects before returning to client
 function sanitizeUser(user: Record<string, unknown> | object | null | undefined): Record<string, unknown> {
   if (!user) return {};
   const u = user as Record<string, unknown>;
@@ -37,17 +36,14 @@ function sanitizeUsers(users: Record<string, unknown>[] | object[] | null | unde
   return (users || []).map(u => sanitizeUser(u));
 }
 
-// SECURITY: Validate password complexity (min 8 chars, upper, lower, number, special)
 function validatePasswordComplexity(password: string): boolean {
   return password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password);
 }
 
-// SECURITY: Sanitize user input to prevent XSS in stored fields
 function sanitizeInput(str: string): string {
   return str.replace(/[<>]/g, '').trim().slice(0, 500);
 }
 
-// SECURITY: Sanitize CSV cells to prevent formula injection
 function sanitizeCsvCell(value: string): string {
   if (/^[=+\-@]/.test(value)) {
     return "'" + value;
@@ -55,7 +51,6 @@ function sanitizeCsvCell(value: string): string {
   return value;
 }
 
-// Type definitions for transactions
 interface Transaction {
   id: string | number;
   createdAt: string | Date | null;
@@ -77,7 +72,6 @@ interface Transaction {
 import { randomUUID } from 'crypto';
 
 export async function registerRoutes(app: Express) {
-  // Typed wrapper that accepts async route handlers returning Promise<void>
   const api = {
     get:    (p: string, ...h: unknown[]) => app.get(p, ...(h as Parameters<typeof app.get>[1][])),
     post:   (p: string, ...h: unknown[]) => app.post(p, ...(h as Parameters<typeof app.post>[1][])),
@@ -85,10 +79,8 @@ export async function registerRoutes(app: Express) {
     patch:  (p: string, ...h: unknown[]) => app.patch(p, ...(h as Parameters<typeof app.patch>[1][])),
     delete: (p: string, ...h: unknown[]) => app.delete(p, ...(h as Parameters<typeof app.delete>[1][])),
   } as const;
-  // Register transfer routes first (they take priority for /api/transfers endpoints)
   setupTransferRoutes(app as Express);
 
-  // ==================== HEALTH CHECK ====================
   api.get('/api/health', (req: Request, res: Response) => {
     try {
       return res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
@@ -97,7 +89,6 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // ==================== USER PROFILE ENDPOINTS ====================
   api.get('/api/user', wrapAsync(requireAuth), wrapAsync(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '' as string);
@@ -176,7 +167,6 @@ export async function registerRoutes(app: Express) {
       const allTransactions = await storage.getAllTransactions();
       const transaction = (allTransactions as unknown as Transaction[]).find((t: Transaction) => String(t.id) === String(id));
       if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
-      // SECURITY: IDOR protection - verify the transaction belongs to the authenticated user
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const txUserId = (transaction as unknown as Record<string, unknown>).fromUserId ?? (transaction as unknown as Record<string, unknown>).userId;
@@ -184,7 +174,6 @@ export async function registerRoutes(app: Express) {
       if (txUserId && String(txUserId) === String(user.id)) {
         isOwner = true;
       } else {
-        // Verify via account ownership
         const accounts = await storage.getUserAccounts(user.id);
         const accountIds = new Set((accounts as unknown as Record<string, unknown>[]).map((a: Record<string, unknown>) => String(a.id)));
         const fromAcc = (transaction as unknown as Record<string, unknown>).fromAccountId;
@@ -200,7 +189,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to fetch transaction' }); }
   }));
 
-  // ==================== PIN MANAGEMENT ====================
   api.post('/api/set-pin', wrapAsync(requireAuth), wrapAsync(authRateLimiter), wrapAsync(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { pin } = req.body;
@@ -240,7 +228,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to change PIN' }); }
   }));
 
-  // ==================== ADMIN ENDPOINTS ====================
   api.get('/api/exchange-rates', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const rates = await storage.getExchangeRates();
@@ -341,7 +328,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to respond to ticket' }); }
   });
 
-  // ==================== AUTH ENDPOINTS ====================
   api.post('/api/auth/login', authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { email, password } = req.body;
@@ -436,7 +422,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'Login failed' }); }
   });
 
-  // ==================== PAYMENT REQUESTS ====================
   api.get('/api/payment-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
@@ -512,7 +497,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to add funds' }); }
   });
 
-  // ==================== SUPPLEMENTARY ENDPOINTS ====================
   api.get('/api/transactions/recent', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
@@ -637,7 +621,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to create transaction route' }); }
   });
 
-  // ==================== RECENT CONTACTS ====================
   api.get('/api/recent-contacts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { data, error } = await supabase.from('recent_contacts').select('*').eq('user_id', req.user?.id || '' as string).order('updated_at', { ascending: false }).limit(10);
@@ -646,7 +629,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
-  // ==================== LOANS ENDPOINTS ====================
   api.get('/api/loans', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { data, error } = await supabase.from('loans').select('*').eq('user_id', req.user?.id || '' as string).order('created_at', { ascending: false });
@@ -720,7 +702,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
-  // ==================== ADMIN USER MANAGEMENT ====================
   api.post('/api/admin/create-admin-user', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { email, password, fullName } = req.body;
@@ -854,7 +835,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to upload profile photo', details: 'An internal error occurred' }); }
   });
 
-  // ==================== MISSING API ENDPOINTS ====================
   api.get('/api/cards', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { data, error } = await supabase.from('cards').select('*').eq('user_id', req.user?.id || '' as string).order('created_at', { ascending: false });
@@ -1030,7 +1010,7 @@ export async function registerRoutes(app: Express) {
       if (isNaN(deposit) || deposit < 0) return res.status(400).json({ error: 'Invalid deposit amount' });
       if (deposit > 0) { const { data: userAccount } = await supabaseClient.from('accounts').select('balance').eq('user_id', req.user?.id || '' as string).eq('status', 'active').limit(1).single(); if (!userAccount) return res.status(404).json({ error: 'Account not found' }); const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0')); if (currentBalance < deposit) return res.status(400).json({ error: 'Insufficient funds for initial deposit' }); const newBalance = (currentBalance - deposit).toFixed(2); await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', req.user?.id || '' as string).eq('status', 'active'); }
       const savingsNumber = `SAV${Date.now()}${Math.floor(Math.random() * 10000)}`;
-      const { data, error } = await supabaseClient.from('savings').insert({ user_id: req.user?.id || '' as string, account_number: savingsNumber, account_type: accountType || 'savings', balance: deposit.toFixed(2), goal_name: goalName || null, target_amount: targetAmount || null, interest_rate: '2.50', status: 'active' }).select().single();
+      const { data, error } = await supabaseClient.from('savings').insert({ user_id: req.user?.id || '' as string, savings_type: accountType || 'savings', current_amount: deposit.toFixed(2), goal_name: goalName || null, target_amount: targetAmount || null, interest_rate: '2.50', status: 'active' }).select().single();
       if (error) throw error;
       if (deposit > 0) { await supabaseClient.from('transactions').insert({ from_user_id: req.user?.id || '' as string, to_user_id: req.user?.id || '' as string, amount: deposit.toFixed(2), currency: 'USD', transaction_type: 'savings_deposit', category: 'savings', status: 'completed', description: `Initial deposit to savings account ${savingsNumber}`, reference_number: `SAV${Date.now()}${Math.floor(Math.random() * 10000)}`, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() }); }
       return res.json(data);
@@ -1051,10 +1031,10 @@ export async function registerRoutes(app: Express) {
       if (!balanceResult.success) {
         return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
       }
-      const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user?.id || '' as string).single();
+      const { data: savings } = await supabaseClient.from('savings').select('current_amount').eq('id', savingsId).eq('user_id', req.user?.id || '' as string).single();
       if (!savings) return res.status(404).json({ error: 'Savings account not found' });
-      const newSavingsBalance = (parseFloat(String((savings as Record<string, unknown>).balance || '0')) + numAmount).toFixed(2);
-      await supabaseClient.from('savings').update({ balance: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId);
+      const newSavingsBalance = (parseFloat(String((savings as Record<string, unknown>).current_amount || '0')) + numAmount).toFixed(2);
+      await supabaseClient.from('savings').update({ current_amount: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId);
       await supabaseClient.from('transactions').insert({ from_user_id: req.user?.id || '' as string, to_user_id: req.user?.id || '' as string, amount: numAmount.toFixed(2), currency: 'USD', transaction_type: 'savings_deposit', category: 'savings', status: 'completed', description: `Deposit to savings account`, reference_number: `SAV${Date.now()}${Math.floor(Math.random() * 10000)}`, processed_at: new Date().toISOString(), completed_at: new Date().toISOString() });
       return res.json({ success: true, newSavingsBalance });
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
@@ -1067,12 +1047,12 @@ export async function registerRoutes(app: Express) {
       const numAmount = parseFloat(String(amount));
       if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Amount must be greater than zero' });
       const supabaseClient = getAdminClient();
-      const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user?.id || '' as string).single();
+      const { data: savings } = await supabaseClient.from('savings').select('current_amount').eq('id', savingsId).eq('user_id', req.user?.id || '' as string).single();
       if (!savings) return res.status(404).json({ error: 'Savings account not found' });
-      const savingsBalance = parseFloat(String((savings as Record<string, unknown>).balance || '0'));
+      const savingsBalance = parseFloat(String((savings as Record<string, unknown>).current_amount || '0'));
       if (savingsBalance < numAmount) return res.status(400).json({ error: 'Insufficient savings balance' });
       const newSavingsBalance = (savingsBalance - numAmount).toFixed(2);
-      const { data: updatedSavings, error: savingsUpdateError } = await supabaseClient.from('savings').update({ balance: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId).eq('balance', savingsBalance).select().single();
+      const { data: updatedSavings, error: savingsUpdateError } = await supabaseClient.from('savings').update({ current_amount: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId).eq('current_amount', savingsBalance).select().single();
       if (savingsUpdateError || !updatedSavings) {
         return res.status(409).json({ error: 'Savings balance was modified by another transaction. Please try again.' });
       }
@@ -1158,8 +1138,8 @@ export async function registerRoutes(app: Express) {
     try {
       const { data, error } = await supabase.from('kyc').select('*').eq('user_id', req.user?.id || '' as string).limit(1).single();
       if (error && error.code !== 'PGRST116') throw error;
-      const { data: user } = await supabase.from('users').select('is_verified, kyc_status, email, phone, full_name, address, city, country, profession, annual_income').eq('id', req.user?.id || '' as string).single();
-      const verificationItems = [{ id: 'identity', name: 'Identity Verification', status: user?.is_verified ? 'verified' : 'pending', completedAt: user?.is_verified ? new Date().toISOString() : null }, { id: 'email', name: 'Email Verification', status: user?.email ? 'verified' : 'pending', completedAt: user?.email ? new Date().toISOString() : null }, { id: 'phone', name: 'Phone Verification', status: user?.phone ? 'verified' : 'pending', completedAt: null }, { id: 'address', name: 'Address Verification', status: user?.address ? 'verified' : 'required', completedAt: null }, { id: 'income', name: 'Income Verification', status: user?.annual_income ? 'verified' : 'required', completedAt: null }, { id: 'kyc', name: 'KYC Compliance', status: user?.kyc_status || 'pending', completedAt: user?.kyc_status === 'approved' ? new Date().toISOString() : null }];
+      const { data: user } = await supabase.from('users').select('is_verified, kyc_status, email, phone_number, full_name, address, city, country, profession, annual_income').eq('id', req.user?.id || '' as string).single();
+      const verificationItems = [{ id: 'identity', name: 'Identity Verification', status: user?.is_verified ? 'verified' : 'pending', completedAt: user?.is_verified ? new Date().toISOString() : null }, { id: 'email', name: 'Email Verification', status: user?.email ? 'verified' : 'pending', completedAt: user?.email ? new Date().toISOString() : null }, { id: 'phone', name: 'Phone Verification', status: user?.phone_number ? 'verified' : 'pending', completedAt: null }, { id: 'address', name: 'Address Verification', status: user?.address ? 'verified' : 'required', completedAt: null }, { id: 'income', name: 'Income Verification', status: user?.annual_income ? 'verified' : 'required', completedAt: null }, { id: 'kyc', name: 'KYC Compliance', status: user?.kyc_status || 'pending', completedAt: user?.kyc_status === 'approved' ? new Date().toISOString() : null }];
       return res.json({ kycRecord: data, verificationItems, user: { isVerified: user?.is_verified, kycStatus: user?.kyc_status } });
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
@@ -1278,7 +1258,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
-  // ==================== BRANCHES & ATMS ====================
   api.get('/api/branches', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { data, error } = await supabase.from('branches').select('*').eq('is_active', true).order('name', { ascending: true });
@@ -1295,7 +1274,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
-  // ==================== EXCHANGE RATE CHANGES ====================
   api.get('/api/exchange-rates/changes', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { data, error } = await supabase.from('forex').select('to_currency, rate, updated_at');
@@ -1309,7 +1287,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.json({}); }
   });
 
-  // ==================== USER LOOKUP (for AuthContext) ====================
   api.get('/api/users/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       if (req.user?.id !== req.params.id && req.user?.role !== 'admin') {
@@ -1321,7 +1298,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
-  // ==================== AUTH: CHECK EMAIL ====================
   api.post('/api/auth/check-email', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { email } = req.body;
@@ -1331,7 +1307,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
-  // ==================== AUTH: REGISTER COMPLETE ====================
   api.post('/api/auth/register-complete', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { email, password, firstName, lastName, phone, dateOfBirth, address, city, state, country, postalCode, nationality, profession, employer, annualIncome, sourceOfFunds, purposeOfAccount, idType, idNumber, transferPin, idCardUrl } = req.body;
@@ -1408,7 +1383,6 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // ==================== ADMIN: PENDING TRANSFERS ====================
   api.get('/api/admin/pending-transfers', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const adminClient = getAdminClient();
@@ -1471,7 +1445,6 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
-  // ==================== INTERNATIONAL TRANSFERS (frontend alias) ====================
   api.post('/api/international-transfers', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { amount, recipientName, recipientCountry, bankName, swiftCode, accountNumber, transferPurpose, transferPin } = req.body;
@@ -1534,11 +1507,9 @@ export async function registerRoutes(app: Express) {
   return httpServer;
 }
 
-// ==================== LIVE CHAT ENDPOINTS ====================
 export async function registerLiveChatRoutes(app: Express) {
   const { getChatHistory, getActiveSessions, createTicketFromChat } = await import('./supabase-live-chat');
   const { supabase } = await import('./supabase-public-storage');
-  const wrap = wrapAsync;
   app.get('/api/chat/history', wrapAsync(requireAuth), wrapAsync(getChatHistory));
   app.get('/api/chat/sessions', wrapAsync(requireAdmin), wrapAsync(getActiveSessions));
   app.post('/api/chat/create-ticket', wrapAsync(requireAuth), wrapAsync(createTicketFromChat));
