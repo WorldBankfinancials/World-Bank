@@ -104,10 +104,10 @@ const mapMessage = (row: Record<string, any>): Message => ({
   senderId: row.sender_id ?? null,
   senderRole: row.sender_role || 'customer',
   recipientId: row.recipient_id ?? null,
-  recipientRole: row.recipient_role ?? null,
-  content: row.content || '',
+  senderName: row.sender_name || '',
+  message: row.message || '',
   isRead: row.is_read ?? false,
-  sessionId: row.session_id ?? null,
+  conversationId: row.conversation_id ?? null,
   createdAt: row.created_at ?? null,
 } as unknown as Message);
 
@@ -557,7 +557,7 @@ export class SupabasePublicStorage implements IStorage {
         subject: data.subject,
         description: data.description,
         status: data.status || 'open',
-        priority: data.priority || 'medium',
+        priority: data.priority || 'normal',
       };
       if ((data as unknown as Record<string, unknown>).resolvedAt !== undefined) row.resolved_at = (data as unknown as Record<string, unknown>).resolvedAt;
       const { data: ticket, error } = await supabase.from('support_tickets').insert(row).select().single();
@@ -745,7 +745,7 @@ export class SupabasePublicStorage implements IStorage {
         .select('*')
         .order('created_at', { ascending: true });
       if (conversationId) {
-        query = query.eq('session_id', conversationId);
+        query = query.eq('conversation_id', conversationId);
       }
       const { data, error } = await query;
       if (error) return [];
@@ -775,10 +775,10 @@ export class SupabasePublicStorage implements IStorage {
         sender_id: data.senderId,
         sender_role: data.senderRole || 'customer',
         recipient_id: data.recipientId,
-        recipient_role: (data as unknown as Record<string, unknown>).recipientRole || 'admin',
-        content: data.content,
+        sender_name: (data as unknown as Record<string, unknown>).senderName || '',
+        message: (data as unknown as Record<string, unknown>).message || '',
         is_read: data.isRead ?? false,
-        session_id: data.sessionId,
+        conversation_id: (data as unknown as Record<string, unknown>).conversationId,
       };
       const { data: message, error } = await supabase.from('messages').insert(row).select().single();
       if (error || !message) throw error;
