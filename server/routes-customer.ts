@@ -1,7 +1,6 @@
 import { Express, Request, Response, RequestHandler } from 'express';
 import { requireAuth, requireAdmin, AuthenticatedRequest, getAdminClient } from './auth-middleware';
 import { storage } from './storage-factory';
-import { supabase } from './supabase-public-storage';
 import { atomicBalanceUpdate } from './transaction-wrapper';
 
 function wrap(handler: (req: AuthenticatedRequest, res: Response) => Promise<any>): RequestHandler {
@@ -15,7 +14,6 @@ function sanitizeUser(user: Record<string, unknown> | null | undefined): Record<
 }
 
 export function setupCustomerRoutes(app: Express) {
-  // ==================== ALERTS ====================
   app.get('/api/alerts', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
@@ -26,26 +24,20 @@ export function setupCustomerRoutes(app: Express) {
   }));
 
   app.patch('/api/alerts/:id/read', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const result = await storage.markAlertAsRead(req.params.id);
-      return res.json(result);
-    } catch { return res.status(500).json({ error: 'Failed to mark alert as read' }); }
+    try { return res.json(await storage.markAlertAsRead(req.params.id)); }
+    catch { return res.status(500).json({ error: 'Failed to mark alert as read' }); }
   }));
 
   app.delete('/api/alerts/:id', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      await storage.deleteAlert(req.params.id);
-      return res.json({ success: true });
-    } catch { return res.status(500).json({ error: 'Failed to delete alert' }); }
+    try { await storage.deleteAlert(req.params.id); return res.json({ success: true }); }
+    catch { return res.status(500).json({ error: 'Failed to delete alert' }); }
   }));
 
-  // ==================== CARDS ====================
   app.get('/api/cards', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.json([]);
-      const cards = await storage.getUserCards(user.id);
-      return res.json(cards);
+      return res.json(await storage.getUserCards(user.id) || []);
     } catch { return res.json([]); }
   }));
 
@@ -60,17 +52,10 @@ export function setupCustomerRoutes(app: Express) {
       const cvv = Math.floor(Math.random() * 900 + 100).toString();
       const expiryDate = `${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}/${String(new Date().getFullYear() + 4).slice(-2)}`;
       const card = await storage.createCard({
-        accountId: String(accounts[0].id),
-        cardType: cardType || 'debit',
-        cardNumber,
+        accountId: String(accounts[0].id), cardType: cardType || 'debit', cardNumber,
         cardholderName: cardholderName || `${user.firstName} ${user.lastName}`,
-        expiryDate,
-        cvv,
-        status: 'active',
-        dailyLimit: dailyLimit || 5000,
-        monthlyLimit: monthlyLimit || 50000,
-        isContactless: true,
-        pinSet: false,
+        expiryDate, cvv, status: 'active', dailyLimit: dailyLimit || 5000,
+        monthlyLimit: monthlyLimit || 50000, isContactless: true, pinSet: false,
       } as any);
       return res.json(card);
     } catch { return res.status(500).json({ error: 'Failed to create card' }); }
@@ -80,8 +65,7 @@ export function setupCustomerRoutes(app: Express) {
     try {
       const { cardId, action } = req.body;
       const status = action === 'unlock' ? 'active' : 'locked';
-      const result = await storage.updateCard(cardId, { status } as any);
-      return res.json(result);
+      return res.json(await storage.updateCard(cardId, { status } as any));
     } catch { return res.status(500).json({ error: 'Failed to update card' }); }
   }));
 
@@ -92,8 +76,7 @@ export function setupCustomerRoutes(app: Express) {
       if (dailyLimit !== undefined) updates.dailyLimit = dailyLimit;
       if (monthlyLimit !== undefined) updates.monthlyLimit = monthlyLimit;
       if (isContactless !== undefined) updates.isContactless = isContactless;
-      const result = await storage.updateCard(cardId, updates as any);
-      return res.json(result);
+      return res.json(await storage.updateCard(cardId, updates as any));
     } catch { return res.status(500).json({ error: 'Failed to update card settings' }); }
   }));
 
@@ -112,7 +95,6 @@ export function setupCustomerRoutes(app: Express) {
     } catch { return res.json([]); }
   }));
 
-  // ==================== DIGITAL WALLET ====================
   app.get('/api/wallet-balance', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
@@ -129,8 +111,7 @@ export function setupCustomerRoutes(app: Express) {
       if (!user) return res.json([]);
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.json([]);
-      const txns = await storage.getAccountTransactions(accounts[0].id, 20);
-      return res.json(txns);
+      return res.json(await storage.getAccountTransactions(accounts[0].id, 20) || []);
     } catch { return res.json([]); }
   }));
 
@@ -146,18 +127,13 @@ export function setupCustomerRoutes(app: Express) {
       const result = await atomicBalanceUpdate(String(accounts[0].id), numAmount, `Add funds from ${source || 'external'}`);
       if (!result.success) return res.status(400).json({ error: result.error });
       await storage.createTransaction({
-        fromAccountId: null,
-        toAccountId: String(accounts[0].id),
-        amount: numAmount,
-        transactionType: 'deposit',
-        description: `Add funds from ${source || 'external source'}`,
-        status: 'completed',
+        fromAccountId: null, toAccountId: String(accounts[0].id), amount: numAmount,
+        transactionType: 'deposit', description: `Add funds from ${source || 'external source'}`, status: 'completed',
       } as any);
       return res.json({ success: true, newBalance: result.newBalance });
     } catch { return res.status(500).json({ error: 'Failed to add funds' }); }
   }));
 
-  // ==================== PAYMENT REQUESTS ====================
   app.get('/api/payment-requests', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
@@ -177,18 +153,14 @@ export function setupCustomerRoutes(app: Express) {
       const requester = await storage.getUserByEmail(requestedUserEmail);
       if (!requester) return res.status(404).json({ error: 'Recipient not found' });
       const { data, error } = await getAdminClient().from('payment_requests').insert({
-        requester_id: user.id,
-        requested_user_id: requester.id,
-        amount: parseFloat(String(amount)),
-        description: description || 'Payment request',
-        status: 'pending',
+        requester_id: user.id, requested_user_id: requester.id,
+        amount: parseFloat(String(amount)), description: description || 'Payment request', status: 'pending',
       }).select().single();
       if (error) throw error;
       return res.json(data);
     } catch { return res.status(500).json({ error: 'Failed to create payment request' }); }
   }));
 
-  // ==================== SUPPORT TICKETS (CUSTOMER) ====================
   app.post('/api/support-tickets', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
@@ -196,39 +168,26 @@ export function setupCustomerRoutes(app: Express) {
       const { subject, description, priority } = req.body;
       const ticketNumber = `TKT${Date.now()}${Math.floor(Math.random() * 10000)}`;
       const ticket = await storage.createSupportTicket({
-        userId: user.id,
-        ticketNumber,
-        subject,
-        description,
-        priority: priority || 'medium',
-        status: 'open',
+        userId: user.id, ticketNumber, subject, description,
+        priority: priority || 'medium', status: 'open',
       } as any);
       return res.json(ticket);
     } catch { return res.status(500).json({ error: 'Failed to create support ticket' }); }
   }));
 
-  // ==================== BRANCHES & ATMS ====================
   app.get('/api/branches', wrap(async (req: Request, res: Response) => {
-    try {
-      const branches = await storage.getBranches();
-      return res.json(branches || []);
-    } catch { return res.json([]); }
+    try { return res.json((await storage.getBranches()) || []); } catch { return res.json([]); }
   }));
 
   app.get('/api/atms', wrap(async (req: Request, res: Response) => {
-    try {
-      const atms = await storage.getAtms();
-      return res.json(atms || []);
-    } catch { return res.json([]); }
+    try { return res.json((await storage.getAtms()) || []); } catch { return res.json([]); }
   }));
 
-  // ==================== STATEMENTS ====================
   app.get('/api/statements', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.json([]);
-      const statements = await storage.getStatementsByUserId(user.id);
-      return res.json(statements || []);
+      return res.json((await storage.getStatementsByUserId(user.id)) || []);
     } catch { return res.json([]); }
   }));
 
@@ -254,13 +213,11 @@ export function setupCustomerRoutes(app: Express) {
     } catch { return res.status(500).json({ error: 'Failed to export transactions' }); }
   }));
 
-  // ==================== INVESTMENTS ====================
   app.get('/api/investments', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.json([]);
-      const investments = await storage.getUserInvestments(user.id);
-      return res.json(investments || []);
+      return res.json((await storage.getUserInvestments(user.id)) || []);
     } catch { return res.json([]); }
   }));
 
@@ -275,19 +232,12 @@ export function setupCustomerRoutes(app: Express) {
       const balanceResult = await atomicBalanceUpdate(String(accounts[0].id), -totalCost, `Investment buy: ${symbol}`);
       if (!balanceResult.success) return res.status(400).json({ error: balanceResult.error });
       const investment = await storage.createInvestment({
-        userId: user.id,
-        symbol,
-        quantity: parseFloat(String(quantity)),
-        buyPrice: parseFloat(String(price)),
-        status: 'active',
+        userId: user.id, symbol, quantity: parseFloat(String(quantity)),
+        buyPrice: parseFloat(String(price)), status: 'active',
       } as any);
       await storage.createTransaction({
-        fromAccountId: String(accounts[0].id),
-        toAccountId: null,
-        amount: totalCost,
-        transactionType: 'investment_buy',
-        description: `Investment buy: ${quantity} ${symbol}`,
-        status: 'completed',
+        fromAccountId: String(accounts[0].id), toAccountId: null, amount: totalCost,
+        transactionType: 'investment_buy', description: `Investment buy: ${quantity} ${symbol}`, status: 'completed',
       } as any);
       return res.json(investment);
     } catch { return res.status(500).json({ error: 'Failed to buy investment' }); }
@@ -300,28 +250,33 @@ export function setupCustomerRoutes(app: Express) {
       if (!user) return res.status(404).json({ error: 'User not found' });
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.status(404).json({ error: 'No account found' });
-      const totalValue = parseFloat(String(quantity)) * parseFloat(String(price));
+      const investments = await storage.getUserInvestments(user.id);
+      const investment = (investments as any[])?.find(inv => String(inv.id) === String(investmentId));
+      if (!investment) return res.status(404).json({ error: 'Investment not found' });
+      if (investment.status !== 'active' && investment.status !== 'pending') return res.status(400).json({ error: 'Investment not active' });
+      const ownedQuantity = parseFloat(String(investment.quantity || investment.shares || 0));
+      const sellQuantity = parseFloat(String(quantity));
+      if (isNaN(sellQuantity) || sellQuantity <= 0) return res.status(400).json({ error: 'Invalid quantity' });
+      if (sellQuantity > ownedQuantity) return res.status(400).json({ error: 'Cannot sell more shares than owned' });
+      const totalValue = sellQuantity * parseFloat(String(price));
       await atomicBalanceUpdate(String(accounts[0].id), totalValue, `Investment sell`);
+      if (sellQuantity >= ownedQuantity) {
+        await storage.updateInvestment(investmentId, { status: 'sold', quantity: 0 } as any);
+      } else {
+        await storage.updateInvestment(investmentId, { quantity: ownedQuantity - sellQuantity } as any);
+      }
       await storage.createTransaction({
-        fromAccountId: null,
-        toAccountId: String(accounts[0].id),
-        amount: totalValue,
-        transactionType: 'investment_sell',
-        description: `Investment sell: ${quantity} shares`,
-        status: 'completed',
+        fromAccountId: null, toAccountId: String(accounts[0].id), amount: totalValue,
+        transactionType: 'investment_sell', description: `Investment sell: ${quantity} shares of ${investment.symbol || 'investment'}`, status: 'completed',
       } as any);
       return res.json({ success: true, proceeds: totalValue });
     } catch { return res.status(500).json({ error: 'Failed to sell investment' }); }
   }));
 
   app.get('/api/market-rates', wrap(async (req: Request, res: Response) => {
-    try {
-      const rates = await storage.getMarketRates();
-      return res.json(rates || []);
-    } catch { return res.json([]); }
+    try { return res.json((await storage.getMarketRates()) || []); } catch { return res.json([]); }
   }));
 
-  // ==================== LOANS ====================
   app.get('/api/loans', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
@@ -339,13 +294,9 @@ export function setupCustomerRoutes(app: Express) {
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const { data, error } = await getAdminClient().from('loans').insert({
-        user_id: user.id,
-        loan_type: loanType || 'personal',
-        amount: parseFloat(String(amount)),
-        term_months: parseInt(String(term || '12')),
-        purpose: purpose || 'Personal loan',
-        interest_rate: 8.5,
-        status: 'pending',
+        user_id: user.id, loan_type: loanType || 'personal', amount: parseFloat(String(amount)),
+        term_months: parseInt(String(term || '12')), purpose: purpose || 'Personal loan',
+        interest_rate: 8.5, status: 'pending',
       }).select().single();
       if (error) throw error;
       return res.json(data);
@@ -380,7 +331,6 @@ export function setupCustomerRoutes(app: Express) {
     } catch { return res.json([]); }
   }));
 
-  // ==================== MOBILE PAY ====================
   app.get('/api/mobile-pay/merchants', wrap(async (req: Request, res: Response) => {
     try {
       const { data, error } = await getAdminClient().from('merchants')
@@ -404,7 +354,6 @@ export function setupCustomerRoutes(app: Express) {
     } catch { return res.json([]); }
   }));
 
-  // ==================== KYC ====================
   app.get('/api/kyc/status', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
@@ -422,15 +371,9 @@ export function setupCustomerRoutes(app: Express) {
       if (!user) return res.status(404).json({ error: 'User not found' });
       const { documentType, documentNumber, fullName, dateOfBirth, nationality, address } = req.body;
       const { data, error } = await getAdminClient().from('kyc').insert({
-        user_id: user.id,
-        document_type: documentType,
-        document_number: documentNumber,
-        full_name: fullName || `${user.firstName} ${user.lastName}`,
-        date_of_birth: dateOfBirth,
-        nationality: nationality || 'US',
-        address,
-        status: 'pending',
-        submitted_at: new Date().toISOString(),
+        user_id: user.id, document_type: documentType, document_number: documentNumber,
+        full_name: fullName || `${user.firstName} ${user.lastName}`, date_of_birth: dateOfBirth,
+        nationality: nationality || 'US', address, status: 'pending', submitted_at: new Date().toISOString(),
       }).select().single();
       if (error) throw error;
       await storage.updateUser(user.id, { kycStatus: 'pending' } as any);
@@ -438,7 +381,6 @@ export function setupCustomerRoutes(app: Express) {
     } catch { return res.status(500).json({ error: 'Failed to submit KYC' }); }
   }));
 
-  // ==================== LIVE CHAT ====================
   app.post('/api/chat/send', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
@@ -446,12 +388,8 @@ export function setupCustomerRoutes(app: Express) {
       const { message, conversationId } = req.body;
       const convId = conversationId || `conv-${user.id}`;
       const msg = await storage.createMessage({
-        senderId: user.id,
-        senderName: `${user.firstName} ${user.lastName}`,
-        senderRole: 'customer',
-        conversationId: convId,
-        message,
-        isRead: false,
+        senderId: user.id, senderName: `${user.firstName} ${user.lastName}`,
+        senderRole: 'customer', conversationId: convId, message, isRead: false,
       } as any);
       return res.json(msg);
     } catch { return res.status(500).json({ error: 'Failed to send message' }); }
@@ -461,16 +399,19 @@ export function setupCustomerRoutes(app: Express) {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.json([]);
-      const convId = `conv-${user.id}`;
-      const messages = await storage.getMessages(convId);
-      return res.json(messages || []);
+      return res.json((await storage.getMessages(`conv-${user.id}`)) || []);
     } catch { return res.json([]); }
   }));
 
   app.get('/api/chat/history/:sessionId', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const messages = await storage.getMessages(req.params.sessionId);
-      return res.json(messages || []);
+      const user = await storage.getUserByEmail(req.user?.email || '');
+      if (!user) return res.json([]);
+      const sessionId = req.params.sessionId;
+      if (req.user?.role !== 'admin' && sessionId !== `conv-${user.id}`) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      return res.json((await storage.getMessages(sessionId)) || []);
     } catch { return res.json([]); }
   }));
 
@@ -489,8 +430,7 @@ export function setupCustomerRoutes(app: Express) {
               id: msg.conversation_id,
               customerName: msg.sender_role === 'customer' ? msg.sender_name : 'Unknown',
               customerId: msg.sender_role === 'customer' ? msg.sender_id : null,
-              lastMessage: msg.message,
-              lastMessageAt: msg.created_at,
+              lastMessage: msg.message, lastMessageAt: msg.created_at,
               unreadCount: msg.sender_role === 'customer' && !msg.is_read ? 1 : 0,
             });
           } else {
@@ -504,7 +444,6 @@ export function setupCustomerRoutes(app: Express) {
     } catch { return res.json([]); }
   }));
 
-  // ==================== EXCHANGE ====================
   app.get('/api/exchange-rates/changes', wrap(async (req: Request, res: Response) => {
     try {
       const { data, error } = await getAdminClient().from('forex')
@@ -528,21 +467,30 @@ export function setupCustomerRoutes(app: Express) {
       const { fromCurrency, toCurrency, amount } = req.body;
       const numAmount = parseFloat(String(amount));
       if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Invalid amount' });
-      const { data: rate } = await getAdminClient().from('forex')
-        .select('rate').eq('currency_code', toCurrency).maybeSingle();
-      const exchangeRate = rate ? parseFloat(String((rate as any).rate || '1')) : 1;
+      const user = await storage.getUserByEmail(req.user?.email || '');
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) return res.status(404).json({ error: 'No account found' });
+      const { data: rateData } = await getAdminClient().from('forex')
+        .select('rate, currency_code').eq('currency_code', toCurrency).maybeSingle();
+      const exchangeRate = rateData ? parseFloat(String((rateData as any).rate || '1')) : 1;
       const converted = numAmount * exchangeRate;
-      return res.json({ success: true, fromAmount: numAmount, toAmount: converted, rate: exchangeRate, fromCurrency, toCurrency });
+      const debitResult = await atomicBalanceUpdate(String(accounts[0].id), -numAmount, `Currency exchange: ${fromCurrency} to ${toCurrency}`);
+      if (!debitResult.success) return res.status(400).json({ error: debitResult.error || 'Insufficient funds' });
+      await atomicBalanceUpdate(String(accounts[0].id), converted, `Currency exchange credit: ${toCurrency}`);
+      await storage.createTransaction({
+        fromAccountId: String(accounts[0].id), toAccountId: String(accounts[0].id), amount: numAmount,
+        transactionType: 'currency_exchange', description: `Currency exchange: ${numAmount} ${fromCurrency} to ${converted.toFixed(2)} ${toCurrency}`, status: 'completed',
+      } as any);
+      return res.json({ success: true, fromAmount: numAmount, toAmount: converted, rate: exchangeRate, fromCurrency, toCurrency, newBalance: debitResult.newBalance });
     } catch { return res.status(500).json({ error: 'Failed to exchange currency' }); }
   }));
 
-  // ==================== ACCOUNT PREFERENCES ====================
   app.get('/api/user/preferences', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.json({});
-      const prefs = (user as any).notificationPreferences || {};
-      return res.json(prefs);
+      return res.json((user as any).notificationPreferences || {});
     } catch { return res.json({}); }
   }));
 
@@ -555,13 +503,10 @@ export function setupCustomerRoutes(app: Express) {
     } catch { return res.status(500).json({ error: 'Failed to update preferences' }); }
   }));
 
-  // ==================== AUTH HELPERS ====================
   app.post('/api/auth/logout', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const token = req.headers.authorization?.slice(7) || '';
-      if (token) {
-        await getAdminClient().auth.signOut(token);
-      }
+      if (token) await getAdminClient().auth.signOut(token);
       return res.json({ success: true });
     } catch { return res.json({ success: true }); }
   }));
