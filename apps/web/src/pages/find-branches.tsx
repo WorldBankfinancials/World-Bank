@@ -64,10 +64,22 @@ export default function FindBranches() {
   // Fetch branches and ATMs from real database
   const { data: branches, isLoading: branchesLoading, error: branchesError } = useQuery<Branch[]>({
     queryKey: ['/api/branches'],
+    queryFn: async ({ queryKey }) => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch(queryKey[0] as string);
+      if (!res.ok) throw new Error('Failed to fetch branches');
+      return res.json();
+    },
   });
 
   const { data: atms, isLoading: atmsLoading, error: atmsError } = useQuery<ATM[]>({
     queryKey: ['/api/atms'],
+    queryFn: async ({ queryKey }) => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch(queryKey[0] as string);
+      if (!res.ok) throw new Error('Failed to fetch ATMs');
+      return res.json();
+    },
   });
 
   const queryError = userError || branchesError || atmsError;
