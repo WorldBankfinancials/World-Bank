@@ -1,4 +1,4 @@
-import type { User, InsertUser, InsertTransaction } from '@shared/schema';
+import type { User, InsertUser, InsertTransaction, InsertAccount } from '@shared/schema';
 import { generateAccountNumber, generateTransferPin, generateTransactionId, generateReferenceNumber } from './crypto-utils';
 import { validateId, validateAmount } from './validators';
 import { Express, Request, Response, NextFunction } from 'express';
@@ -245,7 +245,7 @@ export async function registerRoutes(app: Express) {
     try {
       const rates = await storage.getExchangeRates();
       const ratesObject: Record<string, number> = {};
-      rates.forEach((rate: Record<string, string>) => { ratesObject[rate.targetCurrency || rate.target_currency] = parseFloat(rate.rate); });
+      rates.forEach((rate: Record<string, string>) => { ratesObject[rate.toCurrency || rate.to_currency] = parseFloat(rate.rate); });
       return res.json(ratesObject);
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to fetch exchange rates' }); }
   });
@@ -261,7 +261,6 @@ export async function registerRoutes(app: Express) {
   api.put('/api/admin/customers/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = req.params.id;
-      // SECURITY: Whitelist allowed fields to prevent mass-assignment of sensitive props (role, password, etc.)
       const allowedFields = ['fullName', 'firstName', 'lastName', 'email', 'phone', 'profession', 'address', 'city', 'country', 'postalCode', 'dateOfBirth', 'nationality', 'avatarUrl', 'annualIncome'];
       const updates: Record<string, unknown> = {};
       for (const key of Object.keys(req.body || {})) {
@@ -310,7 +309,6 @@ export async function registerRoutes(app: Express) {
   api.patch('/api/admin/support-tickets/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const id = req.params.id;
-      // SECURITY: Whitelist allowed fields to prevent mass-assignment
       const allowedFields = ['status', 'priority', 'assignedTo', 'notes', 'response'];
       const updates: Record<string, unknown> = {};
       for (const key of Object.keys(req.body || {})) {
@@ -408,7 +406,6 @@ export async function registerRoutes(app: Express) {
     try {
       const { currentPassword, newPassword } = req.body;
       if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password required' });
-      // Password complexity validation
       if (newPassword.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
       if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) return res.status(400).json({ error: 'Password must contain uppercase, lowercase, and a number' });
       const { createClient } = await import('@supabase/supabase-js');
@@ -472,7 +469,6 @@ export async function registerRoutes(app: Express) {
       const amount = parseFloat(String((request as Record<string, unknown>).amount));
       const { data: userAccount } = await supabase.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string || '' as string).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
-      // ATOMIC BALANCE UPDATE: prevents race condition where concurrent requests both pass the balance check
       const accountId = (userAccount as Record<string, unknown>).id as number;
       const balanceResult = await atomicBalanceUpdate(accountId, -amount, `Payment for request ${req.params.id}`);
       if (!balanceResult.success) {
@@ -499,13 +495,11 @@ export async function registerRoutes(app: Express) {
       try {
         const updated = await storage.updateUserBalance(user.id, parsedAmount);
         if (!updated) return res.status(500).json({ error: 'Failed to update balance' });
-        // ATOMIC BALANCE UPDATE: credit account atomically (prevents race condition on concurrent deposits)
         const { data: account } = await supabase.from('accounts').select('id').eq('user_id', user.id).eq('status', 'active').limit(1).single();
         if (account) {
           const accountId = (account as Record<string, unknown>).id as number;
           const balanceResult = await atomicBalanceUpdate(accountId, parsedAmount, `Funds added via ${sanitizedMethod}`);
           if (!balanceResult.success) {
-            // Rollback the user balance update since the account update failed
             await storage.updateUserBalance(user.id, -parsedAmount);
             return res.status(500).json({ error: balanceResult.error || 'Failed to update account balance' });
           }
@@ -533,7 +527,7 @@ export async function registerRoutes(app: Express) {
   });
 
   api.get('/api/currencies', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    return res.json([{ code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' }, { code: 'EUR', name: 'Euro', symbol: '€', flag: '🇪🇺' }, { code: 'GBP', name: 'British Pound', symbol: '£', flag: '🇬🇧' }, { code: 'JPY', name: 'Japanese Yen', symbol: '¥', flag: '🇯🇵' }, { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', flag: '🇨🇳' }, { code: 'CAD', name: 'Canadian Dollar', symbol: 'CA$', flag: '🇨🇦' }, { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', flag: '🇦🇺' }, { code: 'CHF', name: 'Swiss Franc', symbol: 'Fr', flag: '🇨🇭' }, { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', flag: '🇸🇬' }, { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$', flag: '🇭🇰' }]);
+    return res.json([{ code: 'USD', name: 'US Dollar', symbol: '$', flag: 'US' }, { code: 'EUR', name: 'Euro', symbol: 'EUR', flag: 'EU' }, { code: 'GBP', name: 'British Pound', symbol: 'GBP', flag: 'UK' }, { code: 'JPY', name: 'Japanese Yen', symbol: 'JPY', flag: 'JP' }, { code: 'CNY', name: 'Chinese Yuan', symbol: 'CNY', flag: 'CN' }, { code: 'CAD', name: 'Canadian Dollar', symbol: 'CA$', flag: 'CA' }, { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', flag: 'AU' }, { code: 'CHF', name: 'Swiss Franc', symbol: 'Fr', flag: 'CH' }, { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', flag: 'SG' }, { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$', flag: 'HK' }]);
   });
 
   api.get('/api/admin/customers-list', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
@@ -595,7 +589,7 @@ export async function registerRoutes(app: Express) {
   });
 
   api.get('/api/mobile-pay/merchants', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    return res.json([{ id: 1, name: 'Apple Pay', logo: '🍎', category: 'Digital Wallet' }, { id: 2, name: 'Google Pay', logo: '🔵', category: 'Digital Wallet' }, { id: 3, name: 'Samsung Pay', logo: '📱', category: 'Digital Wallet' }, { id: 4, name: 'PayPal', logo: '💙', category: 'Online Payment' }, { id: 5, name: 'Venmo', logo: '💜', category: 'P2P Transfer' }, { id: 6, name: 'Cash App', logo: '💚', category: 'P2P Transfer' }, { id: 7, name: 'Zelle', logo: '🟣', category: 'Bank Transfer' }]);
+    return res.json([{ id: 1, name: 'Apple Pay', logo: 'A', category: 'Digital Wallet' }, { id: 2, name: 'Google Pay', logo: 'G', category: 'Digital Wallet' }, { id: 3, name: 'Samsung Pay', logo: 'S', category: 'Digital Wallet' }, { id: 4, name: 'PayPal', logo: 'P', category: 'Online Payment' }, { id: 5, name: 'Venmo', logo: 'V', category: 'P2P Transfer' }, { id: 6, name: 'Cash App', logo: 'C', category: 'P2P Transfer' }, { id: 7, name: 'Zelle', logo: 'Z', category: 'Bank Transfer' }]);
   });
 
   api.get('/api/user/activity-log', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -697,7 +691,6 @@ export async function registerRoutes(app: Express) {
       if (error) throw error;
       const { data: account } = await supabase.from('accounts').select('id, balance').eq('user_id', loan.user_id).eq('status', 'active').limit(1).single();
       if (account) {
-        // ATOMIC BALANCE UPDATE: credit loan principal atomically (prevents race condition on concurrent disbursements)
         const accountId = (account as Record<string, unknown>).id as number;
         const principalAmount = parseFloat(String(loan.principal_amount));
         await atomicBalanceUpdate(accountId, principalAmount, `Loan disbursement - ${loan.loan_type} - ${loan.loan_number}`);
@@ -833,7 +826,6 @@ export async function registerRoutes(app: Express) {
     try {
       const { file, fileName, fileType } = req.body;
       if (!file || !fileName) return res.status(400).json({ error: 'Missing file or fileName' });
-      // SECURITY: Sanitize fileName to prevent path traversal / injection
       const sanitizedFileName = String(fileName).replace(/[^a-zA-Z0-9.\-]/g, '_');
       const fileId = `upload_${Date.now()}_${randomUUID().substring(0, 8)}`;
       return res.json({ success: true, fileId, fileName: sanitizedFileName, fileType: fileType || 'image/jpeg', uploadedAt: new Date().toISOString(), url: `/uploads/${fileId}`, message: 'File uploaded successfully' });
@@ -853,7 +845,6 @@ export async function registerRoutes(app: Express) {
       const { id } = req.params;
       const { photoUrl } = req.body;
       if (!id || !photoUrl) return res.status(400).json({ error: 'User ID and photo URL required' });
-      // SECURITY: Validate photo URL format to prevent SSRF / arbitrary input
       if (photoUrl && !/^https?:\/\/.+/.test(String(photoUrl))) {
         return res.status(400).json({ error: 'Invalid photo URL format' });
       }
@@ -945,7 +936,7 @@ export async function registerRoutes(app: Express) {
 
   api.get('/api/market-rates', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data, error } = await supabase.from('forex').select('*').order('currency', { ascending: true });
+      const { data, error } = await supabase.from('forex').select('*').order('to_currency', { ascending: true });
       if (error) throw error;
       return res.json(data || []);
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
@@ -959,14 +950,13 @@ export async function registerRoutes(app: Express) {
       const sanitizedToCurrency = sanitizeInput(String(toCurrency));
       const numAmount = parseFloat(String(amount));
       if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Amount must be greater than zero' });
-      const { data: rate, error: rateError } = await supabase.from('forex').select('rate').eq('currency', sanitizedToCurrency).single();
+      const { data: rate, error: rateError } = await supabase.from('forex').select('rate').eq('to_currency', sanitizedToCurrency).maybeSingle();
       if (rateError || !rate) return res.status(400).json({ error: 'Exchange rate not found' });
       const exchangeRate = parseFloat(String((rate as Record<string, unknown>).rate));
       const convertedAmount = numAmount * exchangeRate;
       const { data: userAccount } = await supabase.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string || '' as string).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
       const accountId = (userAccount as Record<string, unknown>).id as number;
-      // ATOMIC BALANCE UPDATE: prevents race condition where concurrent requests both pass the balance check
       const balanceResult = await atomicBalanceUpdate(accountId, -numAmount, `Currency exchange: ${numAmount} ${sanitizedFromCurrency} to ${sanitizedToCurrency}`);
       if (!balanceResult.success) {
         return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
@@ -1057,7 +1047,6 @@ export async function registerRoutes(app: Express) {
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
       const accountId = (userAccount as Record<string, unknown>).id as number;
-      // ATOMIC BALANCE UPDATE: prevents race condition where concurrent requests both pass the balance check
       const balanceResult = await atomicBalanceUpdate(accountId, -numAmount, 'Deposit to savings account');
       if (!balanceResult.success) {
         return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
@@ -1083,14 +1072,12 @@ export async function registerRoutes(app: Express) {
       const savingsBalance = parseFloat(String((savings as Record<string, unknown>).balance || '0'));
       if (savingsBalance < numAmount) return res.status(400).json({ error: 'Insufficient savings balance' });
       const newSavingsBalance = (savingsBalance - numAmount).toFixed(2);
-      // RACE CONDITION FIX: Optimistic lock on savings decrement - only update if balance hasn't changed
       const { data: updatedSavings, error: savingsUpdateError } = await supabaseClient.from('savings').update({ balance: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId).eq('balance', savingsBalance).select().single();
       if (savingsUpdateError || !updatedSavings) {
         return res.status(409).json({ error: 'Savings balance was modified by another transaction. Please try again.' });
       }
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string).eq('status', 'active').limit(1).single();
       if (userAccount) {
-        // ATOMIC BALANCE UPDATE: credit checking account atomically
         const accountId = (userAccount as Record<string, unknown>).id as number;
         await atomicBalanceUpdate(accountId, numAmount, 'Withdrawal from savings account');
       }
@@ -1113,7 +1100,6 @@ export async function registerRoutes(app: Express) {
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string).eq('status', 'active').limit(1).single();
       if (!userAccount) return res.status(404).json({ error: 'Account not found' });
       const accountId = (userAccount as Record<string, unknown>).id as number;
-      // ATOMIC BALANCE UPDATE: prevents race condition where concurrent requests both pass the balance check
       const balanceResult = await atomicBalanceUpdate(accountId, -totalCost, `Bought ${numShares} shares of ${sanitizedSymbol} at ${numPrice.toFixed(2)}`);
       if (!balanceResult.success) {
         return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
@@ -1141,7 +1127,6 @@ export async function registerRoutes(app: Express) {
       const heldShares = parseFloat(String((investment as Record<string, unknown>).shares || '0'));
       if (heldShares < numShares) return res.status(400).json({ error: 'Insufficient shares' });
       const remainingShares = heldShares - numShares;
-      // RACE CONDITION FIX: Optimistic lock on shares decrement - only update if shares haven't changed
       const newSharesValue = remainingShares > 0 ? remainingShares.toString() : '0';
       const newStatus = remainingShares > 0 ? undefined : 'sold';
       const updatePayload: Record<string, unknown> = { shares: newSharesValue, current_price: numPrice.toFixed(2), updated_at: new Date().toISOString() };
@@ -1152,7 +1137,6 @@ export async function registerRoutes(app: Express) {
       }
       const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string).eq('status', 'active').limit(1).single();
       if (userAccount) {
-        // ATOMIC BALANCE UPDATE: credit account atomically
         const accountId = (userAccount as Record<string, unknown>).id as number;
         await atomicBalanceUpdate(accountId, totalProceeds, `Sold ${numShares} shares of ${(investment as Record<string, unknown>).symbol} at ${numPrice.toFixed(2)}`);
       }
@@ -1219,7 +1203,6 @@ export async function registerRoutes(app: Express) {
     try {
       const { securityQuestion1, securityAnswer1, securityQuestion2, securityAnswer2 } = req.body;
       if (!securityQuestion1 || !securityAnswer1 || !securityQuestion2 || !securityAnswer2) return res.status(400).json({ error: 'Both security questions and answers are required' });
-      // SECURITY: Hash security answers before storing (never store plaintext)
       const hashedAnswer1 = crypto.createHash('sha256').update(String(securityAnswer1).toLowerCase().trim()).digest('hex');
       const hashedAnswer2 = crypto.createHash('sha256').update(String(securityAnswer2).toLowerCase().trim()).digest('hex');
       const { error } = await supabase.from('users').update({ security_question_1: securityQuestion1, security_answer_1: hashedAnswer1, security_question_2: securityQuestion2, security_answer_2: hashedAnswer2 }).eq('id', req.user?.id || '' as string);
@@ -1264,7 +1247,6 @@ export async function registerRoutes(app: Express) {
       const { data: account } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user?.id || '' as string).eq('status', 'active').limit(1).single();
       if (!account) return res.status(404).json({ error: 'Account not found' });
       const accountId = (account as Record<string, unknown>).id as number;
-      // ATOMIC BALANCE UPDATE: prevents race condition where concurrent requests both pass the balance check
       const balanceResult = await atomicBalanceUpdate(accountId, -numAmount, `Loan repayment for loan ${req.params.id}`);
       if (!balanceResult.success) {
         return res.status(400).json({ error: balanceResult.error || 'Insufficient funds' });
@@ -1296,6 +1278,258 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
+  // ==================== BRANCHES & ATMS ====================
+  api.get('/api/branches', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('branches').select('*').eq('is_active', true).order('name', { ascending: true });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
+  });
+
+  api.get('/api/atms', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('atms').select('*').eq('is_active', true).order('name', { ascending: true });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
+  });
+
+  // ==================== EXCHANGE RATE CHANGES ====================
+  api.get('/api/exchange-rates/changes', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('forex').select('to_currency, rate, updated_at');
+      if (error) throw error;
+      const changes: Record<string, number> = {};
+      (data || []).forEach((row: Record<string, unknown>) => {
+        const currency = row.to_currency as string;
+        if (currency) changes[currency] = 0;
+      });
+      return res.json(changes);
+    } catch (error: unknown) { return res.json({}); }
+  });
+
+  // ==================== USER LOOKUP (for AuthContext) ====================
+  api.get('/api/users/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.id !== req.params.id && req.user?.role !== 'admin') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      const user = await storage.getUser(req.params.id);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      return res.json(sanitizeUser(user as unknown as Record<string, unknown>));
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
+  });
+
+  // ==================== AUTH: CHECK EMAIL ====================
+  api.post('/api/auth/check-email', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ error: 'Email required' });
+      const existing = await storage.getUserByEmail(email);
+      return res.json({ available: !existing });
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
+  });
+
+  // ==================== AUTH: REGISTER COMPLETE ====================
+  api.post('/api/auth/register-complete', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { email, password, firstName, lastName, phone, dateOfBirth, address, city, state, country, postalCode, nationality, profession, employer, annualIncome, sourceOfFunds, purposeOfAccount, idType, idNumber, transferPin, idCardUrl } = req.body;
+      if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+      if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, { auth: { autoRefreshToken: false, persistSession: false } });
+
+      const { data: existingAuth } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = existingAuth?.users?.find((u: { email?: string }) => u.email === email);
+      if (existingUser) {
+        return res.status(409).json({ error: 'An account with this email already exists' });
+      }
+
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { first_name: firstName, last_name: lastName, phone },
+      });
+      if (authError || !authData.user) {
+        return res.status(500).json({ error: authError?.message || 'Failed to create auth account' });
+      }
+
+      try {
+        const pinHash = transferPin ? await bcrypt.hash(String(transferPin), 12) : '';
+        const newUser = await storage.createUser({
+          username: email.split('@')[0],
+          email,
+          firstName: firstName || email.split('@')[0],
+          lastName: lastName || 'User',
+          phone: phone || '',
+          dateOfBirth: dateOfBirth || null,
+          address: address || null,
+          city: city || null,
+          state: state || null,
+          country: country || null,
+          postalCode: postalCode || null,
+          profession: profession || null,
+          employer: employer || null,
+          annualIncome: annualIncome || null,
+          accountNumber: generateAccountNumber(),
+          accountId: randomUUID(),
+          balance: '0',
+          isActive: false,
+          isVerified: false,
+          transferPin: pinHash || null,
+          role: 'customer',
+        } as unknown as InsertUser);
+
+        await storage.createAccount({
+          userId: newUser.id,
+          accountNumber: generateAccountNumber(),
+          accountType: 'checking',
+          balance: '0.00',
+          currency: 'USD',
+          status: 'pending',
+        } as unknown as InsertAccount);
+
+        return res.status(201).json({
+          success: true,
+          message: 'Registration submitted. Your account is pending approval.',
+          user: sanitizeUser(newUser as unknown as Record<string, unknown>),
+        });
+      } catch (dbError: unknown) {
+        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+        return res.status(500).json({ error: 'Failed to create user profile' });
+      }
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Registration failed' });
+    }
+  });
+
+  // ==================== ADMIN: PENDING TRANSFERS ====================
+  api.get('/api/admin/pending-transfers', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const adminClient = getAdminClient();
+      const { data, error } = await adminClient
+        .from('transactions')
+        .select('*, users!from_user_id(email, first_name, last_name)')
+        .in('status', ['pending', 'processing'])
+        .in('transaction_type', ['transfer', 'international', 'domestic'])
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
+  });
+
+  api.post('/api/admin/transfers/:id/approve', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { notes } = req.body;
+      const adminClient = getAdminClient();
+      const { data: txn, error: txnError } = await adminClient.from('transactions').select('*').eq('id', id).single();
+      if (txnError || !txn) return res.status(404).json({ error: 'Transaction not found' });
+      if ((txn as Record<string, unknown>).status !== 'pending') return res.status(400).json({ error: 'Transaction is not pending' });
+
+      const { data, error } = await adminClient.from('transactions').update({
+        status: 'completed',
+        approved_by: req.user?.id || '' as string,
+        approved_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        admin_notes: notes || null,
+        updated_at: new Date().toISOString(),
+      }).eq('id', id).select().single();
+      if (error) throw error;
+
+      const admin = await storage.getUserByEmail(req.user?.email || '');
+      if (admin) { await storage.createAdminAction({ adminId: admin.id, action: 'approve_transfer', targetType: 'transaction', targetId: id, details: { notes } }); }
+      return res.json({ success: true, transaction: data });
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
+  });
+
+  api.post('/api/admin/transfers/:id/reject', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { notes } = req.body;
+      if (!notes) return res.status(400).json({ error: 'Rejection reason required' });
+      const adminClient = getAdminClient();
+      const { data: txn, error: txnError } = await adminClient.from('transactions').select('*').eq('id', id).single();
+      if (txnError || !txn) return res.status(404).json({ error: 'Transaction not found' });
+      if ((txn as Record<string, unknown>).status !== 'pending') return res.status(400).json({ error: 'Transaction is not pending' });
+
+      const { data, error } = await adminClient.from('transactions').update({
+        status: 'cancelled',
+        admin_notes: notes,
+        updated_at: new Date().toISOString(),
+      }).eq('id', id).select().single();
+      if (error) throw error;
+
+      const admin = await storage.getUserByEmail(req.user?.email || '');
+      if (admin) { await storage.createAdminAction({ adminId: admin.id, action: 'reject_transfer', targetType: 'transaction', targetId: id, details: { notes } }); }
+      return res.json({ success: true, transaction: data });
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
+  });
+
+  // ==================== INTERNATIONAL TRANSFERS (frontend alias) ====================
+  api.post('/api/international-transfers', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { amount, recipientName, recipientCountry, bankName, swiftCode, accountNumber, transferPurpose, transferPin } = req.body;
+      if (!amount || !recipientName) return res.status(400).json({ error: 'Missing required fields' });
+      const numAmount = parseFloat(String(amount));
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+      if (numAmount > 500000) return res.status(400).json({ error: 'Maximum international transfer is $500,000' });
+
+      const user = await storage.getUserByEmail(req.user?.email || '');
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      if (!user.transferPin) return res.status(400).json({ error: 'PIN not set' });
+      const pinMatch = await bcrypt.compare(String(transferPin), user.transferPin);
+      if (!pinMatch) return res.status(401).json({ error: 'Invalid PIN' });
+
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) return res.status(404).json({ error: 'No account found' });
+      const account = accounts[0];
+
+      const reference = `INT${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      try {
+        const result = await atomicTransfer({
+          fromAccountId: Number(account.id),
+          toAccountId: undefined,
+          amount: numAmount,
+          transactionType: 'international',
+          description: `International transfer to ${recipientName} - ${bankName || ''} ${swiftCode || ''}`,
+          recipientName,
+          recipientCountry,
+        });
+        if (!result.success) {
+          return res.status(400).json({ error: result.error || 'Transfer failed' });
+        }
+        const adminClient = getAdminClient();
+        await adminClient.from('transactions').update({
+          recipient_name: recipientName,
+          recipient_country: recipientCountry,
+          bank_name: bankName,
+          swift_code: swiftCode,
+          account_number: accountNumber,
+          transfer_purpose: transferPurpose,
+          reference_number: reference,
+        }).eq('id', String((result.transaction as Record<string, unknown>)?.id || ''));
+
+        return res.json({ success: true, reference, transactionId: (result.transaction as Record<string, unknown>)?.id });
+      } catch (transferError) {
+        return res.status(500).json({ error: transferError instanceof Error ? transferError.message : 'Transfer failed' });
+      }
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
+  });
+
+  api.get('/api/international-transfers/:id/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('transactions').select('status').eq('id', req.params.id).single();
+      if (error) throw error;
+      return res.json({ status: (data as Record<string, unknown>)?.status || 'pending' });
+    } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
@@ -1304,7 +1538,7 @@ export async function registerRoutes(app: Express) {
 export async function registerLiveChatRoutes(app: Express) {
   const { getChatHistory, getActiveSessions, createTicketFromChat } = await import('./supabase-live-chat');
   const { supabase } = await import('./supabase-public-storage');
-  const wrap = wrapAsync; // alias for compatibility
+  const wrap = wrapAsync;
   app.get('/api/chat/history', wrapAsync(requireAuth), wrapAsync(getChatHistory));
   app.get('/api/chat/sessions', wrapAsync(requireAdmin), wrapAsync(getActiveSessions));
   app.post('/api/chat/create-ticket', wrapAsync(requireAuth), wrapAsync(createTicketFromChat));
@@ -1328,7 +1562,6 @@ export async function registerLiveChatRoutes(app: Express) {
   app.post('/api/chat/notify', wrapAsync(requireAuth), wrapAsync(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { userId, type, message } = req.body;
-      // SECURITY: Only allow admin to broadcast or users to notify themselves
       const authReq = req as AuthenticatedRequest;
       if (userId !== authReq.user?.id && authReq.user?.role !== 'admin') {
         return res.status(403).json({ error: 'Not authorized to send notifications to other users' });
