@@ -64,6 +64,14 @@ export function setupTransferRoutes(app: Express) {
           return res.status(400).json({ error: result.error || 'Transfer failed' });
         }
 
+        // Persist reference_number to the transaction record
+        if (result.transaction) {
+          const adminClient = getAdminClient();
+          await adminClient.from('transactions').update({
+            reference_number: reference,
+          }).eq('id', String(result.transaction.id));
+        }
+
         return res.json({ success: true, reference, amount: numAmount });
       } catch (transferError) {
         return res.status(500).json({ error: transferError instanceof Error ? transferError.message : 'Transfer failed' });
@@ -81,18 +89,21 @@ export function setupTransferRoutes(app: Express) {
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.json([]);
 
-      const allTxns: Array<{ id: string | number; createdAt: string | Date | null; status: string | null; amount: string | number; type: string; description?: string | null; recipientName?: string | null; referenceNumber?: string | null }> = [];
+      const allTxns: Array<Record<string, unknown>> = [];
       for (const account of accounts) {
         const txns = await storage.getAccountTransactions(account.id);
         const transfers = txns.filter((t) => {
-          const tType = (t as unknown as Record<string, unknown>).type as string | undefined;
-          const txType = (t as unknown as Record<string, unknown>).transactionType as string | undefined;
-          const typeVal = tType || txType || '';
+          const row = t as unknown as Record<string, unknown>;
+          const typeVal = (row.transaction_type || row.type || '') as string;
           return typeVal === 'transfer' || typeVal === 'domestic_transfer' || typeVal === 'international_transfer' || typeVal === 'domestic' || typeVal === 'international';
         });
-        allTxns.push(...(transfers as unknown as typeof allTxns));
+        allTxns.push(...(transfers as unknown as Array<Record<string, unknown>>));
       }
-      allTxns.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      allTxns.sort((a, b) => {
+        const aDate = (a.created_at || a.createdAt || 0) as string | Date;
+        const bDate = (b.created_at || b.createdAt || 0) as string | Date;
+        return new Date(bDate as string).getTime() - new Date(aDate as string).getTime();
+      });
       return res.json(allTxns);
     } catch (error: unknown) {
       return res.json([]);
@@ -102,14 +113,32 @@ export function setupTransferRoutes(app: Express) {
   // GET /api/transfers/:id/status - Check transfer status
   app.get('/api/transfers/:id/status', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const user = await storage.getUserByEmail(req.user?.email || '');
+      if (!user) return res.status(404).json({ error: 'User not found' });
+
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) return res.status(404).json({ error: 'No account found' });
+
+      const accountIds = accounts.map(a => String(a.id));
+
       const { data, error } = await supabase
         .from('transactions')
-        .select('id, status, amount, transaction_type, description, recipient_name, reference_number, created_at')
+        .select('id, status, amount, transaction_type, description, recipient_name, reference_number, created_at, from_account_id, to_account_id')
         .eq('id', req.params.id)
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
         return res.status(404).json({ error: 'Transfer not found' });
+      }
+
+      // Ownership check: user must own the from or to account
+      const txn = data as Record<string, unknown>;
+      const fromAccId = txn.from_account_id ? String(txn.from_account_id) : null;
+      const toAccId = txn.to_account_id ? String(txn.to_account_id) : null;
+      const isOwner = (fromAccId && accountIds.includes(fromAccId)) || (toAccId && accountIds.includes(toAccId));
+
+      if (!isOwner && req.user?.role !== 'admin') {
+        return res.status(403).json({ error: 'Access denied' });
       }
 
       return res.json(data);
