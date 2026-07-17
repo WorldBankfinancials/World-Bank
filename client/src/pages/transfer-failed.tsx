@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
@@ -8,6 +7,16 @@ import { useLanguage } from "@/contexts/LanguageContext";
 export default function TransferFailed() {
   const [, setLocation] = useLocation();
   const { t } = useLanguage();
+
+  const state = (window.history.state?.state || window.history.state || {}) as {
+    transferId?: string;
+    referenceNumber?: string;
+    amount?: number | string;
+    recipientName?: string;
+  };
+
+  const referenceId = state.referenceNumber || state.transferId || `WB${Date.now().toString().slice(-8)}`;
+  const hasDetails = !!(state.amount || state.recipientName);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -39,8 +48,24 @@ export default function TransferFailed() {
               <div className="space-y-2 text-sm text-left">
                 <div className="flex justify-between">
                   <span>{t('reference_id')}</span>
-                  <span className="font-mono">WB{Date.now().toString().slice(-8)}</span>
+                  <span className="font-mono">{referenceId}</span>
                 </div>
+                {hasDetails && (
+                  <>
+                    {state.amount && (
+                      <div className="flex justify-between">
+                        <span>Amount:</span>
+                        <span className="font-medium">{parseFloat(String(state.amount)).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {state.recipientName && (
+                      <div className="flex justify-between">
+                        <span>Recipient:</span>
+                        <span className="font-medium">{state.recipientName}</span>
+                      </div>
+                    )}
+                  </>
+                )}
                 <div className="flex justify-between">
                   <span>{t('status')}</span>
                   <span className="text-red-600 font-medium">{t('status_failed')}</span>
@@ -59,11 +84,11 @@ export default function TransferFailed() {
             <div className="border-t pt-4">
               <h4 className="font-medium mb-2">Common Reasons for Failure</h4>
               <ul className="text-sm text-gray-600 text-left space-y-1">
-                <li>• Insufficient account balance</li>
-                <li>• Invalid recipient information</li>
-                <li>• Security verification required</li>
-                <li>• Transfer limits exceeded</li>
-                <li>• Technical issues</li>
+                <li>Insufficient account balance</li>
+                <li>Invalid recipient information</li>
+                <li>Security verification required</li>
+                <li>Transfer limits exceeded</li>
+                <li>Technical issues</li>
               </ul>
             </div>
           </div>
