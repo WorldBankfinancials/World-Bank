@@ -106,6 +106,7 @@ export async function atomicBalanceUpdate(
       if ((error as Error).message?.includes('insufficient') || (error as Error).message?.includes('negative')) {
         return { success: false, error: 'Insufficient funds' };
       }
+      return { success: false, error: 'Balance update failed' };
     }
 
     if (data && Array.isArray(data) && data.length > 0) {
@@ -117,9 +118,9 @@ export async function atomicBalanceUpdate(
       };
     }
 
-    return await fallbackAtomicUpdate(accountId, amountChange, description);
+    return { success: false, error: 'Balance update returned no data' };
   } catch {
-    return await fallbackAtomicUpdate(accountId, amountChange, description);
+    return { success: false, error: 'Balance update failed' };
   }
 }
 
@@ -185,7 +186,7 @@ export async function atomicTransfer(params: {
 }): Promise<{ success: boolean; transaction?: Record<string, unknown>; error?: string; isExternal?: boolean }> {
 
   const tx = new BankingTransaction();
-  let createdTransaction: Record<string, unknown> | null = null;
+  const txState: { createdTransaction: Record<string, unknown> | null } = { createdTransaction: null };
 
   let toAccountId = params.toAccountId;
   let isExternal = false;
@@ -203,6 +204,9 @@ export async function atomicTransfer(params: {
       toAccountId = undefined;
     } else {
       toAccountId = (recipientAccount as Record<string, unknown>).id as string;
+      if (toAccountId === params.fromAccountId) {
+        return { success: false, error: 'Cannot transfer to your own account' };
+      }
     }
   }
 
@@ -251,12 +255,12 @@ export async function atomicTransfer(params: {
       const { data, error } = await getAdminClient()
         .from('transactions').insert(insertData).select().single();
       if (error) throw error;
-      createdTransaction = data;
+      txState.createdTransaction = data;
       return data;
     },
     rollback: async () => {
-      if (createdTransaction) {
-        await getAdminClient().from('transactions').delete().eq('id', createdTransaction.id);
+      if (txState.createdTransaction) {
+        await getAdminClient().from('transactions').delete().eq('id', txState.createdTransaction.id);
       }
     }
   });
@@ -277,8 +281,8 @@ export async function atomicTransfer(params: {
 
   const result = await tx.execute();
   if (result.success) {
-    return { success: true, transaction: createdTransaction ?? undefined, isExternal };
+    return { success: true, transaction: txState.createdTransaction ?? undefined, isExternal };
   } else {
-    return { success: false, error: result.error, isExternal };
+    return { success: false, error: 'Transfer failed', isExternal };
   }
 }
