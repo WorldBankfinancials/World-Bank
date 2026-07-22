@@ -36,7 +36,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     'https://worldbankfinancials.vercel.app',
     'https://world-bank-financials.vercel.app',
   ];
-  if (origin && (allowed.includes(origin) || origin.endsWith('.vercel.app'))) {
+  if (origin && allowed.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
