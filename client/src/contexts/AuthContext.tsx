@@ -48,8 +48,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (parsedUser?.id && parsedUser?.email) {
           setUser(parsedUser);
           if (storedProfile) { try { setUserProfile(JSON.parse(storedProfile)); } catch (e) {} }
+          authenticatedFetch('/api/user').then(async (r: Response) => {
+            if (r.ok) {
+              const profile = await r.json();
+              if (profile && typeof profile === 'object') setUserProfile(profile);
+            } else if (r.status === 401) {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              localStorage.removeItem('userProfile');
+              localStorage.removeItem('refresh_token');
+              setUser(null);
+              setUserProfile(null);
+            }
+          }).catch(() => {});
         }
-      } catch (e) { localStorage.clear(); }
+      } catch (e) { localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('userProfile'); localStorage.removeItem('refresh_token'); }
     }
     setLoading(false);
   }, []);
