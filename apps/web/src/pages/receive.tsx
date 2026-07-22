@@ -158,7 +158,7 @@ export default function Receive() {
                 <QrCode className="w-32 h-32 text-gray-400" />
               </div>
               <p className="text-sm text-gray-600 mb-4">
-                Scan this QR code to send money to Mr. Liu Wei
+                Scan this QR code to send money to {accountDetails.name}
               </p>
               <div className="flex space-x-2 justify-center">
                 <Button variant="outline" onClick={() => toast({ title: 'QR Code Downloaded', description: 'QR code has been downloaded.' })}>

@@ -48,7 +48,7 @@ export default function ProfileSettings() {
   });
 
   // Initialize form data from profile
-  useState(() => {
+  useEffect(() => {
     if (profile) {
       setFormData({
         firstName: profile.firstName || '',
@@ -62,7 +62,7 @@ export default function ProfileSettings() {
         country: profile.country || ''
       });
     }
-  });
+  }, [profile]);
 
   const handleSave = async () => {
     // Validate form
