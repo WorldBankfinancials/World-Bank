@@ -1,22 +1,15 @@
 import express from "express";
 import { createServer } from "http";
 import { registerRoutes, registerLiveChatRoutes } from "./fix-routes";
-import { setupAdminExtraRoutes } from "./routes-admin-extra";
-import { setupTransferRoutes } from "./routes-transfer";
-import { setupCustomerRoutes } from "./routes-customer";
-import { setupAdminExtra2Routes } from "./routes-admin-extra2";
 import { errorHandler, notFoundHandler } from "./error-handler";
 import { setupVite, serveStatic, log } from "./vite";
 
 async function main() {
   const app = express();
+  app.set('trust proxy', 1);
 
   await registerRoutes(app);
   await registerLiveChatRoutes(app);
-  setupTransferRoutes(app);
-  setupCustomerRoutes(app);
-  setupAdminExtraRoutes(app);
-  setupAdminExtra2Routes(app);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
