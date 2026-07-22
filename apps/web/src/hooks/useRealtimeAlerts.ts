@@ -18,7 +18,7 @@ interface Alert {
 
 export function useRealtimeAlerts(userId?: string | number | undefined, enabled?: boolean) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const pollIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleAlertReceived = useCallback((alert: Alert) => {
     setAlerts((prev) => [...prev, alert]);
@@ -77,7 +77,7 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
       channel.unsubscribe();
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
-  }, [userId, enabled, handleAlertReceived]);
+  }, [userId, enabled]);
 
   const unsubscribe = useCallback(() => {
     setAlerts([]);

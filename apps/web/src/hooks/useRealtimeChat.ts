@@ -63,7 +63,7 @@ export function useRealtimeChat(userId: string | undefined, onMessageReceived?: 
       channel.unsubscribe();
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
-  }, [userId, handleMessage]);
+  }, [userId]);
 
   return { messages };
 }

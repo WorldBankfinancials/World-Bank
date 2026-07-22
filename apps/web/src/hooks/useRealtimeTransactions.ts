@@ -71,7 +71,7 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
       channel.unsubscribe();
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
-  }, [userId, handleTransactionUpdate]);
+  }, [userId]);
 
   return { transactions };
 }

@@ -72,26 +72,31 @@ export default function MobilePay() {
     if (!amount || !phoneNumber || !pin) return;
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) return;
-    if (numAmount > 10000) { alert('Maximum mobile payment is $10,000'); return; }
+    if (numAmount > 10000) { toast({ title: 'Maximum mobile payment is $10,000', variant: 'destructive' }); return; }
 
     try {
       const verifyRes = await authenticatedFetch('/api/verify-pin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: userProfile?.email, pin })
       });
-      if (!verifyRes.ok) { alert('Invalid PIN'); return; }
+      if (!verifyRes.ok) { toast({ title: 'Invalid PIN', variant: 'destructive' }); return; }
 
       const txnRes = await authenticatedFetch('/api/transactions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: numAmount, currency: 'USD', transaction_type: 'payment', description: `Mobile payment to ${phoneNumber}`, recipient_name: phoneNumber, status: 'completed' })
+        body: JSON.stringify({ amount: numAmount, currency: 'USD', transaction_type: 'payment', description: `Mobile payment to ${phoneNumber}`, recipient_name: phoneNumber, status: 'completed', transferPin: pin })
       });
       if (txnRes.ok) {
+        toast({ title: 'Payment sent successfully', variant: 'default' });
         queryClient.invalidateQueries({ queryKey: ['/api/mobile-payments'] });
         queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         setAmount(''); setPhoneNumber(''); setPin('');
+      } else {
+        const errData = await txnRes.json().catch(() => ({}));
+        toast({ title: errData.error || 'Payment failed', variant: 'destructive' });
       }
     } catch (error) {
       console.error('Payment failed:', error);
+      toast({ title: 'Payment failed. Please try again.', variant: 'destructive' });
     }
   };
 

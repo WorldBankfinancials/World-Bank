@@ -85,13 +85,27 @@ export default function StatementsReports() {
         </div>
 
         <div className="mt-6">
-          <a
-            href="/api/transactions/export"
+          <button
+            onClick={async () => {
+              try {
+                const { authenticatedFetch } = await import('@/lib/queryClient');
+                const res = await authenticatedFetch('/api/transactions/export');
+                if (res.ok) {
+                  const blob = await res.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const a = window.document.createElement('a');
+                  a.href = url;
+                  a.download = 'transactions.csv';
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                }
+              } catch (e) { console.error('Export failed:', e); }
+            }}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Download className="w-4 h-4" />
             Export Transactions (CSV)
-          </a>
+          </button>
         </div>
       </main>
       <BottomNavigation />
