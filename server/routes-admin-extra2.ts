@@ -55,8 +55,13 @@ export function setupAdminExtra2Routes(app: Express) {
       if (error || !txn) return res.status(404).json({ error: 'Transfer not found' });
       if (txn.status !== 'pending') return res.status(400).json({ error: 'Transfer is not pending' });
       const admin = await storage.getUserByEmail(req.user?.email || '');
+      const numAmount = parseFloat(String(txn.amount));
+      if (txn.from_account_id) {
+        const debitResult = await atomicBalanceUpdate(String(txn.from_account_id), -numAmount, `Approved transfer debit`);
+        if (!debitResult.success) return res.status(400).json({ error: debitResult.error || 'Insufficient funds for transfer' });
+      }
       if (txn.to_account_id) {
-        await atomicBalanceUpdate(String(txn.to_account_id), parseFloat(String(txn.amount)), `Approved transfer credit`);
+        await atomicBalanceUpdate(String(txn.to_account_id), numAmount, `Approved transfer credit`);
       }
       await getAdminClient().from('transactions').update({
         status: 'completed', approved_by: admin?.id, approved_at: new Date().toISOString(), completed_at: new Date().toISOString()
@@ -72,13 +77,10 @@ export function setupAdminExtra2Routes(app: Express) {
         .select('*').eq('id', req.params.id).single();
       if (error || !txn) return res.status(404).json({ error: 'Transfer not found' });
       if (txn.status !== 'pending') return res.status(400).json({ error: 'Transfer is not pending' });
-      if (txn.from_account_id) {
-        await atomicBalanceUpdate(String(txn.from_account_id), parseFloat(String(txn.amount)), `Refund: rejected transfer`);
-      }
       await getAdminClient().from('transactions').update({
         status: 'rejected', admin_notes: reason || 'Rejected by admin'
       }).eq('id', req.params.id);
-      return res.json({ success: true, message: 'Transfer rejected, funds refunded' });
+      return res.json({ success: true, message: 'Transfer rejected' });
     } catch { return res.status(500).json({ error: 'Failed to reject transfer' }); }
   }));
 
@@ -229,7 +231,7 @@ export function setupAdminExtra2Routes(app: Express) {
     } catch { return res.status(500).json({ error: 'Failed to update transaction route' }); }
   }));
 
-  app.post('/api/objects/upload', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: any) => {
+  app.post('/api/objects/upload', requireAdmin, wrap(async (req: AuthenticatedRequest, res: any) => {
     try {
       const { bucket, path: filePath, contentType, data } = req.body;
       if (!bucket || !filePath || !data) return res.status(400).json({ error: 'bucket, path, and data required' });
