@@ -235,6 +235,9 @@ export function setupAdminExtra2Routes(app: Express) {
     try {
       const { bucket, path: filePath, contentType, data } = req.body;
       if (!bucket || !filePath || !data) return res.status(400).json({ error: 'bucket, path, and data required' });
+      const allowedBuckets = ['avatars', 'kyc-documents', 'statements', 'public-assets'];
+      if (!allowedBuckets.includes(bucket)) return res.status(400).json({ error: 'Invalid bucket' });
+      if (filePath.includes('..') || filePath.startsWith('/') || filePath.includes('\0')) return res.status(400).json({ error: 'Invalid file path' });
       const buffer = Buffer.from(data, 'base64');
       const { uploadFile, getFileUrl } = await import('./supabase-public-storage');
       const result = await uploadFile(bucket, filePath, buffer, contentType || 'application/octet-stream');
