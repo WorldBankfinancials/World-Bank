@@ -51,7 +51,6 @@ import AddMoney from "@/pages/add-money";
 import Receive from "@/pages/receive";
 import Alerts from "@/pages/alerts";
 import AccountPreferences from "@/pages/account-preferences";
-import SecurityCenterPage from "@/pages/security-center";
 import Verification from "@/pages/verification";
 import About from "@/pages/about";
 import { ProtectedRoute, AdminRoute } from "@/components/ProtectedRoute";
