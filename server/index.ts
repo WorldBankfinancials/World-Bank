@@ -7,6 +7,8 @@ import { setupVite, serveStatic, log } from "./vite";
 async function main() {
   const app = express();
   app.set('trust proxy', 1);
+  app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ extended: true }));
 
   await registerRoutes(app);
   await registerLiveChatRoutes(app);
