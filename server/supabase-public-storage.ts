@@ -20,7 +20,7 @@ export function getAdminClient() {
 }
 
 function toSnakeCase(str: string): string {
-  return str.replace(/([A-Z])/g, '_$1').toLowerCase();
+  return str.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
 }
 
 function convertKeysToSnakeCase(obj: Record<string, unknown>): Record<string, unknown> {
@@ -40,8 +40,9 @@ export async function uploadFile(bucket: string, path: string, file: Buffer, con
 
 export async function getFileUrl(bucket: string, path: string) {
   const adminClient = getAdminClient();
-  const { data } = adminClient.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
+  const { data, error } = await adminClient.storage.from(bucket).createSignedUrl(path, 3600);
+  if (error) throw error;
+  return data.signedUrl;
 }
 
 export async function deleteFile(bucket: string, path: string) {
