@@ -75,68 +75,68 @@ export default function Cards() {
 
   const handleLockCard = async () => {
     if (!selectedCard) return;
+    if (!userProfile?.email) { toast({ title: 'Error', description: 'User session invalid. Please re-login.', variant: 'destructive' }); return; }
+    if (!pin || pin.length < 4) { toast({ title: t('invalid_pin') || 'Invalid PIN', description: t('please_enter_correct_pin') || 'Please enter your correct PIN', variant: 'destructive' }); return; }
     try {
-      const response = await authenticatedFetch('/api/verify-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: userProfile?.email || 'user@worldbank.com', pin }) });
-      if (!response.ok) throw new Error('PIN verification failed');
-      if (response.ok) {
-        try { await apiRequest('POST', '/api/cards/lock', { cardId: selectedCard.id, isLocked: !selectedCard.isLocked }); } catch (apiError) { throw new Error(apiError instanceof Error ? apiError.message : 'Failed to update card lock status'); }
-        queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
-        toast({ title: selectedCard.isLocked ? t('card_unlocked') || 'Card Unlocked' : t('card_locked') || 'Card Locked', description: selectedCard.isLocked ? t('card_unlocked_desc') || 'Your card has been unlocked successfully' : t('card_locked_desc') || 'Your card has been locked for security' });
-        setLockDialogOpen(false); setPin('');
-      } else {
-        toast({ title: t('invalid_pin') || 'Invalid PIN', description: t('please_enter_correct_pin') || 'Please enter your correct 4-digit PIN', variant: 'destructive' });
-      }
+      const response = await authenticatedFetch('/api/verify-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: userProfile.email, pin }) });
+      if (!response.ok) { toast({ title: t('invalid_pin') || 'Invalid PIN', description: t('please_enter_correct_pin') || 'Please enter your correct PIN', variant: 'destructive' }); return; }
+      try { await apiRequest('POST', '/api/cards/lock', { cardId: selectedCard.id, isLocked: !selectedCard.isLocked }); } catch (apiError) { throw new Error(apiError instanceof Error ? apiError.message : 'Failed to update card lock status'); }
+      queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
+      toast({ title: selectedCard.isLocked ? t('card_unlocked') || 'Card Unlocked' : t('card_locked') || 'Card Locked', description: selectedCard.isLocked ? t('card_unlocked_desc') || 'Your card has been unlocked successfully' : t('card_locked_desc') || 'Your card has been locked for security' });
+      setLockDialogOpen(false); setPin('');
     } catch (error) {
       toast({ title: t('error') || 'Error', description: t('operation_failed') || 'Operation failed. Please try again.', variant: 'destructive' });
     }
   };
 
   const handleMobilePay = async () => {
+    if (!userProfile?.email) { toast({ title: 'Error', description: 'User session invalid. Please re-login.', variant: 'destructive' }); return; }
+    if (!pin || pin.length < 4) { toast({ title: t('invalid_pin') || 'Invalid PIN', description: 'Please enter your PIN', variant: 'destructive' }); return; }
+    const mobilePayAmount = parseFloat(amount);
+    if (isNaN(mobilePayAmount) || mobilePayAmount <= 0) { toast({ title: 'Invalid Amount', description: 'Please enter a valid amount', variant: 'destructive' }); return; }
+    if (mobilePayAmount > 10000) { toast({ title: 'Amount Too High', description: 'Maximum mobile payment is $10,000', variant: 'destructive' }); return; }
     try {
-      const response = await authenticatedFetch('/api/verify-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: userProfile?.email || 'user@worldbank.com', pin }) });
-      if (response.ok) {
-        const mobilePayAmount = parseFloat(amount);
-        if (mobilePayAmount > 10000) { toast({ title: 'Amount Too High', description: 'Maximum mobile payment is $10,000', variant: 'destructive' }); return; }
-        const mobilePayPhone = phoneNumber;
-        const txnResponse = await authenticatedFetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: mobilePayAmount, currency: 'USD', transaction_type: 'payment', description: `Mobile payment to ${mobilePayPhone}`, recipient_name: mobilePayPhone, status: 'completed' }) });
-        if (!txnResponse.ok) { const errorData = await txnResponse.json().catch(() => ({})); throw new Error(errorData.error || 'Payment failed'); }
-        queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-        toast({ title: t('mobile_payment_sent') || 'Mobile Payment Sent', description: `${t('sent') || 'Sent'} ${amount} ${t('to') || 'to'} ${phoneNumber}` });
-        setMobilePayDialogOpen(false); setPin(''); setAmount(''); setPhoneNumber('');
-      } else {
-        toast({ title: t('invalid_pin') || 'Invalid PIN', description: t('please_enter_correct_pin') || 'Please enter your correct 4-digit PIN', variant: 'destructive' });
-      }
+      const response = await authenticatedFetch('/api/verify-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: userProfile.email, pin }) });
+      if (!response.ok) { toast({ title: t('invalid_pin') || 'Invalid PIN', description: t('please_enter_correct_pin') || 'Please enter your correct PIN', variant: 'destructive' }); return; }
+      const txnResponse = await authenticatedFetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: mobilePayAmount, currency: 'USD', transaction_type: 'payment', description: `Mobile payment to ${phoneNumber}`, recipient_name: phoneNumber, status: 'completed' }) });
+      if (!txnResponse.ok) { const errorData = await txnResponse.json().catch(() => ({})); throw new Error(errorData.error || 'Payment failed'); }
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+      toast({ title: t('mobile_payment_sent') || 'Mobile Payment Sent', description: `${t('sent') || 'Sent'} ${amount} ${t('to') || 'to'} ${phoneNumber}` });
+      setMobilePayDialogOpen(false); setPin(''); setAmount(''); setPhoneNumber('');
     } catch (error) {
       toast({ title: t('error') || 'Error', description: t('payment_failed') || 'Payment failed. Please try again.', variant: 'destructive' });
     }
   };
 
   const handlePayBill = async () => {
+    if (!userProfile?.email) { toast({ title: 'Error', description: 'User session invalid. Please re-login.', variant: 'destructive' }); return; }
+    if (!pin || pin.length < 4) { toast({ title: t('invalid_pin') || 'Invalid PIN', description: 'Please enter your PIN', variant: 'destructive' }); return; }
+    const payBillAmount = parseFloat(amount);
+    if (isNaN(payBillAmount) || payBillAmount <= 0) { toast({ title: 'Invalid Amount', description: 'Please enter a valid amount', variant: 'destructive' }); return; }
+    if (payBillAmount > 50000) { toast({ title: 'Amount Too High', description: 'Maximum bill payment is $50,000', variant: 'destructive' }); return; }
     try {
-      const response = await authenticatedFetch('/api/verify-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: userProfile?.email || 'user@worldbank.com', pin }) });
-      if (response.ok) {
-        const payBillAmount = parseFloat(amount);
-        if (payBillAmount > 50000) { toast({ title: 'Amount Too High', description: 'Maximum bill payment is $50,000', variant: 'destructive' }); return; }
-        const billProviderName = billProvider;
-        const billAccountNumber = accountNumber;
-        const txnResponse = await authenticatedFetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: payBillAmount, currency: 'USD', transaction_type: 'payment', description: `Bill payment to ${billProviderName} - Account: ${billAccountNumber}`, recipient_name: billProviderName, reference_number: billAccountNumber, status: 'completed' }) });
-        if (!txnResponse.ok) { const errorData = await txnResponse.json().catch(() => ({})); throw new Error(errorData.error || 'Payment failed'); }
-        queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-        toast({ title: t('bill_payment_successful') || 'Bill Payment Successful', description: `${t('paid') || 'Paid'} ${amount} ${t('to') || 'to'} ${billProvider}` });
-        setPayBillDialogOpen(false); setPin(''); setAmount(''); setBillProvider(''); setAccountNumber('');
-      } else {
-        toast({ title: t('invalid_pin') || 'Invalid PIN', description: t('please_enter_correct_pin') || 'Please enter your correct 4-digit PIN', variant: 'destructive' });
-      }
+      const response = await authenticatedFetch('/api/verify-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: userProfile.email, pin }) });
+      if (!response.ok) { toast({ title: t('invalid_pin') || 'Invalid PIN', description: t('please_enter_correct_pin') || 'Please enter your correct PIN', variant: 'destructive' }); return; }
+      const txnResponse = await authenticatedFetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ amount: payBillAmount, currency: 'USD', transaction_type: 'payment', description: `Bill payment to ${billProvider} - Account: ${accountNumber}`, recipient_name: billProvider, reference_number: accountNumber, status: 'completed' }) });
+      if (!txnResponse.ok) { const errorData = await txnResponse.json().catch(() => ({})); throw new Error(errorData.error || 'Payment failed'); }
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+      toast({ title: t('bill_payment_successful') || 'Bill Payment Successful', description: `${t('paid') || 'Paid'} ${amount} ${t('to') || 'to'} ${billProvider}` });
+      setPayBillDialogOpen(false); setPin(''); setAmount(''); setBillProvider(''); setAccountNumber('');
     } catch (error) {
       toast({ title: t('error') || 'Error', description: t('payment_failed') || 'Payment failed. Please try again.', variant: 'destructive' });
     }
   };
 
   const handleUpdateSettings = async () => {
+    if (!selectedCard) { toast({ title: 'Error', description: 'No card selected', variant: 'destructive' }); return; }
     try {
-      await apiRequest('POST', '/api/cards/settings', { cardId: selectedCard?.id, dailyLimit: parseInt(amount) || selectedCard?.dailyLimit, contactlessEnabled: selectedCard?.contactlessEnabled });
+      const newDailyLimit = parseInt(amount);
+      const dailyLimitValue = (!isNaN(newDailyLimit) && newDailyLimit > 0) ? newDailyLimit : selectedCard.dailyLimit;
+      await apiRequest('POST', '/api/cards/settings', { cardId: selectedCard.id, dailyLimit: dailyLimitValue, contactlessEnabled: selectedCard.contactlessEnabled });
       queryClient.invalidateQueries({ queryKey: ['/api/cards'] });
       toast({ title: t('settings_updated') || 'Settings Updated', description: t('card_settings_updated') || 'Your card settings have been updated successfully' });
       setSettingsDialogOpen(false); setAmount('');
@@ -155,7 +155,7 @@ export default function Cards() {
           {creditCards && creditCards.map((card: CardType) => (
             <Card key={card.id} className="overflow-hidden">
               <div className={`${(card as unknown as Record<string, unknown>).color || 'bg-gradient-to-br from-blue-600 to-blue-800'} text-white p-6 relative`}>
-                <div className="flex justify-between items-start mb-4"><div><p className="text-sm opacity-80">{card.name}</p><p className="text-lg font-mono">{card.number}</p></div><div className="flex items-center space-x-2"><Badge variant="secondary" className="bg-white/20 text-white">{card.type}</Badge><button onClick={() => { setSelectedCard(card); setSettingsDialogOpen(true); }} className="p-1 rounded hover:bg-white/20 transition-colors"><MoreVertical className="w-4 h-4" /></button></div></div>
+                <div className="flex justify-between items-start mb-4"><div><p className="text-sm opacity-80">{card.name}</p><p className="text-lg font-mono">{card.number ? `**** **** **** ${String(card.number).slice(-4)}` : '****'}</p></div><div className="flex items-center space-x-2"><Badge variant="secondary" className="bg-white/20 text-white">{card.type}</Badge><button onClick={() => { setSelectedCard(card); setSettingsDialogOpen(true); }} className="p-1 rounded hover:bg-white/20 transition-colors"><MoreVertical className="w-4 h-4" /></button></div></div>
                 <div className="flex justify-between items-end"><div><p className="text-xs opacity-80">Available Credit</p><p className="text-xl font-bold">{showBalance ? `${((Number((card as unknown as Record<string, unknown>).limit) || 0) - (Number((card as unknown as Record<string, unknown>).balance) || 0)).toLocaleString()}` : '••••••'}</p></div><div className="text-right"><p className="text-xs opacity-80">Expires</p><p className="text-sm">{String((card as unknown as Record<string, unknown>).expiry || 'N/A')}</p></div></div>
                 <div className="absolute top-16 left-6 w-8 h-6 bg-yellow-400 rounded opacity-80"></div>
               </div>

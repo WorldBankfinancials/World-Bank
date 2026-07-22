@@ -64,11 +64,19 @@ export default function History() {
           })
         );
         
-        const allTransactionArrays = await Promise.all(accountPromises);
-        const allTransactions = allTransactionArrays.flat();
+        const results = await Promise.allSettled(accountPromises);
+        const allTransactions = results
+          .filter((r): r is PromiseFulfilledResult<Transaction[]> => r.status === 'fulfilled')
+          .flatMap(r => Array.isArray(r.value) ? r.value : []);
         
-        // Sort by date (newest first)
-        allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        allTransactions.sort((a, b) => {
+          const dateA = new Date(a.date || a.createdAt || '').getTime();
+          const dateB = new Date(b.date || b.createdAt || '').getTime();
+          if (isNaN(dateA) && isNaN(dateB)) return 0;
+          if (isNaN(dateA)) return 1;
+          if (isNaN(dateB)) return -1;
+          return dateB - dateA;
+        });
         
         return allTransactions;
       } catch (error) {
@@ -139,9 +147,12 @@ export default function History() {
   };
 
   const filteredTransactions = transactions.filter(transaction => {
-    const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transaction.amount.includes(searchTerm) ||
-                         (transaction.recipientName && transaction.recipientName.toLowerCase().includes(searchTerm.toLowerCase()));
+    const desc = transaction.description || '';
+    const amt = String(transaction.amount || '');
+    const recip = transaction.recipientName || '';
+    const matchesSearch = desc.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         amt.includes(searchTerm) ||
+                         recip.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesAccount = selectedAccount === 'all' || transaction.accountId.toString() === selectedAccount;
     const matchesCategory = selectedCategory === 'all' || transaction.category === selectedCategory;
@@ -267,7 +278,7 @@ export default function History() {
               <div className="text-2xl font-bold text-green-600">
                 ${filteredTransactions
                   .filter(t => t.type === 'credit')
-                  .reduce((sum, t) => sum + parseFloat(t.amount), 0)
+                  .reduce((sum, t) => { const n = parseFloat(t.amount); return sum + (isNaN(n) ? 0 : n); }, 0)
                   .toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </div>
             </CardContent>
@@ -278,7 +289,7 @@ export default function History() {
               <div className="text-2xl font-bold text-red-600">
                 ${filteredTransactions
                   .filter(t => t.type === 'debit')
-                  .reduce((sum, t) => sum + parseFloat(t.amount), 0)
+                  .reduce((sum, t) => { const n = parseFloat(t.amount); return sum + (isNaN(n) ? 0 : n); }, 0)
                   .toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </div>
             </CardContent>

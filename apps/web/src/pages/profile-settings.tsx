@@ -119,7 +119,8 @@ export default function ProfileSettings() {
         <div className="bg-white rounded-xl shadow p-6 mb-6">
           <div className="flex items-center gap-3 mb-4"><UserIcon className="w-6 h-6 text-blue-600" /><h2 className="text-lg font-semibold">{t('profile_information')}</h2></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">{t('full_name')}</label>{editing ? <input type="text" value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" /> : <p className="text-gray-900">{displayProfile?.firstName} {displayProfile?.lastName}</p>}</div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">{t('first_name') || 'First Name'}</label>{editing ? <input type="text" value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" /> : <p className="text-gray-900">{displayProfile?.firstName}</p>}</div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">{t('last_name') || 'Last Name'}</label>{editing ? <input type="text" value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" /> : <p className="text-gray-900">{displayProfile?.lastName}</p>}</div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">{t('email')}</label><p className="text-gray-900">{displayProfile?.email}</p></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">{t('phone')}</label>{editing ? <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" /> : <p className="text-gray-900">{displayProfile?.phone || 'N/A'}</p>}</div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">{t('profession')}</label>{editing ? <input type="text" value={formData.profession} onChange={(e) => setFormData({ ...formData, profession: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" /> : <p className="text-gray-900">{displayProfile?.profession || 'N/A'}</p>}</div>
@@ -145,7 +146,7 @@ export default function ProfileSettings() {
           <div className="flex items-center gap-3 mb-4"><Shield className="w-6 h-6 text-blue-600" /><h2 className="text-lg font-semibold">{t('secure_profile')}</h2></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="block text-sm font-medium text-gray-700 mb-1">{t('verified')}</label><p className="text-gray-900">{displayProfile?.isVerified ? t('verified') : t('unverified')}</p></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label><p className="text-gray-900 font-mono">{displayProfile?.accountNumber || 'N/A'}</p></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label><p className="text-gray-900 font-mono">{displayProfile?.accountNumber ? `****${String(displayProfile.accountNumber).slice(-4)}` : 'N/A'}</p></div>
           </div>
         </div>
 

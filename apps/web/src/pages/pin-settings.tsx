@@ -117,10 +117,10 @@ export default function PinSettings() {
           navigate('/profile-settings');
         }, 2000);
       } else {
-        setError(data.message || t('pin_change_failed'));
+        setError(data.error || data.message || t('pin_change_failed'));
         toast({
           title: 'PIN change failed',
-          description: data.message || 'Unable to change PIN. Please try again.',
+          description: data.error || data.message || 'Unable to change PIN. Please try again.',
           variant: 'destructive',
         });
       }
@@ -259,7 +259,7 @@ export default function PinSettings() {
                                 ? 'bg-yellow-500'
                                 : 'bg-green-500'
                               : 'bg-gray-200'
-                          }`}
+                          }`
                         />
                       ))}
                     </div>
