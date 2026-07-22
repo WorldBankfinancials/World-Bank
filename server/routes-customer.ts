@@ -3,6 +3,7 @@ import { requireAuth, requireAdmin, AuthenticatedRequest, getAdminClient } from 
 import { storage } from './storage-factory';
 import { atomicBalanceUpdate } from './transaction-wrapper';
 import { cryptoRandomInt } from './crypto-utils';
+import { authRateLimiter } from './rate-limiter';
 
 function wrap(handler: (req: AuthenticatedRequest, res: Response) => Promise<any>): RequestHandler {
   return (req, res, next) => Promise.resolve(handler(req as AuthenticatedRequest, res as Response)).catch(next);
@@ -113,7 +114,7 @@ export function setupCustomerRoutes(app: Express) {
       if (!accounts || accounts.length === 0) return res.json([]);
       const accountIds = accounts.map(a => String(a.id));
       const { data, error } = await getAdminClient().from('transactions')
-        .select('*').in('from_account_id', accountIds)
+        .select('*').or(`from_account_id.in.(${accountIds.join(',')}),to_account_id.in.(${accountIds.join(',')})`)
         .order('created_at', { ascending: false }).limit(50);
       if (error) throw error;
       return res.json(data || []);
@@ -284,7 +285,8 @@ export function setupCustomerRoutes(app: Express) {
       if (isNaN(sellQuantity) || sellQuantity <= 0) return res.status(400).json({ error: 'Invalid quantity' });
       if (sellQuantity > ownedQuantity) return res.status(400).json({ error: 'Cannot sell more shares than owned' });
       const totalValue = sellQuantity * parseFloat(String(price));
-      await atomicBalanceUpdate(String(accounts[0].id), totalValue, `Investment sell`);
+      const creditResult = await atomicBalanceUpdate(String(accounts[0].id), totalValue, `Investment sell`);
+      if (!creditResult.success) return res.status(500).json({ error: 'Failed to credit account after investment sale' });
       if (sellQuantity >= ownedQuantity) {
         await storage.updateInvestment(investmentId, { status: 'sold', quantity: 0 } as any);
       } else {
@@ -332,8 +334,8 @@ export function setupCustomerRoutes(app: Express) {
     try {
       const { data, error } = await getAdminClient().from('loans')
         .update({ status: 'approved', approved_by: req.user?.id, approved_at: new Date().toISOString() })
-        .eq('id', req.params.id).select().single();
-      if (error) throw error;
+        .eq('id', req.params.id).eq('status', 'pending').select().single();
+      if (error || !data) return res.status(409).json({ error: 'Loan was already processed' });
       return res.json(data);
     } catch { return res.status(500).json({ error: 'Failed to approve loan' }); }
   }));
@@ -502,7 +504,11 @@ export function setupCustomerRoutes(app: Express) {
       const converted = numAmount * exchangeRate;
       const debitResult = await atomicBalanceUpdate(String(accounts[0].id), -numAmount, `Currency exchange: ${fromCurrency} to ${toCurrency}`);
       if (!debitResult.success) return res.status(400).json({ error: debitResult.error || 'Insufficient funds' });
-      await atomicBalanceUpdate(String(accounts[0].id), converted, `Currency exchange credit: ${toCurrency}`);
+      const creditResult = await atomicBalanceUpdate(String(accounts[0].id), converted, `Currency exchange credit: ${toCurrency}`);
+      if (!creditResult.success) {
+        await atomicBalanceUpdate(String(accounts[0].id), numAmount, `Currency exchange rollback: ${fromCurrency}`);
+        return res.status(500).json({ error: 'Currency exchange failed during credit' });
+      }
       await storage.createTransaction({
         fromAccountId: String(accounts[0].id), toAccountId: String(accounts[0].id), amount: numAmount,
         transactionType: 'currency_exchange', description: `Currency exchange: ${numAmount} ${fromCurrency} to ${converted.toFixed(2)} ${toCurrency}`, status: 'completed',
@@ -536,7 +542,7 @@ export function setupCustomerRoutes(app: Express) {
     } catch { return res.json({ success: true }); }
   }));
 
-  app.post('/api/auth/check-email', wrap(async (req: Request, res: Response) => {
+  app.post('/api/auth/check-email', authRateLimiter, wrap(async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
       if (!email) return res.status(400).json({ error: 'Email required' });
