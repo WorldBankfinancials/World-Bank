@@ -14,14 +14,15 @@ async function main() {
   app.use(notFoundHandler);
   app.use(errorHandler);
 
+  const port = Number(process.env.PORT) || 5000;
+  const httpServer = createServer(app);
+
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
-    await setupVite(app, createServer(app));
+    await setupVite(app, httpServer);
   }
 
-  const port = Number(process.env.PORT) || 5000;
-  const httpServer = createServer(app);
   httpServer.listen(port, () => {
     log(`serving on port ${port}`);
   });
