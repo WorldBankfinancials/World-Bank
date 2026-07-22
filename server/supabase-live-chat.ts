@@ -6,6 +6,7 @@
 import { Request, Response } from 'express';
 import { supabase, getAdminClient } from './supabase-public-storage';
 import { AuthenticatedRequest } from './auth-middleware';
+import { cryptoRandomInt } from './crypto-utils';
 
 // Get chat history for a user
 export async function getChatHistory(req: AuthenticatedRequest, res: Response) {
@@ -13,10 +14,12 @@ export async function getChatHistory(req: AuthenticatedRequest, res: Response) {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { data, error } = await supabase
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient
       .from('messages')
       .select('*')
-      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+      .filter('sender_id', 'eq', userId)
+      .filter('recipient_id', 'eq', userId)
       .order('created_at', { ascending: true })
       .limit(100);
 
@@ -54,7 +57,7 @@ export async function createTicketFromChat(req: AuthenticatedRequest, res: Respo
     if (!subject || !description) return res.status(400).json({ error: 'Subject and description required' });
 
     const adminClient = getAdminClient();
-    const ticketNumber = `TKT${Date.now()}${Math.floor(Math.random() * 10000)}`;
+    const ticketNumber = `TKT${Date.now()}${cryptoRandomInt(0, 9999)}`;
     const { data, error } = await adminClient.from('support_tickets').insert({
       user_id: userId,
       ticket_number: ticketNumber,

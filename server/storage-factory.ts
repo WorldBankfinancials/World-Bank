@@ -83,7 +83,8 @@ class SupabasePublicStorage implements IStorage {
     const { data, error } = await adminClient
       .from('transactions')
       .select('*')
-      .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
+      .filter('from_account_id', 'eq', accountId)
+      .filter('to_account_id', 'eq', accountId)
       .order('created_at', { ascending: false })
       .limit(limit || 100);
     if (error) throw error;
@@ -176,7 +177,8 @@ class SupabasePublicStorage implements IStorage {
     const { data, error } = await adminClient
       .from('messages')
       .select('*')
-      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+      .filter('sender_id', 'eq', userId)
+      .filter('recipient_id', 'eq', userId)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []) as unknown as Message[];

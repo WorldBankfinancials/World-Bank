@@ -1,18 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
-import { log } from './vite';
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
 
+let adminClientInstance: ReturnType<typeof createClient> | null = null;
+
 export function getAdminClient() {
-  return createClient(supabaseUrl, supabaseServiceKey, {
-    auth: { autoRefreshToken: false, persistSession: false }
-  });
+  if (!adminClientInstance) {
+    adminClientInstance = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+  }
+  return adminClientInstance;
 }
 
 function toSnakeCase(str: string): string {
