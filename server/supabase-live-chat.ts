@@ -32,6 +32,7 @@ export async function getChatHistory(req: AuthenticatedRequest, res: Response) {
 // Get active chat sessions (admin only)
 export async function getActiveSessions(req: AuthenticatedRequest, res: Response) {
   try {
+    if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
     const adminClient = getAdminClient();
     const { data, error } = await adminClient
       .from('messages')
