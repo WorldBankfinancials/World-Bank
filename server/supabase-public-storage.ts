@@ -20,7 +20,10 @@ export function getAdminClient() {
 }
 
 function toSnakeCase(str: string): string {
-  return str.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
+  return str
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+    .replace(/([a-z\d])([A-Z])/g, '$1_$2')
+    .toLowerCase();
 }
 
 function convertKeysToSnakeCase(obj: Record<string, unknown>): Record<string, unknown> {
