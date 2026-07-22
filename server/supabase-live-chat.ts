@@ -18,8 +18,7 @@ export async function getChatHistory(req: AuthenticatedRequest, res: Response) {
     const { data, error } = await adminClient
       .from('messages')
       .select('*')
-      .filter('sender_id', 'eq', userId)
-      .filter('recipient_id', 'eq', userId)
+      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
       .order('created_at', { ascending: true })
       .limit(100);
 
