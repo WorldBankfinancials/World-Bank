@@ -275,7 +275,7 @@ export default function AdminDashboard() {
   };
 
   // Render guard — block non-admins from seeing admin content
-  if (userProfile && userProfile.role !== 'admin') return null;
+  if (!userProfile || userProfile.role !== 'admin') return null;
 
   // Show loading state
   if (customersLoading || transfersLoading || ticketsLoading) {
