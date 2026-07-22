@@ -21,8 +21,11 @@ export function setupTransferRoutes(app: Express) {
       if (!recipientAccount || !recipientName || !amount) return res.status(400).json({ error: 'Missing required fields' });
       const numAmount = parseFloat(String(amount));
       if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+      if (!Number.isFinite(numAmount)) return res.status(400).json({ error: 'Invalid amount' });
       const MAX_TRANSFER = 1000000;
-      if (numAmount > MAX_TRANSFER) return res.status(400).json({ error: `Transfer amount exceeds maximum limit of $${MAX_TRANSFER}` });
+      if (numAmount > MAX_TRANSFER) return res.status(400).json({ error: `Transfer amount exceeds maximum limit of ${MAX_TRANSFER}` });
+      const allowedTransferTypes = ['transfer', 'domestic', 'international'];
+      const safeTransferType = allowedTransferTypes.includes(transferType) ? transferType : 'transfer';
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       if (!user.transferPin) return res.status(400).json({ error: 'PIN not set' });
@@ -38,7 +41,7 @@ export function setupTransferRoutes(app: Express) {
         const result = await atomicTransfer({
           fromAccountId: String(account.id), fromUserId: String(user.id),
           recipientAccountNumber: String(recipientAccount), amount: numAmount,
-          transactionType: transferType || 'transfer', description: description || `Transfer to ${recipientName}`,
+          transactionType: safeTransferType, description: description || `Transfer to ${recipientName}`,
           recipientName, currency: currency || 'USD', referenceNumber: reference,
         });
         if (!result.success) return res.status(400).json({ error: result.error || 'Transfer failed' });
