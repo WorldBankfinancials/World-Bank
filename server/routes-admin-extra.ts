@@ -14,13 +14,6 @@ function wrap(fn: AsyncHandler) {
   };
 }
 
-type AsyncRequestHandler = (req: AuthenticatedRequest, res: Response, next: (e?: unknown) => void) => Promise<unknown> | unknown;
-function wrapAsync(fn: AsyncRequestHandler) {
-  return (req: Request, res: Response, next: (e?: unknown) => void): void => {
-    Promise.resolve(fn(req as AuthenticatedRequest, res, next)).catch(next);
-  };
-}
-
 function sanitizeUser(user: Record<string, unknown> | null | undefined): Record<string, unknown> {
   if (!user) return {};
   const { password, transferPin, transfer_pin, password_hash, idNumber, identification_number, ...safe } = user;
@@ -119,7 +112,7 @@ export function setupAdminExtraRoutes(app: Express) {
           await atomicBalanceUpdate(String(accounts[0].id), parseFloat(String(initialBalance)), 'Initial deposit upon approval');
         }
       } else {
-        const newAcc = await storage.createAccount({ userId: req.params.id, accountNumber: generateAccountNumber(), accountType: 'checking', balance: String(initialBalance || '0.00'), currency: 'USD', status: 'active' } as unknown as InsertAccount);
+        await storage.createAccount({ userId: req.params.id, accountNumber: generateAccountNumber(), accountType: 'checking', balance: String(initialBalance || '0.00'), currency: 'USD', status: 'active' } as unknown as InsertAccount);
       }
       await adminClient.from('alerts').insert({ user_id: req.params.id, title: 'Account Approved', message: 'Your account has been approved.', type: 'success', priority: 'high', is_read: false });
       return res.json({ success: true, message: 'Registration approved successfully' });
@@ -200,7 +193,7 @@ export function setupAdminExtraRoutes(app: Express) {
   app.post('/api/user/change-pin', requireAuth, authRateLimiter, wrap(async (req, res) => {
     try {
       const { currentPin, newPin } = req.body;
-      if (!currentPin || !newPin || !/^\d{4}$/.test(String(newPin))) return res.status(400).json({ error: 'Current PIN and new PIN (4 digits) required' });
+      if (!currentPin || !newPin || !/^\d{4,6}$/.test(String(newPin))) return res.status(400).json({ error: 'Current PIN and new PIN (4-6 digits) required' });
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user || !user.transferPin) return res.status(401).json({ error: 'PIN not set on account' });
       const pinMatch = await bcrypt.compare(String(currentPin).trim(), String(user.transferPin).trim());

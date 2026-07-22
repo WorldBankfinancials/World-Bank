@@ -15,8 +15,7 @@ const isViteWarning = (reason: unknown) => {
          msg.includes('HTTP Error') ||
          stack.includes('@vite/client') ||
          msg.includes('WebSocket') ||
-         msg.includes('fetch') && msg.includes('abort') ||
-         msg.includes('AuthRetryableFetchError');
+         (msg.includes('fetch') && msg.includes('abort') && !msg.includes('auth'));
 };
 
 window.addEventListener('unhandledrejection', (event) => {

@@ -45,7 +45,7 @@ class SupabasePublicStorage implements IStorage {
     const adminClient = getAdminClient();
     const { data, error } = await adminClient
       .from('users')
-      .select('id, email, username, first_name, last_name, phone, role, is_active, is_verified, transfer_pin, password_hash, profession, account_number, avatar_url, created_at, updated_at')
+      .select('id, email, username, first_name, last_name, phone, role, is_active, is_verified, profession, account_number, avatar_url, created_at, updated_at')
       .eq('email', email)
       .maybeSingle();
     if (error) throw error;
@@ -56,7 +56,7 @@ class SupabasePublicStorage implements IStorage {
     const adminClient = getAdminClient();
     const { data, error } = await adminClient
       .from('users')
-      .select('id, email, username, first_name, last_name, phone, role, is_active, is_verified, transfer_pin, password_hash, profession, account_number, avatar_url, created_at, updated_at')
+      .select('id, email, username, first_name, last_name, phone, role, is_active, is_verified, profession, account_number, avatar_url, created_at, updated_at')
       .eq('username', username)
       .maybeSingle();
     if (error) throw error;
@@ -98,6 +98,7 @@ class SupabasePublicStorage implements IStorage {
   async getAccountTransactions(accountId: string, limit?: number) {
     const { getAdminClient } = await import('./supabase-public-storage');
     const adminClient = getAdminClient();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(accountId)) return [];
     const { data, error } = await adminClient
       .from('transactions')
       .select('*')
@@ -228,6 +229,7 @@ class SupabasePublicStorage implements IStorage {
   async getUserMessages(userId: string) {
     const { getAdminClient } = await import('./supabase-public-storage');
     const adminClient = getAdminClient();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) return [];
     const { data, error } = await adminClient
       .from('messages')
       .select('*')

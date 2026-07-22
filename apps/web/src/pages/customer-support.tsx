@@ -21,6 +21,12 @@ export default function CustomerSupport() {
   const queryClient = useQueryClient();
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['/api/user'],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch('/api/user');
+      if (!res.ok) throw new Error('Failed to fetch user');
+      return res.json();
+    }
   });
 
   const [subject, setSubject] = useState('');
@@ -73,13 +79,14 @@ export default function CustomerSupport() {
         setPriority('medium');
         setDescription('');
       } else {
+        const errorData = await response.json().catch(() => ({}));
         toast({
           title: 'Submission Failed',
-          description: 'Failed to submit ticket. Please try again.',
+          description: errorData.error || 'Failed to submit ticket. Please try again.',
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: 'Error',
         description: 'An error occurred while submitting your ticket.',
@@ -89,14 +96,6 @@ export default function CustomerSupport() {
       setIsSubmitting(false);
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-wb-gray flex items-center justify-center">
-        <div className="text-wb-dark">{t('loading')}</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-wb-gray">

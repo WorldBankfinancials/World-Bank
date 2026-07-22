@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'wouter';
-import { Shield, CheckCircle, Clock, AlertCircle, Upload, FileText, Mail, Phone, MapPin, DollarSign, User as UserIcon } from 'lucide-react';
+import { Shield, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import type { User } from '@packages/shared/schema';
 import BottomNavigation from '@/components/BottomNavigation';
@@ -37,7 +37,7 @@ export default function Verification() {
     queryKey: ['/api/kyc/status'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/kyc/status');
-      if (!response.ok) return { kycRecord: null, verificationItems: [], user: { isVerified: false, kycStatus: 'pending' } };
+      if (!response.ok) throw new Error('Failed to load KYC status');
       return response.json();
     }
   });
@@ -131,7 +131,7 @@ export default function Verification() {
             <div><label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label><input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-2">Nationality</label><input type="text" value={nationality} onChange={(e) => setNationality(e.target.value)} placeholder="Your nationality" className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-2">Address</label><input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Your address" className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
-            <button onClick={handleSubmit} disabled={!fullName} className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Submit for Verification</button>
+            <button onClick={handleSubmit} disabled={!fullName || !documentNumber} className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Submit for Verification</button>
           </div>
         </div>
       </main>

@@ -52,7 +52,8 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
           localStorage.removeItem(STORAGE_KEY);
         }
       }
-    } catch (e) {
+    } catch {
+      localStorage.removeItem(STORAGE_KEY);
     }
     
     const defaultMsg: Message = {
@@ -73,7 +74,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
     saveTimeoutRef.current = setTimeout(() => {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-      } catch (e) {
+      } catch {
       }
     }, 500);
 
@@ -115,7 +116,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
           });
 
         subscriptionRef.current = channel;
-      } catch (error) {
+      } catch {
         setIsConnected(false);
       }
     };
@@ -150,7 +151,7 @@ export default function LiveChat({ isOpen = true, onClose }: LiveChatProps) {
       const updated = [...prev, userMessage];
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch (e) {
+      } catch {
       }
       return updated;
     });

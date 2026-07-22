@@ -7,6 +7,10 @@ const DEFAULT_AVATAR_BASE64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAA
 // Module-level cache so multiple Avatar instances don't re-fetch
 let avatarCache: string | null = null;
 
+export function clearAvatarCache() {
+  avatarCache = null;
+}
+
 export function Avatar({ size = 48 }: { size?: number }) {
   const [profileImageData, setProfileImageData] = useState<string>(avatarCache ?? "");
 
@@ -32,7 +36,7 @@ export function Avatar({ size = 48 }: { size?: number }) {
       })
       .then(data => {
         if (controller.signal.aborted) return;
-        if (data && data.avatarUrl && data.avatarUrl.startsWith('data:image/')) {
+        if (data && data.avatarUrl && (data.avatarUrl.startsWith('data:image/') || data.avatarUrl.startsWith('https://'))) {
           avatarCache = data.avatarUrl;
           setProfileImageData(data.avatarUrl);
         } else {

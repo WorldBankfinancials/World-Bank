@@ -24,7 +24,8 @@ export async function apiRequest<T = Response>(
   });
 
   await throwIfResNotOk(res);
-  return res.json();
+  const text = await res.text();
+  return (text ? JSON.parse(text) : {}) as T;
 }
 
 export const authenticatedFetch = async (url: string, options: RequestInit = {}) => {

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { authenticatedFetch, queryClient } from '@/lib/queryClient';
+import { clearAvatarCache } from '@/components/Avatar';
 
 interface UserProfile {
   id: string;
@@ -247,6 +248,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('user');
       localStorage.removeItem('userProfile');
       localStorage.removeItem('refresh_token');
+      localStorage.removeItem('bank_chat_messages_v2');
+      clearAvatarCache();
       sessionStorage.removeItem('auth_token');
       sessionStorage.removeItem('auth_user');
       sessionStorage.removeItem('auth_session');

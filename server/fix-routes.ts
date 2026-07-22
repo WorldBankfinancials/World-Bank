@@ -1,18 +1,32 @@
-import type { User, InsertUser, InsertTransaction, InsertAccount } from '@shared/schema';
-import { generateAccountNumber, generateTransferPin, generateTransactionId, generateReferenceNumber, cryptoRandomInt } from './crypto-utils';
-import { validateId, validateAmount } from './validators';
-import { Express, Request, Response, NextFunction } from 'express';
-import { Server, createServer } from 'http';
-import { storage } from './storage-factory';
+/**
+ * server/fix-routes.ts
+ * Route aggregation — exports registerRoutes and registerLiveChatRoutes
+ * so server/index.ts can wire all routes.
+ */
+import { Express } from 'express';
+import { setupCustomerRoutes } from './routes-customer';
 import { setupTransferRoutes } from './routes-transfer';
-import { log } from './vite';
-import { config, logConfiguration } from './config';
-import { createClient } from '@supabase/supabase-js';
-import { requireAuth, requireAdmin, AuthenticatedRequest, getAdminClient } from './auth-middleware';
-import { authRateLimiter, registrationRateLimiter, transactionRateLimiter, generalRateLimiter } from './rate-limiter';
-import { validateRequest, registrationSchema, approvalSchema, balanceUpdateSchema, pinChangeSchema } from './validation-schemas';
-import { BankingTransaction, atomicBalanceUpdate, atomicTransfer } from './transaction-wrapper';
-import { errorHandler, notFoundHandler, asyncHandler, createApiError } from './error-handler';
-import { runStartupChecks } from './startup-checks';
-import * as bcrypt from 'bcryptjs';
-import crypto from 'crypto';
+import { setupAdminExtraRoutes } from './routes-admin-extra';
+import { setupAdminExtra2Routes } from './routes-admin-extra2';
+import { getChatHistory, getActiveSessions, createTicketFromChat } from './supabase-live-chat';
+import { AuthenticatedRequest } from './auth-middleware';
+import { Response } from 'express';
+
+export function registerRoutes(app: Express) {
+  setupCustomerRoutes(app);
+  setupTransferRoutes(app);
+  setupAdminExtraRoutes(app);
+  setupAdminExtra2Routes(app);
+}
+
+export function registerLiveChatRoutes(app: Express) {
+  app.get('/api/chat/history', async (req: AuthenticatedRequest, res: Response) => {
+    return getChatHistory(req, res);
+  });
+  app.get('/api/chat/active-sessions', async (req: AuthenticatedRequest, res: Response) => {
+    return getActiveSessions(req, res);
+  });
+  app.post('/api/chat/create-ticket', async (req: AuthenticatedRequest, res: Response) => {
+    return createTicketFromChat(req, res);
+  });
+}

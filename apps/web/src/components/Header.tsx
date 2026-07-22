@@ -1,7 +1,6 @@
 import { Settings, User, LogOut, Shield, Check, Download, Building2, RotateCcw, TrendingUp, HelpCircle, CreditCard, ArrowUpRight, Menu } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from "wouter";
-import type { User as UserType } from "@packages/shared/schema";
 import NavigationMenu from "./NavigationMenu";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,7 +9,7 @@ import { Avatar } from './Avatar';
 import { LanguageSelector } from './LanguageSelector';
 
 interface HeaderProps {
-  user?: UserType;
+  user?: unknown;
 }
 
 export default function Header({}: HeaderProps) {
@@ -166,12 +165,14 @@ export default function Header({}: HeaderProps) {
                         <div className="font-semibold text-gray-900">{userProfile?.fullName || 'Banking Customer'}</div>
                         <div className="text-sm text-gray-600">{userProfile?.profession || 'Account Holder'}</div>
                         <div className="text-sm text-gray-600">{userProfile?.email || ''}</div>
+                        {userProfile?.isVerified && (
                         <div className="flex items-center space-x-2 mt-1">
                           <Badge variant="default" className="text-xs bg-green-100 text-green-800 flex items-center space-x-1">
                             <Check className="w-3 h-3" />
                             <span>Verified Account</span>
                           </Badge>
                         </div>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -64,6 +64,12 @@ export default function CustomerManagement() {
   // Fetch customers
   const { data: customersData = [], isLoading, error } = useQuery<Customer[]>({
     queryKey: ["/api/admin/customers"],
+    queryFn: async () => {
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const res = await authenticatedFetch('/api/admin/customers');
+      if (!res.ok) throw new Error('Failed to fetch customers');
+      return res.json();
+    },
     enabled: user?.role === "admin"
   });
 
@@ -135,9 +141,10 @@ export default function CustomerManagement() {
 
   const handleSaveCustomer = () => {
     if (!editingCustomer) return;
+    const { id, createdAt, updatedAt, isOnline, ...updates } = editingCustomer;
     updateCustomerMutation.mutate({
-      customerId: editingCustomer.id,
-      updates: editingCustomer
+      customerId: id,
+      updates
     });
   };
 

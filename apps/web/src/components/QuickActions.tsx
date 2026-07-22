@@ -21,8 +21,8 @@ const quickActions: QuickAction[] = [
   { id: "transfer", labelKey: "send_money", icon: ArrowLeftRight, href: "/transfer-funds", color: "bg-blue-500" },
   { id: "cards", labelKey: "my_cards", icon: CreditCard, href: "/cards", color: "bg-purple-500" },
   { id: "statements", labelKey: "statements", icon: Download, href: "/statements-reports", color: "bg-green-500" },
-  { id: "savings", labelKey: "add_money", icon: PiggyBank, href: "/savings", color: "bg-orange-500" },
-  { id: "support", labelKey: "live_chat", icon: HelpCircle, href: "/support", color: "bg-red-500" },
+  { id: "savings", labelKey: "add_money", icon: PiggyBank, href: "/add-money", color: "bg-orange-500" },
+  { id: "support", labelKey: "live_chat", icon: HelpCircle, href: "/support-center", color: "bg-red-500" },
 ];
 
 export default function QuickActions() {
