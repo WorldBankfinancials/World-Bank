@@ -2,8 +2,8 @@ import { getAdminClient } from './auth-middleware';
 
 /**
  * ATOMIC TRANSACTION WRAPPER FOR BANKING OPERATIONS
- * Ensures all money operations are either fully completed or fully rolled back
- * CRITICAL for preventing race conditions and data corruption
+ * Ensures all money operations are either fully completed or fully rolled back.
+ * Uses compensating transactions with rollback on failure.
  */
 
 export interface TransactionStep {
@@ -37,6 +37,7 @@ export class BankingTransaction {
           const rollbackFailures = await this.rollback();
 
           if (rollbackFailures.length > 0) {
+            console.error(`[CRITICAL] Transaction failed at step "${step.name}": ${stepErrorMsg}. Rollback failures:`, rollbackFailures);
             return {
               success: false,
               error: `Transaction failed at step "${step.name}": ${stepErrorMsg}. CRITICAL: Rollback had ${rollbackFailures.length} failures - manual intervention required: ${rollbackFailures.join('; ')}`
@@ -59,6 +60,7 @@ export class BankingTransaction {
       const rollbackFailures = await this.rollback();
 
       if (rollbackFailures.length > 0) {
+        console.error(`[CRITICAL] Transaction failed: ${errorMsg}. Rollback failures:`, rollbackFailures);
         return {
           success: false,
           error: `Transaction failed: ${errorMsg}. CRITICAL: Rollback had ${rollbackFailures.length} failures: ${rollbackFailures.join('; ')}`
@@ -94,7 +96,7 @@ export class BankingTransaction {
 export async function atomicBalanceUpdate(
   accountId: string,
   amountChange: number,
-  description: string
+  _description: string
 ): Promise<{ success: boolean; newBalance?: string; error?: string; previousBalance?: string }> {
   try {
     const { data, error } = await getAdminClient().rpc('atomic_balance_update', {
@@ -124,48 +126,18 @@ export async function atomicBalanceUpdate(
   }
 }
 
-async function fallbackAtomicUpdate(
-  accountId: string,
-  amountChange: number,
-  description: string
-): Promise<{ success: boolean; newBalance?: string; error?: string }> {
+async function verifyAccountOwnership(accountId: string, userId?: string): Promise<boolean> {
+  if (!userId) return true;
   try {
-    const { data: account, error: fetchError } = await getAdminClient()
+    const { data, error } = await getAdminClient()
       .from('accounts')
-      .select('balance')
+      .select('user_id')
       .eq('id', accountId)
-      .single();
-
-    if (fetchError || !account) {
-      return { success: false, error: 'Account not found' };
-    }
-
-    const currentBalance = parseFloat(String((account as Record<string, unknown>).balance || '0'));
-    const newBalance = currentBalance + amountChange;
-
-    if (newBalance < 0) {
-      return { success: false, error: 'Insufficient funds' };
-    }
-
-    const { data: updated, error: updateError } = await getAdminClient()
-      .from('accounts')
-      .update({ balance: newBalance.toFixed(2), updated_at: new Date().toISOString() })
-      .eq('id', accountId)
-      .eq('balance', (account as Record<string, unknown>).balance)
-      .select('balance')
-      .single();
-
-    if (updateError) {
-      return { success: false, error: 'Balance was modified by another transaction. Please try again.' };
-    }
-
-    if (!updated) {
-      return { success: false, error: 'Balance was modified by another transaction. Please try again.' };
-    }
-
-    return { success: true, newBalance: newBalance.toFixed(2) };
-  } catch (error: unknown) {
-    return { success: false, error: 'Transaction failed' };
+      .maybeSingle();
+    if (error || !data) return false;
+    return String((data as Record<string, unknown>).user_id) === String(userId);
+  } catch {
+    return false;
   }
 }
 
@@ -185,6 +157,13 @@ export async function atomicTransfer(params: {
   swiftCode?: string;
 }): Promise<{ success: boolean; transaction?: Record<string, unknown>; error?: string; isExternal?: boolean }> {
 
+  if (params.fromUserId) {
+    const isOwner = await verifyAccountOwnership(params.fromAccountId, params.fromUserId);
+    if (!isOwner) {
+      return { success: false, error: 'Account ownership verification failed' };
+    }
+  }
+
   const tx = new BankingTransaction();
   const txState: { createdTransaction: Record<string, unknown> | null } = { createdTransaction: null };
 
@@ -199,7 +178,12 @@ export async function atomicTransfer(params: {
       .eq('status', 'active')
       .maybeSingle();
 
-    if (lookupError || !recipientAccount) {
+    if (lookupError) {
+      console.error('[atomicTransfer] Recipient lookup error:', lookupError.message);
+      return { success: false, error: 'Unable to verify recipient account. Please try again.' };
+    }
+
+    if (!recipientAccount) {
       isExternal = true;
       toAccountId = undefined;
     } else {
@@ -245,16 +229,20 @@ export async function atomicTransfer(params: {
       };
 
       if (toAccountId && !isExternal) {
-        const { data: recipientAccount } = await getAdminClient()
-          .from('accounts').select('user_id').eq('id', toAccountId).single();
+        const { data: recipientAccount, error: recipientError } = await getAdminClient()
+          .from('accounts').select('user_id').eq('id', toAccountId).maybeSingle();
+        if (recipientError) {
+          console.error('[atomicTransfer] Recipient user lookup error:', recipientError.message);
+        }
         if (recipientAccount) {
           insertData.to_user_id = (recipientAccount as Record<string, unknown>).user_id;
         }
       }
 
       const { data, error } = await getAdminClient()
-        .from('transactions').insert(insertData).select().single();
+        .from('transactions').insert(insertData).select().maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error('Failed to create transaction record');
       txState.createdTransaction = data;
       return data;
     },
@@ -283,6 +271,6 @@ export async function atomicTransfer(params: {
   if (result.success) {
     return { success: true, transaction: txState.createdTransaction ?? undefined, isExternal };
   } else {
-    return { success: false, error: 'Transfer failed', isExternal };
+    return { success: false, error: result.error || 'Transfer failed', isExternal };
   }
 }

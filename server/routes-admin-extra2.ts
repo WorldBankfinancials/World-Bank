@@ -1,7 +1,7 @@
 import { Express, RequestHandler } from 'express';
 import { requireAdmin, requireAuth, AuthenticatedRequest, getAdminClient } from './auth-middleware';
 import { storage } from './storage-factory';
-import { atomicBalanceUpdate } from './transaction-wrapper';
+import { atomicBalanceUpdate, BankingTransaction } from './transaction-wrapper';
 
 function wrap(handler: (req: AuthenticatedRequest, res: any) => Promise<any>): RequestHandler {
   return (req, res, next) => Promise.resolve(handler(req as AuthenticatedRequest, res as any)).catch(next);
@@ -51,21 +51,43 @@ export function setupAdminExtra2Routes(app: Express) {
   app.post('/api/admin/transfers/:id/approve', requireAdmin, wrap(async (req: AuthenticatedRequest, res: any) => {
     try {
       const { data: txn, error } = await getAdminClient().from('transactions')
-        .select('*').eq('id', req.params.id).single();
-      if (error || !txn) return res.status(404).json({ error: 'Transfer not found' });
-      if (txn.status !== 'pending') return res.status(400).json({ error: 'Transfer is not pending' });
+        .select('*').eq('id', req.params.id).eq('status', 'pending').maybeSingle();
+      if (error || !txn) return res.status(404).json({ error: 'Transfer not found or already processed' });
       const admin = await storage.getUserByEmail(req.user?.email || '');
       const numAmount = parseFloat(String(txn.amount));
+      const tx = new BankingTransaction();
       if (txn.from_account_id) {
-        const debitResult = await atomicBalanceUpdate(String(txn.from_account_id), -numAmount, `Approved transfer debit`);
-        if (!debitResult.success) return res.status(400).json({ error: debitResult.error || 'Insufficient funds for transfer' });
+        tx.addStep({
+          name: 'Debit sender for approved transfer',
+          execute: async () => {
+            const result = await atomicBalanceUpdate(String(txn.from_account_id), -numAmount, `Approved transfer debit`);
+            if (!result.success) throw new Error(result.error || 'Insufficient funds');
+            return result;
+          },
+          rollback: async () => { await atomicBalanceUpdate(String(txn.from_account_id), numAmount, 'Rollback: Approved transfer debit'); }
+        });
       }
       if (txn.to_account_id) {
-        await atomicBalanceUpdate(String(txn.to_account_id), numAmount, `Approved transfer credit`);
+        tx.addStep({
+          name: 'Credit recipient for approved transfer',
+          execute: async () => {
+            const result = await atomicBalanceUpdate(String(txn.to_account_id), numAmount, `Approved transfer credit`);
+            if (!result.success) throw new Error(result.error || 'Failed to credit recipient');
+            return result;
+          },
+          rollback: async () => { await atomicBalanceUpdate(String(txn.to_account_id), -numAmount, 'Rollback: Approved transfer credit'); }
+        });
       }
-      await getAdminClient().from('transactions').update({
-        status: 'completed', approved_by: admin?.id, approved_at: new Date().toISOString(), completed_at: new Date().toISOString()
-      }).eq('id', req.params.id);
+      tx.addStep({
+        name: 'Mark transfer as completed',
+        execute: async () => {
+          return await getAdminClient().from('transactions').update({
+            status: 'completed', approved_by: admin?.id, approved_at: new Date().toISOString(), completed_at: new Date().toISOString()
+          }).eq('id', req.params.id).eq('status', 'pending');
+        }
+      });
+      const result = await tx.execute();
+      if (!result.success) return res.status(400).json({ error: result.error || 'Failed to approve transfer' });
       return res.json({ success: true, message: 'Transfer approved' });
     } catch { return res.status(500).json({ error: 'Failed to approve transfer' }); }
   }));
@@ -96,18 +118,51 @@ export function setupAdminExtra2Routes(app: Express) {
 
   app.post('/api/admin/transactions', requireAdmin, wrap(async (req: AuthenticatedRequest, res: any) => {
     try {
-      const { fromAccountId, toAccountId, amount, transactionType, description, status } = req.body;
+      const { fromAccountId, toAccountId, amount, transactionType, description } = req.body;
+      const numAmount = parseFloat(String(amount));
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+      if (!Number.isFinite(numAmount)) return res.status(400).json({ error: 'Invalid amount' });
       const admin = await storage.getUserByEmail(req.user?.email || '');
-      const txn = await storage.createTransaction({
-        fromAccountId: fromAccountId || null,
-        toAccountId: toAccountId || null,
-        amount: parseFloat(String(amount)),
-        transactionType: transactionType || 'admin_adjustment',
-        description: description || 'Admin transaction',
-        status: status || 'completed',
-        approvedBy: admin?.id,
-      } as any);
-      return res.json(txn);
+      const tx = new BankingTransaction();
+      if (fromAccountId) {
+        tx.addStep({
+          name: 'Debit source account',
+          execute: async () => {
+            const result = await atomicBalanceUpdate(String(fromAccountId), -numAmount, `Admin debit: ${description || ''}`);
+            if (!result.success) throw new Error(result.error || 'Insufficient funds');
+            return result;
+          },
+          rollback: async () => { await atomicBalanceUpdate(String(fromAccountId), numAmount, 'Rollback: Admin debit'); }
+        });
+      }
+      if (toAccountId) {
+        tx.addStep({
+          name: 'Credit target account',
+          execute: async () => {
+            const result = await atomicBalanceUpdate(String(toAccountId), numAmount, `Admin credit: ${description || ''}`);
+            if (!result.success) throw new Error(result.error || 'Failed to credit');
+            return result;
+          },
+          rollback: async () => { await atomicBalanceUpdate(String(toAccountId), -numAmount, 'Rollback: Admin credit'); }
+        });
+      }
+      tx.addStep({
+        name: 'Create admin transaction record',
+        execute: async () => {
+          return await storage.createTransaction({
+            fromAccountId: fromAccountId || null,
+            toAccountId: toAccountId || null,
+            amount: numAmount,
+            transactionType: transactionType || 'admin_adjustment',
+            description: description || 'Admin transaction',
+            status: 'completed',
+            approvedBy: admin?.id,
+          } as any);
+        }
+      });
+      const result = await tx.execute();
+      if (!result.success) return res.status(400).json({ error: result.error || 'Failed to create transaction' });
+      return res.json(result.data);
     } catch { return res.status(500).json({ error: 'Failed to create transaction' }); }
   }));
 
@@ -197,6 +252,13 @@ export function setupAdminExtra2Routes(app: Express) {
     try {
       const { userId, role } = req.body;
       if (!userId || !role) return res.status(400).json({ error: 'userId and role required' });
+      const validRoles = ['admin', 'customer'];
+      if (!validRoles.includes(role)) return res.status(400).json({ error: 'Invalid role. Must be admin or customer.' });
+      const targetUser = await storage.getUserById(userId);
+      if (!targetUser) return res.status(404).json({ error: 'User not found' });
+      if (targetUser.role === 'admin' && role !== 'admin' && req.user?.email === targetUser.email) {
+        return res.status(400).json({ error: 'Cannot demote yourself' });
+      }
       const updated = await storage.updateUser(userId, { role } as any);
       return res.json({ success: true, user: updated });
     } catch { return res.status(500).json({ error: 'Failed to set user role' }); }
@@ -206,6 +268,8 @@ export function setupAdminExtra2Routes(app: Express) {
     try {
       const user = await storage.getUserByEmail(req.params.email);
       if (!user) return res.status(404).json({ error: 'User not found' });
+      if (user.role === 'admin') return res.status(400).json({ error: 'Cannot deactivate admin accounts' });
+      if (req.user?.email === user.email) return res.status(400).json({ error: 'Cannot deactivate your own account' });
       await getAdminClient().from('users').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', user.id);
       await getAdminClient().from('accounts').update({ status: 'closed' }).eq('user_id', user.id);
       return res.json({ success: true, message: 'User deactivated' });

@@ -26,7 +26,8 @@ async function verifyToken(token: string): Promise<{ userId: string; email: stri
     const { data, error } = await getAdminClient().auth.getUser(token);
     if (error || !data?.user) return null;
     return { userId: data.user.id, email: data.user.email || '' };
-  } catch {
+  } catch (err) {
+    console.error('[auth] Token verification error (may be infra):', err instanceof Error ? err.message : 'unknown');
     return null;
   }
 }
@@ -63,10 +64,15 @@ export async function requireAuth(
       return;
     }
 
-    req.user = { id: String(user.id), email: user.email, role: user.role || 'customer' };
+    if (!user.role || (user.role !== 'admin' && user.role !== 'customer')) {
+      res.status(403).json({ error: 'Account role not recognized. Contact support.' });
+      return;
+    }
+
+    req.user = { id: String(user.id), email: user.email, role: user.role };
     next();
   } catch (err) {
-    console.error('[auth] requireAuth error:', err);
+    console.error('[auth] requireAuth error:', err instanceof Error ? err.message : 'unknown');
     res.status(401).json({ error: 'Authentication failed' });
   }
 }
@@ -76,31 +82,11 @@ export async function requireAdmin(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
-  try {
-    const header = req.headers.authorization;
-    if (!header?.startsWith('Bearer ')) {
-      res.status(401).json({ error: 'Authentication required' });
+  await requireAuth(req, res, async () => {
+    if (req.user?.role !== 'admin') {
+      res.status(403).json({ error: 'Admin access required' });
       return;
     }
-
-    const token = header.slice(7).trim();
-    const verified = await verifyToken(token);
-    if (!verified || !verified.email) {
-      res.status(401).json({ error: 'Invalid or expired token' });
-      return;
-    }
-
-    const { email } = verified;
-    const user = await storage.getUserByEmail(email);
-
-    if (!user) { res.status(403).json({ error: 'Account not found' }); return; }
-    if (!user.isActive) { res.status(403).json({ error: 'Account pending approval' }); return; }
-    if (user.role !== 'admin') { res.status(403).json({ error: 'Admin access required' }); return; }
-
-    req.user = { id: String(user.id), email: user.email, role: user.role || 'customer' };
     next();
-  } catch (err) {
-    console.error('[auth] requireAdmin error:', err);
-    res.status(401).json({ error: 'Authentication failed' });
-  }
+  });
 }

@@ -2,7 +2,7 @@ import { Express, Request, Response, RequestHandler } from 'express';
 import { storage } from './storage-factory';
 import { requireAuth, AuthenticatedRequest, getAdminClient } from './auth-middleware';
 import { transactionRateLimiter } from './rate-limiter';
-import { atomicTransfer, atomicBalanceUpdate } from './transaction-wrapper';
+import { atomicTransfer } from './transaction-wrapper';
 import { generateReferenceNumber } from './crypto-utils';
 import * as bcrypt from 'bcryptjs';
 

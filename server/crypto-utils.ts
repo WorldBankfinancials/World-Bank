@@ -1,21 +1,14 @@
 import { randomBytes } from 'crypto';
 
 export function generateAccountNumber(): string {
-  const bytes = randomBytes(5);
-  // Use 5 bytes (40 bits) to eliminate modulo bias for 8-digit numbers
-  const randomNum = (bytes.readUInt32BE(0) * 256 + bytes[4]) % 90000000;
-  return String(10000000 + randomNum);
+  return String(cryptoRandomInt(10000000, 100000000));
 }
 
 export function generateTransferPin(): string {
-  const bytes = randomBytes(3);
-  // Use 3 bytes (24 bits) to eliminate modulo bias for 4-digit PINs
-  const randomNum = (bytes.readUInt16BE(0) * 256 + bytes[2]) % 9000;
-  return String(1000 + randomNum);
+  return String(cryptoRandomInt(1000, 10000));
 }
 
 export function generateTransactionId(prefix: string = 'TXN'): string {
-  // Cryptographically secure transaction ID
   const timestamp = Date.now();
   const randomStr = randomBytes(8).toString('hex').toUpperCase();
   return `${prefix}-${timestamp}-${randomStr}`;
@@ -24,15 +17,13 @@ export function generateTransactionId(prefix: string = 'TXN'): string {
 export function cryptoRandomInt(min: number, max: number): number {
   const range = max - min;
   if (range <= 0) throw new Error('Invalid range');
-  const bytesNeeded = Math.ceil(range.toString(2).length / 8);
-  const maxVal = 256 ** bytesNeeded;
+  if (range > 2 ** 32) throw new Error('Range too large');
+  const maxVal = 2 ** 32;
   const threshold = maxVal - (maxVal % range);
   let val: number;
   do {
-    val = 0;
-    for (let i = 0; i < bytesNeeded; i++) {
-      val = val * 256 + randomBytes(1)[0];
-    }
+    const buf = randomBytes(4);
+    val = buf.readUInt32BE(0);
   } while (val >= threshold);
   return min + (val % range);
 }
@@ -41,4 +32,13 @@ export function generateReferenceNumber(prefix: string = 'WB'): string {
   const timestamp = Date.now();
   const random = randomBytes(6).toString('hex').toUpperCase();
   return `${prefix}-${timestamp}-${random}`;
+}
+
+export function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
 }

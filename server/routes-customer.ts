@@ -71,7 +71,10 @@ export function setupCustomerRoutes(app: Express) {
         expiryDate, cvv, status: 'active', dailyLimit: dailyLimit || 5000,
         monthlyLimit: monthlyLimit || 50000, isContactless: true, pinSet: false,
       } as any);
-      return res.json(card);
+      const safeCard = sanitizeUser(card as Record<string, unknown>);
+      (safeCard as Record<string, unknown>).cardNumber = `**** **** **** ${cardNumber.slice(-4)}`;
+      delete (safeCard as Record<string, unknown>).cvv;
+      return res.json(safeCard);
     } catch { return res.status(500).json({ error: 'Failed to create card' }); }
   }));
 
@@ -146,8 +149,11 @@ export function setupCustomerRoutes(app: Express) {
       const { amount, source } = req.body;
       const numAmount = parseFloat(String(amount));
       if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+      if (!Number.isFinite(numAmount)) return res.status(400).json({ error: 'Invalid amount' });
       const MAX_DEPOSIT = 50000;
       if (numAmount > MAX_DEPOSIT) return res.status(400).json({ error: `Deposit exceeds maximum limit of ${MAX_DEPOSIT}` });
+      const validSources = ['card', 'bank_transfer', 'wire', 'external'];
+      const safeSource = validSources.includes(source) ? source : 'external';
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const accounts = await storage.getUserAccounts(user.id);
@@ -156,7 +162,7 @@ export function setupCustomerRoutes(app: Express) {
       tx.addStep({
         name: 'Credit account',
         execute: async () => {
-          const result = await atomicBalanceUpdate(String(accounts[0].id), numAmount, `Add funds from ${source || 'external'}`);
+          const result = await atomicBalanceUpdate(String(accounts[0].id), numAmount, `Add funds from ${safeSource}`);
           if (!result.success) throw new Error(result.error || 'Failed to add funds');
           return result;
         },
@@ -169,7 +175,7 @@ export function setupCustomerRoutes(app: Express) {
         execute: async () => {
           return await storage.createTransaction({
             fromAccountId: null, toAccountId: String(accounts[0].id), amount: numAmount,
-            transactionType: 'deposit', description: `Add funds from ${source || 'external source'}`, status: 'completed',
+            transactionType: 'deposit', description: `Add funds from ${safeSource}`, status: 'completed',
           } as any);
         }
       });
@@ -273,29 +279,59 @@ export function setupCustomerRoutes(app: Express) {
 
   app.post('/api/investments/buy', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { symbol, quantity, price } = req.body;
+      const { symbol, quantity } = req.body;
+      const numQty = parseFloat(String(quantity));
+      if (isNaN(numQty) || numQty <= 0) return res.status(400).json({ error: 'Invalid quantity' });
+      if (!symbol || typeof symbol !== 'string') return res.status(400).json({ error: 'Symbol required' });
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.status(404).json({ error: 'No account found' });
-      const totalCost = parseFloat(String(quantity)) * parseFloat(String(price));
-      const balanceResult = await atomicBalanceUpdate(String(accounts[0].id), -totalCost, `Investment buy: ${symbol}`);
-      if (!balanceResult.success) return res.status(400).json({ error: balanceResult.error });
-      const investment = await storage.createInvestment({
-        userId: user.id, symbol, quantity: parseFloat(String(quantity)),
-        buyPrice: parseFloat(String(price)), status: 'active',
-      } as any);
-      await storage.createTransaction({
-        fromAccountId: String(accounts[0].id), toAccountId: null, amount: totalCost,
-        transactionType: 'investment_buy', description: `Investment buy: ${quantity} ${symbol}`, status: 'completed',
-      } as any);
-      return res.json(investment);
+      const { data: marketData } = await getAdminClient().from('market_rates')
+        .select('price').eq('symbol', symbol.toUpperCase()).maybeSingle();
+      if (!marketData) return res.status(400).json({ error: 'Market price unavailable for this symbol' });
+      const serverPrice = parseFloat(String((marketData as Record<string, unknown>).price));
+      if (isNaN(serverPrice) || serverPrice <= 0) return res.status(400).json({ error: 'Invalid market price' });
+      const totalCost = numQty * serverPrice;
+      const tx = new BankingTransaction();
+      tx.addStep({
+        name: 'Debit account for investment',
+        execute: async () => {
+          const result = await atomicBalanceUpdate(String(accounts[0].id), -totalCost, `Investment buy: ${symbol}`);
+          if (!result.success) throw new Error(result.error || 'Insufficient funds');
+          return result;
+        },
+        rollback: async () => { await atomicBalanceUpdate(String(accounts[0].id), totalCost, 'Rollback: Investment buy'); }
+      });
+      tx.addStep({
+        name: 'Create investment record',
+        execute: async () => {
+          return await storage.createInvestment({
+            userId: user.id, symbol: symbol.toUpperCase(), quantity: numQty,
+            buyPrice: serverPrice, status: 'active',
+          } as any);
+        }
+      });
+      tx.addStep({
+        name: 'Create transaction record',
+        execute: async () => {
+          return await storage.createTransaction({
+            fromAccountId: String(accounts[0].id), toAccountId: null, amount: totalCost,
+            transactionType: 'investment_buy', description: `Investment buy: ${numQty} ${symbol.toUpperCase()} @ ${serverPrice}`, status: 'completed',
+          } as any);
+        }
+      });
+      const result = await tx.execute();
+      if (!result.success) return res.status(400).json({ error: result.error || 'Failed to buy investment' });
+      return res.json(result.data);
     } catch { return res.status(500).json({ error: 'Failed to buy investment' }); }
   }));
 
   app.post('/api/investments/sell', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { investmentId, quantity, price } = req.body;
+      const { investmentId, quantity } = req.body;
+      const sellQuantity = parseFloat(String(quantity));
+      if (isNaN(sellQuantity) || sellQuantity <= 0) return res.status(400).json({ error: 'Invalid quantity' });
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const accounts = await storage.getUserAccounts(user.id);
@@ -305,22 +341,45 @@ export function setupCustomerRoutes(app: Express) {
       if (!investment) return res.status(404).json({ error: 'Investment not found' });
       if (investment.status !== 'active' && investment.status !== 'pending') return res.status(400).json({ error: 'Investment not active' });
       const ownedQuantity = parseFloat(String(investment.quantity || investment.shares || 0));
-      const sellQuantity = parseFloat(String(quantity));
-      if (isNaN(sellQuantity) || sellQuantity <= 0) return res.status(400).json({ error: 'Invalid quantity' });
       if (sellQuantity > ownedQuantity) return res.status(400).json({ error: 'Cannot sell more shares than owned' });
-      const totalValue = sellQuantity * parseFloat(String(price));
-      const creditResult = await atomicBalanceUpdate(String(accounts[0].id), totalValue, `Investment sell`);
-      if (!creditResult.success) return res.status(500).json({ error: 'Failed to credit account after investment sale' });
-      if (sellQuantity >= ownedQuantity) {
-        await storage.updateInvestment(investmentId, { status: 'sold', quantity: 0 } as any);
-      } else {
-        await storage.updateInvestment(investmentId, { quantity: ownedQuantity - sellQuantity } as any);
-      }
-      await storage.createTransaction({
-        fromAccountId: null, toAccountId: String(accounts[0].id), amount: totalValue,
-        transactionType: 'investment_sell', description: `Investment sell: ${quantity} shares of ${investment.symbol || 'investment'}`, status: 'completed',
-      } as any);
-      return res.json({ success: true, proceeds: totalValue });
+      const { data: marketData } = await getAdminClient().from('market_rates')
+        .select('price').eq('symbol', String(investment.symbol || '').toUpperCase()).maybeSingle();
+      if (!marketData) return res.status(400).json({ error: 'Market price unavailable' });
+      const serverPrice = parseFloat(String((marketData as Record<string, unknown>).price));
+      if (isNaN(serverPrice) || serverPrice <= 0) return res.status(400).json({ error: 'Invalid market price' });
+      const totalValue = sellQuantity * serverPrice;
+      const tx = new BankingTransaction();
+      tx.addStep({
+        name: 'Credit account for investment sale',
+        execute: async () => {
+          const result = await atomicBalanceUpdate(String(accounts[0].id), totalValue, `Investment sell: ${investment.symbol}`);
+          if (!result.success) throw new Error(result.error || 'Failed to credit account');
+          return result;
+        },
+        rollback: async () => { await atomicBalanceUpdate(String(accounts[0].id), -totalValue, 'Rollback: Investment sell'); }
+      });
+      tx.addStep({
+        name: 'Update investment record',
+        execute: async () => {
+          if (sellQuantity >= ownedQuantity) {
+            return await storage.updateInvestment(investmentId, { status: 'sold', quantity: 0 } as any);
+          } else {
+            return await storage.updateInvestment(investmentId, { quantity: ownedQuantity - sellQuantity } as any);
+          }
+        }
+      });
+      tx.addStep({
+        name: 'Create transaction record',
+        execute: async () => {
+          return await storage.createTransaction({
+            fromAccountId: null, toAccountId: String(accounts[0].id), amount: totalValue,
+            transactionType: 'investment_sell', description: `Investment sell: ${sellQuantity} shares of ${investment.symbol || 'investment'} @ ${serverPrice}`, status: 'completed',
+          } as any);
+        }
+      });
+      const result = await tx.execute();
+      if (!result.success) return res.status(400).json({ error: result.error || 'Failed to sell investment' });
+      return res.json({ success: true, proceeds: totalValue, pricePerShare: serverPrice });
     } catch { return res.status(500).json({ error: 'Failed to sell investment' }); }
   }));
 
@@ -436,11 +495,15 @@ export function setupCustomerRoutes(app: Express) {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
-      const { message, conversationId } = req.body;
-      const convId = conversationId || `conv-${user.id}`;
+      const { message } = req.body;
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        return res.status(400).json({ error: 'Message content required' });
+      }
+      if (message.length > 5000) return res.status(400).json({ error: 'Message too long' });
+      const convId = `conv-${user.id}`;
       const msg = await storage.createMessage({
         senderId: user.id, senderName: `${user.firstName} ${user.lastName}`,
-        senderRole: 'customer', conversationId: convId, message, isRead: false,
+        senderRole: 'customer', conversationId: convId, message: message.trim(), isRead: false,
       } as any);
       return res.json(msg);
     } catch { return res.status(500).json({ error: 'Failed to send message' }); }

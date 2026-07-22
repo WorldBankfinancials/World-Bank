@@ -11,15 +11,29 @@ import BottomNavigation from '@/components/BottomNavigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { authenticatedFetch } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
+interface CurrencyRate {
+  code: string;
+  name: string;
+  flag: string;
+}
+
+const FALLBACK_CURRENCIES: CurrencyRate[] = [
+  { code: 'USD', name: 'US Dollar', flag: '🇺🇸' },
+  { code: 'EUR', name: 'Euro', flag: '🇪🇺' },
+  { code: 'GBP', name: 'British Pound', flag: '🇬🇧' },
+  { code: 'JPY', name: 'Japanese Yen', flag: '🇯🇵' },
+  { code: 'CHF', name: 'Swiss Franc', flag: '🇨🇭' },
+  { code: 'CAD', name: 'Canadian Dollar', flag: '🇨🇦' },
+  { code: 'AUD', name: 'Australian Dollar', flag: '🇦🇺' },
+  { code: 'CNY', name: 'Chinese Yuan', flag: '🇨🇳' },
+  { code: 'INR', name: 'Indian Rupee', flag: '🇮🇳' },
+  { code: 'KRW', name: 'Korean Won', flag: '🇰🇷' }
+];
+
 export default function Exchange() {
-  interface CurrencyRate {
-    code: string;
-    name: string;
-    flag: string;
-  }
   const { userProfile } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -27,43 +41,61 @@ export default function Exchange() {
   const [toCurrency, setToCurrency] = useState('EUR');
   const [amount, setAmount] = useState('1000');
   const [convertedAmount, setConvertedAmount] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch live exchange rates from Supabase/API
   const { data: exchangeRates, isLoading: ratesLoading, isError: ratesError, refetch } = useQuery<Record<string, number>>({
     queryKey: ['/api/exchange-rates'],
-    staleTime: 30000, // 30 seconds cache
-    refetchInterval: 60000 // Auto refresh every minute
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api/exchange-rates');
+      if (!res.ok) throw new Error('Failed to fetch exchange rates');
+      return res.json();
+    },
+    staleTime: 30000,
+    refetchInterval: 60000,
   });
 
-  // Fetch 24h change data from API (falls back to empty when unavailable)
-  const { data: rateChanges, isError: changesError } = useQuery<Record<string, number>>({
+  const { data: rateChanges } = useQuery<Record<string, number>>({
     queryKey: ['/api/exchange-rates/changes'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api/exchange-rates/changes');
+      if (!res.ok) return {};
+      return res.json();
+    },
     staleTime: 30000,
-    refetchInterval: 60000
+    refetchInterval: 60000,
+  });
+
+  const { data: currencyList } = useQuery<CurrencyRate[]>({
+    queryKey: ['/api/currencies'],
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api/currencies');
+      if (!res.ok) return [];
+      return res.json();
+    },
+    staleTime: 86400000,
   });
 
   useEffect(() => {
     if (ratesError) {
       toast({ title: 'Error loading exchange rates', variant: 'destructive' });
     }
-    if (changesError) {
-      toast({ title: 'Error loading rate changes', variant: 'destructive' });
-    }
-  }, [ratesError, changesError]);
+  }, [ratesError, toast]);
 
-  // Calculate converted amount
   useEffect(() => {
+    if (exchangeRates) {
+      setLastUpdated(new Date());
+    }
     if (exchangeRates && amount) {
       const parsedAmount = parseFloat(amount) || 0;
       if (isNaN(parsedAmount) || parsedAmount <= 0) {
         setConvertedAmount(0);
         return;
       }
-      const fromRate = exchangeRates[fromCurrency] || 1;
-      const toRate = exchangeRates[toCurrency] || 1;
+      const fromRate = exchangeRates[fromCurrency] ?? 1;
+      const toRate = exchangeRates[toCurrency] ?? 1;
       const converted = (parsedAmount / fromRate) * toRate;
-      setConvertedAmount(isNaN(converted) ? 0 : converted);
+      setConvertedAmount(isNaN(converted) || !isFinite(converted) ? 0 : converted);
     }
   }, [exchangeRates, fromCurrency, toCurrency, amount]);
 
@@ -80,55 +112,32 @@ export default function Exchange() {
   const handleExchange = async () => {
     const parsedAmount = parseFloat(amount) || 0;
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      toast({
-        title: 'Invalid Amount',
-        description: 'Please enter a valid exchange amount.',
-        variant: 'destructive'
-      });
+      toast({ title: 'Invalid Amount', description: 'Please enter a valid exchange amount.', variant: 'destructive' });
       return;
     }
-    
     if (convertedAmount <= 0) {
-      toast({
-        title: 'Invalid Exchange',
-        description: 'Unable to calculate exchange rate. Please try again.',
-        variant: 'destructive'
-      });
+      toast({ title: 'Invalid Exchange', description: 'Unable to calculate exchange rate. Please try again.', variant: 'destructive' });
       return;
     }
-
     try {
-      const response = await apiRequest('POST', '/api/currency-exchange', {
-        userId: userProfile?.id,
-        fromCurrency,
-        toCurrency,
-        amount: parsedAmount,
-        exchangeRate: convertedAmount / parsedAmount
+      const response = await authenticatedFetch('/api/currency-exchange', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fromCurrency, toCurrency, amount: parsedAmount }),
       });
-
       if (response.ok) {
-        toast({
-          title: 'Exchange Successful',
-          description: `Successfully exchanged ${amount} ${fromCurrency} to ${convertedAmount.toFixed(2)} ${toCurrency}`
-        });
+        toast({ title: 'Exchange Successful', description: `Successfully exchanged ${amount} ${fromCurrency} to ${convertedAmount.toFixed(2)} ${toCurrency}` });
         queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast({ title: 'Exchange Failed', description: data.error || 'Unable to complete currency exchange.', variant: 'destructive' });
       }
-    } catch (error) {
-      toast({
-        title: 'Exchange Failed',
-        description: 'Unable to complete currency exchange. Please try again.',
-        variant: 'destructive'
-      });
+    } catch {
+      toast({ title: 'Exchange Failed', description: 'Network error. Please try again.', variant: 'destructive' });
     }
   };
 
-  // Fetch currencies from API
-  const { data: currencyList = [] } = useQuery<CurrencyRate[]>({
-    queryKey: ['/api/currencies'],
-    staleTime: 86400000
-  });
-  
-  // Show loading state
   if (ratesLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -140,29 +149,22 @@ export default function Exchange() {
     );
   }
 
-  const currencies = currencyList.length > 0 ? currencyList : [
-    { code: 'USD', name: 'US Dollar', flag: '🇺🇸' },
-    { code: 'EUR', name: 'Euro', flag: '🇪🇺' },
-    { code: 'GBP', name: 'British Pound', flag: '🇬🇧' },
-    { code: 'JPY', name: 'Japanese Yen', flag: '🇯🇵' },
-    { code: 'CHF', name: 'Swiss Franc', flag: '🇨🇭' },
-    { code: 'CAD', name: 'Canadian Dollar', flag: '🇨🇦' },
-    { code: 'AUD', name: 'Australian Dollar', flag: '🇦🇺' },
-    { code: 'CNY', name: 'Chinese Yuan', flag: '🇨🇳' },
-    { code: 'INR', name: 'Indian Rupee', flag: '🇮🇳' },
-    { code: 'KRW', name: 'Korean Won', flag: '🇰🇷' }
-  ];
+  const currencies = currencyList && currencyList.length > 0 ? currencyList : FALLBACK_CURRENCIES;
 
-  const topRates: [string, number][] = exchangeRates ? Object.entries(exchangeRates)
-    .filter(([code]) => ['EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD'].includes(code))
-    .slice(0, 6) as [string, number][] : [];
+  const topRates: [string, number][] = exchangeRates
+    ? Object.entries(exchangeRates)
+        .filter(([code]) => ['EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD'].includes(code))
+        .slice(0, 6) as [string, number][]
+    : [];
+
+  const exchangeRateDisplay = parseFloat(amount) > 0
+    ? (convertedAmount / parseFloat(amount)).toFixed(4)
+    : '0.0000';
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
       <div className="pt-16 pb-20">
-        {/* Page Header */}
         <div className="px-4 py-6">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -175,7 +177,6 @@ export default function Exchange() {
             </Button>
           </div>
 
-          {/* Exchange Calculator */}
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -184,11 +185,10 @@ export default function Exchange() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* From Currency */}
               <div className="space-y-2">
                 <Label>{t('from') || 'From'}</Label>
                 <div className="flex space-x-2">
-                  <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="flex-1" placeholder="0.00" />
+                  <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="flex-1" placeholder="0.00" min="0" />
                   <Select value={fromCurrency} onValueChange={setFromCurrency}>
                     <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -200,14 +200,12 @@ export default function Exchange() {
                 </div>
               </div>
 
-              {/* Swap Button */}
               <div className="flex justify-center">
                 <Button onClick={handleSwapCurrencies} variant="outline" size="sm" className="rounded-full p-2">
                   <ArrowUpDown className="w-4 h-4" />
                 </Button>
               </div>
 
-              {/* To Currency */}
               <div className="space-y-2">
                 <Label>{t('to') || 'To'}</Label>
                 <div className="flex space-x-2">
@@ -223,26 +221,24 @@ export default function Exchange() {
                 </div>
               </div>
 
-              {/* Exchange Rate */}
               {exchangeRates && (
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <div className="text-sm text-blue-600 mb-1">
-                    1 {fromCurrency} = {(convertedAmount / parseFloat(amount || '1')).toFixed(4)} {toCurrency}
+                    1 {fromCurrency} = {exchangeRateDisplay} {toCurrency}
                   </div>
                   <div className="flex items-center text-xs text-gray-500">
                     <Clock className="w-3 h-3 mr-1" />
-                    {t('last_updated') || 'Last updated'}: {new Date().toLocaleTimeString()}
+                    {t('last_updated') || 'Last updated'}: {lastUpdated ? lastUpdated.toLocaleTimeString() : '—'}
                   </div>
                 </div>
               )}
 
-              <Button onClick={handleExchange} className="w-full bg-blue-600 text-white" disabled={!amount || parseFloat(amount) <= 0}>
+              <Button onClick={handleExchange} className="w-full bg-blue-600 text-white" disabled={!amount || parseFloat(amount) <= 0 || convertedAmount <= 0}>
                 {t('exchange_now') || 'Exchange Now'}
               </Button>
             </CardContent>
           </Card>
 
-          {/* Live Exchange Rates */}
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -255,12 +251,14 @@ export default function Exchange() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
+                {topRates.length === 0 && (
+                  <p className="text-gray-500 text-center py-4">No rates available</p>
+                )}
                 {topRates.map(([currency, rate]) => {
                   const currencyInfo = currencies.find(c => c.code === currency);
                   const change = rateChanges?.[currency];
                   const hasChange = typeof change === 'number' && isFinite(change);
                   const isPositive = hasChange ? change >= 0 : true;
-                  
                   return (
                     <div key={currency} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
@@ -274,11 +272,7 @@ export default function Exchange() {
                         <div className="font-medium">{rate.toFixed(4)}</div>
                         {hasChange ? (
                           <div className={`text-sm flex items-center ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                            {isPositive ? (
-                              <TrendingUp className="w-3 h-3 mr-1" />
-                            ) : (
-                              <TrendingDown className="w-3 h-3 mr-1" />
-                            )}
+                            {isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
                             {isPositive ? '+' : ''}{change.toFixed(2)}%
                           </div>
                         ) : null}
@@ -291,7 +285,6 @@ export default function Exchange() {
           </Card>
         </div>
       </div>
-
       <BottomNavigation />
     </div>
   );

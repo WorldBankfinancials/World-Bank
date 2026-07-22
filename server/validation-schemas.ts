@@ -1,6 +1,6 @@
 /**
  * server/validation-schemas.ts
- * Zod schemas. accountId/userId are UUID strings, not integers.
+ * Zod schemas for input validation.
  */
 import { z } from 'zod';
 import type { Request, Response, NextFunction } from 'express';
@@ -25,21 +25,23 @@ export function validateBody<T>(schema: z.ZodSchema<T>) {
   };
 }
 
+const PIN_REGEX = /^\d{4,6}$/;
+
 export const transferSchema = z.object({
-  amount:           z.number().positive().max(1_000_000),
+  amount:           z.number().positive().max(1_000_000).multipleOf(0.01),
   recipientName:    z.string().min(1).max(200).optional(),
   recipientAccount: z.string().min(1).max(100),
   recipientBank:    z.string().max(200).optional(),
   recipientCountry: z.string().max(100).optional(),
   swiftCode:        z.string().regex(/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/, 'Invalid SWIFT code').optional(),
-  transferPin:      z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits'),
+  transferPin:      z.string().regex(PIN_REGEX, 'PIN must be 4-6 digits'),
   description:      z.string().max(500).optional(),
   transferPurpose:  z.string().max(200).optional(),
-  idempotencyKey:   z.string().optional(),
+  idempotencyKey:   z.string().min(8).max(128).optional(),
 });
 
 export const balanceUpdateSchema = z.object({
-  accountId:   z.string().min(1, 'accountId required'),
+  accountId:   z.string().uuid(),
   amount:      z.number().positive('Amount must be positive'),
   description: z.string().min(1).max(500),
   type:        z.enum(['credit', 'debit']),
@@ -47,26 +49,32 @@ export const balanceUpdateSchema = z.object({
 
 export const registrationSchema = z.object({
   email:       z.string().email(),
-  password:    z.string().min(8).regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Requires uppercase, lowercase, number'),
+  password:    z.string().min(8).max(128).regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Requires uppercase, lowercase, number'),
   firstName:   z.string().min(1).max(100),
   lastName:   z.string().min(1).max(100),
   phone:       z.string().min(7).max(20).optional(),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth:  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').refine((val) => {
+    const date = new Date(val);
+    if (isNaN(date.getTime())) return false;
+    if (date > new Date()) return false;
+    const age = (Date.now() - date.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+    return age >= 18;
+  }, 'Must be 18 or older').optional(),
   address:     z.string().max(300).optional(),
   city:        z.string().max(100).optional(),
-  state:       z.string().max(100).optional(),
-  country:     z.string().max(100).optional(),
-  postalCode:  z.string().max(20).optional(),
-  profession:  z.string().max(200).optional(),
+  state:        z.string().max(100).optional(),
+  country:        z.string().max(100).optional(),
+  postalCode:   z.string().max(20).optional(),
+  profession:   z.string().max(200).optional(),
   annualIncome: z.string().max(50).optional(),
-  idType:      z.string().max(50).optional(),
-  idNumber:    z.string().max(100).optional(),
-  transferPin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits'),
+  idType:       z.string().max(50).optional(),
+  idNumber:     z.string().max(100).optional(),
+  transferPin:  z.string().regex(PIN_REGEX, 'PIN must be 4-6 digits'),
 });
 
 export const approvalSchema = z.object({
   registrationId: z.string().min(1),
-  initialBalance: z.number().min(0).optional().default(0),
+  initialBalance: z.number().min(0).max(10_000_000).default(0),
   notes:          z.string().max(500).optional(),
 });
 
@@ -76,13 +84,16 @@ export const rejectionSchema = z.object({
 });
 
 export const pinChangeSchema = z.object({
-  currentPin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits'),
-  newPin:     z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits'),
+  currentPin: z.string().regex(PIN_REGEX, 'PIN must be 4-6 digits'),
+  newPin:     z.string().regex(PIN_REGEX, 'PIN must be 4-6 digits'),
+}).refine(data => data.currentPin !== data.newPin, {
+  message: 'New PIN must be different from current PIN',
+  path: ['newPin'],
 });
 
 export const supportTicketSchema = z.object({
   subject:     z.string().min(3).max(200),
   description: z.string().min(10).max(5000),
-  priority:    z.enum(['low', 'medium', 'high']).default('medium'),
+  priority:    z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
   category:    z.string().min(1).max(100).optional(),
 });
