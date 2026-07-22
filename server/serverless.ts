@@ -27,12 +27,21 @@ export async function processScheduledTransactions(_req?: unknown, _res?: unknow
 
     for (const txn of pending as Array<Record<string, unknown>>) {
       try {
+        const txnId = String(txn.id);
         const numAmount = parseFloat(String(txn.amount));
         const fromAccountId = txn.from_account_id ? String(txn.from_account_id) : null;
         const toAccountId = txn.to_account_id ? String(txn.to_account_id) : null;
 
+        const { data: claimed, error: claimError } = await adminClient
+          .from('transactions')
+          .update({ status: 'processing' })
+          .eq('id', txnId)
+          .eq('status', 'pending')
+          .select('id')
+          .single();
+        if (claimError || !claimed) { failed++; continue; }
+
         if (fromAccountId && toAccountId) {
-          // Internal scheduled transfer: update the existing row, don't create a new one
           const result = await atomicTransfer({
             fromAccountId,
             toAccountId,
@@ -44,22 +53,35 @@ export async function processScheduledTransactions(_req?: unknown, _res?: unknow
             referenceNumber: txn.reference_number ? String(txn.reference_number) : undefined,
           });
           if (result.success) {
-            // Mark the original pending row as completed
-            await adminClient.from('transactions').update({ status: 'completed', completed_at: now }).eq('id', String(txn.id));
+            await adminClient.from('transactions').update({ status: 'completed', completed_at: now }).eq('id', txnId);
             processed++;
-          } else failed++;
+          } else {
+            await adminClient.from('transactions').update({ status: 'pending' }).eq('id', txnId);
+            failed++;
+          }
         } else if (fromAccountId) {
           const result = await atomicBalanceUpdate(fromAccountId, -numAmount, String(txn.description || 'Scheduled debit'));
           if (result.success) {
-            await adminClient.from('transactions').update({ status: 'completed', completed_at: now }).eq('id', String(txn.id));
+            await adminClient.from('transactions').update({ status: 'completed', completed_at: now }).eq('id', txnId);
             processed++;
-          } else failed++;
+          } else {
+            await adminClient.from('transactions').update({ status: 'pending' }).eq('id', txnId);
+            failed++;
+          }
         } else if (toAccountId) {
+          if (!txn.from_user_id && !txn.from_account_id) {
+            await adminClient.from('transactions').update({ status: 'pending' }).eq('id', txnId);
+            failed++;
+            continue;
+          }
           const result = await atomicBalanceUpdate(toAccountId, numAmount, String(txn.description || 'Scheduled credit'));
           if (result.success) {
-            await adminClient.from('transactions').update({ status: 'completed', completed_at: now }).eq('id', String(txn.id));
+            await adminClient.from('transactions').update({ status: 'completed', completed_at: now }).eq('id', txnId);
             processed++;
-          } else failed++;
+          } else {
+            await adminClient.from('transactions').update({ status: 'pending' }).eq('id', txnId);
+            failed++;
+          }
         } else {
           failed++;
         }
@@ -136,7 +158,6 @@ export async function sendTransactionAlert(_req?: unknown, _res?: unknown): Prom
         });
       }
 
-      await adminClient.from('transactions').update({ alert_sent: new Date().toISOString() }).eq('id', txnId);
     }
 
     if (alerts.length > 0) {
@@ -144,6 +165,8 @@ export async function sendTransactionAlert(_req?: unknown, _res?: unknown): Prom
       if (alertError) {
         console.error('Failed to insert alerts:', alertError.message);
       } else {
+        const txnIds = (recentTxns as Array<Record<string, unknown>>).map(t => String(t.id));
+        await adminClient.from('transactions').update({ alert_sent: new Date().toISOString() }).in('id', txnIds);
         console.info(`Sent ${alerts.length} transaction alerts`);
       }
     }
@@ -203,7 +226,8 @@ export async function generateMonthlyStatements(_req?: unknown, _res?: unknown):
         .filter((t: Record<string, unknown>) => t.from_account_id && accountIds.includes(t.from_account_id))
         .reduce((sum: number, t: Record<string, unknown>) => sum + parseFloat(String(t.amount || '0')), 0);
 
-      const statementNumber = `STMT${now.getFullYear()}${(now.getMonth())}${Math.floor(Math.random() * 10000)}`;
+      const { cryptoRandomInt } = await import('./crypto-utils');
+      const statementNumber = `STMT${now.getFullYear()}${(now.getMonth())}${cryptoRandomInt(0, 9999)}`;
       const { error: stmtError } = await adminClient.from('statements').insert({
         user_id: userId,
         statement_number: statementNumber,
