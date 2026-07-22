@@ -8,7 +8,11 @@ export function validateId(value: unknown): string {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new Error('Invalid ID: must be a non-empty string');
   }
-  return value.trim();
+  const id = value.trim();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    throw new Error('Invalid ID: must be a valid UUID');
+  }
+  return id;
 }
 
 export function validateAmount(value: unknown): number {
@@ -21,7 +25,7 @@ export function validateAmount(value: unknown): number {
 export function validateEmail(value: unknown): string {
   if (typeof value !== 'string') throw new Error('Invalid email');
   const email = value.trim().toLowerCase();
-  if (!email.includes('@') || email.length < 5) throw new Error('Invalid email format');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Invalid email format');
   return email;
 }
 
