@@ -1,7 +1,7 @@
 import { Express, Request, Response, RequestHandler } from 'express';
 import { requireAuth, requireAdmin, AuthenticatedRequest, getAdminClient } from './auth-middleware';
 import { storage } from './storage-factory';
-import { atomicBalanceUpdate } from './transaction-wrapper';
+import { atomicBalanceUpdate, BankingTransaction } from './transaction-wrapper';
 import { cryptoRandomInt } from './crypto-utils';
 import { authRateLimiter } from './rate-limiter';
 
@@ -146,17 +146,36 @@ export function setupCustomerRoutes(app: Express) {
       const { amount, source } = req.body;
       const numAmount = parseFloat(String(amount));
       if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+      const MAX_DEPOSIT = 50000;
+      if (numAmount > MAX_DEPOSIT) return res.status(400).json({ error: `Deposit exceeds maximum limit of ${MAX_DEPOSIT}` });
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.status(404).json({ error: 'No account found' });
-      const result = await atomicBalanceUpdate(String(accounts[0].id), numAmount, `Add funds from ${source || 'external'}`);
-      if (!result.success) return res.status(400).json({ error: result.error });
-      await storage.createTransaction({
-        fromAccountId: null, toAccountId: String(accounts[0].id), amount: numAmount,
-        transactionType: 'deposit', description: `Add funds from ${source || 'external source'}`, status: 'completed',
-      } as any);
-      return res.json({ success: true, newBalance: result.newBalance });
+      const tx = new BankingTransaction();
+      tx.addStep({
+        name: 'Credit account',
+        execute: async () => {
+          const result = await atomicBalanceUpdate(String(accounts[0].id), numAmount, `Add funds from ${source || 'external'}`);
+          if (!result.success) throw new Error(result.error || 'Failed to add funds');
+          return result;
+        },
+        rollback: async () => {
+          await atomicBalanceUpdate(String(accounts[0].id), -numAmount, `Rollback: Add funds`);
+        }
+      });
+      tx.addStep({
+        name: 'Create deposit transaction record',
+        execute: async () => {
+          return await storage.createTransaction({
+            fromAccountId: null, toAccountId: String(accounts[0].id), amount: numAmount,
+            transactionType: 'deposit', description: `Add funds from ${source || 'external source'}`, status: 'completed',
+          } as any);
+        }
+      });
+      const result = await tx.execute();
+      if (!result.success) return res.status(400).json({ error: result.error || 'Failed to add funds' });
+      return res.json({ success: true, newBalance: (result.data as Record<string, unknown>)?.newBalance });
     } catch { return res.status(500).json({ error: 'Failed to add funds' }); }
   }));
 
@@ -174,13 +193,18 @@ export function setupCustomerRoutes(app: Express) {
   app.post('/api/payment-requests', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { requestedUserEmail, amount, description } = req.body;
+      const numAmount = parseFloat(String(amount));
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+      if (numAmount > 100000) return res.status(400).json({ error: 'Payment request exceeds maximum limit' });
+      if (!requestedUserEmail) return res.status(400).json({ error: 'Recipient email required' });
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const requester = await storage.getUserByEmail(requestedUserEmail);
       if (!requester) return res.status(404).json({ error: 'Recipient not found' });
+      if (requester.id === user.id) return res.status(400).json({ error: 'Cannot request payment from yourself' });
       const { data, error } = await getAdminClient().from('payment_requests').insert({
         requester_id: user.id, requested_user_id: requester.id,
-        amount: parseFloat(String(amount)), description: description || 'Payment request', status: 'pending',
+        amount: numAmount, description: description || 'Payment request', status: 'pending',
       }).select().single();
       if (error) throw error;
       return res.json(data);
@@ -494,6 +518,8 @@ export function setupCustomerRoutes(app: Express) {
       const { fromCurrency, toCurrency, amount } = req.body;
       const numAmount = parseFloat(String(amount));
       if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+      if (!fromCurrency || !toCurrency) return res.status(400).json({ error: 'Source and target currency required' });
+      if (fromCurrency === toCurrency) return res.status(400).json({ error: 'Cannot exchange to the same currency' });
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const accounts = await storage.getUserAccounts(user.id);
@@ -502,18 +528,41 @@ export function setupCustomerRoutes(app: Express) {
         .select('rate, currency_code').eq('currency_code', toCurrency).maybeSingle();
       const exchangeRate = rateData ? parseFloat(String((rateData as any).rate || '1')) : 1;
       const converted = numAmount * exchangeRate;
-      const debitResult = await atomicBalanceUpdate(String(accounts[0].id), -numAmount, `Currency exchange: ${fromCurrency} to ${toCurrency}`);
-      if (!debitResult.success) return res.status(400).json({ error: debitResult.error || 'Insufficient funds' });
-      const creditResult = await atomicBalanceUpdate(String(accounts[0].id), converted, `Currency exchange credit: ${toCurrency}`);
-      if (!creditResult.success) {
-        await atomicBalanceUpdate(String(accounts[0].id), numAmount, `Currency exchange rollback: ${fromCurrency}`);
-        return res.status(500).json({ error: 'Currency exchange failed during credit' });
-      }
-      await storage.createTransaction({
-        fromAccountId: String(accounts[0].id), toAccountId: String(accounts[0].id), amount: numAmount,
-        transactionType: 'currency_exchange', description: `Currency exchange: ${numAmount} ${fromCurrency} to ${converted.toFixed(2)} ${toCurrency}`, status: 'completed',
-      } as any);
-      return res.json({ success: true, fromAmount: numAmount, toAmount: converted, rate: exchangeRate, fromCurrency, toCurrency, newBalance: debitResult.newBalance });
+      const tx = new BankingTransaction();
+      tx.addStep({
+        name: 'Debit source currency',
+        execute: async () => {
+          const result = await atomicBalanceUpdate(String(accounts[0].id), -numAmount, `Currency exchange: ${fromCurrency} to ${toCurrency}`);
+          if (!result.success) throw new Error(result.error || 'Insufficient funds');
+          return result;
+        },
+        rollback: async () => {
+          await atomicBalanceUpdate(String(accounts[0].id), numAmount, `Rollback: Currency exchange debit`);
+        }
+      });
+      tx.addStep({
+        name: 'Credit converted currency',
+        execute: async () => {
+          const result = await atomicBalanceUpdate(String(accounts[0].id), converted, `Currency exchange credit: ${toCurrency}`);
+          if (!result.success) throw new Error(result.error || 'Failed to credit converted amount');
+          return result;
+        },
+        rollback: async () => {
+          await atomicBalanceUpdate(String(accounts[0].id), -converted, `Rollback: Currency exchange credit`);
+        }
+      });
+      tx.addStep({
+        name: 'Create exchange transaction record',
+        execute: async () => {
+          return await storage.createTransaction({
+            fromAccountId: String(accounts[0].id), toAccountId: String(accounts[0].id), amount: numAmount,
+            transactionType: 'currency_exchange', description: `Currency exchange: ${numAmount} ${fromCurrency} to ${converted.toFixed(2)} ${toCurrency}`, status: 'completed',
+          } as any);
+        }
+      });
+      const result = await tx.execute();
+      if (!result.success) return res.status(400).json({ error: result.error || 'Currency exchange failed' });
+      return res.json({ success: true, fromAmount: numAmount, toAmount: converted, rate: exchangeRate, fromCurrency, toCurrency, newBalance: (result.data as Record<string, unknown>)?.newBalance });
     } catch { return res.status(500).json({ error: 'Failed to exchange currency' }); }
   }));
 

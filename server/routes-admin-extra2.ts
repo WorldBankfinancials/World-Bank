@@ -120,14 +120,66 @@ export function setupAdminExtra2Routes(app: Express) {
       if (txn.status !== 'completed' && txn.status !== 'success') {
         return res.status(400).json({ error: 'Only completed transactions can be reversed' });
       }
+      const admin = await storage.getUserByEmail(req.user?.email || '');
+      const numAmount = parseFloat(String(txn.amount));
+      const { BankingTransaction } = await import('./transaction-wrapper');
+      const tx = new BankingTransaction();
       if (txn.from_account_id) {
-        await atomicBalanceUpdate(String(txn.from_account_id), parseFloat(String(txn.amount)), `Reversal credit`);
+        tx.addStep({
+          name: 'Reversal credit to sender',
+          execute: async () => {
+            const result = await atomicBalanceUpdate(String(txn.from_account_id), numAmount, `Reversal credit for ${txn.id}`);
+            if (!result.success) throw new Error(result.error || 'Failed to credit reversal');
+            return result;
+          },
+          rollback: async () => {
+            await atomicBalanceUpdate(String(txn.from_account_id), -numAmount, `Rollback: Reversal credit`);
+          }
+        });
       }
       if (txn.to_account_id) {
-        await atomicBalanceUpdate(String(txn.to_account_id), -parseFloat(String(txn.amount)), `Reversal debit`);
+        tx.addStep({
+          name: 'Reversal debit from recipient',
+          execute: async () => {
+            const result = await atomicBalanceUpdate(String(txn.to_account_id), -numAmount, `Reversal debit for ${txn.id}`);
+            if (!result.success) throw new Error(result.error || 'Failed to debit reversal');
+            return result;
+          },
+          rollback: async () => {
+            await atomicBalanceUpdate(String(txn.to_account_id), numAmount, `Rollback: Reversal debit`);
+          }
+        });
       }
-      await getAdminClient().from('transactions').update({ status: 'reversed' }).eq('id', req.params.id);
-      return res.json({ success: true, message: 'Transaction reversed' });
+      tx.addStep({
+        name: 'Create reversal transaction record',
+        execute: async () => {
+          return await storage.createTransaction({
+            fromAccountId: txn.to_account_id || null,
+            toAccountId: txn.from_account_id || null,
+            amount: numAmount,
+            transactionType: 'reversal',
+            description: `Reversal of transaction ${txn.reference_number || txn.id}`,
+            status: 'completed',
+            approvedBy: admin?.id,
+          } as any);
+        }
+      });
+      tx.addStep({
+        name: 'Mark original as reversed',
+        execute: async () => {
+          await getAdminClient().from('transactions').update({ status: 'reversed' }).eq('id', req.params.id);
+        }
+      });
+      const result = await tx.execute();
+      if (!result.success) return res.status(400).json({ error: result.error || 'Reversal failed' });
+      if (admin) {
+        await storage.createAdminAction({
+          adminId: admin.id, action: 'reverse_transaction',
+          targetType: 'transaction', targetId: req.params.id,
+          details: { originalAmount: numAmount, reason: req.body.reason || 'Admin reversal' }
+        });
+      }
+      return res.json({ success: true, message: 'Transaction reversed successfully' });
     } catch { return res.status(500).json({ error: 'Failed to reverse transaction' }); }
   }));
 
