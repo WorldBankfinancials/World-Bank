@@ -238,7 +238,7 @@ export async function registerRoutes(app: Express) {
     } catch (error: unknown) { return res.status(500).json({ error: 'Failed to change PIN' }); }
   }));
 
-  api.get('/api/exchange-rates', async (req: AuthenticatedRequest, res: Response) => {
+  api.get('/api/exchange-rates', wrapAsync(requireAuth), async (req: AuthenticatedRequest, res: Response) => {
     try {
       const rates = await storage.getExchangeRates();
       const ratesObject: Record<string, number> = {};
@@ -1541,9 +1541,14 @@ export async function registerRoutes(app: Express) {
 
   api.get('/api/international-transfers/:id/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data, error } = await getAdminClient().from('transactions').select('status').eq('id', req.params.id).single();
+      const { data, error } = await getAdminClient().from('transactions').select('status, from_user_id, to_user_id').eq('id', req.params.id).single();
       if (error) throw error;
-      return res.json({ status: (data as Record<string, unknown>)?.status || 'pending' });
+      const txn = data as Record<string, unknown>;
+      const userId = String(req.user?.id || '');
+      if (txn.from_user_id !== userId && txn.to_user_id !== userId && req.user?.role !== 'admin') {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      return res.json({ status: txn?.status || 'pending' });
     } catch (error: unknown) { return res.status(500).json({ error: 'An internal error occurred' }); }
   });
 
