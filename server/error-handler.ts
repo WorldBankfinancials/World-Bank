@@ -1,87 +1,90 @@
 import { Request, Response, NextFunction } from 'express';
 
-/**
- * COMPREHENSIVE ERROR HANDLING MIDDLEWARE
- * Provides detailed, user-friendly error messages
- * CRITICAL for production banking application
- */
-
 export interface ApiError extends Error {
   statusCode?: number;
   details?: unknown;
   isOperational?: boolean;
+  code?: string;
 }
 
-/**
- * Create a standardized API error
- */
 export function createApiError(
   message: string,
   statusCode: number = 500,
-  details?: unknown
+  details?: unknown,
+  code?: string
 ): ApiError {
   const error: ApiError = new Error(message);
   error.statusCode = statusCode;
   error.details = details;
   error.isOperational = true;
+  error.code = code;
   return error;
 }
 
-/**
- * Global error handling middleware
- * MUST be registered LAST in Express middleware chain
- */
+const SAFE_STATUS_MESSAGES: Record<number, string> = {
+  400: 'Bad request',
+  401: 'Authentication required',
+  403: 'Access denied',
+  404: 'Not found',
+  409: 'Conflict',
+  429: 'Too many requests',
+  500: 'An internal error occurred',
+};
+
+const SENSITIVE_BODY_KEYS = ['password', 'transferPin', 'pin', 'cvv', 'cardNumber', 'token', 'refreshToken'];
+
+function redactBody(body: unknown): unknown {
+  if (!body || typeof body !== 'object') return '[REDACTED]';
+  const redacted = { ...(body as Record<string, unknown>) };
+  for (const key of Object.keys(redacted)) {
+    if (SENSITIVE_BODY_KEYS.some(s => key.toLowerCase().includes(s.toLowerCase()))) {
+      redacted[key] = '[REDACTED]';
+    }
+  }
+  return redacted;
+}
+
 export function errorHandler(
   err: ApiError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) {
-  // SECURITY FIX: Log error WITHOUT sensitive data (passwords, PINs, tokens)
   const isProduction = process.env.NODE_ENV === 'production';
-  
-  // Log error details safely (internal logging keeps the real message)
+  const statusCode = err.statusCode || 500;
+
   const errorLog = {
     message: err.message,
+    code: err.code,
     stack: isProduction ? undefined : err.stack,
     path: req.path,
     method: req.method,
-    body: isProduction ? '[REDACTED]' : req.body,
-    statusCode: err.statusCode,
+    body: redactBody(req.body),
+    statusCode,
     timestamp: new Date().toISOString()
   };
   console.error('Error handler:', errorLog);
 
-  // Determine status code
-  const statusCode = err.statusCode || 500;
-  
-  // SECURITY: Never send the real error message to the client
-  const message = 'An internal error occurred';
+  const clientMessage = isProduction
+    ? (SAFE_STATUS_MESSAGES[statusCode] || 'An internal error occurred')
+    : err.message;
 
   const errorResponse: Record<string, unknown> = {
     error: true,
-    message,
+    message: clientMessage,
+    code: err.code,
     timestamp: new Date().toISOString(),
     path: req.path
   };
 
-  // Include details in development
   if (!isProduction) {
     errorResponse.details = err.details;
     errorResponse.stack = err.stack;
-  } else if (err.details) {
-    // Only include safe details in production
-    errorResponse.hint = 'Contact support if this persists';
   }
 
-  // Send error response
   res.status(statusCode).json(errorResponse);
 }
 
-/**
- * Async error wrapper
- * Catches errors from async route handlers
- */
 export function asyncHandler(
   fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
 ) {
@@ -90,9 +93,6 @@ export function asyncHandler(
   };
 }
 
-/**
- * Not found handler (404)
- */
 export function notFoundHandler(req: Request, res: Response) {
   res.status(404).json({
     error: true,

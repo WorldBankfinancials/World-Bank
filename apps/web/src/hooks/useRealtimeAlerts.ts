@@ -3,7 +3,7 @@
  * Listens for live alerts and notifications using Supabase Realtime
  */
 
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { authenticatedFetch } from '@/lib/queryClient';
 
@@ -19,10 +19,6 @@ interface Alert {
 export function useRealtimeAlerts(userId?: string | number | undefined, enabled?: boolean) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const handleAlertReceived = useCallback((alert: Alert) => {
-    setAlerts((prev) => [...prev, alert]);
-  }, []);
 
   useEffect(() => {
     if (!userId || !enabled) return;
@@ -44,10 +40,13 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
             setAlerts(prev => prev.filter(a => a.id !== (payload as { old?: { id?: string } }).old?.id));
             return;
           }
-          if (event === 'INSERT') {
+          if (event === 'INSERT' || event === 'UPDATE') {
             setAlerts(prev => {
-              if (prev.some(a => a.id === (payload.new as Alert).id)) return prev;
-              return [payload.new as Alert, ...prev];
+              const newAlert = payload.new as Alert;
+              if (prev.some(a => a.id === newAlert.id)) {
+                return prev.map(a => a.id === newAlert.id ? newAlert : a);
+              }
+              return [newAlert, ...prev];
             });
           }
         }
@@ -61,15 +60,16 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
               if (res.ok) {
                 const data = await res.json();
                 if (Array.isArray(data)) {
-                  setAlerts(prev => {
-                    const existingIds = new Set(prev.map(a => a.id));
-                    const newAlerts = data.filter((alert: Alert) => !existingIds.has(alert.id));
-                    return [...prev, ...newAlerts];
-                  });
+                  setAlerts(data);
                 }
               }
             } catch (e) { console.error('Realtime alerts error:', e); }
           }, 10000);
+        } else if (status === 'SUBSCRIBED') {
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
         }
       });
 
@@ -79,9 +79,7 @@ export function useRealtimeAlerts(userId?: string | number | undefined, enabled?
     };
   }, [userId, enabled]);
 
-  const unsubscribe = useCallback(() => {
-    setAlerts([]);
-  }, []);
+  const unsubscribe = () => setAlerts([]);
 
   return { alerts, unsubscribe };
 }

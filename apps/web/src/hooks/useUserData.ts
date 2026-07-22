@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { authenticatedFetch } from '@/lib/queryClient';
 
 interface UserProfile {
   id: number;
@@ -20,7 +21,6 @@ interface UserProfile {
   annualIncome: string;
   idType: string;
   idNumber: string;
-  transferPin: string;
   role: string;
   isVerified: boolean;
   isOnline: boolean;
@@ -33,33 +33,31 @@ interface UserProfile {
 export function useUserData() {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ['userData', user?.email],
+    queryKey: ['userData', user?.id],
     queryFn: async (): Promise<UserProfile | null> => {
       if (!user?.email) return null;
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/user');
       if (!response.ok) throw new Error('Failed to fetch user profile');
       return await response.json();
     },
     enabled: !!user?.email,
     staleTime: 5 * 60 * 1000,
-    retry: 3
+    retry: 1
   });
 }
 
 export function useAccountData() {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ['accounts', user?.email],
+    queryKey: ['accounts', user?.id],
     queryFn: async () => {
       if (!user?.email) return [];
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/accounts');
       if (!response.ok) throw new Error('Failed to fetch user accounts');
       return await response.json();
     },
     enabled: !!user?.email,
     staleTime: 5 * 60 * 1000,
-    retry: 3
+    retry: 1
   });
 }

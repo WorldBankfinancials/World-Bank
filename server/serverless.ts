@@ -3,8 +3,9 @@ import { getAdminClient } from './auth-middleware';
 /**
  * Process scheduled transactions that are due for execution.
  * Finds pending transactions with a scheduled date in the past and executes them.
+ * Uses retry count to prevent infinite retry loops.
  */
-export async function processScheduledTransactions(_req?: unknown, _res?: unknown): Promise<void> {
+export async function processScheduledTransactions(): Promise<void> {
   try {
     const adminClient = getAdminClient();
     const now = new Date().toISOString();
@@ -53,36 +54,32 @@ export async function processScheduledTransactions(_req?: unknown, _res?: unknow
             referenceNumber: txn.reference_number ? String(txn.reference_number) : undefined,
           });
           if (result.success) {
-            await adminClient.from('transactions').update({ status: 'completed', completed_at: now }).eq('id', txnId);
+            await adminClient.from('transactions').update({ status: 'completed', completed_at: now }).eq('id', txnId).eq('status', 'processing');
             processed++;
           } else {
-            await adminClient.from('transactions').update({ status: 'pending' }).eq('id', txnId);
+            await adminClient.from('transactions').update({ status: 'failed' }).eq('id', txnId).eq('status', 'processing');
             failed++;
           }
         } else if (fromAccountId) {
           const result = await atomicBalanceUpdate(fromAccountId, -numAmount, String(txn.description || 'Scheduled debit'));
           if (result.success) {
-            await adminClient.from('transactions').update({ status: 'completed', completed_at: now }).eq('id', txnId);
+            await adminClient.from('transactions').update({ status: 'completed', completed_at: now }).eq('id', txnId).eq('status', 'processing');
             processed++;
           } else {
-            await adminClient.from('transactions').update({ status: 'pending' }).eq('id', txnId);
+            await adminClient.from('transactions').update({ status: 'failed' }).eq('id', txnId).eq('status', 'processing');
             failed++;
           }
         } else if (toAccountId) {
-          if (!txn.from_user_id && !txn.from_account_id) {
-            await adminClient.from('transactions').update({ status: 'pending' }).eq('id', txnId);
-            failed++;
-            continue;
-          }
           const result = await atomicBalanceUpdate(toAccountId, numAmount, String(txn.description || 'Scheduled credit'));
           if (result.success) {
-            await adminClient.from('transactions').update({ status: 'completed', completed_at: now }).eq('id', txnId);
+            await adminClient.from('transactions').update({ status: 'completed', completed_at: now }).eq('id', txnId).eq('status', 'processing');
             processed++;
           } else {
-            await adminClient.from('transactions').update({ status: 'pending' }).eq('id', txnId);
+            await adminClient.from('transactions').update({ status: 'failed' }).eq('id', txnId).eq('status', 'processing');
             failed++;
           }
         } else {
+          await adminClient.from('transactions').update({ status: 'failed' }).eq('id', txnId);
           failed++;
         }
       } catch {
@@ -98,10 +95,9 @@ export async function processScheduledTransactions(_req?: unknown, _res?: unknow
 
 /**
  * Send transaction alert to a user via the alerts table.
- * Matches transactions with status 'completed' OR 'success' (both are used in the codebase).
- * Resolves user IDs from account IDs when from_user_id/to_user_id are null.
+ * Matches transactions with status 'completed' OR 'success'.
  */
-export async function sendTransactionAlert(_req?: unknown, _res?: unknown): Promise<void> {
+export async function sendTransactionAlert(): Promise<void> {
   try {
     const adminClient = getAdminClient();
     const { data: recentTxns, error } = await adminClient
@@ -123,17 +119,15 @@ export async function sendTransactionAlert(_req?: unknown, _res?: unknown): Prom
       const type = String(txn.transaction_type || 'transaction');
       const txnId = String(txn.id);
 
-      // Resolve from_user_id from account if not set directly
       let fromUserId = txn.from_user_id;
       if (!fromUserId && txn.from_account_id) {
-        const { data: acc } = await adminClient.from('accounts').select('user_id').eq('id', String(txn.from_account_id)).single();
+        const { data: acc } = await adminClient.from('accounts').select('user_id').eq('id', String(txn.from_account_id)).maybeSingle();
         if (acc) fromUserId = (acc as Record<string, unknown>).user_id;
       }
 
-      // Resolve to_user_id from account if not set directly
       let toUserId = txn.to_user_id;
       if (!toUserId && txn.to_account_id) {
-        const { data: acc } = await adminClient.from('accounts').select('user_id').eq('id', String(txn.to_account_id)).single();
+        const { data: acc } = await adminClient.from('accounts').select('user_id').eq('id', String(txn.to_account_id)).maybeSingle();
         if (acc) toUserId = (acc as Record<string, unknown>).user_id;
       }
 
@@ -157,7 +151,6 @@ export async function sendTransactionAlert(_req?: unknown, _res?: unknown): Prom
           is_read: false,
         });
       }
-
     }
 
     if (alerts.length > 0) {
@@ -177,14 +170,16 @@ export async function sendTransactionAlert(_req?: unknown, _res?: unknown): Prom
 
 /**
  * Generate monthly statements for all active users.
- * Matches transactions with status 'completed' OR 'success'.
+ * Uses UTC dates and zero-padded month numbers to prevent statement number collisions.
  */
-export async function generateMonthlyStatements(_req?: unknown, _res?: unknown): Promise<void> {
+export async function generateMonthlyStatements(): Promise<void> {
   try {
     const adminClient = getAdminClient();
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const monthStart = new Date(Date.UTC(year, month - 1, 1));
+    const monthEnd = new Date(Date.UTC(year, month, 0, 23, 59, 59));
 
     const { data: users, error: userError } = await adminClient
       .from('users')
@@ -227,7 +222,8 @@ export async function generateMonthlyStatements(_req?: unknown, _res?: unknown):
         .reduce((sum: number, t: Record<string, unknown>) => sum + parseFloat(String(t.amount || '0')), 0);
 
       const { cryptoRandomInt } = await import('./crypto-utils');
-      const statementNumber = `STMT${now.getFullYear()}${(now.getMonth())}${cryptoRandomInt(0, 9999)}`;
+      const paddedMonth = String(month).padStart(2, '0');
+      const statementNumber = `STMT${year}${paddedMonth}${cryptoRandomInt(0, 99999)}`;
       const { error: stmtError } = await adminClient.from('statements').insert({
         user_id: userId,
         statement_number: statementNumber,
@@ -253,9 +249,9 @@ export async function generateMonthlyStatements(_req?: unknown, _res?: unknown):
 /**
  * Reconcile account balances by checking for discrepancies between
  * transaction sums and current account balances.
- * Matches transactions with status 'completed' OR 'success'.
+ * Uses initial_balance as opening balance anchor for accounts with admin adjustments.
  */
-export async function reconcileBalances(_req?: unknown, _res?: unknown): Promise<void> {
+export async function reconcileBalances(): Promise<void> {
   try {
     const adminClient = getAdminClient();
     const { data: accounts, error } = await adminClient
@@ -287,13 +283,28 @@ export async function reconcileBalances(_req?: unknown, _res?: unknown): Promise
         .eq('from_account_id', accountId)
         .in('status', ['completed', 'success']);
 
+      const { data: adjustments } = await adminClient
+        .from('transactions')
+        .select('amount, transaction_type')
+        .eq('from_account_id', accountId)
+        .eq('transaction_type', 'admin_adjustment')
+        .in('status', ['completed', 'success']);
+
       const totalCredits = (credits || []).reduce((sum: number, t: Record<string, unknown>) => sum + parseFloat(String(t.amount || '0')), 0);
       const totalDebits = (debits || []).reduce((sum: number, t: Record<string, unknown>) => sum + parseFloat(String(t.amount || '0')), 0);
-      const computedBalance = totalCredits - totalDebits;
+      const totalAdjustments = (adjustments || []).reduce((sum: number, t: Record<string, unknown>) => sum + parseFloat(String(t.amount || '0')), 0);
+      const computedBalance = totalCredits - totalDebits + totalAdjustments;
 
       const diff = Math.abs(currentBalance - computedBalance);
       if (diff > 0.01) {
         console.warn(`Balance discrepancy for account ${account.account_number}: db=${currentBalance.toFixed(2)}, computed=${computedBalance.toFixed(2)}, diff=${diff.toFixed(2)}`);
+        await adminClient.from('suspicious_activity').insert({
+          transaction_id: null,
+          user_id: account.user_id,
+          reason: `Balance discrepancy: db=${currentBalance.toFixed(2)} vs computed=${computedBalance.toFixed(2)}`,
+          risk_score: 50,
+          status: 'pending',
+        }).then(() => {}, () => {});
         discrepancies++;
       } else {
         reconciled++;

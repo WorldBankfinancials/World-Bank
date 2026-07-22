@@ -5,16 +5,16 @@
 
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-
-export function usePresence() {
-  return null;
-}
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useOnlineUsers(callback?: (users: Array<Record<string, unknown>>) => void, enabled?: boolean) {
+  const { user } = useAuth();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !user?.id) return;
 
     try {
       const channel = supabase.channel('online-users');
@@ -23,18 +23,19 @@ export function useOnlineUsers(callback?: (users: Array<Record<string, unknown>>
         .on('presence', { event: 'sync' }, () => {
           const presenceState = channel.presenceState();
           const onlineUsers = Object.values(presenceState).flat();
-          callback?.(onlineUsers as Array<Record<string, unknown>>);
+          callbackRef.current?.(onlineUsers as Array<Record<string, unknown>>);
         })
-        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-          callback?.(Object.values(channel.presenceState()).flat() as Array<Record<string, unknown>>);
+        .on('presence', { event: 'join' }, () => {
+          callbackRef.current?.(Object.values(channel.presenceState()).flat() as Array<Record<string, unknown>>);
         })
-        .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-          callback?.(Object.values(channel.presenceState()).flat() as Array<Record<string, unknown>>);
+        .on('presence', { event: 'leave' }, () => {
+          callbackRef.current?.(Object.values(channel.presenceState()).flat() as Array<Record<string, unknown>>);
         })
         .subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
             await channel.track({
-              user_id: `user_${Date.now()}`,
+              user_id: user.id,
+              email: user.email,
               online_at: new Date().toISOString()
             });
           }
@@ -48,18 +49,20 @@ export function useOnlineUsers(callback?: (users: Array<Record<string, unknown>>
     return () => {
       channelRef.current?.unsubscribe();
     };
-  }, [callback, enabled]);
+  }, [enabled, user?.id]);
 
   return null;
 }
 
 /**
  * ADMIN REALTIME SUBSCRIPTION
- * Listen for admin changes that need to broadcast to all users
+ * Listen for admin changes - admin only
  */
 export function useAdminUpdates(onUpdate?: (action: Record<string, unknown>) => void, enabled?: boolean) {
+  const { user } = useAuth();
+
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !user || user.role !== 'admin') return;
 
     const channel = supabase.channel('admin-actions');
 
@@ -72,7 +75,7 @@ export function useAdminUpdates(onUpdate?: (action: Record<string, unknown>) => 
           table: 'admin_actions'
         },
         (payload) => {
-          onUpdate?.(payload.new);
+          onUpdate?.(payload.new as Record<string, unknown>);
           window.dispatchEvent(new CustomEvent('admin-update', { detail: payload.new }));
         }
       )
@@ -81,7 +84,7 @@ export function useAdminUpdates(onUpdate?: (action: Record<string, unknown>) => 
     return () => {
       channel.unsubscribe();
     };
-  }, [onUpdate, enabled]);
+  }, [onUpdate, enabled, user?.role]);
 
   return null;
 }

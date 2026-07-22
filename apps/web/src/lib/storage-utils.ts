@@ -4,6 +4,8 @@
 
 const STORAGE_PREFIX = 'wb_';
 
+const AUTH_KEYS = ['token', 'user', 'userProfile', 'refresh_token'];
+
 export function setStorageItem(key: string, value: unknown): void {
   try {
     const prefixedKey = `${STORAGE_PREFIX}${key}`;
@@ -40,10 +42,13 @@ export function clearAllStorage(): void {
   try {
     const keys = Object.keys(localStorage);
     keys.forEach(key => {
-      if (key.startsWith(STORAGE_PREFIX)) {
+      if (key.startsWith(STORAGE_PREFIX) || AUTH_KEYS.includes(key)) {
         localStorage.removeItem(key);
       }
     });
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('auth_user');
+    sessionStorage.removeItem('auth_session');
   } catch (error) {
     console.error('Failed to clear storage:', error);
   }

@@ -56,45 +56,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize auth session on mount
   useEffect(() => {
-    // Check for existing session from localStorage (set by login)
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    const storedProfile = localStorage.getItem('userProfile');
+    let cancelled = false;
 
-    if (storedToken && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        if (parsedUser?.id && parsedUser?.email) {
-          setUser(parsedUser);
-          // CRITICAL: Load cached profile immediately - NO FETCH
-          if (storedProfile) {
-            try {
-              const parsedProfile = JSON.parse(storedProfile);
-              setUserProfile(parsedProfile);
-            } catch (e) { console.error('Auth error:', e); }
-          }
-        }
-      } catch (e) {
-        localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('userProfile'); localStorage.removeItem('refresh_token');
-      }
-    }
+    async function bootstrap() {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
 
-    setLoading(false);
-  }, []);
-
-  const fetchUserData = useCallback(async (authUser: User) => {
-    if (!authUser?.id) {
-      return;
-    }
-    try {
-      const response = await authenticatedFetch(`/api/user`);
-      
-      if (!response.ok) {
+      if (!storedToken || !storedUser) {
+        if (!cancelled) setLoading(false);
         return;
       }
 
+      let parsedUser: User;
+      try {
+        parsedUser = JSON.parse(storedUser);
+        if (!parsedUser?.id || !parsedUser?.email) throw new Error('invalid');
+      } catch {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userProfile');
+        localStorage.removeItem('refresh_token');
+        if (!cancelled) setLoading(false);
+        return;
+      }
+
+      setUser(parsedUser);
+
+      const storedProfile = localStorage.getItem('userProfile');
+      if (storedProfile) {
+        try {
+          const parsedProfile = JSON.parse(storedProfile);
+          if (!cancelled) setUserProfile(parsedProfile);
+        } catch { /* ignore */ }
+      }
+
+      try {
+        const response = await authenticatedFetch('/api/user');
+        if (response.ok) {
+          const profile = await response.json();
+          if (!cancelled && profile && typeof profile === 'object') {
+            setUserProfile(profile);
+            localStorage.setItem('userProfile', JSON.stringify(profile));
+          }
+        } else if (response.status === 401) {
+          if (!cancelled) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('userProfile');
+            localStorage.removeItem('refresh_token');
+            setUser(null);
+            setUserProfile(null);
+          }
+        }
+      } catch {
+        // Network error - keep cached profile, user stays logged in
+      }
+
+      if (!cancelled) setLoading(false);
+    }
+
+    bootstrap();
+    return () => { cancelled = true; };
+  }, []);
+
+  const fetchUserData = useCallback(async (authUser: User) => {
+    if (!authUser?.id) return;
+    try {
+      const response = await authenticatedFetch(`/api/user`);
+      if (!response.ok) return;
       const profile = await response.json();
       if (profile && typeof profile === 'object') {
         setUserProfile(profile);
@@ -106,7 +136,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
 
-      // Login endpoint - intentionally unauthenticated to create initial session
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -126,26 +155,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: data?.error || 'Login failed' };
       }
 
-      // CRITICAL: Validate token is Supabase JWT (3 parts: header.payload.signature)
       if (!data.token || data.token.split('.').length !== 3) {
         setLoading(false);
         return { error: 'Invalid authentication token format' };
       }
 
       if (data.token && data.user) {
-        // Store Supabase JWT token for API calls
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('refresh_token', data.refreshToken || '');
-        
-        const userObj: User = { 
-          id: data.user.id, 
+
+        const userObj: User = {
+          id: data.user.id,
           email: data.user.email,
-          role: data.user.role 
+          role: data.user.role
         };
         setUser(userObj);
-        
-        // CRITICAL: Cache full profile immediately to avoid fetch timeout
+
         const cacheProfile: UserProfile = {
           id: data.user.id,
           email: data.user.email,
@@ -154,14 +180,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: data.user.role || 'customer',
           balance: data.user.balance || '0',
           isVerified: data.user?.isVerified || false,
-          isActive: true,
+          isActive: data.user?.isActive !== undefined ? data.user.isActive : true,
           profession: data.user.profession || '',
           accountId: data.user.accountId || '',
-          accountNumber: data.user.accountNumber || '****1234'
+          accountNumber: data.user.accountNumber || ''
         };
         setUserProfile(cacheProfile);
         localStorage.setItem('userProfile', JSON.stringify(cacheProfile));
-        
+
         setLoading(false);
         return {};
       }
@@ -176,12 +202,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, metadata?: SignUpMetadata): Promise<{ error?: string }> => {
     try {
-      // Register endpoint - intentionally unauthenticated to create account
       const response = await fetch('/api/auth/register-complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email, 
+        body: JSON.stringify({
+          email,
           password,
           firstName: metadata?.firstName || email.split('@')[0],
           lastName: metadata?.lastName || 'User',
@@ -217,42 +242,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    const clearAll = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('userProfile');
+      localStorage.removeItem('refresh_token');
+      sessionStorage.removeItem('auth_token');
+      sessionStorage.removeItem('auth_user');
+      sessionStorage.removeItem('auth_session');
+      setUser(null);
+      setUserProfile(null);
+    };
+
     try {
-      // Notify backend to terminate session
-      try {
-        await authenticatedFetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        }).catch(() => {}); // Don't fail if endpoint unavailable
-      } catch (e) { console.error('Auth error:', e); }
-      
-      // Clear ALL stored credentials IMMEDIATELY
-      localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('userProfile'); localStorage.removeItem('refresh_token');
-      sessionStorage.removeItem('auth_token');
-      sessionStorage.removeItem('auth_user');
-      sessionStorage.removeItem('auth_session');
-      
-      // Clear state
-      setUser(null);
-      setUserProfile(null);
-      
-      // Clear query cache
-      try {
-        queryClient.clear();
-      } catch (e) { console.error('Auth error:', e); }
-      
-      // Force navigation to login with hard refresh
-      window.location.replace('/login');
-    } catch (error) {
-      // Even on error, clear everything and logout
-      localStorage.removeItem('token'); localStorage.removeItem('user'); localStorage.removeItem('userProfile'); localStorage.removeItem('refresh_token');
-      sessionStorage.removeItem('auth_token');
-      sessionStorage.removeItem('auth_user');
-      sessionStorage.removeItem('auth_session');
-      setUser(null);
-      setUserProfile(null);
-      window.location.replace('/login');
-    }
+      await authenticatedFetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      }).catch(() => {});
+    } catch { /* ignore */ }
+
+    clearAll();
+
+    try {
+      queryClient.clear();
+    } catch { /* ignore */ }
+
+    window.location.replace('/login');
   };
 
   return (

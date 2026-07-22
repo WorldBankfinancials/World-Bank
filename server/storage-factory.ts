@@ -41,12 +41,26 @@ class SupabasePublicStorage implements IStorage {
     return getRecord('users', id) as Promise<User | undefined>;
   }
   async getUserByEmail(email: string) {
-    const rows = await listRecords('users', { email }) as Array<Record<string, unknown>>;
-    return rows[0] as unknown as User | undefined;
+    const { getAdminClient } = await import('./supabase-public-storage');
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient
+      .from('users')
+      .select('id, email, username, first_name, last_name, phone, role, is_active, is_verified, transfer_pin, password_hash, profession, account_number, avatar_url, created_at, updated_at')
+      .eq('email', email)
+      .maybeSingle();
+    if (error) throw error;
+    return data as unknown as User | undefined;
   }
   async getUserByUsername(username: string) {
-    const rows = await listRecords('users', { username }) as Array<Record<string, unknown>>;
-    return rows[0] as unknown as User | undefined;
+    const { getAdminClient } = await import('./supabase-public-storage');
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient
+      .from('users')
+      .select('id, email, username, first_name, last_name, phone, role, is_active, is_verified, transfer_pin, password_hash, profession, account_number, avatar_url, created_at, updated_at')
+      .eq('username', username)
+      .maybeSingle();
+    if (error) throw error;
+    return data as unknown as User | undefined;
   }
   async getAllUsers() {
     return listRecords('users') as Promise<User[]>;
@@ -94,16 +108,53 @@ class SupabasePublicStorage implements IStorage {
     return (data || []) as unknown as Transaction[];
   }
   async getAllTransactions() {
-    return listRecords('transactions') as Promise<Transaction[]>;
+    const { getAdminClient } = await import('./supabase-public-storage');
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient
+      .from('transactions')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1000);
+    if (error) throw error;
+    return (data || []) as unknown as Transaction[];
   }
   async createTransaction(tx: InsertTransaction) {
     return insertRecord('transactions', tx as unknown as Record<string, unknown>) as Promise<Transaction>;
   }
-  async updateTransactionStatus(id: string, status: string, _adminId: string, _notes?: string) {
-    return updateRecord('transactions', id, { status }) as Promise<Transaction | undefined>;
+  async updateTransactionStatus(id: string, status: string, adminId: string, notes?: string) {
+    const { getAdminClient } = await import('./supabase-public-storage');
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient
+      .from('transactions')
+      .update({ status, admin_notes: notes || null, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .maybeSingle();
+    if (error) throw error;
+    if (data && adminId) {
+      await adminClient.from('transaction_audit_log').insert({
+        transaction_id: id,
+        user_id: data.from_user_id || null,
+        action: status === 'reversed' ? 'reversed' : 'modified',
+        old_status: null,
+        new_status: status,
+        amount: data.amount,
+        performed_by: adminId,
+        metadata: { notes: notes || null }
+      }).then(() => {}, () => {});
+    }
+    return data as unknown as Transaction | undefined;
   }
   async getPendingTransactions() {
-    return listRecords('transactions', { status: 'pending' }) as Promise<Transaction[]>;
+    const { getAdminClient } = await import('./supabase-public-storage');
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient
+      .from('transactions')
+      .select('*')
+      .in('status', ['pending', 'processing'])
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as unknown as Transaction[];
   }
 
   async createAdminAction(action: InsertAdminAction) {

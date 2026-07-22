@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Account {
   id: number;
@@ -17,18 +18,10 @@ interface Transaction {
   date?: string;
 }
 
-/**
- * Check if authenticated (token exists in localStorage)
- */
 function isAuthenticated(): boolean {
   return !!localStorage.getItem('token');
 }
 
-/**
- * Generic Supabase Realtime hook with Smart Polling Fallback
- * Primary: Supabase Realtime for instant updates
- * Fallback: Polling if realtime connection fails
- */
 export function useSupabaseRealtime<T>(
   options: {
     endpoint: string;
@@ -38,9 +31,11 @@ export function useSupabaseRealtime<T>(
     onDataChange: (data: T) => void;
     transform?: (raw: unknown) => T;
     enabled?: boolean;
+    filterColumn?: string;
+    filterValue?: string;
   }
 ) {
-  const { endpoint, channelName, table, presenceKey, onDataChange, transform, enabled = true } = options;
+  const { endpoint, channelName, table, presenceKey, onDataChange, transform, enabled = true, filterColumn, filterValue } = options;
   const unsubscribeRef = useRef<(() => void) | null>(null);
   const onDataChangeRef = useRef(onDataChange);
   onDataChangeRef.current = onDataChange;
@@ -51,7 +46,8 @@ export function useSupabaseRealtime<T>(
       const { authenticatedFetch } = await import('@/lib/queryClient');
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
-      const response = await authenticatedFetch(`${endpoint}?t=${Date.now()}`, { signal: controller.signal });
+      const sep = endpoint.includes('?') ? '&' : '?';
+      const response = await authenticatedFetch(`${endpoint}${sep}t=${Date.now()}`, { signal: controller.signal });
       clearTimeout(timeoutId);
       if (!response.ok) return;
       const data = await response.json();
@@ -70,16 +66,21 @@ export function useSupabaseRealtime<T>(
 
     const setupRealtime = async () => {
       try {
+        const filter = filterColumn && filterValue
+          ? { event: '*', schema: 'public', table, filter: `${filterColumn}=eq.${filterValue}` }
+          : { event: '*', schema: 'public', table };
+
         channel = supabase
           .channel(channelName, {
             config: { broadcast: { ack: false }, presence: { key: presenceKey } },
           })
-          .on('postgres_changes', { event: '*', schema: 'public', table }, () => fetchData())
+          .on('postgres_changes', filter, () => fetchData())
           .subscribe((status: string) => {
             if (status === 'SUBSCRIBED') {
               realtimeConnected = true;
               if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              realtimeConnected = false;
               if (!pollInterval) pollInterval = setInterval(fetchData, 8000);
             }
           });
@@ -102,18 +103,16 @@ export function useSupabaseRealtime<T>(
         unsubscribeRef.current();
       }
     };
-  }, [enabled, fetchData]);
+  }, [enabled, fetchData, filterColumn, filterValue]);
 
   return { fetchData };
 }
 
-/**
- * Supabase Realtime for accounts (backward-compatible wrapper)
- */
 export function useSupabaseRealtimeAccounts(
   onAccountsChange: (accounts: Account[]) => void,
   enabled = true
 ) {
+  const { user } = useAuth();
   return useSupabaseRealtime<Account[]>({
     endpoint: '/api/accounts',
     channelName: 'accounts_realtime',
@@ -123,16 +122,16 @@ export function useSupabaseRealtimeAccounts(
       if (Array.isArray(data)) onAccountsChange(data);
     },
     enabled,
+    filterColumn: 'user_id',
+    filterValue: user?.id,
   });
 }
 
-/**
- * Supabase Realtime for transactions (backward-compatible wrapper)
- */
 export function useSupabaseRealtimeTransactions(
   onTransactionsChange: (transactions: Transaction[]) => void,
   enabled = true
 ) {
+  const { user } = useAuth();
   return useSupabaseRealtime<Transaction[]>({
     endpoint: '/api/transactions',
     channelName: 'transactions_realtime',
@@ -141,28 +140,31 @@ export function useSupabaseRealtimeTransactions(
     onDataChange: (data) => {
       if (Array.isArray(data)) onTransactionsChange(data);
     },
-    transform: (data: unknown) => (data as unknown[]).slice(0, 10).map((txn) => {
-      const t = txn as Record<string, unknown>;
-      return {
-        id: t.id as number,
-        amount: t.amount as string,
-        status: (t.status as string) || 'pending',
-        description: (t.description as string) || (t.recipientName as string) || 'Transfer',
-        createdAt: (t.createdAt as string) || new Date().toISOString(),
-        date: (t.createdAt as string) || new Date().toISOString(),
-      };
-    }),
+    transform: (data: unknown) => {
+      if (!Array.isArray(data)) return [];
+      return data.slice(0, 10).map((txn) => {
+        const t = txn as Record<string, unknown>;
+        return {
+          id: t.id as number,
+          amount: t.amount as string,
+          status: (t.status as string) || 'pending',
+          description: (t.description as string) || (t.recipientName as string) || 'Transfer',
+          createdAt: (t.createdAt as string) || new Date().toISOString(),
+          date: (t.createdAt as string) || new Date().toISOString(),
+        };
+      });
+    },
     enabled,
+    filterColumn: 'from_user_id',
+    filterValue: user?.id,
   });
 }
 
-/**
- * Supabase Realtime for user balance (backward-compatible wrapper)
- */
 export function useSupabaseRealtimeUserBalance(
   onBalanceChange: (balance: Record<string, unknown>) => void,
   enabled = true
 ) {
+  const { user } = useAuth();
   return useSupabaseRealtime<Record<string, unknown>>({
     endpoint: '/api/user',
     channelName: 'users_realtime',
@@ -170,5 +172,7 @@ export function useSupabaseRealtimeUserBalance(
     presenceKey: 'user',
     onDataChange: onBalanceChange,
     enabled,
+    filterColumn: 'id',
+    filterValue: user?.id,
   });
 }

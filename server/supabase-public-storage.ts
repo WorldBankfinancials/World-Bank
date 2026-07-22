@@ -35,8 +35,12 @@ function convertKeysToSnakeCase(obj: Record<string, unknown>): Record<string, un
 }
 
 export async function uploadFile(bucket: string, path: string, file: Buffer, contentType: string) {
+  if (!path || path.includes('..') || path.startsWith('/')) {
+    throw new Error('Invalid file path');
+  }
+  const sanitizedPath = path.replace(/[^a-zA-Z0-9._\-/]/g, '_');
   const adminClient = getAdminClient();
-  const { data, error } = await adminClient.storage.from(bucket).upload(path, file, { contentType, upsert: true });
+  const { data, error } = await adminClient.storage.from(bucket).upload(sanitizedPath, file, { contentType, upsert: false });
   if (error) throw error;
   return data;
 }
@@ -72,7 +76,7 @@ export async function insertRecord(table: string, record: Record<string, unknown
 export async function updateRecord(table: string, id: string | number, updates: Record<string, unknown>) {
   const adminClient = getAdminClient();
   const snakeCaseUpdates = convertKeysToSnakeCase(updates);
-  const { data, error } = await adminClient.from(table).update(snakeCaseUpdates).eq('id', id).select().single();
+  const { data, error } = await adminClient.from(table).update(snakeCaseUpdates).eq('id', id).select().maybeSingle();
   if (error) throw error;
   return data;
 }
@@ -92,7 +96,7 @@ export async function getRecord(table: string, id: string | number) {
 
 export async function listRecords(table: string, filters?: Record<string, unknown>) {
   const adminClient = getAdminClient();
-  let query = adminClient.from(table).select('*');
+  let query = adminClient.from(table).select('*').order('created_at', { ascending: false }).limit(1000);
   if (filters) {
     const snakeCaseFilters = convertKeysToSnakeCase(filters);
     for (const [key, value] of Object.entries(snakeCaseFilters)) {
