@@ -21,6 +21,22 @@ export function generateTransactionId(prefix: string = 'TXN'): string {
   return `${prefix}-${timestamp}-${randomStr}`;
 }
 
+export function cryptoRandomInt(min: number, max: number): number {
+  const range = max - min;
+  if (range <= 0) throw new Error('Invalid range');
+  const bytesNeeded = Math.ceil(range.toString(2).length / 8);
+  const maxVal = 256 ** bytesNeeded;
+  const threshold = maxVal - (maxVal % range);
+  let val: number;
+  do {
+    val = 0;
+    for (let i = 0; i < bytesNeeded; i++) {
+      val = val * 256 + randomBytes(1)[0];
+    }
+  } while (val >= threshold);
+  return min + (val % range);
+}
+
 export function generateReferenceNumber(prefix: string = 'WB'): string {
   const timestamp = Date.now();
   const random = randomBytes(6).toString('hex').toUpperCase();
