@@ -76,18 +76,12 @@ export default function Cards() {
     
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
+      if (!userProfile?.email) { toast({ title: 'Error', description: 'Unable to verify identity. Please re-login.', variant: 'destructive' }); return; }
       const response = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userProfile?.email || 'user@worldbank.com', pin })
+        body: JSON.stringify({ email: userProfile.email, pin })
       });
-
-      if (!response.ok) {
-        throw new Error('PIN verification failed');
-      }
-
-      if (response.ok) {
-        // Update card lock status in database (PROTECTED - needs auth)
         try {
           await apiRequest('POST', '/api/cards/lock', {
             cardId: selectedCard.id,
@@ -127,15 +121,23 @@ export default function Cards() {
   const handleMobilePay = async () => {
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
+      if (!userProfile?.email) { toast({ title: 'Error', description: 'Unable to verify identity. Please re-login.', variant: 'destructive' }); return; }
       const response = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userProfile?.email || 'user@worldbank.com', pin })
+        body: JSON.stringify({ email: userProfile.email, pin })
       });
 
       if (response.ok) {
+        try {
+          const payResponse = await authenticatedFetch('/api/transfer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ recipientAccount: phoneNumber, recipientName: 'Mobile Pay', amount: parseFloat(amount) || 0, currency: 'USD', description: 'Mobile payment' })
+          });
+          if (!payResponse.ok) { const err = await payResponse.json().catch(() => ({})); throw new Error(err.error || 'Payment failed'); }
+        } catch (apiError: any) { throw new Error(apiError?.message || 'Payment failed'); }
         toast({
-          title: t('mobile_payment_sent') || 'Mobile Payment Sent',
           description: `${t('sent') || 'Sent'} $${amount} ${t('to') || 'to'} ${phoneNumber}`,
         });
         setMobilePayDialogOpen(false);
@@ -161,15 +163,23 @@ export default function Cards() {
   const handlePayBill = async () => {
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
+      if (!userProfile?.email) { toast({ title: 'Error', description: 'Unable to verify identity. Please re-login.', variant: 'destructive' }); return; }
       const response = await authenticatedFetch('/api/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: userProfile?.email || 'user@worldbank.com', pin })
+        body: JSON.stringify({ email: userProfile.email, pin })
       });
 
       if (response.ok) {
+        try {
+          const payResponse = await authenticatedFetch('/api/transfer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ recipientAccount: accountNumber, recipientName: billProvider, amount: parseFloat(amount) || 0, currency: 'USD', description: `Bill payment to ${billProvider}` })
+          });
+          if (!payResponse.ok) { const err = await payResponse.json().catch(() => ({})); throw new Error(err.error || 'Bill payment failed'); }
+        } catch (apiError: any) { throw new Error(apiError?.message || 'Bill payment failed'); }
         toast({
-          title: t('bill_payment_successful') || 'Bill Payment Successful',
           description: `${t('paid') || 'Paid'} $${amount} ${t('to') || 'to'} ${billProvider}`,
         });
         setPayBillDialogOpen(false);
@@ -221,7 +231,7 @@ export default function Cards() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={userProfile as any || { id: 0, email: '', firstName: '', lastName: '', username: '', password: '', role: 'customer', isVerified: false, isActive: true, fullName: '', profession: '', accountId: 0, accountNumber: '', idType: null, idNumber: null, transferPin: null, annualIncome: null, address: null, city: null, state: null, postalCode: null, country: null, dateOfBirth: null, mothersMaidenName: null, citizenship: null, taxId: null, industry: null, phone: null, createdAt: new Date(), updatedAt: null }} />
+      <Header user={userProfile as any || { id: 0, email: '', firstName: '', lastName: '', username: '', role: 'customer', isVerified: false, isActive: true, fullName: '', profession: '', accountId: 0, accountNumber: '' }} />
       
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Page Header */}
@@ -245,7 +255,7 @@ export default function Cards() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <p className="text-sm opacity-80">{card.name}</p>
-                    <p className="text-lg font-mono">{card.number}</p>
+                    <p className="text-lg font-mono">{'**** **** **** ' + (card.number?.slice(-4) || '')}</p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge variant="secondary" className="bg-white/20 text-white">
