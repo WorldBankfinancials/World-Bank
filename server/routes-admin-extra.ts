@@ -6,7 +6,6 @@ import { atomicBalanceUpdate } from './transaction-wrapper';
 import { generateAccountNumber } from './crypto-utils';
 import { InsertAccount } from '@shared/schema';
 import * as bcrypt from 'bcryptjs';
-import { randomUUID } from 'crypto';
 
 type AsyncHandler = (req: AuthenticatedRequest, res: Response) => Promise<unknown> | unknown;
 function wrap(fn: AsyncHandler) {
@@ -30,7 +29,7 @@ function sanitizeUser(user: Record<string, unknown> | null | undefined): Record<
 
 export function setupAdminExtraRoutes(app: Express) {
   // GET /api/accounts/:id/transactions
-  app.get('/api/accounts/:id/transactions', wrapAsync(requireAuth), wrap(async (req, res) => {
+  app.get('/api/accounts/:id/transactions', requireAuth, wrap(async (req, res) => {
     try {
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
@@ -74,7 +73,17 @@ export function setupAdminExtraRoutes(app: Express) {
       const { accountName, balance, isActive } = req.body;
       const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
       if (accountName !== undefined) updates.account_nickname = accountName;
-      if (balance !== undefined) { updates.balance = String(balance); updates.available_balance = String(balance); }
+      if (balance !== undefined) {
+        const numBalance = parseFloat(String(balance));
+        if (isNaN(numBalance) || numBalance < 0) return res.status(400).json({ error: 'Invalid balance' });
+        const { data: account } = await getAdminClient().from('accounts').select('balance').eq('id', req.params.id).single();
+        const currentBalance = parseFloat(String(account?.balance || '0'));
+        const delta = numBalance - currentBalance;
+        if (Math.abs(delta) > 0.001) {
+          const result = await atomicBalanceUpdate(req.params.id, delta, 'Admin balance adjustment');
+          if (!result.success) return res.status(400).json({ error: result.error || 'Failed to adjust balance' });
+        }
+      }
       if (isActive !== undefined) updates.status = isActive ? 'active' : 'inactive';
       const { data, error } = await getAdminClient().from('accounts').update(updates).eq('id', req.params.id).select().single();
       if (error) throw error;
@@ -85,6 +94,10 @@ export function setupAdminExtraRoutes(app: Express) {
   // DELETE /api/admin/accounts/:id
   app.delete('/api/admin/accounts/:id', requireAdmin, wrap(async (req, res) => {
     try {
+      const { data: account } = await getAdminClient().from('accounts').select('balance').eq('id', req.params.id).single();
+      if (account && parseFloat(String(account.balance || '0')) !== 0) {
+        return res.status(400).json({ error: 'Cannot close account with non-zero balance' });
+      }
       const { error } = await getAdminClient().from('accounts').update({ status: 'closed', updated_at: new Date().toISOString() }).eq('id', req.params.id);
       if (error) throw error;
       return res.json({ success: true });
@@ -107,9 +120,6 @@ export function setupAdminExtraRoutes(app: Express) {
         }
       } else {
         const newAcc = await storage.createAccount({ userId: req.params.id, accountNumber: generateAccountNumber(), accountType: 'checking', balance: String(initialBalance || '0.00'), currency: 'USD', status: 'active' } as unknown as InsertAccount);
-        if (initialBalance && parseFloat(String(initialBalance)) > 0) {
-          await atomicBalanceUpdate(String(newAcc.id), parseFloat(String(initialBalance)), 'Initial deposit upon approval');
-        }
       }
       await adminClient.from('alerts').insert({ user_id: req.params.id, title: 'Account Approved', message: 'Your account has been approved.', type: 'success', priority: 'high', is_read: false });
       return res.json({ success: true, message: 'Registration approved successfully' });
@@ -187,10 +197,10 @@ export function setupAdminExtraRoutes(app: Express) {
   }));
 
   // POST /api/user/change-pin
-  app.post('/api/user/change-pin', wrapAsync(requireAuth), wrapAsync(authRateLimiter), wrap(async (req, res) => {
+  app.post('/api/user/change-pin', requireAuth, authRateLimiter, wrap(async (req, res) => {
     try {
       const { currentPin, newPin } = req.body;
-      if (!currentPin || !newPin || String(newPin).length !== 4) return res.status(400).json({ error: 'Current PIN and new PIN (4 digits) required' });
+      if (!currentPin || !newPin || !/^\d{4}$/.test(String(newPin))) return res.status(400).json({ error: 'Current PIN and new PIN (4 digits) required' });
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user || !user.transferPin) return res.status(401).json({ error: 'PIN not set on account' });
       const pinMatch = await bcrypt.compare(String(currentPin).trim(), String(user.transferPin).trim());
