@@ -11,8 +11,6 @@ const isViteWarning = (reason: any) => {
   return msg.includes('did not match the expected pattern') ||
          msg.includes('HTTP Error') ||
          stack.includes('@vite/client') ||
-         msg.includes('WebSocket') ||
-         msg.includes('fetch') && msg.includes('abort') ||
          msg.includes('AuthRetryableFetchError');
 };
 
