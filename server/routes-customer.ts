@@ -2,6 +2,7 @@ import { Express, Request, Response, RequestHandler } from 'express';
 import { requireAuth, requireAdmin, AuthenticatedRequest, getAdminClient } from './auth-middleware';
 import { storage } from './storage-factory';
 import { atomicBalanceUpdate } from './transaction-wrapper';
+import { cryptoRandomInt } from './crypto-utils';
 
 function wrap(handler: (req: AuthenticatedRequest, res: Response) => Promise<any>): RequestHandler {
   return (req, res, next) => Promise.resolve(handler(req as AuthenticatedRequest, res as Response)).catch(next);
@@ -24,13 +25,25 @@ export function setupCustomerRoutes(app: Express) {
   }));
 
   app.patch('/api/alerts/:id/read', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
-    try { return res.json(await storage.markAlertAsRead(req.params.id)); }
-    catch { return res.status(500).json({ error: 'Failed to mark alert as read' }); }
+    try {
+      const user = await storage.getUserByEmail(req.user?.email || '');
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      const { data: alert, error } = await getAdminClient().from('alerts').select('user_id').eq('id', req.params.id).maybeSingle();
+      if (error || !alert) return res.status(404).json({ error: 'Alert not found' });
+      if ((alert as Record<string, unknown>).user_id !== user.id) return res.status(403).json({ error: 'Access denied' });
+      return res.json(await storage.markAlertAsRead(req.params.id));
+    } catch { return res.status(500).json({ error: 'Failed to mark alert as read' }); }
   }));
 
   app.delete('/api/alerts/:id', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
-    try { await storage.deleteAlert(req.params.id); return res.json({ success: true }); }
-    catch { return res.status(500).json({ error: 'Failed to delete alert' }); }
+    try {
+      const user = await storage.getUserByEmail(req.user?.email || '');
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      const { data: alert, error } = await getAdminClient().from('alerts').select('user_id').eq('id', req.params.id).maybeSingle();
+      if (error || !alert) return res.status(404).json({ error: 'Alert not found' });
+      if ((alert as Record<string, unknown>).user_id !== user.id) return res.status(403).json({ error: 'Access denied' });
+      await storage.deleteAlert(req.params.id); return res.json({ success: true });
+    } catch { return res.status(500).json({ error: 'Failed to delete alert' }); }
   }));
 
   app.get('/api/cards', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
@@ -48,9 +61,9 @@ export function setupCustomerRoutes(app: Express) {
       const accounts = await storage.getUserAccounts(user.id);
       if (!accounts || accounts.length === 0) return res.status(404).json({ error: 'No account found' });
       const { cardType, cardholderName, dailyLimit, monthlyLimit } = req.body;
-      const cardNumber = Math.floor(Math.random() * 9e15 + 1e15).toString();
-      const cvv = Math.floor(Math.random() * 900 + 100).toString();
-      const expiryDate = `${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}/${String(new Date().getFullYear() + 4).slice(-2)}`;
+      const cardNumber = cryptoRandomInt(9e15, 1e16 - 1).toString();
+      const cvv = cryptoRandomInt(100, 999).toString();
+      const expiryDate = `${String(cryptoRandomInt(1, 12)).padStart(2, '0')}/${String(new Date().getFullYear() + 4).slice(-2)}`;
       const card = await storage.createCard({
         accountId: String(accounts[0].id), cardType: cardType || 'debit', cardNumber,
         cardholderName: cardholderName || `${user.firstName} ${user.lastName}`,
@@ -64,6 +77,12 @@ export function setupCustomerRoutes(app: Express) {
   app.post('/api/cards/lock', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { cardId, action } = req.body;
+      const user = await storage.getUserByEmail(req.user?.email || '');
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      const { data: card, error } = await getAdminClient().from('cards').select('account_id').eq('id', cardId).maybeSingle();
+      if (error || !card) return res.status(404).json({ error: 'Card not found' });
+      const { data: account } = await getAdminClient().from('accounts').select('user_id').eq('id', (card as Record<string, unknown>).account_id).maybeSingle();
+      if (!account || (account as Record<string, unknown>).user_id !== user.id) return res.status(403).json({ error: 'Access denied' });
       const status = action === 'unlock' ? 'active' : 'locked';
       return res.json(await storage.updateCard(cardId, { status } as any));
     } catch { return res.status(500).json({ error: 'Failed to update card' }); }
@@ -72,6 +91,12 @@ export function setupCustomerRoutes(app: Express) {
   app.post('/api/cards/settings', requireAuth as RequestHandler, wrap(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { cardId, dailyLimit, monthlyLimit, isContactless } = req.body;
+      const user = await storage.getUserByEmail(req.user?.email || '');
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      const { data: card, error } = await getAdminClient().from('cards').select('account_id').eq('id', cardId).maybeSingle();
+      if (error || !card) return res.status(404).json({ error: 'Card not found' });
+      const { data: account } = await getAdminClient().from('accounts').select('user_id').eq('id', (card as Record<string, unknown>).account_id).maybeSingle();
+      if (!account || (account as Record<string, unknown>).user_id !== user.id) return res.status(403).json({ error: 'Access denied' });
       const updates: Record<string, unknown> = {};
       if (dailyLimit !== undefined) updates.dailyLimit = dailyLimit;
       if (monthlyLimit !== undefined) updates.monthlyLimit = monthlyLimit;
@@ -166,7 +191,7 @@ export function setupCustomerRoutes(app: Express) {
       const user = await storage.getUserByEmail(req.user?.email || '');
       if (!user) return res.status(404).json({ error: 'User not found' });
       const { subject, description, priority } = req.body;
-      const ticketNumber = `TKT${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const ticketNumber = `TKT${Date.now()}${cryptoRandomInt(0, 9999)}`;
       const ticket = await storage.createSupportTicket({
         userId: user.id, ticketNumber, subject, description,
         priority: priority || 'medium', status: 'open',
