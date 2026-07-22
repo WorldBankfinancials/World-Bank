@@ -58,10 +58,14 @@ class SupabasePublicStorage implements IStorage {
     return updateRecord('users', id, updates as unknown as Record<string, unknown>) as Promise<User | undefined>;
   }
   async updateUserBalance(id: string, delta: number) {
-    const user = await this.getUser(id);
-    if (!user) return undefined;
-    const newBalance = (Number(user.balance) || 0) + delta;
-    return updateRecord('users', id, { balance: String(newBalance) }) as Promise<User | undefined>;
+    const { getAdminClient } = await import('./supabase-public-storage');
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient.rpc('atomic_balance_update', {
+      p_account_id: id,
+      p_amount_change: delta,
+    });
+    if (error) return undefined;
+    return this.getUser(id);
   }
 
   async getUserAccounts(userId: string) {
@@ -83,8 +87,7 @@ class SupabasePublicStorage implements IStorage {
     const { data, error } = await adminClient
       .from('transactions')
       .select('*')
-      .filter('from_account_id', 'eq', accountId)
-      .filter('to_account_id', 'eq', accountId)
+      .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
       .order('created_at', { ascending: false })
       .limit(limit || 100);
     if (error) throw error;
@@ -177,8 +180,7 @@ class SupabasePublicStorage implements IStorage {
     const { data, error } = await adminClient
       .from('messages')
       .select('*')
-      .filter('sender_id', 'eq', userId)
-      .filter('recipient_id', 'eq', userId)
+      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []) as unknown as Message[];
@@ -194,8 +196,16 @@ class SupabasePublicStorage implements IStorage {
     return listRecords('alerts', { user_id: userId }) as Promise<Alert[]>;
   }
   async getUnreadAlerts(userId: string) {
-    const all = await this.getUserAlerts(userId);
-    return (all as unknown as Array<Record<string, unknown>>).filter(a => !a.is_read) as unknown as Alert[];
+    const { getAdminClient } = await import('./supabase-public-storage');
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient
+      .from('alerts')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_read', false)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as unknown as Alert[];
   }
   async createAlert(alert: InsertAlert) {
     return insertRecord('alerts', alert as unknown as Record<string, unknown>) as Promise<Alert>;
