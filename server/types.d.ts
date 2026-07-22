@@ -7,7 +7,7 @@ declare global {
       params: Record<string, unknown>;
       body: Record<string, unknown>;
       user?: {
-        id: string | number;
+        id: string;
         email: string;
         role: string;
       };
