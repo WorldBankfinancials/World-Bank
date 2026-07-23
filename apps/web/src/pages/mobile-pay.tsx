@@ -5,9 +5,9 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authenticatedFetch } from "@/lib/queryClient";
-import { Smartphone, Send, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Smartphone, Send } from "lucide-react";
 
 interface Merchant {
   id: number;
@@ -37,7 +37,7 @@ export default function MobilePay() {
     queryKey: ['/api/mobile-pay/merchants'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/mobile-pay/merchants');
-      if (!response.ok) return [];
+      if (!response.ok) throw new Error('Failed to fetch merchants');
       return response.json();
     }
   });
@@ -46,7 +46,7 @@ export default function MobilePay() {
     queryKey: ['/api/mobile-payments'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/mobile-payments');
-      if (!response.ok) return [];
+      if (!response.ok) throw new Error('Failed to fetch payments');
       return response.json();
     }
   });
@@ -55,10 +55,8 @@ export default function MobilePay() {
   const queryError = merchantsError || paymentsError;
 
   useEffect(() => {
-    if (queryError) {
-      toast({ title: 'Error loading data', variant: 'destructive' });
-    }
-  }, [queryError]);
+    if (queryError) toast({ title: 'Error loading data', variant: 'destructive' });
+  }, [queryError, toast]);
 
   if (isLoading) {
     return (
@@ -86,7 +84,7 @@ export default function MobilePay() {
         body: JSON.stringify({ amount: numAmount, currency: 'USD', transaction_type: 'payment', description: `Mobile payment to ${phoneNumber}`, recipient_name: phoneNumber, status: 'completed', transferPin: pin })
       });
       if (txnRes.ok) {
-        toast({ title: 'Payment sent successfully', variant: 'default' });
+        toast({ title: 'Payment sent successfully' });
         queryClient.invalidateQueries({ queryKey: ['/api/mobile-payments'] });
         queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         setAmount(''); setPhoneNumber(''); setPin('');
@@ -94,8 +92,7 @@ export default function MobilePay() {
         const errData = await txnRes.json().catch(() => ({}));
         toast({ title: errData.error || 'Payment failed', variant: 'destructive' });
       }
-    } catch (error) {
-      console.error('Payment failed:', error);
+    } catch {
       toast({ title: 'Payment failed. Please try again.', variant: 'destructive' });
     }
   };
@@ -103,16 +100,16 @@ export default function MobilePay() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header user={userProfile as User | undefined} />
-      <main className="container mx-auto px-4 py-6 max-w-4xl pb-20">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('mobile_pay')}</h1>
+      <div className="container mx-auto px-4 py-6 max-w-4xl pb-20">
+        <h1 className="text-2xl font-bold mb-6">{t('mobile_pay') || 'Mobile Pay'}</h1>
 
         <div className="bg-white rounded-xl shadow p-6 mb-6">
           <div className="flex items-center gap-3 mb-4"><Smartphone className="w-6 h-6 text-blue-600" /><h2 className="text-lg font-semibold">Send Payment</h2></div>
           <div className="space-y-4">
-            <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('phone_number')}</label><input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="+1 234 567 8900" className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('amount')}</label><input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" max="10000" className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('transfer_pin')}</label><input type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="••••" maxLength={4} className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
-            <button onClick={handleSendPayment} disabled={!amount || !phoneNumber || !pin} className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"><Send className="w-4 h-4" />{t('send_payment')}</button>
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('phone_number') || 'Phone Number'}</label><input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="+1 234 567 8900" className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('amount') || 'Amount'}</label><input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" max="10000" className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('transfer_pin') || 'Transfer PIN'}</label><input type="password" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} placeholder="4-6 digits" maxLength={6} className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
+            <button onClick={handleSendPayment} disabled={!amount || !phoneNumber || !pin} className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"><Send className="w-4 h-4" />{t('send_payment') || 'Send Payment'}</button>
           </div>
         </div>
 
@@ -141,7 +138,7 @@ export default function MobilePay() {
             )}
           </div>
         </div>
-      </main>
+      </div>
       <BottomNavigation />
     </div>
   );

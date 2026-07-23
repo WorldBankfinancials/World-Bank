@@ -7,25 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { apiRequest, queryClient } from "@lib/queryClient";
-import { 
-  Bell, 
-  
-  Mail, 
-  
-  
-  
-  ArrowUpRight, 
-  ArrowDownRight,
-  Shield,
-  
-  CheckCircle,
-  Clock,
-  DollarSign,
-  Settings,
-  Filter,
-  Trash2
-} from "lucide-react";
+import { authenticatedFetch, queryClient } from "@/lib/queryClient";
+import { Bell, Mail, ArrowUpRight, ArrowDownRight, Shield, CheckCircle, Clock, DollarSign, Settings, Filter, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRealtimeAlerts } from "@/hooks/useRealtimeAlerts";
 
@@ -43,298 +26,120 @@ export default function Alerts() {
   const { toast } = useToast();
   const { data: user, isLoading, error: userError } = useQuery<User>({
     queryKey: ['/api/user'],
+    queryFn: async () => {
+      const response = await authenticatedFetch('/api/user');
+      if (!response.ok) throw new Error('Failed to fetch user');
+      return response.json();
+    }
   });
 
-  // Real-time alerts via Supabase Realtime
   useRealtimeAlerts(String(user?.id), !!user);
 
-  // Fetch real alerts from database
   const { data: alerts = [], isLoading: alertsLoading, error: alertsError } = useQuery<Alert[]>({
     queryKey: ['/api/alerts'],
     queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/alerts');
-      if (!response.ok) return [];
-      return response.json().catch(() => []);
+      if (!response.ok) throw new Error('Failed to fetch alerts');
+      return response.json();
     },
     enabled: !!user,
   });
 
   const queryError = userError || alertsError;
   useEffect(() => {
-    if (queryError) {
-      toast({ title: 'Error loading data', variant: 'destructive' });
-    }
-  }, [queryError]);
-  
-  const [notifications, setNotifications] = useState({
-    transactions: true,
-    security: true,
-    marketing: false,
-    statements: true,
-    maintenance: true
-  });
+    if (queryError) toast({ title: 'Error loading data', variant: 'destructive' });
+  }, [queryError, toast]);
 
-  const [activeTab, setActiveTab] = useState('all');
+  const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
-  // Mutation for marking alert as read - MUST be before conditional return
-  const markAsReadMutation = useMutation({
+  const markAsRead = useMutation({
     mutationFn: async (alertId: number) => {
-      return apiRequest('PATCH', `/api/alerts/${alertId}/read`);
+      const response = await authenticatedFetch(`/api/alerts/${alertId}/read`, { method: 'PATCH' });
+      if (!response.ok) throw new Error('Failed to mark as read');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
     },
+    onError: () => toast({ title: 'Failed to mark as read', variant: 'destructive' })
   });
 
-  // Mutation for deleting alert - MUST be before conditional return
-  const deleteAlertMutation = useMutation({
+  const deleteAlert = useMutation({
     mutationFn: async (alertId: number) => {
-      return apiRequest('DELETE', `/api/alerts/${alertId}`);
+      const response = await authenticatedFetch(`/api/alerts/${alertId}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete alert');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
     },
+    onError: () => toast({ title: 'Failed to delete alert', variant: 'destructive' })
   });
 
   if (isLoading || alertsLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-600">{t('loading')}</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
-  const alertsList = alerts || [];
-
-  const notificationSettings = [
-    {
-      key: "transactions" as keyof typeof notifications,
-      title: "Transaction Alerts",
-      description: "Get notified about payments and transfers",
-      icon: DollarSign
-    },
-    {
-      key: "security" as keyof typeof notifications,
-      title: "Security Alerts",
-      description: "Important security notifications",
-      icon: Shield
-    },
-    {
-      key: "statements" as keyof typeof notifications,
-      title: "Account Statements",
-      description: "Monthly statements and reports",
-      icon: Mail
-    },
-    {
-      key: "maintenance" as keyof typeof notifications,
-      title: "System Updates",
-      description: "Maintenance and system notifications",
-      icon: Settings
-    },
-    {
-      key: "marketing" as keyof typeof notifications,
-      title: "Promotional Offers",
-      description: "Special offers and product updates",
-      icon: Bell
-    }
-  ];
-
-  const filteredAlerts = activeTab === 'all' 
-    ? alertsList 
-    : alertsList.filter((alert) => alert.alert_type === activeTab);
-
-  const unreadCount = alertsList.filter((alert) => !alert.is_read).length;
-
-  const handleNotificationToggle = (key: keyof typeof notifications) => {
-    setNotifications(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
-
-  const markAsRead = (alertId: number) => {
-    markAsReadMutation.mutate(alertId);
-  };
-
-  const deleteAlert = (alertId: number) => {
-    deleteAlertMutation.mutate(alertId);
-  };
-
-  // Helper function to get alert icon
-  const getAlertIcon = (type: string) => {
-    switch (type) {
-      case 'transaction': return ArrowUpRight;
-      case 'security': return Shield;
-      case 'statement': return Mail;
-      case 'maintenance': return Clock;
-      default: return Bell;
-    }
-  };
-
-  // Helper function to get alert styling
-  const getAlertStyle = (type: string) => {
-    switch (type) {
-      case 'transaction':
-        return { color: 'text-green-600', bgColor: 'bg-green-100' };
-      case 'security':
-        return { color: 'text-orange-600', bgColor: 'bg-orange-100' };
-      case 'statement':
-        return { color: 'text-blue-600', bgColor: 'bg-blue-100' };
-      case 'maintenance':
-        return { color: 'text-purple-600', bgColor: 'bg-purple-100' };
-      default:
-        return { color: 'text-gray-600', bgColor: 'bg-gray-100' };
-    }
-  };
+  const filteredAlerts = filter === 'unread' ? alerts.filter(a => !a.is_read) : alerts;
+  const unreadCount = alerts.filter(a => !a.is_read).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
-      
-      <div className="px-4 py-6 pb-20">
-        {/* Header Section */}
-        <div className="flex items-center justify-between mb-6">
+      <Header user={user as User | undefined} />
+      <div className="container mx-auto px-4 py-6 max-w-4xl pb-20">
+        <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Alerts & Notifications</h1>
-            <p className="text-sm text-gray-600">
-              {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
-            </p>
+            <h1 className="text-2xl font-bold">Notifications</h1>
+            {unreadCount > 0 && <p className="text-sm text-gray-500">{unreadCount} unread</p>}
           </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" size="sm" onClick={() => setActiveTab(activeTab === 'all' ? 'transaction' : 'all')}>
-              <Filter className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => toast({ title: 'Settings', description: 'Alert settings opened.' })}>
-              <Settings className="w-4 h-4" />
-            </Button>
+          <div className="flex gap-2">
+            <Button variant={filter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('all')}>All</Button>
+            <Button variant={filter === 'unread' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('unread')}>Unread</Button>
           </div>
         </div>
 
-        {/* Alert Tabs */}
-        <Card className="mb-6">
-          <CardContent className="pt-4">
-            <div className="flex space-x-2 overflow-x-auto">
-              {[
-                { key: 'all', label: 'All', count: alertsList.length },
-                { key: 'transaction', label: 'Transactions', count: alertsList.filter((a) => a.alert_type === 'transaction').length },
-                { key: 'security', label: 'Security', count: alertsList.filter((a) => a.alert_type === 'security').length },
-                { key: 'statement', label: 'Statements', count: alertsList.filter((a) => a.alert_type === 'statement').length }
-              ].map((tab) => (
-                <Button
-                  key={tab.key}
-                  variant={activeTab === tab.key ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveTab(tab.key)}
-                  className="whitespace-nowrap"
-                  data-testid={`alert-tab-${tab.key}`}
-                >
-                  {tab.label} ({tab.count})
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Alerts List */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Recent Alerts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {filteredAlerts.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Bell className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>No alerts found</p>
-                  <p className="text-sm">You're all caught up!</p>
-                </div>
-              ) : (
-                filteredAlerts.map((alertItem) => {
-                  const IconComponent = getAlertIcon(alertItem.alert_type);
-                  const { color, bgColor } = getAlertStyle(alertItem.alert_type);
-                  const timeAgo = alertItem.created_at ? new Date(alertItem.created_at).toLocaleString() : new Date().toLocaleString();
-                  
-                  return (
-                    <div
-                      key={alertItem.id}
-                      className={`p-4 border rounded-lg ${!alertItem.is_read ? 'bg-blue-50 border-blue-200' : 'bg-white'}`}
-                      data-testid={`alert-item-${alertItem.id}`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-3">
-                          <div className={`w-10 h-10 ${bgColor} rounded-full flex items-center justify-center`}>
-                            <IconComponent className={`w-5 h-5 ${color}`} />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <h3 className="font-medium text-sm" data-testid={`alert-title-${alertItem.id}`}>{alertItem.title || alertItem.message}</h3>
-                              {!alertItem.is_read && (
-                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                              )}
-                            </div>
-                            <p className="text-sm text-gray-600 mb-2">{alertItem.message}</p>
-                            <p className="text-xs text-gray-500">{timeAgo}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          {!alertItem.is_read && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => markAsRead(alertItem.id)}
-                              data-testid={`alert-mark-read-${alertItem.id}`}
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteAlert(alertItem.id)}
-                            data-testid={`alert-delete-${alertItem.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+        {filteredAlerts.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <Bell className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-500">No notifications</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {filteredAlerts.map((alert: Alert) => (
+              <Card key={alert.id} className={alert.is_read ? 'opacity-60' : ''}>
+                <CardContent className="pt-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${alert.alert_type === 'security' ? 'bg-red-100' : alert.alert_type === 'transaction' ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                        {alert.alert_type === 'security' ? <Shield className="w-5 h-5 text-red-600" /> : alert.alert_type === 'transaction' ? <DollarSign className="w-5 h-5 text-blue-600" /> : <Bell className="w-5 h-5 text-gray-600" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{alert.title || alert.alert_type}</p>
+                        <p className="text-sm text-gray-600">{alert.message}</p>
+                        {alert.created_at && <p className="text-xs text-gray-400 mt-1">{new Date(alert.created_at).toLocaleString()}</p>}
                       </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Notification Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Notification Preferences</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {notificationSettings.map((setting) => (
-                <div key={setting.key} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                      <setting.icon className="w-4 h-4 text-gray-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{setting.title}</p>
-                      <p className="text-xs text-gray-600">{setting.description}</p>
+                    <div className="flex gap-1">
+                      {!alert.is_read && (
+                        <Button variant="ghost" size="sm" onClick={() => markAsRead.mutate(alert.id)}>
+                          <CheckCircle className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => deleteAlert.mutate(alert.id)}>
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
                     </div>
                   </div>
-                  <Switch
-                    checked={notifications[setting.key]}
-                    onCheckedChange={() => handleNotificationToggle(setting.key)}
-                  />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
-      
       <BottomNavigation />
     </div>
   );

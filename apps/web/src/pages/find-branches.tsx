@@ -10,361 +10,162 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  MapPin, 
-  Search, 
-  Navigation, 
-  Clock, 
-  Phone, 
-  Car, 
-  Accessibility,
-  Banknote,
-  CreditCard,
-  Users,
-  Building,
-  Globe
-} from "lucide-react";
+import { authenticatedFetch } from "@/lib/queryClient";
+import { MapPin, Search, Navigation, Clock, Phone, Car, Accessibility, Banknote, CreditCard, Users, Building, Globe } from "lucide-react";
 
+interface Branch {
+  id: string;
+  name: string;
+  address: string;
+  phone?: string;
+  contact_phone?: string;
+  hours?: string;
+  opening_hours?: string;
+  lat?: number;
+  lng?: number;
+  latitude?: number;
+  longitude?: number;
+  distance?: string;
+  services?: string[];
+  amenities?: string[];
+}
+interface ATM {
+  id: string;
+  name: string;
+  address: string;
+  location?: string;
+  available?: boolean;
+  lat?: number;
+  lng?: number;
+  distance?: string;
+  features?: string[];
+}
 
 export default function FindBranches() {
-  interface Branch {
-    id: string;
-    name: string;
-    address: string;
-    phone?: string;
-    contact_phone?: string;
-    hours?: string;
-    opening_hours?: string;
-    lat?: number;
-    lng?: number;
-    latitude?: number;
-    longitude?: number;
-    distance?: string;
-    services?: string[];
-    amenities?: string[];
-  }
-  interface ATM {
-    id: string;
-    name: string;
-    address: string;
-    location?: string;
-    available?: boolean;
-    lat?: number;
-    lng?: number;
-    distance?: string;
-    features?: string[];
-  }
   const { t } = useLanguage();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const { data: user, isLoading, error: userError } = useQuery<User>({
+
+  const { data: user, isLoading: userLoading, error: userError } = useQuery<User>({
     queryKey: ['/api/user'],
+    queryFn: async () => {
+      const response = await authenticatedFetch('/api/user');
+      if (!response.ok) throw new Error('Failed to fetch user');
+      return response.json();
+    }
   });
 
-  // Fetch branches and ATMs from real database
-  const { data: branches, isLoading: branchesLoading, error: branchesError } = useQuery<Branch[]>({
+  const { data: branches = [], isLoading: branchesLoading, error: branchesError } = useQuery<Branch[]>({
     queryKey: ['/api/branches'],
-    queryFn: async ({ queryKey }) => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const res = await authenticatedFetch(queryKey[0] as string);
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api/branches');
       if (!res.ok) throw new Error('Failed to fetch branches');
       return res.json();
-    },
+    }
   });
 
-  const { data: atms, isLoading: atmsLoading, error: atmsError } = useQuery<ATM[]>({
+  const { data: atms = [], isLoading: atmsLoading, error: atmsError } = useQuery<ATM[]>({
     queryKey: ['/api/atms'],
-    queryFn: async ({ queryKey }) => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const res = await authenticatedFetch(queryKey[0] as string);
+    queryFn: async () => {
+      const res = await authenticatedFetch('/api/atms');
       if (!res.ok) throw new Error('Failed to fetch ATMs');
       return res.json();
-    },
-  });
-
-  const queryError = userError || branchesError || atmsError;
-  useEffect(() => {
-    if (queryError) {
-      toast({ title: 'Error loading data', variant: 'destructive' });
     }
-  }, [queryError]);
-
-  if (isLoading || branchesLoading || atmsLoading) {
-    return (
-      <div className="min-h-screen bg-wb-gray flex items-center justify-center">
-        <div className="text-wb-dark">{t('loading')}</div>
-      </div>
-    );
-  }
-
-  if (branchesError || atmsError) {
-    return (
-      <div className="min-h-screen bg-wb-gray flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-2">Failed to load locations. Please try again.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const branchesList = (branches || []).filter((branch: Branch) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (branch.name || '').toLowerCase().includes(q) ||
-           (branch.address || '').toLowerCase().includes(q);
   });
-  const atmsList = atms || [];
 
-  const globalPresence = {
-    regions: [
-      { name: "North America", branches: 2847, countries: ["USA", "Canada", "Mexico"] },
-      { name: "Europe", branches: 3521, countries: ["UK", "Germany", "France", "Italy", "Spain"] },
-      { name: "Asia Pacific", branches: 4123, countries: ["Japan", "China", "Australia", "Singapore", "India"] },
-      { name: "Middle East & Africa", branches: 1876, countries: ["UAE", "Saudi Arabia", "South Africa", "Egypt"] },
-      { name: "Latin America", branches: 1654, countries: ["Brazil", "Argentina", "Chile", "Colombia"] }
-    ]
-  };
+  const isLoading = userLoading || branchesLoading || atmsLoading;
+  const queryError = userError || branchesError || atmsError;
+
+  useEffect(() => {
+    if (queryError) toast({ title: 'Error loading data', variant: 'destructive' });
+  }, [queryError, toast]);
+
+  const filteredBranches = branches.filter((b: Branch) =>
+    !searchQuery || b.name?.toLowerCase().includes(searchQuery.toLowerCase()) || b.address?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const filteredATMs = atms.filter((a: ATM) =>
+    !searchQuery || a.name?.toLowerCase().includes(searchQuery.toLowerCase()) || a.address?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-wb-gray">
-      <Header user={user} />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold wb-dark mb-4">Find Branches & ATMs</h1>
-          <p className="text-wb-text">Locate World Bank branches and ATMs worldwide</p>
+    <div className="min-h-screen bg-gray-50">
+      <Header user={user as User | undefined} />
+      <div className="max-w-6xl mx-auto px-4 py-6 pb-20">
+        <h1 className="text-2xl font-bold mb-2">Find Branches & ATMs</h1>
+        <p className="text-gray-600 mb-6">Locate nearby branches and ATMs</p>
+
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input placeholder="Search by name or address..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
         </div>
 
-        {/* Search Section */}
-        <Card className="mb-8">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-                  <Input 
-                    placeholder="Enter city, state, or ZIP code" 
-                    className="pl-10"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={() => setSearchQuery(searchQuery)}>
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Search
-                </Button>
-                <Button variant="outline" onClick={() => toast({ title: 'Location services coming soon', description: 'We are unable to detect your location at this time.' })}>
-                  <Navigation className="w-4 h-4 mr-2" />
-                  Use My Location
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Results */}
-          <div className="lg:col-span-2">
-            {/* Nearby Branches */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold wb-dark mb-6">Nearby Branches</h2>
-              <div className="space-y-4">
-                {branchesList.length === 0 ? (
-                  <Card>
-                    <CardContent className="p-8 text-center text-gray-500">
-                      <Building className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p>No branches found matching your criteria.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><Building className="w-5 h-5" />Branches ({filteredBranches.length})</h2>
+            <div className="space-y-3">
+              {filteredBranches.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">No branches found</p>
+              ) : (
+                filteredBranches.map((branch: Branch) => (
+                  <Card key={branch.id}>
+                    <CardContent className="pt-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium">{branch.name}</p>
+                          <p className="text-sm text-gray-500 flex items-center gap-1"><MapPin className="w-3 h-3" />{branch.address}</p>
+                          {(branch.phone || branch.contact_phone) && <p className="text-sm text-gray-500 flex items-center gap-1"><Phone className="w-3 h-3" />{branch.phone || branch.contact_phone}</p>}
+                          {(branch.hours || branch.opening_hours) && <p className="text-sm text-gray-500 flex items-center gap-1"><Clock className="w-3 h-3" />{branch.hours || branch.opening_hours}</p>}
+                        </div>
+                        {branch.distance && <Badge variant="outline">{branch.distance}</Badge>}
+                      </div>
                     </CardContent>
                   </Card>
-                ) : (
-                  branchesList.map((branch: Branch) => (
-                    <Card key={branch.id} className="hover:shadow-md transition-shadow" data-testid={`branch-card-${branch.id}`}>
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="flex-1">
-                            <h3 className="text-lg font-semibold wb-dark mb-1" data-testid={`branch-name-${branch.id}`}>{branch.name}</h3>
-                            <div className="flex items-center text-wb-text mb-2">
-                              <MapPin className="w-4 h-4 mr-1" />
-                              {branch.address}
-                            </div>
-                            <div className="flex items-center text-wb-text mb-2">
-                              <Phone className="w-4 h-4 mr-1" />
-                              {branch.phone || branch.contact_phone || 'N/A'}
-                            </div>
-                            <div className="flex items-center text-wb-text">
-                              <Clock className="w-4 h-4 mr-1" />
-                              {branch.hours || branch.opening_hours || 'Mon-Fri: 9AM-5PM'}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            {branch.distance && <div className="text-wb-blue font-semibold mb-2">{branch.distance}</div>}
-                            <Button size="sm" data-testid={`branch-directions-${branch.id}`} onClick={() => {
-                              const lat = branch.latitude || branch.lat;
-                              const lng = branch.longitude || branch.lng;
-                              if (lat && lng) {
-                                window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
-                              } else {
-                                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((branch.name || '') + ' ' + (branch.address || ''))}`, '_blank');
-                              }
-                            }}>Get Directions</Button>
-                          </div>
-                        </div>
-                        
-                        {branch.services && branch.services.length > 0 && (
-                          <div className="mb-4">
-                            <div className="text-sm font-medium wb-dark mb-2">Services</div>
-                            <div className="flex flex-wrap gap-1">
-                              {branch.services.map((service: string, idx: number) => (
-                                <Badge key={idx} variant="secondary" className="text-xs">
-                                  {service}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {branch.amenities && branch.amenities.length > 0 && (
-                          <div>
-                            <div className="text-sm font-medium wb-dark mb-2">Amenities</div>
-                            <div className="flex flex-wrap gap-1">
-                              {branch.amenities.map((amenity: string, idx: number) => (
-                                <Badge key={idx} variant="outline" className="text-xs">
-                                  {amenity}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* ATM Locations */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold wb-dark mb-6">Nearby ATMs</h2>
-              <div className="space-y-3">
-                {atmsList.length === 0 ? (
-                  <Card>
-                    <CardContent className="p-6 text-center text-gray-500">
-                      <Banknote className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                      <p>No ATMs found nearby</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  atmsList.map((atm: ATM) => (
-                    <Card key={atm.id} className="hover:shadow-sm transition-shadow" data-testid={`atm-card-${atm.id}`}>
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <div className="font-medium wb-dark" data-testid={`atm-location-${atm.id}`}>{atm.location}</div>
-                            <div className="text-sm text-wb-text">{atm.address}</div>
-                          </div>
-                          <div className="text-right">
-                            {atm.distance && <div className="text-wb-blue font-semibold text-sm mb-1">{atm.distance}</div>}
-                            {atm.features && atm.features.length > 0 && (
-                              <div className="flex gap-1">
-                                {atm.features.map((feature: string, idx: number) => (
-                                  <Badge key={idx} variant="secondary" className="text-xs">
-                                    {feature}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
+                ))
+              )}
             </div>
           </div>
 
-          {/* Sidebar */}
           <div>
-            {/* Filter Options */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Filter Options</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="font-medium mb-2">Services</div>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
-                      <input type="checkbox" aria-label="ATM Available filter" className="mr-2" defaultChecked />
-                      <Banknote className="w-4 h-4 mr-1" />
-                      <span className="text-sm">ATM Available</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input type="checkbox" aria-label="Teller Services filter" className="mr-2" />
-                      <Users className="w-4 h-4 mr-1" />
-                      <span className="text-sm">Teller Services</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input type="checkbox" aria-label="Business Banking filter" className="mr-2" />
-                      <CreditCard className="w-4 h-4 mr-1" />
-                      <span className="text-sm">Business Banking</span>
-                    </label>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="font-medium mb-2">Amenities</div>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
-                      <input type="checkbox" className="mr-2" />
-                      <Car className="w-4 h-4 mr-1" />
-                      <span className="text-sm">Parking Available</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input type="checkbox" className="mr-2" />
-                      <Accessibility className="w-4 h-4 mr-1" />
-                      <span className="text-sm">Wheelchair Accessible</span>
-                    </label>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Global Presence */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Globe className="w-5 h-5 mr-2" />
-                  Global Presence
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {globalPresence.regions.map((region, index) => (
-                    <div key={`item-${index}`} className="p-3 border rounded-lg">
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="font-medium">{region.name}</div>
-                        <Badge variant="secondary">{region.branches.toLocaleString()}</Badge>
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><Banknote className="w-5 h-5" />ATMs ({filteredATMs.length})</h2>
+            <div className="space-y-3">
+              {filteredATMs.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">No ATMs found</p>
+              ) : (
+                filteredATMs.map((atm: ATM) => (
+                  <Card key={atm.id}>
+                    <CardContent className="pt-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium">{atm.name}</p>
+                          <p className="text-sm text-gray-500 flex items-center gap-1"><MapPin className="w-3 h-3" />{atm.address}</p>
+                          {atm.features && atm.features.length > 0 && (
+                            <div className="flex gap-1 mt-1 flex-wrap">
+                              {atm.features.map((f, idx) => <Badge key={idx} variant="outline" className="text-xs">{f}</Badge>)}
+                            </div>
+                          )}
+                        </div>
+                        {atm.available !== undefined && (
+                          <Badge className={atm.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                            {atm.available ? 'Available' : 'Offline'}
+                          </Badge>
+                        )}
                       </div>
-                      <div className="text-xs text-wb-text">
-                        {region.countries.join(", ")}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 p-3 bg-wb-blue-light rounded-lg text-center">
-                  <div className="text-2xl font-bold wb-blue">190+</div>
-                  <div className="text-sm text-wb-text">Countries Worldwide</div>
-                </div>
-              </CardContent>
-            </Card>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>
-
       <Footer />
     </div>
   );

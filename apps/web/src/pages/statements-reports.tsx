@@ -20,23 +20,20 @@ interface Statement {
 export default function StatementsReports() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
+  const { toast } = useToast();
 
   const { data: statements = [], isLoading, error } = useQuery<Statement[]>({
     queryKey: ['/api/statements'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/statements');
-      if (!response.ok) return [];
+      if (!response.ok) throw new Error('Failed to fetch statements');
       return response.json();
     }
   });
 
-  const { toast } = useToast();
-
   useEffect(() => {
-    if (error) {
-      toast({ title: 'Error loading data', variant: 'destructive' });
-    }
-  }, [error]);
+    if (error) toast({ title: 'Error loading statements', variant: 'destructive' });
+  }, [error, toast]);
 
   if (isLoading) {
     return (
@@ -46,15 +43,32 @@ export default function StatementsReports() {
     );
   }
 
+  const handleExport = async () => {
+    try {
+      const res = await authenticatedFetch('/api/transactions/export');
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = window.document.createElement('a');
+        a.href = url;
+        a.download = 'transactions.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } else {
+        toast({ title: 'Export failed', variant: 'destructive' });
+      }
+    } catch { toast({ title: 'Export failed', variant: 'destructive' }); }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header user={userProfile as User | undefined} />
-      <main className="container mx-auto px-4 py-6 max-w-4xl pb-20">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('statements')}</h1>
+      <div className="container mx-auto px-4 py-6 max-w-4xl pb-20">
+        <h1 className="text-2xl font-bold mb-6">{t('statements') || 'Statements & Reports'}</h1>
 
         <div className="bg-white rounded-xl shadow">
           <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold">{t('download_reports')}</h2>
+            <h2 className="text-lg font-semibold">{t('download_reports') || 'Download Reports'}</h2>
           </div>
           <div className="p-4">
             {statements.length === 0 ? (
@@ -73,9 +87,8 @@ export default function StatementsReports() {
                         <p className="text-sm text-gray-500">{stmt.type} - {stmt.status}</p>
                       </div>
                     </div>
-                    <button className="flex items-center gap-1 text-blue-600 hover:text-blue-700">
-                      <Download className="w-4 h-4" />
-                      Download
+                    <button className="flex items-center gap-1 text-blue-600 hover:text-blue-700" onClick={handleExport}>
+                      <Download className="w-4 h-4" />Download
                     </button>
                   </div>
                 ))}
@@ -85,29 +98,11 @@ export default function StatementsReports() {
         </div>
 
         <div className="mt-6">
-          <button
-            onClick={async () => {
-              try {
-                const { authenticatedFetch } = await import('@/lib/queryClient');
-                const res = await authenticatedFetch('/api/transactions/export');
-                if (res.ok) {
-                  const blob = await res.blob();
-                  const url = window.URL.createObjectURL(blob);
-                  const a = window.document.createElement('a');
-                  a.href = url;
-                  a.download = 'transactions.csv';
-                  a.click();
-                  window.URL.revokeObjectURL(url);
-                }
-              } catch (e) { console.error('Export failed:', e); }
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Download className="w-4 h-4" />
-            Export Transactions (CSV)
+          <button onClick={handleExport} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <Download className="w-4 h-4" />Export Transactions (CSV)
           </button>
         </div>
-      </main>
+      </div>
       <BottomNavigation />
     </div>
   );
