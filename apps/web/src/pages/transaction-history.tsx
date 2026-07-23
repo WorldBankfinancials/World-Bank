@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Download, ArrowUpRight, ArrowDownRight, Calendar, RefreshCw } from "lucide-react";
+import { Search, Download, ArrowUpRight, ArrowDownRight, RefreshCw } from "lucide-react";
 import Header from "@/components/Header";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { authenticatedFetch } from "@/lib/queryClient";
 
 interface Transaction {
   id: number;
@@ -40,10 +40,9 @@ export default function TransactionHistory() {
   const { data: accounts = [], isLoading: accountsLoading, error: accountsError } = useQuery<Account[]>({
     queryKey: ['/api/accounts'],
     queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/accounts');
-      if (!response.ok) return [];
-      return response.json().catch(() => []);
+      if (!response.ok) throw new Error('Failed to fetch accounts');
+      return response.json();
     }
   });
 
@@ -51,61 +50,50 @@ export default function TransactionHistory() {
     queryKey: ['/api/transactions', accounts],
     queryFn: async () => {
       if (accounts.length === 0) return [];
-      try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const accountPromises = accounts.map(account =>
-          authenticatedFetch(`/api/accounts/${account.id}/transactions`).then(async res => {
-            if (!res.ok) return [];
-            return res.json().catch(() => []);
-          })
-        );
-        const allTransactionArrays = await Promise.all(accountPromises);
-        return allTransactionArrays.flat();
-      } catch (error) {
-        toast({
-          title: 'Error loading transactions',
-          description: 'Unable to load transaction history.',
-          variant: 'destructive',
-        });
-        return [];
-      }
+      const response = await authenticatedFetch('/api/transactions');
+      if (!response.ok) throw new Error('Failed to fetch transactions');
+      return response.json();
     },
     enabled: accounts.length > 0
   });
+
+  useEffect(() => {
+    if (accountsError) toast({ title: 'Error loading accounts', variant: 'destructive' });
+    if (transactionsError) toast({ title: 'Error loading transactions', variant: 'destructive' });
+  }, [accountsError, transactionsError, toast]);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
     queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
   };
 
-  const filteredTransactions = transactions.filter(transaction => {
-    const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transaction.amount.includes(searchTerm);
-    const matchesAccount = selectedAccount === 'all' || transaction.accountId.toString() === selectedAccount;
-    const matchesCategory = selectedCategory === 'all' || transaction.category === selectedCategory;
-    return matchesSearch && matchesAccount && matchesCategory;
-  });
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((tx: Transaction) => {
+      const matchesSearch = !searchTerm ||
+        tx.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        tx.recipientName?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesAccount = selectedAccount === 'all' || String(tx.accountId) === selectedAccount;
+      const matchesCategory = selectedCategory === 'all' || tx.category === selectedCategory;
+      return matchesSearch && matchesAccount && matchesCategory;
+    });
+  }, [transactions, searchTerm, selectedAccount, selectedCategory]);
 
-  const categories = ['all', ...Array.from(new Set(transactions.map(t => t.category)))];
-
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'failed': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const handleDownload = () => {
+    const csv = ['id,date,description,amount,type,status,recipient']
+      ...filteredTransactions.map((tx: Transaction) =>
+        `${tx.id},${tx.date},${tx.description},${tx.amount},${tx.type},${tx.status},${tx.recipientName || ''}`
+      )
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'transactions.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
-  const queryError = accountsError || transactionsError;
-
-  useEffect(() => {
-    if (queryError) {
-      toast({ title: 'Error loading data', variant: 'destructive' });
-    }
-  }, [queryError]);
-
-  if (loading || accountsLoading) {
+  if (accountsLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -116,125 +104,65 @@ export default function TransactionHistory() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <div className="px-4 py-6 pb-20">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Transaction History</h1>
-              <p className="text-gray-600 mt-1">View all your transactions</p>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleRefresh} variant="outline" size="sm">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
-              <Button variant="outline" size="sm" onClick={async () => {
-                try {
-                  const { authenticatedFetch } = await import('@/lib/queryClient');
-                  const response = await authenticatedFetch('/api/transactions/export');
-                  if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = window.document.createElement('a');
-                    a.href = url;
-                    a.download = 'transactions.csv';
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    toast({ title: 'Export downloaded' });
-                  } else {
-                    toast({ title: 'Export failed', variant: 'destructive' });
-                  }
-                } catch {
-                  toast({ title: 'Export failed', variant: 'destructive' });
-                }
-              }}>
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
-            </div>
+      <div className="container mx-auto px-4 py-6 max-w-4xl pb-20">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Transaction History</h1>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              <Download className="w-4 h-4 mr-1" /> Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
+              <RefreshCw className="w-4 h-4 mr-1" /> Refresh
+            </Button>
           </div>
+        </div>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search transactions"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Accounts" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Accounts</SelectItem>
-                    {accounts.map(acc => (
-                      <SelectItem key={acc.id} value={acc.id.toString()}>
-                        {acc.accountName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(cat => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat === 'all' ? 'All Categories' : cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+        <Card className="mb-4">
+          <CardContent className="pt-4 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search transactions..."
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Calendar className="w-5 h-5 text-blue-600" />
-                <span>Recent Transactions ({filteredTransactions.length})</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {filteredTransactions.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">No transactions found</p>
-                ) : (
-                  filteredTransactions.map((tx, idx) => (
-                    <div key={`${tx.id}-${idx}-${tx.date}`} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                      <div className="flex items-center space-x-3 flex-1">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                          {tx.type === 'credit' ? (
-                            <ArrowDownRight className="w-5 h-5 text-green-600" />
-                          ) : (
-                            <ArrowUpRight className="w-5 h-5 text-red-600" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium">{tx.description}</div>
-                          <div className="text-sm text-gray-600">{new Date(tx.date).toLocaleDateString()}</div>
-                        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Transactions ({filteredTransactions.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredTransactions.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">No transactions found</p>
+            ) : (
+              <div className="space-y-2">
+                {filteredTransactions.map((tx: Transaction) => (
+                  <div key={tx.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'}`}>
+                        {tx.type === 'credit' ? <ArrowDownRight className="w-5 h-5 text-green-600" /> : <ArrowUpRight className="w-5 h-5 text-red-600" />}
                       </div>
-                      <div className="text-right space-y-1">
-                        <div className={`font-medium ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-                          {tx.type === 'credit' ? '+' : '-'}${((parseFloat(tx.amount) || 0) >= 0 ? parseFloat(tx.amount) || 0 : 0).toFixed(2)}
-                        </div>
-                        <Badge className={getStatusColor(tx.status)}>{tx.status}</Badge>
+                      <div>
+                        <p className="font-medium">{tx.description || tx.recipientName || 'Transfer'}</p>
+                        <p className="text-sm text-gray-500">{new Date(tx.date).toLocaleDateString()}</p>
                       </div>
                     </div>
-                  ))
-                )}
+                    <div className="text-right">
+                      <p className={`font-semibold ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                        {tx.type === 'credit' ? '+' : '-'}${parseFloat(tx.amount).toFixed(2)}
+                      </p>
+                      <Badge variant="outline" className="text-xs">{tx.status}</Badge>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
       <BottomNavigation />
     </div>
