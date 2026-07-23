@@ -5,7 +5,7 @@ export function generateAccountNumber(): string {
 }
 
 export function generateTransferPin(): string {
-  return String(cryptoRandomInt(1000, 10000));
+  return String(cryptoRandomInt(100000, 1000000));
 }
 
 export function generateTransactionId(prefix: string = 'TXN'): string {

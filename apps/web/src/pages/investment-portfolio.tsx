@@ -30,16 +30,16 @@ export default function InvestmentPortfolio() {
     queryKey: ['/api/investments'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/investments');
-      if (!response.ok) return [];
+      if (!response.ok) throw new Error('Failed to fetch investments');
       return response.json();
     }
   });
 
   useEffect(() => {
     if (error) {
-      toast({ title: 'Error loading data', variant: 'destructive' });
+      toast({ title: 'Error loading investments', variant: 'destructive' });
     }
-  }, [error]);
+  }, [error, toast]);
 
   if (isLoading) {
     return (

@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Search, Phone, MessageCircle, FileText, Clock } from "lucide-react";
 import LiveChat from "@/components/LiveChat";
+import { authenticatedFetch } from "@/lib/queryClient";
 
 
 export default function SupportCenter() {
@@ -19,6 +20,11 @@ export default function SupportCenter() {
   const [searchQuery, setSearchQuery] = useState('');
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['/api/user'],
+    queryFn: async () => {
+      const response = await authenticatedFetch('/api/user');
+      if (!response.ok) throw new Error('Failed to fetch user');
+      return response.json();
+    }
   });
 
   const { toast } = useToast();
@@ -27,7 +33,7 @@ export default function SupportCenter() {
     if (error) {
       toast({ title: 'Error loading data', variant: 'destructive' });
     }
-  }, [error]);
+  }, [error, toast]);
 
   if (isLoading) {
     return (

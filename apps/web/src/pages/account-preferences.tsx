@@ -6,6 +6,7 @@ import BottomNavigation from '@/components/BottomNavigation';
 import { Settings, Bell, CreditCard, Shield, Globe, Smartphone, Mail, MessageSquare, DollarSign, Eye, EyeOff, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { authenticatedFetch } from '@/lib/queryClient';
 
 interface UserPreferences {
   notificationPreferences?: Record<string, boolean>;
@@ -38,6 +39,11 @@ export default function AccountPreferences() {
 
   const { data: userData, isLoading, error: queryError } = useQuery<UserData & UserPreferences>({
     queryKey: ['/api/user'],
+    queryFn: async () => {
+      const response = await authenticatedFetch('/api/user');
+      if (!response.ok) throw new Error('Failed to fetch user preferences');
+      return response.json();
+    },
     staleTime: 60000,
   });
 
@@ -45,7 +51,7 @@ export default function AccountPreferences() {
     if (queryError) {
       toast({ title: 'Error loading preferences', variant: 'destructive' });
     }
-  }, [queryError]);
+  }, [queryError, toast]);
 
   const [preferences, setPreferences] = useState({
     notifications: { email: true, sms: true, push: true, marketing: false },
@@ -55,24 +61,30 @@ export default function AccountPreferences() {
   });
 
   useEffect(() => {
-    if (!userData) return;
-    const saved = userData.preferences;
-    if (saved) {
-      setPreferences(prev => ({
-        notifications: { ...prev.notifications, ...(saved.notifications || {}) },
-        privacy: { ...prev.privacy, ...(saved.privacy || {}) },
-        display: { ...prev.display, ...(saved.display || {}) },
-        security: { ...prev.security, ...(saved.security || {}) },
-      }));
-    } else {
-      setPreferences(prev => ({
-        ...prev,
-        display: { ...prev.display, currency: userData.currency || prev.display.currency, language: userData.language || prev.display.language },
-        notifications: { ...prev.notifications, email: userData.emailNotifications ?? prev.notifications.email, sms: userData.smsNotifications ?? prev.notifications.sms, push: userData.pushNotifications ?? prev.notifications.push },
-        privacy: { ...prev.privacy, twoFactorAuth: userData.twoFactorEnabled ?? prev.privacy.twoFactorAuth, showBalance: userData.showBalance ?? prev.privacy.showBalance },
-      }));
+    if (userData?.preferences) {
+      setPreferences({
+        notifications: { ...preferences.notifications, ...userData.preferences.notifications },
+        privacy: { ...preferences.privacy, ...userData.preferences.privacy },
+        display: { ...preferences.display, ...userData.preferences.display },
+        security: { ...preferences.security, ...userData.preferences.security },
+      });
     }
   }, [userData]);
+
+  const handleSave = async () => {
+    try {
+      const response = await authenticatedFetch('/api/user/preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preferences })
+      });
+      if (!response.ok) throw new Error('Failed to save');
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({ title: 'Preferences saved successfully' });
+    } catch {
+      toast({ title: 'Failed to save preferences', variant: 'destructive' });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -82,77 +94,63 @@ export default function AccountPreferences() {
     );
   }
 
-  const handleSave = async () => {
-    const { authenticatedFetch } = await import('@/lib/queryClient');
-    try {
-      const response = await authenticatedFetch('/api/user/preferences', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(preferences)
-      });
-      if (response.ok) {
-        toast({ title: 'Preferences Saved', description: t('preferences_saved') });
-        queryClient.invalidateQueries({ queryKey: ['/api/user/preferences'] });
-      } else {
-        toast({ title: 'Save Failed', description: 'Failed to save preferences. Please try again.', variant: 'destructive' });
-      }
-    } catch (error) {
-      toast({ title: 'Error', description: 'Error saving preferences. Please try again.', variant: 'destructive' });
-    }
-  };
-
-  const togglePreference = (category: 'notifications' | 'privacy' | 'security', key: string) => {
-    setPreferences(prev => {
-      if (category === 'notifications') return { ...prev, notifications: { ...prev.notifications, [key]: !prev.notifications[key as keyof typeof prev.notifications] } };
-      else if (category === 'privacy') return { ...prev, privacy: { ...prev.privacy, [key]: !prev.privacy[key as keyof typeof prev.privacy] } };
-      else if (category === 'security') return { ...prev, security: { ...prev.security, [key]: !prev.security[key as keyof typeof prev.security] } };
-      return prev;
-    });
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <Header user={user as unknown as import("@packages/shared/schema").User || undefined} />
-      <main className="pt-16 pb-20 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('account_preferences')}</h1>
-            <p className="text-gray-600">{t('manage_account_settings')}</p>
+    <div className="min-h-screen bg-gray-50">
+      <Header user={user as any} />
+      <div className="container mx-auto px-4 py-6 max-w-3xl pb-20">
+        <h1 className="text-2xl font-bold mb-6">{t('account_preferences') || 'Account Preferences'}</h1>
+
+        <div className="bg-white rounded-xl shadow p-6 mb-4">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><Bell className="w-5 h-5" /> Notifications</h2>
+          <div className="space-y-3">
+            {Object.entries(preferences.notifications).map(([key, value]) => (
+              <label key={key} className="flex items-center justify-between">
+                <span className="capitalize">{key}</span>
+                <input type="checkbox" checked={value} onChange={(e) => setPreferences({ ...preferences, notifications: { ...preferences.notifications, [key]: e.target.checked } })} />
+              </label>
+            ))}
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center space-x-3 mb-4"><Bell className="w-5 h-5 text-blue-600" /><h2 className="text-lg font-semibold text-gray-900">{t('notification_preferences')}</h2></div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between"><div className="flex items-center space-x-3"><Mail className="w-4 h-4 text-gray-400" /><span className="text-sm text-gray-700">{t('email_notifications')}</span></div><button onClick={() => togglePreference('notifications', 'email')} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${preferences.notifications.email ? 'bg-blue-600' : 'bg-gray-200'}`}><span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${preferences.notifications.email ? 'translate-x-6' : 'translate-x-1'}`} /></button></div>
-                <div className="flex items-center justify-between"><div className="flex items-center space-x-3"><MessageSquare className="w-4 h-4 text-gray-400" /><span className="text-sm text-gray-700">{t('sms_notifications')}</span></div><button onClick={() => togglePreference('notifications', 'sms')} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${preferences.notifications.sms ? 'bg-blue-600' : 'bg-gray-200'}`}><span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${preferences.notifications.sms ? 'translate-x-6' : 'translate-x-1'}`} /></button></div>
-                <div className="flex items-center justify-between"><div className="flex items-center space-x-3"><Smartphone className="w-4 h-4 text-gray-400" /><span className="text-sm text-gray-700">{t('push_notifications')}</span></div><button onClick={() => togglePreference('notifications', 'push')} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${preferences.notifications.push ? 'bg-blue-600' : 'bg-gray-200'}`}><span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${preferences.notifications.push ? 'translate-x-6' : 'translate-x-1'}`} /></button></div>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center space-x-3 mb-4"><Shield className="w-5 h-5 text-blue-600" /><h2 className="text-lg font-semibold text-gray-900">{t('privacy_settings')}</h2></div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between"><div className="flex items-center space-x-3">{preferences.privacy.showBalance ? <Eye className="w-4 h-4 text-gray-400" /> : <EyeOff className="w-4 h-4 text-gray-400" />}<span className="text-sm text-gray-700">{t('show_balance')}</span></div><button onClick={() => togglePreference('privacy', 'showBalance')} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${preferences.privacy.showBalance ? 'bg-blue-600' : 'bg-gray-200'}`}><span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${preferences.privacy.showBalance ? 'translate-x-6' : 'translate-x-1'}`} /></button></div>
-                <div className="flex items-center justify-between"><div className="flex items-center space-x-3"><Shield className="w-4 h-4 text-gray-400" /><span className="text-sm text-gray-700">{t('two_factor_auth')}</span></div><button onClick={() => togglePreference('privacy', 'twoFactorAuth')} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${preferences.privacy.twoFactorAuth ? 'bg-blue-600' : 'bg-gray-200'}`}><span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${preferences.privacy.twoFactorAuth ? 'translate-x-6' : 'translate-x-1'}`} /></button></div>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center space-x-3 mb-4"><Settings className="w-5 h-5 text-blue-600" /><h2 className="text-lg font-semibold text-gray-900">{t('display_preferences')}</h2></div>
-              <div className="space-y-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('preferred_currency')}</label><select value={preferences.display.currency} onChange={(e) => setPreferences(prev => ({ ...prev, display: { ...prev.display, currency: e.target.value } }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"><option value="USD">USD - US Dollar</option><option value="EUR">EUR - Euro</option><option value="GBP">GBP - British Pound</option><option value="CNY">CNY - Chinese Yuan</option><option value="JPY">JPY - Japanese Yen</option></select></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('language')}</label><select value={preferences.display.language} onChange={(e) => setPreferences(prev => ({ ...prev, display: { ...prev.display, language: e.target.value } }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"><option value="en">English</option><option value="zh">中文 (Chinese)</option><option value="es">Español</option><option value="fr">Français</option></select></div>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center space-x-3 mb-4"><Shield className="w-5 h-5 text-blue-600" /><h2 className="text-lg font-semibold text-gray-900">{t('security_settings')}</h2></div>
-              <div className="space-y-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('session_timeout')}</label><select value={preferences.security.sessionTimeout} onChange={(e) => setPreferences(prev => ({ ...prev, security: { ...prev.security, sessionTimeout: parseInt(e.target.value) } }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"><option value={15}>15 minutes</option><option value={30}>30 minutes</option><option value={60}>1 hour</option><option value={120}>2 hours</option></select></div>
-                <div className="flex items-center justify-between"><div className="flex items-center space-x-3"><Smartphone className="w-4 h-4 text-gray-400" /><span className="text-sm text-gray-700">{t('biometric_auth')}</span></div><button onClick={() => togglePreference('security', 'biometric')} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${preferences.security.biometric ? 'bg-blue-600' : 'bg-gray-200'}`}><span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${preferences.security.biometric ? 'translate-x-6' : 'translate-x-1'}`} /></button></div>
-              </div>
-            </div>
-          </div>
-          <div className="mt-8 flex justify-end"><button onClick={handleSave} className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"><Save className="w-4 h-4" /><span>{t('save_preferences')}</span></button></div>
         </div>
-      </main>
+
+        <div className="bg-white rounded-xl shadow p-6 mb-4">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><Shield className="w-5 h-5" /> Privacy & Security</h2>
+          <div className="space-y-3">
+            {Object.entries(preferences.privacy).map(([key, value]) => (
+              <label key={key} className="flex items-center justify-between">
+                <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                <input type="checkbox" checked={value} onChange={(e) => setPreferences({ ...preferences, privacy: { ...preferences.privacy, [key]: e.target.checked } })} />
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow p-6 mb-4">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2"><Globe className="w-5 h-5" /> Display</h2>
+          <div className="space-y-3">
+            <label className="flex items-center justify-between">
+              <span>Currency</span>
+              <select value={preferences.display.currency} onChange={(e) => setPreferences({ ...preferences, display: { ...preferences.display, currency: e.target.value } })}>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="GBP">GBP</option>
+                <option value="CNY">CNY</option>
+              </select>
+            </label>
+            <label className="flex items-center justify-between">
+              <span>Language</span>
+              <select value={preferences.display.language} onChange={(e) => setPreferences({ ...preferences, display: { ...preferences.display, language: e.target.value } })}>
+                <option value="en">English</option>
+                <option value="zh">中文</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <button onClick={handleSave} className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2">
+          <Save className="w-4 h-4" />
+          {t('save_preferences') || 'Save Preferences'}
+        </button>
+      </div>
       <BottomNavigation />
     </div>
   );

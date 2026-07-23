@@ -39,77 +39,56 @@ export default function TransferFunds() {
     queryKey: ['/api/accounts'],
     queryFn: async () => {
       const response = await authenticatedFetch('/api/accounts');
-      if (!response.ok) return [];
+      if (!response.ok) throw new Error('Failed to fetch accounts');
       return response.json();
     }
   });
 
   useEffect(() => {
     if (error) {
-      toast({ title: 'Error loading data', variant: 'destructive' });
+      toast({ title: 'Error loading accounts', variant: 'destructive' });
     }
-  }, [error]);
+  }, [error, toast]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  const handleSubmit = async () => {
-    // Validate
-    if (!amount || !recipientName || !recipientAccount || !transferPin) {
-      toast({ title: t('missing_information'), description: 'Please fill in all required fields', variant: 'destructive' });
+  const handleTransfer = async () => {
+    if (!amount || !recipientAccount || !recipientName || !transferPin) {
+      toast({ title: 'Missing required fields', variant: 'destructive' });
       return;
     }
-
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      toast({ title: 'Invalid Amount', description: 'Please enter a valid amount', variant: 'destructive' });
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      toast({ title: 'Invalid amount', variant: 'destructive' });
       return;
     }
-
-    // Max transfer validation
-    const MAX_TRANSFER = transferType === 'domestic' ? 1000000 : 500000;
-    if (numAmount > MAX_TRANSFER) {
-      toast({ title: 'Amount Too High', description: `Maximum ${transferType} transfer is $${MAX_TRANSFER.toLocaleString()}`, variant: 'destructive' });
-      return;
-    }
-
     setStep('processing');
-
     try {
-      const endpoint = transferType === 'international' ? '/api/transfers/international' : '/api/transfers';
-      const body = transferType === 'international'
-        ? { recipientAccount, recipientName, recipientBank, swiftCode, amount: numAmount, currency: 'USD', description, transferPin }
-        : { recipientAccount, recipientName, amount: numAmount, currency: 'USD', description, transferPin };
-
-      const response = await authenticatedFetch(endpoint, {
+      const response = await authenticatedFetch('/api/transfers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          recipientAccount,
+          recipientName,
+          amount: parsedAmount,
+          description,
+          transferPin,
+          transferType,
+          ...(transferType === 'international' && recipientBank ? { recipientBank } : {}),
+          ...(transferType === 'international' && swiftCode ? { swiftCode } : {}),
+        })
       });
-
       const data = await response.json();
-
-      if (response.ok && data.success) {
-        setReferenceNumber(data.reference || `TRF${Date.now()}`);
-        setStep('success');
-        queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      } else {
-        setErrorMessage(data.error || 'Transfer failed');
-        setStep('error');
-      }
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Transfer failed');
+      if (!response.ok) throw new Error(data.error || 'Transfer failed');
+      setReferenceNumber(data.referenceNumber || data.reference_number || 'N/A');
+      setStep('success');
+      queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Transfer failed');
       setStep('error');
     }
   };
 
-  const resetForm = () => {
+  const reset = () => {
     setStep('details');
     setAmount('');
     setRecipientName('');
@@ -122,43 +101,102 @@ export default function TransferFunds() {
     setErrorMessage('');
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={(userProfile as unknown as User) || undefined} />
-      <main className="container mx-auto px-4 py-6 max-w-2xl pb-20">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('transfer')}</h1>
-
+      <Header user={userProfile as User | undefined} />
+      <div className="container mx-auto px-4 py-6 max-w-2xl pb-20">
         {step === 'details' && (
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="flex gap-2 mb-6">
-              <button onClick={() => setTransferType('domestic')} className={`flex-1 py-2 rounded-lg font-medium ${transferType === 'domestic' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>{t('domestic_transfer')}</button>
-              <button onClick={() => setTransferType('international')} className={`flex-1 py-2 rounded-lg font-medium ${transferType === 'international' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>{t('international_transfer')}</button>
+          <div className="space-y-6">
+            <h1 className="text-2xl font-bold">{t('transfer_funds') || 'Transfer Funds'}</h1>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setTransferType('domestic')}
+                className={`flex-1 py-2 rounded-lg font-medium ${transferType === 'domestic' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'}`}
+              >
+                {t('domestic') || 'Domestic'}
+              </button>
+              <button
+                onClick={() => setTransferType('international')}
+                className={`flex-1 py-2 rounded-lg font-medium ${transferType === 'international' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'}`}
+              >
+                {t('international') || 'International'}
+              </button>
             </div>
-
-            <div className="space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('amount')}</label><input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" max={transferType === 'domestic' ? 1000000 : 500000} className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('recipient_name')}</label><input type="text" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} placeholder="Recipient name" className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('account_number')}</label><input type="text" value={recipientAccount} onChange={(e) => setRecipientAccount(e.target.value)} placeholder="Account number" className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
-              {transferType === 'international' && (<><div><label className="block text-sm font-medium text-gray-700 mb-2">{t('bank_name')}</label><input type="text" value={recipientBank} onChange={(e) => setRecipientBank(e.target.value)} placeholder="Bank name" className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div><div><label className="block text-sm font-medium text-gray-700 mb-2">{t('swift_code')}</label><input type="text" value={swiftCode} onChange={(e) => setSwiftCode(e.target.value)} placeholder="SWIFT code" className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div></>)}
-              <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('description')}</label><input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Transfer description (optional)" className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-2">{t('transfer_pin')}</label><input type="password" value={transferPin} onChange={(e) => setTransferPin(e.target.value)} placeholder="••••" maxLength={4} className="w-full px-3 py-2 border border-gray-300 rounded-lg" /></div>
-              <button onClick={handleSubmit} className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center justify-center gap-2"><Send className="w-4 h-4" />{t('transfer.submit')}</button>
+            <div className="bg-white rounded-xl shadow p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">{t('amount') || 'Amount'}</label>
+                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full px-3 py-2 border rounded-lg" placeholder="0.00" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t('recipient_name') || 'Recipient Name'}</label>
+                <input type="text" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t('recipient_account') || 'Recipient Account'}</label>
+                <input type="text" value={recipientAccount} onChange={(e) => setRecipientAccount(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+              </div>
+              {transferType === 'international' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">{t('recipient_bank') || 'Recipient Bank'}</label>
+                    <input type="text" value={recipientBank} onChange={(e) => setRecipientBank(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">SWIFT Code</label>
+                    <input type="text" value={swiftCode} onChange={(e) => setSwiftCode(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+                  </div>
+                </>
+              )}
+              <div>
+                <label className="block text-sm font-medium mb-1">{t('description') || 'Description'}</label>
+                <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3 py-2 border rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">{t('transfer_pin') || 'Transfer PIN'}</label>
+                <input type="password" maxLength={6} value={transferPin} onChange={(e) => setTransferPin(e.target.value.replace(/\D/g, ''))} className="w-full px-3 py-2 border rounded-lg" placeholder="4-6 digits" />
+              </div>
+              <button onClick={handleTransfer} className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2">
+                <Send className="w-4 h-4" />
+                {t('send_transfer') || 'Send Transfer'}
+              </button>
             </div>
           </div>
         )}
-
         {step === 'processing' && (
-          <div className="bg-white rounded-xl shadow p-8 text-center"><Loader2 className="w-12 h-12 text-blue-600 mx-auto mb-4 animate-spin" /><h2 className="text-lg font-semibold mb-2">{t('transfer_processing')}</h2><p className="text-sm text-gray-600">{t('transfer_processing_secure')}</p></div>
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600 mb-4" />
+            <p className="text-gray-600">{t('processing_transfer') || 'Processing your transfer...'}</p>
+          </div>
         )}
-
         {step === 'success' && (
-          <div className="bg-white rounded-xl shadow p-8 text-center"><div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><Check className="w-8 h-8 text-green-600" /></div><h2 className="text-lg font-semibold mb-2">{t('transfer.success')}</h2><p className="text-sm text-gray-600 mb-4">{t('reference_id')} {referenceNumber}</p><button onClick={resetForm} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{t('continue')}</button></div>
+          <div className="flex flex-col items-center justify-center py-20">
+            <Check className="w-16 h-16 text-green-600 mb-4" />
+            <h2 className="text-2xl font-bold mb-2">{t('transfer_successful') || 'Transfer Successful'}</h2>
+            <p className="text-gray-600 mb-1">{t('reference_number') || 'Reference'}: {referenceNumber}</p>
+            <button onClick={() => { reset(); setLocation('/dashboard'); }} className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg">
+              {t('back_to_dashboard') || 'Back to Dashboard'}
+            </button>
+          </div>
         )}
-
         {step === 'error' && (
-          <div className="bg-white rounded-xl shadow p-8 text-center"><div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><AlertCircle className="w-8 h-8 text-red-600" /></div><h2 className="text-lg font-semibold mb-2">{t('failed')}</h2><p className="text-sm text-gray-600 mb-4">{errorMessage}</p><button onClick={() => setStep('details')} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{t('back')}</button></div>
+          <div className="flex flex-col items-center justify-center py-20">
+            <AlertCircle className="w-16 h-16 text-red-600 mb-4" />
+            <h2 className="text-2xl font-bold mb-2">{t('transfer_failed') || 'Transfer Failed'}</h2>
+            <p className="text-gray-600 mb-4">{errorMessage}</p>
+            <button onClick={reset} className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg">
+              {t('try_again') || 'Try Again'}
+            </button>
+          </div>
         )}
-      </main>
+      </div>
       <BottomNavigation />
     </div>
   );

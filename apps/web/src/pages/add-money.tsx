@@ -4,19 +4,23 @@ import BottomNavigation from "@/components/BottomNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { authenticatedFetch, queryClient } from "@/lib/queryClient";
-import { CreditCard, Banknote, Building, Smartphone, Plus, CheckCircle, Clock, Wallet, ArrowUpRight } from "lucide-react";
+import { CreditCard, Banknote, Building, Smartphone, Wallet } from "lucide-react";
 
 export default function AddMoney() {
   const { t } = useLanguage();
   const { toast } = useToast();
   const { data: user, isLoading, error: queryError } = useQuery<User>({
     queryKey: ['/api/user'],
+    queryFn: async () => {
+      const response = await authenticatedFetch('/api/user');
+      if (!response.ok) throw new Error('Failed to fetch user');
+      return response.json();
+    }
   });
 
   const [selectedMethod, setSelectedMethod] = useState("");
@@ -27,7 +31,7 @@ export default function AddMoney() {
     if (queryError) {
       toast({ title: 'Error loading account data', variant: 'destructive' });
     }
-  }, [queryError]);
+  }, [queryError, toast]);
 
   if (isLoading) {
     return (
@@ -106,9 +110,11 @@ export default function AddMoney() {
         body: JSON.stringify({ method: selectedMethod, amount: parsedAmount })
       });
 
-      if (!response.ok) throw new Error('Failed to add money');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to add money');
+      }
 
-      // Invalidate wallet balance and related queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: ['/api/wallet-balance'] });
       queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/transactions'] });
@@ -119,7 +125,7 @@ export default function AddMoney() {
       });
       setAmount("");
       setSelectedMethod("");
-    } catch (error) {
+    } catch {
       toast({
         title: t('error'),
         description: t('add_money_failed'),
