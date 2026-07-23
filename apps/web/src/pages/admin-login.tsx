@@ -31,9 +31,6 @@ export default function AdminLogin() {
       if (result.error) {
         setError(result.error);
       } else {
-        // Check if the user has admin role before redirecting.
-        // signIn() writes the profile to localStorage synchronously before returning,
-        // so we read it from there since the userProfile state update may not be reflected yet.
         const storedProfile = localStorage.getItem('userProfile');
         const profile = storedProfile ? JSON.parse(storedProfile) : null;
         if (profile?.role !== 'admin') {
@@ -43,7 +40,7 @@ export default function AdminLogin() {
         }
         setLocation("/admin-dashboard");
       }
-    } catch (err) {
+    } catch {
       setError("Login failed. Please try again.");
     } finally {
       setIsLoading(false);
@@ -51,7 +48,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
@@ -100,7 +97,7 @@ export default function AdminLogin() {
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
               disabled={isLoading}
             >
               {isLoading ? t('signing_in') : t('access_admin_panel')}

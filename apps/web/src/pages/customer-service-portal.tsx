@@ -12,9 +12,8 @@ export default function CustomerServicePortal() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
             <BankLogo className="w-16 h-16" />
@@ -27,7 +26,6 @@ export default function CustomerServicePortal() {
           </p>
         </div>
 
-        {/* Features Grid */}
         <div className="grid md:grid-cols-3 gap-8 mb-12">
           <Card className="text-center hover:shadow-lg transition-shadow">
             <CardHeader>
@@ -59,8 +57,8 @@ export default function CustomerServicePortal() {
 
           <Card className="text-center hover:shadow-lg transition-shadow">
             <CardHeader>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Users className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <Users className="w-6 h-6 text-teal-600" />
               </div>
               <CardTitle className="text-lg">Customer Management</CardTitle>
             </CardHeader>
@@ -72,7 +70,6 @@ export default function CustomerServicePortal() {
           </Card>
         </div>
 
-        {/* System Status */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h2 className="text-2xl font-semibold mb-6">System Status</h2>
           <div className="grid md:grid-cols-4 gap-6">
@@ -102,15 +99,14 @@ export default function CustomerServicePortal() {
             
             <div className="text-center">
               <div className="flex items-center justify-center mb-2">
-                <Headphones className="w-5 h-5 text-purple-600 mr-2" />
-                <span className="font-semibold text-purple-600">Available</span>
+                <Headphones className="w-5 h-5 text-teal-600 mr-2" />
+                <span className="font-semibold text-teal-600">Available</span>
               </div>
               <p className="text-sm text-gray-600">Customer Service</p>
             </div>
           </div>
         </div>
 
-        {/* Access Instructions */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-8">
           <h2 className="text-2xl font-semibold mb-6">Access Instructions</h2>
           <div className="space-y-4">
@@ -146,9 +142,6 @@ export default function CustomerServicePortal() {
           </div>
         </div>
 
-        {/* NOTE: Current Activity section removed - mock data eliminated per production requirements */}
-
-        {/* Action Button */}
         <div className="text-center">
           <Button 
             onClick={handleAccessLiveChat}
@@ -164,7 +157,6 @@ export default function CustomerServicePortal() {
           </p>
         </div>
 
-        {/* Footer */}
         <div className="text-center mt-12 pt-8 border-t border-gray-200">
           <p className="text-gray-500">
             WORLD BANK Customer Service Portal • Vercel Deployment Ready • Real-time WebSocket Support

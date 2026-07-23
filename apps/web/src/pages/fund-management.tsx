@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { authenticatedFetch } from '@/lib/queryClient';
 import { Plus, Minus, DollarSign, Search } from "lucide-react";
 
 interface Customer {
@@ -26,9 +27,9 @@ export default function FundManagement() {
   const { data: customers = [], isLoading, error } = useQuery<Customer[]>({
     queryKey: ['/api/admin/customers'],
     queryFn: async () => {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch('/api/admin/customers');
-      return response.ok ? response.json() : [];
+      if (!response.ok) throw new Error('Failed to fetch customers');
+      return response.json();
     }
   });
 
@@ -36,7 +37,7 @@ export default function FundManagement() {
     if (error) {
       toast({ title: 'Error loading data', variant: 'destructive' });
     }
-  }, [error]);
+  }, [error, toast]);
 
   if (isLoading) {
     return (
@@ -67,7 +68,6 @@ export default function FundManagement() {
     }
 
     try {
-      const { authenticatedFetch } = await import('@/lib/queryClient');
       const response = await authenticatedFetch(`/api/admin/customers/${selectedCustomer.id}/balance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,7 +86,7 @@ export default function FundManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/customers'] });
       setAdjustAmount("");
       setSelectedCustomer(null);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to adjust balance",
@@ -94,6 +94,10 @@ export default function FundManagement() {
       });
     }
   };
+
+  const filteredCustomers = (customers as Customer[]).filter((c: Customer) =>
+    !searchTerm || c.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) || c.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -189,10 +193,10 @@ export default function FundManagement() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {(customers as Customer[]).length === 0 ? (
+              {filteredCustomers.length === 0 ? (
                 <p className="text-center text-gray-500 py-8">No customers found</p>
               ) : (
-                (customers as Customer[]).map((customer: Customer) => (
+                filteredCustomers.map((customer: Customer) => (
                   <div
                     key={customer.id}
                     role="button"
