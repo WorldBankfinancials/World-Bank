@@ -8,69 +8,65 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLocation } from "wouter";
-import { 
-  Wallet, 
-  Smartphone, 
-  QrCode, 
-  CreditCard, 
-  Shield, 
-  Zap, 
-  Globe, 
-  Plus,
-  Send,
-  Download,
-  Eye,
-  EyeOff,
-  History,
-  Settings,
-  ArrowUpRight,
-  ArrowDownRight,
-  Scan
-} from "lucide-react";
+import { Wallet, Send, Download, Eye, EyeOff, History, Settings, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { authenticatedFetch } from "@/lib/queryClient";
 
+interface WalletTransaction {
+  id: string;
+  amount: string;
+  description: string;
+  date: string;
+  status: string;
+  type: string;
+}
 
 export default function DigitalWallet() {
   const { t } = useLanguage();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [showBalance, setShowBalance] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
 
   const { data: user, isLoading, error } = useQuery<User>({
     queryKey: ['/api/user'],
+    queryFn: async () => {
+      const response = await authenticatedFetch('/api/user');
+      if (!response.ok) throw new Error('Failed to fetch user');
+      return response.json();
+    }
   });
 
-  // Fetch real wallet data from Supabase
   const { data: walletData, error: walletError } = useQuery<{ balance: number }>({
     queryKey: ['/api/wallet-balance'],
+    queryFn: async () => {
+      const response = await authenticatedFetch('/api/wallet-balance');
+      if (!response.ok) throw new Error('Failed to fetch wallet balance');
+      return response.json();
+    },
     enabled: !!user,
     staleTime: 30000
   });
 
-  const { data: recentTransactions, error: transactionsError } = useQuery({
+  const { data: recentTransactions = [], error: transactionsError } = useQuery<WalletTransaction[]>({
     queryKey: ['/api/wallet-transactions'],
+    queryFn: async () => {
+      const response = await authenticatedFetch('/api/wallet-transactions');
+      if (!response.ok) throw new Error('Failed to fetch wallet transactions');
+      return response.json();
+    },
     enabled: !!user,
     staleTime: 30000
   });
 
   useEffect(() => {
-    if (error) {
-      toast({ title: 'Error loading data', variant: 'destructive' });
-    }
-  }, [error]);
-
+    if (error) toast({ title: 'Error loading data', variant: 'destructive' });
+  }, [error, toast]);
   useEffect(() => {
-    if (walletError) {
-      toast({ title: 'Error loading wallet balance', variant: 'destructive' });
-    }
-  }, [walletError]);
-
+    if (walletError) toast({ title: 'Error loading wallet balance', variant: 'destructive' });
+  }, [walletError, toast]);
   useEffect(() => {
-    if (transactionsError) {
-      toast({ title: 'Error loading transactions', variant: 'destructive' });
-    }
-  }, [transactionsError]);
+    if (transactionsError) toast({ title: 'Error loading transactions', variant: 'destructive' });
+  }, [transactionsError, toast]);
 
   if (isLoading) {
     return (
@@ -80,183 +76,73 @@ export default function DigitalWallet() {
     );
   }
 
-  const walletBalance = walletData?.balance || (user && 'balance' in user ? user.balance : 0) || 0;
-
-  // Quick actions - navigation only (no API needed)
-  const quickActions = [
-    { icon: Send, label: t('send_money'), action: () => { navigate("/transfer"); } },
-    { icon: QrCode, label: "QR Pay", action: () => { navigate("/mobile-pay"); } },
-    { icon: Plus, label: t('add_money'), action: () => { navigate("/add-money"); } },
-    { icon: History, label: t('history'), action: () => { navigate("/history"); } }
-  ];
+  const balance = walletData?.balance ?? 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
-      
-      <div className="px-4 py-6 pb-20">
-        {/* Header Section */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">{t('digital_wallet')}</h1>
-            <p className="text-sm text-gray-600">{t('digital_wallet_desc')}</p>
-          </div>
-          <Button onClick={() => navigate('/add-money')} className="bg-blue-600 text-white">
-            <Plus className="w-4 h-4 mr-1" />
-            Add Funds
-          </Button>
-        </div>
-
-        {/* Main Wallet Card */}
-        <Card className="mb-6 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
-          <CardHeader>
-            <div className="flex justify-between items-start">
+      <Header user={user} />
+      <div className="container mx-auto px-4 py-6 max-w-4xl pb-20">
+        <h1 className="text-2xl font-bold mb-6">Digital Wallet</h1>
+        <Card className="mb-4">
+          <CardContent className="pt-6">
+            <div className="flex justify-between items-center">
               <div>
-                <CardTitle className="text-xl mb-2">World Bank Digital Wallet</CardTitle>
-                <p className="text-blue-100">Available Balance</p>
+                <p className="text-sm text-gray-500">Wallet Balance</p>
+                <p className="text-3xl font-bold">
+                  {showBalance ? `$${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '******'}
+                </p>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowBalance(!showBalance)}
-                className="text-white hover:bg-blue-700"
-              >
+              <Button variant="ghost" size="sm" onClick={() => setShowBalance(!showBalance)}>
                 {showBalance ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-6">
-              <div className="text-3xl font-bold mb-2">
-                {showBalance ? `$${walletBalance.toLocaleString()}` : "••••••"}
-              </div>
-              <div className="flex items-center space-x-4 text-blue-100">
-                <span>Account: {user?.accountNumber || t('loading')}</span>
-                <Badge className="bg-green-500 text-white">{user && 'isActive' in user && user.isActive ? t('account_active') : t('account_inactive')}</Badge>
-              </div>
-            </div>
           </CardContent>
         </Card>
-
-        {/* Quick Actions */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>{t('quick_actions')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-4 gap-3">
-              {quickActions.map((action, index) => (
-                <button
-                  key={`quick-action-${index}`}
-                  onClick={() => {
-                    try {
-                      action.action();
-                    } catch (e) {
-                      toast({ title: 'Error', description: 'Navigation failed', variant: 'destructive' });
-                    }
-                  }}
-                  className="h-16 flex flex-col items-center justify-center space-y-2 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all"
-                >
-                  <action.icon className="w-5 h-5 text-gray-600" />
-                  <span className="text-xs text-gray-700 font-medium text-center line-clamp-2">{action.label}</span>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Transactions */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Recent Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentTransactions && (recentTransactions as Array<Record<string, unknown>>).length > 0 ? (
-                (recentTransactions as Array<Record<string, unknown>>).map((transaction, index: number) => (
-                <div key={`item-${index}`} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                      transaction.type === 'received' ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
-                      {transaction.type === 'received' ? (
-                        <ArrowDownRight className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <ArrowUpRight className="w-5 h-5 text-red-600" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">
-                        {transaction.type === 'received' ? `From ${transaction.from}` : `To ${transaction.to}`}
-                      </p>
-                      <p className="text-xs text-gray-500">{String(transaction.time || '')}</p>
-                    </div>
-                  </div>
-                  <span className={`font-medium ${
-                    transaction.type === 'received' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {String(transaction.amount || '')}
-                  </span>
-                </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No recent transactions yet</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Digital Payment Options */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <Button variant="outline" className="flex flex-col items-center gap-1 h-auto py-3" onClick={() => navigate('/transfer-funds')}>
+            <Send className="w-5 h-5" /><span className="text-xs">Send</span>
+          </Button>
+          <Button variant="outline" className="flex flex-col items-center gap-1 h-auto py-3" onClick={() => navigate('/add-money')}>
+            <Download className="w-5 h-5" /><span className="text-xs">Receive</span>
+          </Button>
+          <Button variant="outline" className="flex flex-col items-center gap-1 h-auto py-3" onClick={() => navigate('/transaction-history')}>
+            <History className="w-5 h-5" /><span className="text-xs">History</span>
+          </Button>
+          <Button variant="outline" className="flex flex-col items-center gap-1 h-auto py-3" onClick={() => navigate('/account-preferences')}>
+            <Settings className="w-5 h-5" /><span className="text-xs">Settings</span>
+          </Button>
+        </div>
         <Card>
-          <CardHeader>
-            <CardTitle>Payment Methods</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Recent Transactions</CardTitle></CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <QrCode className="w-6 h-6 text-blue-600" />
-                  <div>
-                    <p className="font-medium">QR Code Payments</p>
-                    <p className="text-sm text-gray-600">Scan to pay instantly</p>
+            {recentTransactions.length === 0 ? (
+              <p className="text-center text-gray-500 py-4">No transactions yet</p>
+            ) : (
+              <div className="space-y-2">
+                {recentTransactions.map((tx: WalletTransaction) => (
+                  <div key={tx.id} className="flex items-center justify-between p-2 border-b">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${tx.type === 'credit' ? 'bg-green-100' : 'bg-red-100'}`}>
+                        {tx.type === 'credit' ? <ArrowDownRight className="w-4 h-4 text-green-600" /> : <ArrowUpRight className="w-4 h-4 text-red-600" />}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{tx.description}</p>
+                        <p className="text-xs text-gray-500">{new Date(tx.date).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-semibold text-sm ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                        {tx.type === 'credit' ? '+' : '-'}${parseFloat(tx.amount).toFixed(2)}
+                      </p>
+                      <Badge variant="outline" className="text-xs">{tx.status}</Badge>
+                    </div>
                   </div>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => toast({ title: 'QR scanning coming soon' })}>
-                  <Scan className="w-4 h-4 mr-1" />
-                  Scan
-                </Button>
+                ))}
               </div>
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Smartphone className="w-6 h-6 text-green-600" />
-                  <div>
-                    <p className="font-medium">Mobile Transfers</p>
-                    <p className="text-sm text-gray-600">Send to phone numbers</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => navigate('/transfer-funds')}>
-                  Send
-                </Button>
-              </div>
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Globe className="w-6 h-6 text-purple-600" />
-                  <div>
-                    <p className="font-medium">International Payments</p>
-                    <p className="text-sm text-gray-600">Send money worldwide</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => navigate('/transfer-funds')}>
-                  Transfer
-                </Button>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
-      
       <BottomNavigation />
     </div>
   );

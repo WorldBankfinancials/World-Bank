@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Lock, Eye, EyeOff, Shield, Smartphone, CreditCard, Mail, User, Globe } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertCircle, Lock, Eye, EyeOff, Mail, Globe } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import { BankLogo } from "@/components/BankLogo";
@@ -13,8 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LiveChat from "@/components/LiveChat";
+import { authenticatedFetch } from "@/lib/queryClient";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -23,444 +22,125 @@ export default function Login() {
   const { t, language, setLanguage } = useLanguage();
   const [loading, setLoading] = useState(false);
 
-  // Check for pending approval status from URL params
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('status') === 'pending') {
       toast({
         title: "Registration Pending Approval",
-        description: "Your registration is being reviewed by our customer support team. You'll receive an email once approved.",
+        description: "Your registration is being reviewed. You'll receive an email once approved.",
         duration: 8000,
       });
     }
   }, [toast]);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showPinVerification, setShowPinVerification] = useState(false);
-  const [loginPin, setLoginPin] = useState("");
-  const [pinError, setPinError] = useState("");
-  const [loginType, setLoginType] = useState<'email' | 'mobile' | 'id'>('email');
-  const [loginData, setLoginData] = useState({
-    email: "",
-    mobile: "",
-    idNumber: "",
-    password: "",
-  });
-  const [showLiveChat, setShowLiveChat] = useState(false);
 
-  // Fetch user data to get current PIN when PIN verification is shown
+  const [showPassword, setShowPassword] = useState(false);
+  const [credentials, setCredentials] = useState({ email: "", password: "" });
+
   const { error: queryError } = useQuery({
     queryKey: ['/api/user'],
-    enabled: showPinVerification, // Only fetch when PIN verification is needed
+    queryFn: async () => {
+      const response = await authenticatedFetch('/api/user');
+      if (!response.ok) throw new Error('Not authenticated');
+      return response.json();
+    },
+    retry: false,
+    staleTime: Infinity,
   });
 
-  useEffect(() => {
-    if (queryError) {
-      toast({ title: 'Error loading data', variant: 'destructive' });
-    }
-  }, [queryError]);
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
-    try {
-      // For now, only support email login (mobile/ID require backend mapping)
-      if (loginType !== 'email') {
-        toast({
-          title: t('login_failed'),
-          description: 'Only email login is currently supported',
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
-      const result = await signIn(loginData.email, loginData.password);
-      
-      if (result.error) {
-        let errorMessage = result.error;
-        
-        // Provide specific error messages
-        if (result.error.includes('Invalid login credentials')) {
-          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
-        } else if (result.error.includes('Email not confirmed')) {
-          errorMessage = 'Please verify your email address before logging in.';
-        } else if (result.error.includes('not found')) {
-          errorMessage = 'Account not found. Please register first or contact support.';
-        }
-        
-        toast({
-          title: t('login_failed') || 'Login Failed',
-          description: errorMessage,
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Show PIN verification
-      setShowPinVerification(true);
-      setLoading(false);
-
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'An unexpected error occurred';
-      toast({
-        title: t('login_failed'),
-        description: errorMsg,
-        variant: "destructive"
-      });
-      setLoading(false);
-    }
-  };
-
-  const handlePinVerification = async () => {
-    if (loginPin.length !== 4) {
-      setPinError('PIN must be 4 digits');
+    if (!credentials.email || !credentials.password) {
+      toast({ title: "Please enter both email and password", variant: "destructive" });
       return;
     }
-
+    setLoading(true);
     try {
-      const identifier = loginData.email;
-      const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/verify-pin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: identifier,
-          pin: loginPin
-        }),
+      await signIn(credentials.email, credentials.password);
+      toast({ title: "Welcome back!", description: "Login successful" });
+      setLocation('/dashboard');
+    } catch (err) {
+      toast({
+        title: "Login Failed",
+        description: err instanceof Error ? err.message : "Invalid credentials",
+        variant: "destructive",
       });
-
-      if (!response.ok) {
-        setPinError('Invalid PIN or verification failed');
-        setLoginPin("");
-        return;
-      }
-
-      const result = await response.json();
-
-      if (result.success && result.verified) {
-        setShowPinVerification(false);
-        setLoginPin("");
-        setPinError("");
-        toast({
-          title: 'Login Successful',
-          description: 'Welcome back to World Bank',
-        });
-        setLocation("/dashboard");
-      } else {
-        setPinError('Invalid PIN');
-        setLoginPin("");
-      }
-    } catch (error) {
-      setPinError('Verification failed. Please try again.');
-      setLoginPin("");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex flex-col">
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md relative">
-          {/* Language Selector */}
-          <div className="flex justify-end mb-6">
-            <div className="w-32">
-              <Select value={language} onValueChange={(value: 'en' | 'zh') => setLanguage(value)}>
-                <SelectTrigger className="bg-white/80 backdrop-blur-sm border-white/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="zh">中文</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Professional World Bank Header */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-6">
-              <div className="relative">
-                <BankLogo className="w-20 h-20" />
-              </div>
-            </div>
-            <div className="space-y-3">
-              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-                WORLD BANK
-              </h1>
-              <p className="text-gray-600 text-base">
-                International Digital Banking
-              </p>
-            </div>
-          </div>
-
-          {/* Professional Login Card */}
-          <Card className="wb-login-card shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
-            <CardHeader className="space-y-3 pb-6 pt-8">
-              <div className="text-center">
-                <CardTitle className="text-2xl font-semibold text-gray-900 mb-2">
-                  Sign In
-                </CardTitle>
-                <p className="text-gray-600 text-sm">
-                  Access your account
-                </p>
-              </div>
-            </CardHeader>
-          
-            <CardContent className="space-y-6 px-8 pb-8">
-              {/* Login Method Tabs */}
-              <Tabs value={loginType} onValueChange={(value) => setLoginType(value as 'email' | 'mobile' | 'id')} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg">
-                  <TabsTrigger value="email" className="flex items-center space-x-2 text-xs">
-                    <Mail className="w-4 h-4" />
-                    <span>Email</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="mobile" className="flex items-center space-x-2 text-xs">
-                    <Smartphone className="w-4 h-4" />
-                    <span>Mobile</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="id" className="flex items-center space-x-2 text-xs">
-                    <CreditCard className="w-4 h-4" />
-                    <span>Account ID</span>
-                  </TabsTrigger>
-                </TabsList>
-
-                <form onSubmit={handleLogin} className="space-y-5 mt-6">
-                  {/* Email Login */}
-                  <TabsContent value="email" className="space-y-4 mt-4">
-                    <div className="space-y-3">
-                      <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
-                        User ID or Email
-                      </Label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-4 text-gray-500 font-medium text-base">@/</span>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={loginData.email}
-                          onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
-                          className="wb-input pl-12 h-14 text-base"
-                          placeholder="Enter email address"
-                          required={loginType === 'email'}
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  {/* Mobile Login */}
-                  <TabsContent value="mobile" className="space-y-4 mt-4">
-                    <div className="space-y-3">
-                      <Label htmlFor="mobile" className="text-sm font-semibold text-gray-700">
-                        Mobile Number
-                      </Label>
-                      <div className="relative">
-                        <Smartphone className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
-                        <Input
-                          id="mobile"
-                          type="tel"
-                          value={loginData.mobile}
-                          onChange={(e) => setLoginData(prev => ({ ...prev, mobile: e.target.value }))}
-                          className="wb-input pl-12 h-14 text-base"
-                          placeholder="Enter mobile number"
-                          required={loginType === 'mobile'}
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  {/* ID Login */}
-                  <TabsContent value="id" className="space-y-4 mt-4">
-                    <div className="space-y-3">
-                      <Label htmlFor="idNumber" className="text-sm font-semibold text-gray-700">
-                        Account ID
-                      </Label>
-                      <div className="relative">
-                        <CreditCard className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
-                        <Input
-                          id="idNumber"
-                          type="text"
-                          value={loginData.idNumber}
-                          onChange={(e) => setLoginData(prev => ({ ...prev, idNumber: e.target.value }))}
-                          className="wb-input pl-12 h-14 text-base"
-                          placeholder="Enter account ID (e.g. WB-2025-8912)"
-                          required={loginType === 'id'}
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  {/* Password Field (Common for all login types) */}
-                  <div className="space-y-3">
-                    <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
-                      Password
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-4 h-5 w-5 text-gray-400" />
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        value={loginData.password}
-                        onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
-                        className="wb-input pl-12 pr-12 h-14 text-base"
-                        placeholder="Enter your password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors"
-                      >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Sign In Button */}
-                  <div className="pt-2">
-                    <Button
-                      type="submit"
-                      className="wb-button-primary w-full h-14 text-base font-semibold"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <div className="flex items-center space-x-2">
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Signing In...</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-2">
-                          <Shield className="w-5 h-5" />
-                          <span>Sign In</span>
-                        </div>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </Tabs>
-
-              {/* Create Account Section */}
-              <div className="text-center pt-4 border-t border-gray-100">
-                <p className="text-sm text-gray-600">
-                  New customer?{" "}
-                  <button
-                    onClick={() => setLocation("/register-multi")}
-                    className="text-blue-600 hover:text-blue-700 font-semibold hover:underline transition-all"
-                  >
-                    Create Account
-                  </button>
-                </p>
-              </div>
-              
-              {/* About World Bank Link */}
-              <div className="text-center pt-2">
-                <button
-                  onClick={() => setLocation("/about")}
-                  className="text-gray-500 hover:text-gray-700 text-sm underline transition-colors"
-                >
-                  About World Bank
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Professional Footer */}
-          <div className="text-center mt-8 space-y-4">
-            <div className="flex justify-center space-x-6 text-gray-500 text-sm">
-              <button 
-                onClick={() => setShowLiveChat(true)}
-                className="hover:text-blue-600 transition-colors"
-              >
-                Support
-              </button>
-              <span className="text-gray-300">|</span>
-              <button 
-                onClick={() => window.open('https://worldbank.org/security', '_blank')}
-                className="hover:text-blue-600 transition-colors"
-              >
-                Security
-              </button>
-            </div>
-
-            <div className="text-gray-500 text-xs">
-              <p>© 2025 World Bank Group. All rights reserved.</p>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-blue-100 flex items-center justify-center p-4">
+      <div className="absolute top-4 right-4">
+        <Select value={language} onValueChange={setLanguage}>
+          <SelectTrigger className="w-32">
+            <Globe className="w-4 h-4 mr-2" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="en">English</SelectItem>
+            <SelectItem value="zh">中文</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* PIN Verification Modal */}
-      <Dialog open={showPinVerification} onOpenChange={setShowPinVerification}>
-        <DialogContent className="wb-modal sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-blue-600" />
-              {t('pin_verification_required')}
-            </DialogTitle>
-            <DialogDescription>Enter your 4-digit security PIN to complete login verification</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              {t('enter_pin_complete_login')}
-            </p>
-            
-            <div className="space-y-2">
-              <Label htmlFor="pin">{t('security_pin')}</Label>
-              <Input
-                id="pin"
-                type="password"
-                value={loginPin}
-                onChange={(e) => {
-                  setPinError("");
-                  setLoginPin(e.target.value);
-                }}
-                maxLength={4}
-                className="wb-input text-center text-lg tracking-widest"
-                placeholder="••••"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && loginPin.length === 4) {
-                    handlePinVerification();
-                  }
-                }}
-              />
-              {pinError && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{pinError}</AlertDescription>
-                </Alert>
-              )}
-            </div>
-            
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                className="flex-1 wb-btn-outline"
-                onClick={() => {
-                  setShowPinVerification(false);
-                  setLoginPin("");
-                  setPinError("");
-                }}
-              >
-                {t('cancel')}
-              </Button>
-              <Button
-                className="flex-1 wb-btn-primary"
-                onClick={handlePinVerification}
-                disabled={loginPin.length !== 4}
-              >
-                {t('verify_pin')}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <BankLogo className="w-16 h-16 mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-gray-900">World Bank</h1>
+          <p className="text-gray-600 mt-2">Sign in to your account</p>
+        </div>
 
-      {/* Live Chat Component */}
-      <LiveChat 
-        isOpen={showLiveChat} 
-        onClose={() => setShowLiveChat(false)} 
-      />
+        <Card>
+          <CardContent className="pt-6">
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div>
+                <Label htmlFor="email">{t('email') || 'Email'}</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                  <Input id="email" type="email" placeholder="you@example.com"
+                    value={credentials.email}
+                    onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
+                    className="pl-10" required />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="password">{t('password') || 'Password'}</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                  <Input id="password" type={showPassword ? "text" : "password"} placeholder="********"
+                    value={credentials.password}
+                    onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                    className="pl-10 pr-10" required />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <Button type="submit" disabled={loading} className="w-full bg-blue-600 text-white h-12">
+                {loading ? "Signing in..." : t('sign_in') || "Sign In"}
+              </Button>
+            </form>
+            <div className="mt-4 text-center">
+              <button onClick={() => setLocation('/register')} className="text-blue-600 hover:underline text-sm">
+                {t('no_account') || "Don't have an account? Register"}
+              </button>
+            </div>
+            <div className="mt-4 text-center">
+              <button onClick={() => setLocation('/admin-login')} className="text-gray-500 hover:underline text-sm">
+                {t('admin_login') || "Admin Login"}
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+        <div className="mt-4 text-center">
+          <button onClick={() => setLocation('/about')} className="text-gray-500 hover:underline text-sm">
+            {t('about_us') || "About Us"}
+          </button>
+        </div>
+      </div>
+      <LiveChat />
     </div>
   );
 }
