@@ -41,14 +41,14 @@ export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps)
       items: [
         { icon: Home, label: "Dashboard", href: "/dashboard" },
         { icon: ArrowUpRight, label: "Transfer Funds", href: "/transfer-funds" },
-        { icon: Building2, label: "Banking Services", href: "/banking-services" }
+        { icon: Building2, label: "Banking Services", href: "/digital-wallet" }
       ]
     },
     {
       title: "ACCOUNT MANAGEMENT",
       items: [
-        { icon: User, label: "Profile Settings", href: "/profile-settings" },
-        { icon: Shield, label: "Security Settings", href: "/security-settings" }
+        { icon: User, label: "Profile Settings", href: "/account-preferences" },
+        { icon: Shield, label: "Security Settings", href: "/security-center" }
       ]
     },
     {
@@ -56,7 +56,7 @@ export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps)
       items: [
         { icon: CreditCard, label: "Credit Cards", href: "/credit-cards" },
         { icon: FileText, label: "Transaction History", href: "/transaction-history" },
-        { icon: FileText, label: "Statements & Reports", href: "/statements-reports" }
+        { icon: FileText, label: "Statements & Reports", href: "/transaction-history" }
       ]
     },
     {
@@ -84,7 +84,6 @@ export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps)
         className="fixed right-0 top-0 h-full w-80 bg-white shadow-lg overflow-y-auto transform transition-transform duration-300 ease-in-out"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="p-4 border-b bg-gradient-to-r from-blue-600 to-blue-700">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -104,7 +103,6 @@ export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps)
           </div>
         </div>
 
-        {/* Menu sections */}
         <div className="p-4 space-y-6">
           {menuSections.map((section, sectionIndex) => (
             <div key={sectionIndex}>

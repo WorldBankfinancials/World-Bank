@@ -11,7 +11,7 @@ export default function BottomNavigation() {
     { icon: CreditCard, label: t('cards') || 'Cards', href: "/credit-cards" },
     { icon: ArrowLeftRight, label: t('transfer') || 'Transfer', href: "/transfer-funds" },
     { icon: FileText, label: t('history') || 'History', href: "/transaction-history" },
-    { icon: User, label: t('profile') || 'Profile', href: "/profile-settings" }
+    { icon: User, label: t('profile') || 'Profile', href: "/account-preferences" }
   ];
 
   return (

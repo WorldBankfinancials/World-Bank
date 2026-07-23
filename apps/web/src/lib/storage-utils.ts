@@ -4,7 +4,7 @@
 
 const STORAGE_PREFIX = 'wb_';
 
-const AUTH_KEYS = ['token', 'user', 'userProfile', 'refresh_token'];
+const AUTH_KEYS = ['token', 'user', 'userProfile', 'refresh_token', 'bank_chat_messages_v2'];
 
 export function setStorageItem(key: string, value: unknown): void {
   try {

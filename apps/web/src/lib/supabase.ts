@@ -25,51 +25,44 @@ export const supabase: SupabaseClient = createClient(supabaseUrl || '', supabase
   },
 });
 
-/**
- * Get current authenticated user from Supabase session
- */
 export async function getCurrentUser() {
   try {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) {
+      console.error('getCurrentUser error:', error.message);
       return null;
     }
     return user;
   } catch (error) {
+    console.error('getCurrentUser exception:', error);
     return null;
   }
 }
 
-/**
- * Get current session
- */
 export async function getSession() {
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error) {
+      console.error('getSession error:', error.message);
       return null;
     }
     return session;
   } catch (error) {
+    console.error('getSession exception:', error);
     return null;
   }
 }
 
-/**
- * Get access token for authenticated API calls
- */
 export async function getAccessToken(): Promise<string | null> {
   try {
     const session = await getSession();
     return session?.access_token || null;
   } catch (error) {
+    console.error('getAccessToken error:', error);
     return null;
   }
 }
 
-/**
- * Subscribe to real-time updates
- */
 export function subscribeToRealtimeUpdates(
   table: string,
   callback: (payload: Record<string, unknown>) => void
@@ -86,33 +79,19 @@ export function subscribeToRealtimeUpdates(
 
     return subscription;
   } catch (error) {
+    console.error('subscribeToRealtimeUpdates error:', error);
     return null;
   }
 }
 
-/**
- * Sign in with email and password
- */
 export async function signInWithPassword(email: string, password: string) {
-  return await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  return await supabase.auth.signInWithPassword({ email, password });
 }
 
-/**
- * Sign up with email and password
- */
 export async function signUpWithPassword(email: string, password: string) {
-  return await supabase.auth.signUp({
-    email,
-    password,
-  });
+  return await supabase.auth.signUp({ email, password });
 }
 
-/**
- * Sign out
- */
 export async function signOut() {
   return await supabase.auth.signOut();
 }
