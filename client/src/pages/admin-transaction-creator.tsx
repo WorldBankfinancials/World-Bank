@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PlusCircle, DollarSign } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface Account {
   id: number;
@@ -20,6 +20,7 @@ interface Account {
 export default function AdminTransactionCreator() {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: accounts = [] } = useQuery<Account[]>({
     queryKey: ['/api/accounts'],
     queryFn: async () => {
@@ -72,7 +73,7 @@ export default function AdminTransactionCreator() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          accountId: accountId,
+          accountId,
           amount: parsedAmount,
           description,
           type: transactionType
@@ -81,6 +82,7 @@ export default function AdminTransactionCreator() {
 
       if (!response.ok) throw new Error('Failed to create transaction');
 
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/transactions'] });
       toast({
         title: "Success",
         description: `Transaction created successfully`,

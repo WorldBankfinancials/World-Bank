@@ -17,7 +17,7 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold wb-dark mb-3">{t('banking_services')}</h3>
             <ul className="space-y-2 text-sm wb-text">
-              <li><Link href="/personal-banking" className="hover:text-blue-600">{t('personal_banking')}</Link></li>
+              <li><Link href="/banking-services" className="hover:text-blue-600">{t('personal_banking')}</Link></li>
               <li><Link href="/business-banking" className="hover:text-blue-600">{t('business_banking')}</Link></li>
               <li><Link href="/investment-portfolio" className="hover:text-blue-600">{t('investment_services')}</Link></li>
               <li><Link href="/credit-cards" className="hover:text-blue-600">{t('loans_credit')}</Link></li>
@@ -30,7 +30,7 @@ export default function Footer() {
               <li><Link href="/support-center" className="hover:text-blue-600">{t('help_center')}</Link></li>
               <li><Link href="/customer-support" className="hover:text-blue-600">{t('contact_us')}</Link></li>
               <li><Link href="/security-center" className="hover:text-blue-600">{t('security_center')}</Link></li>
-              <li><Link href="/privacy-policy" className="hover:text-blue-600">{t('privacy_policy')}</Link></li>
+              <li><Link href="/about" className="hover:text-blue-600">{t('privacy_policy')}</Link></li>
             </ul>
           </div>
           

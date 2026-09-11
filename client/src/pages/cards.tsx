@@ -221,7 +221,7 @@ export default function Cards() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={userProfile || undefined} />
+      <Header user={userProfile as any || { id: 0, email: '', firstName: '', lastName: '', username: '', password: '', role: 'customer', isVerified: false, isActive: true, fullName: '', profession: '', accountId: 0, accountNumber: '', idType: null, idNumber: null, transferPin: null, annualIncome: null, address: null, city: null, state: null, postalCode: null, country: null, dateOfBirth: null, mothersMaidenName: null, citizenship: null, taxId: null, industry: null, phone: null, createdAt: new Date(), updatedAt: null }} />
       
       <div className="container mx-auto px-4 py-6 max-w-4xl">
         {/* Page Header */}
@@ -239,9 +239,9 @@ export default function Cards() {
         {/* Credit Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {cardsLoading && <div className="text-center py-8">Loading cards...</div>}
-          {creditCards && creditCards.map((card: any) => (
+          {creditCards && creditCards.map((card: typeof creditCards[0]) => (
             <Card key={card.id} className="overflow-hidden">
-              <div className={`${card.color} text-white p-6 relative`}>
+              <div className={`${(card as any).color || 'bg-gradient-to-br from-blue-600 to-blue-800'} text-white p-6 relative`}>
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <p className="text-sm opacity-80">{card.name}</p>
@@ -267,12 +267,12 @@ export default function Cards() {
                   <div>
                     <p className="text-xs opacity-80">Available Credit</p>
                     <p className="text-xl font-bold">
-                      {showBalance ? `$${(card.limit - card.balance).toLocaleString()}` : '••••••'}
+                      {showBalance ? `$${(((card as any).limit || 0) - ((card as any).balance || 0)).toLocaleString()}` : '••••••'}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs opacity-80">Expires</p>
-                    <p className="text-sm">{card.expiry}</p>
+                    <p className="text-sm">{(card as any).expiry || 'N/A'}</p>
                   </div>
                 </div>
                 
@@ -285,11 +285,11 @@ export default function Cards() {
                 <div className="grid grid-cols-2 gap-4 pb-4 border-b border-gray-200">
                   <div>
                     <p className="text-xs text-gray-500 font-medium mb-1">Current Balance</p>
-                    <p className="text-lg font-bold text-gray-900">{showBalance ? `$${card.balance.toLocaleString()}` : '••••••'}</p>
+                    <p className="text-lg font-bold text-gray-900">{showBalance ? `$${(((card as any).balance || 0).toLocaleString())}` : '••••••'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 font-medium mb-1">Credit Limit</p>
-                    <p className="text-lg font-bold text-gray-900">${card.limit.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-gray-900">${(((card as any).limit || 0).toLocaleString())}</p>
                   </div>
                 </div>
                 
@@ -453,6 +453,7 @@ export default function Cards() {
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 maxLength={4}
+                autoComplete="one-time-code"
               />
             </div>
             <div className="flex space-x-2">
@@ -503,6 +504,7 @@ export default function Cards() {
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 maxLength={4}
+                autoComplete="one-time-code"
               />
             </div>
             <div className="flex space-x-2">
@@ -562,6 +564,7 @@ export default function Cards() {
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 maxLength={4}
+                autoComplete="one-time-code"
               />
             </div>
             <div className="flex space-x-2">

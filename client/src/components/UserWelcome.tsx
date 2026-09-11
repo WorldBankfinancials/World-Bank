@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { User } from "../lib/schema";
+import type { User } from "@shared/schema";
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from "react";
 import { CheckCircle } from "lucide-react";
@@ -22,7 +22,6 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
   const { t } = useLanguage();
   const [freshUserData, setFreshUserData] = useState<FreshUserData | null>(null);
 
-  // Fetch fresh user data once only
   useEffect(() => {
     const fetchFreshUserData = async () => {
       try {
@@ -38,7 +37,6 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
           setFreshUserData(userData);
         }
       } catch (error) {
-        // Silent error handling
       }
     };
 
@@ -48,13 +46,11 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
   const displayName = freshUserData?.fullName || userProfile?.fullName || 'Loading...';
   const displayProfession = freshUserData?.profession || userProfile?.profession || 'Loading...';
   const displayEmail = freshUserData?.email || userProfile?.email || 'Loading...';
-
-
   const displayBalance = user?.balance || 0;
 
   return (
     <div
-      key={`userWelcome-${freshUserData?.fullName || 'loading'}-${Date.now()}`}
+      key="user-welcome"
       style={{
         background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%)',
         backdropFilter: 'blur(20px)',
@@ -153,7 +149,7 @@ export default function UserWelcome({ user }: UserWelcomeProps) {
           )}
 
           <div className="flex items-center space-x-4">
-            {user?.isOnline && (
+            {user?.isVerified && (
               <div className="flex items-center space-x-2 px-3 py-2 rounded-full" style={{
                 background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)',
                 border: '1px solid rgba(59, 130, 246, 0.2)',

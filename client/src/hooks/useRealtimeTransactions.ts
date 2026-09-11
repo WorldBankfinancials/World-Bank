@@ -25,13 +25,23 @@ export function useRealtimeTransactions(userId?: string, onTransactionUpdate?: (
         {
           event: '*',
           schema: 'public',
-          table: 'bank_transactions',
-          filter: `user_id=eq.${userId}`
+          table: 'transactions',
+          filter: `from_user_id=eq.${userId}`
         },
         (payload) => {
-          if (payload.new) {
-            handleTransactionUpdate(payload.new);
-          }
+          if (payload.new) handleTransactionUpdate(payload.new);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `to_user_id=eq.${userId}`
+        },
+        (payload) => {
+          if (payload.new) handleTransactionUpdate(payload.new);
         }
       )
       .subscribe();

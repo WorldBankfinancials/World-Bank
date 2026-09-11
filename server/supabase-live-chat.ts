@@ -10,7 +10,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // Supabase client for realtime features
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
@@ -32,12 +32,23 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
 
     // Parse user info from connection
     const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const token = url.searchParams.get('token') || '';
     const userId = url.searchParams.get('userId') || '';
     const userRole = (url.searchParams.get('role') || 'customer') as 'admin' | 'customer';
     const userEmail = url.searchParams.get('email') || '';
 
-    if (!userId) {
-      ws.close(1008, 'User ID required');
+    if (!token || !userId) {
+      ws.close(1008, 'Authentication required');
+      return;
+    }
+    try {
+      const { data, error } = await supabase.auth.getUser(token);
+      if (error || !data?.user || data.user.id !== userId) {
+        ws.close(1008, 'Invalid authentication token');
+        return;
+      }
+    } catch {
+      ws.close(1008, 'Authentication failed');
       return;
     }
 
@@ -51,20 +62,19 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
     });
 
 
-    // Subscribe to real-time chat messages for this user
+    // Subscribe to real-time chat messages for this user (uses correct 'messages' table + snake_case column)
     const chatChannel = supabase
-      .channel(`chat:${userId}`)
+      .channel(`chat_ws:${userId}`)
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
-          table: 'chat_messages',
-          filter: `receiverId=eq.${userId}`
+          table: 'messages',
+          filter: `recipient_id=eq.${userId}`
         },
         (payload) => {
-          if (payload.eventType === 'INSERT') {
-            // Broadcast new message to connected client
+          if (ws.readyState === ws.OPEN) {
             ws.send(JSON.stringify({
               type: 'chat_message',
               data: payload.new,
@@ -129,18 +139,18 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
           // Determine recipient
           const recipientId = data.recipientId || (userRole === 'admin' ? data.customerId : 'admin');
 
-          // Save message to database
+          // Save message to database (messages table, snake_case columns)
           const { data: savedMessage, error } = await supabase
-            .from('chat_messages')
+            .from('messages')
             .insert([
               {
-                senderId: userId,
-                senderName: userEmail || userId,
-                senderRole: userRole,
-                recipientId,
+                sender_id: userId,
+                sender_name: userEmail || userId,
+                sender_role: userRole,
+                recipient_id: recipientId,
                 content: data.content,
-                createdAt: new Date(),
-                isRead: false
+                created_at: new Date().toISOString(),
+                is_read: false
               }
             ])
             .select()
@@ -187,20 +197,20 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
         if (data.type === 'mark_read') {
           // Mark messages as read
           await supabase
-            .from('chat_messages')
-            .update({ isRead: true })
-            .eq('recipientId', userId)
-            .eq('isRead', false);
+            .from('messages')
+            .update({ is_read: true })
+            .eq('recipient_id', userId)
+            .eq('is_read', false);
 
           ws.send(JSON.stringify({
             type: 'messages_marked_read',
             timestamp: new Date().toISOString()
           }));
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         ws.send(JSON.stringify({
           type: 'error',
-          message: error.message
+          message: (error instanceof Error ? error.message : 'Internal server error')
         }));
       }
     });
@@ -208,6 +218,14 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
     // Handle disconnection
     ws.on('close', async () => {
       activeConnections.delete(connectionId);
+
+      // Unsubscribe from Supabase realtime channels to prevent leaks
+      try {
+        supabase.removeChannel(chatChannel);
+        supabase.removeChannel(presenceChannel);
+      } catch (e) {
+        // Channel cleanup best-effort
+      }
 
       // Update user presence
       try {
@@ -236,17 +254,17 @@ export async function getChatHistory(req: Request, res: Response) {
     }
 
     const { data: messages, error } = await supabase
-      .from('chat_messages')
+      .from('messages')
       .select('*')
-      .or(`senderId.eq.${userId},recipientId.eq.${userId}`)
-      .order('createdAt', { ascending: false })
+      .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
       .range(Number(offset), Number(offset) + Number(limit) - 1);
 
     if (error) throw error;
 
     res.json({ success: true, messages, total: messages?.length || 0 });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 
@@ -266,8 +284,8 @@ export async function getActiveSessions(req: Request, res: Response) {
       }));
 
     res.json({ success: true, sessions });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 
@@ -286,12 +304,12 @@ export async function createTicketFromChat(req: Request, res: Response) {
       .from('support_tickets')
       .insert([
         {
-          userId,
+          user_id: userId,
           subject,
           description,
           priority: priority || 'normal',
           status: 'open',
-          createdAt: new Date()
+          created_at: new Date()
         }
       ])
       .select()
@@ -300,8 +318,8 @@ export async function createTicketFromChat(req: Request, res: Response) {
     if (error) throw error;
 
     res.json({ success: true, ticket });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 

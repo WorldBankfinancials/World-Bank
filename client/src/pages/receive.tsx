@@ -217,7 +217,7 @@ export default function Receive() {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => handleCopyDetails(accountDetails.accountId)}
+                onClick={() => handleCopyDetails(String(accountDetails.accountId))}
               >
                 <Copy className="w-4 h-4" />
               </Button>

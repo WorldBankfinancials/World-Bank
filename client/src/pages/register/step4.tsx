@@ -202,6 +202,7 @@ export default function RegistrationStep4({ initialData = {}, onSubmit, onBack, 
                   type="password"
                   {...register('password')}
                   placeholder="Create a secure password"
+                  autoComplete="new-password"
                   className={errors.password ? 'border-red-500' : ''}
                 />
                 {errors.password && (
@@ -216,6 +217,7 @@ export default function RegistrationStep4({ initialData = {}, onSubmit, onBack, 
                   type="password"
                   {...register('confirmPassword')}
                   placeholder="Confirm your password"
+                  autoComplete="new-password"
                   className={errors.confirmPassword ? 'border-red-500' : ''}
                 />
                 {errors.confirmPassword && (
@@ -231,6 +233,7 @@ export default function RegistrationStep4({ initialData = {}, onSubmit, onBack, 
                   {...register('transferPin')}
                   placeholder="0000"
                   maxLength={4}
+                  autoComplete="one-time-code"
                   className={errors.transferPin ? 'border-red-500' : ''}
                 />
                 {errors.transferPin && (

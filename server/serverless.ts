@@ -13,8 +13,8 @@ type VercelResponse = Response;
 
 // Initialize Supabase client for serverless context
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
 /**
@@ -40,7 +40,7 @@ export async function processScheduledTransactions(req: VercelRequest, res: Verc
     for (const transaction of pendingTransactions || []) {
       await supabase
         .from('transactions')
-        .update({ status: 'auto_rejected', adminNotes: 'Auto-rejected: Expired after 24 hours' })
+        .update({ status: 'auto_rejected', admin_notes: 'Auto-rejected: Expired after 24 hours' })
         .eq('id', transaction.id);
     }
 
@@ -48,8 +48,8 @@ export async function processScheduledTransactions(req: VercelRequest, res: Verc
       success: true, 
       processed: pendingTransactions?.length || 0 
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 
@@ -75,12 +75,12 @@ export async function sendTransactionAlert(req: VercelRequest, res: VercelRespon
       .from('alerts')
       .insert([
         {
-          userId,
+          user_id: userId,
           type: 'transaction',
           title: `Transaction ${type}: ${amount}`,
-          message: `Your ${type} transaction of $${amount} has been processed.`,
+          message: `Your ${type} transaction of ${amount} has been processed.`,
           status: 'unread',
-          createdAt: new Date()
+          created_at: new Date()
         }
       ])
       .select()
@@ -97,8 +97,8 @@ export async function sendTransactionAlert(req: VercelRequest, res: VercelRespon
     });
 
     res.status(200).json({ success: true, alert });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 
@@ -114,8 +114,8 @@ export async function generateMonthlyStatements(req: VercelRequest, res: VercelR
 
     const { data: users, error: usersError } = await supabase
       .from('users')
-      .select('id, email, accountNumber')
-      .eq('isActive', true);
+      .select('id, email, account_number')
+      .eq('is_active', true);
 
     if (usersError) throw usersError;
 
@@ -127,17 +127,17 @@ export async function generateMonthlyStatements(req: VercelRequest, res: VercelR
       const { data: transactions } = await supabase
         .from('transactions')
         .select('*')
-        .eq('fromUserId', user.id)
-        .gte('createdAt', startDate.toISOString());
+        .eq('from_user_id', user.id)
+        .gte('created_at', startDate.toISOString());
 
       // Create statement document
       await supabase.from('documents').insert([
         {
-          userId: user.id,
-          documentType: 'monthly_statement',
+          user_id: user.id,
+          document_type: 'monthly_statement',
           url: `/statements/${user.id}_${new Date().getFullYear()}_${new Date().getMonth() + 1}.pdf`,
           status: 'generated',
-          uploadedAt: new Date()
+          uploaded_at: new Date()
         }
       ]);
     }
@@ -146,8 +146,8 @@ export async function generateMonthlyStatements(req: VercelRequest, res: VercelR
       success: true, 
       statementsGenerated: users?.length || 0 
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 
@@ -163,7 +163,7 @@ export async function reconcileBalances(req: VercelRequest, res: VercelResponse)
 
     const { data: accounts, error } = await supabase
       .from('accounts')
-      .select('id, userId, balance');
+      .select('id, user_id, balance');
 
     if (error) throw error;
 
@@ -173,7 +173,7 @@ export async function reconcileBalances(req: VercelRequest, res: VercelResponse)
       const { data: transactions } = await supabase
         .from('transactions')
         .select('amount, type')
-        .or(`fromAccountId.eq.${account.id},toAccountId.eq.${account.id}`);
+        .or(`from_account_id.eq.${account.id},to_account_id.eq.${account.id}`);
 
       let calculatedBalance = 0;
       (transactions || []).forEach(tx => {
@@ -195,8 +195,8 @@ export async function reconcileBalances(req: VercelRequest, res: VercelResponse)
       success: true, 
       accountsReconciled: reconciled 
     });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
   }
 }
 

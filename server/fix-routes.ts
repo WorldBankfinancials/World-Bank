@@ -1,12 +1,15 @@
+import type { User } from '@shared/schema';
 import { generateAccountNumber, generateTransferPin, generateTransactionId, generateReferenceNumber } from './crypto-utils';
 import { validateId, validateAmount } from './validators';
 import { Express, Request, Response, NextFunction } from 'express';
 import { Server, createServer } from 'http';
 import { storage } from './storage-factory';
 import { setupTransferRoutes } from './routes-transfer';
+import { log } from './vite';
 import { config, logConfiguration } from './config';
 import { createClient } from '@supabase/supabase-js';
-import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
+import { supabase } from './supabase-public-storage';
+import { requireAuth, requireAdmin, AuthenticatedRequest, getAdminClient } from './auth-middleware';
 import { 
   authRateLimiter, 
   registrationRateLimiter, 
@@ -25,1988 +28,1213 @@ import { errorHandler, notFoundHandler, asyncHandler, createApiError } from './e
 import { runStartupChecks } from './startup-checks';
 import * as bcrypt from 'bcryptjs';
 
+// SECURITY: Strip sensitive fields from user objects before returning to client
+function sanitizeUser(user: Record<string, unknown>): Record<string, unknown> {
+  if (!user) return user;
+  const { password, transferPin, transfer_pin, password_hash, idNumber, identification_number, ...safe } = user;
+  return safe;
+}
+
+function sanitizeUsers(users: Record<string, unknown>[]): Record<string, unknown>[] {
+  return (users || []).map(sanitizeUser);
+}
+
 // Type definitions for transactions
 interface Transaction {
   id: string | number;
   createdAt: string | Date | null;
-  [key: string]: any;
+  status: string | null;
+  amount: string | number;
+  type: string;
+  description?: string | null;
+  recipientName?: string | null;
+  recipientAccount?: string | null;
+  referenceNumber?: string | null;
+  fromAccountId?: string | number | null;
+  toAccountId?: string | number | null;
+  fromUserId?: string | number | null;
+  currency?: string | null;
+  recipientCountry?: string | null;
+  updatedAt?: string | Date | null;
 }
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || ''
-);
+const { randomUUID } = await import('crypto');
 
-// Fixed route handlers with proper typing
-export async function registerFixedRoutes(app: Express): Promise<Server> {
-  console.error('\n🚀 =====================================================');
-  console.error('🚀 STARTING EXPRESS SERVER WITH BANKING API');
-  console.error('🚀 =====================================================\n');
-  
-  logConfiguration();
-  
-  console.error('📊 Storage layer:', {
-    type: 'CompleteSupabaseStorage',
-    supabaseUrl: process.env.VITE_SUPABASE_URL?.slice(0, 30) + '...',
-    storageReady: !!storage
-  });
-  
-  // CRITICAL: Run startup sanity checks to verify database functions
-  await runStartupChecks();
-  
-  // Runtime config endpoint - serves Supabase credentials to frontend
-  app.get('/api/config', (req: Request, res: Response) => {
-    res.json({
-      supabaseUrl: process.env.VITE_SUPABASE_URL,
-      supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY,
-    });
-  });
-  
-  // Health check endpoint
-  app.get('/api/health', (req: Request, res: Response) => {
-    res.json({ status: 'OK', timestamp: new Date() });
-  });
-
-  // Test Supabase connection and verify tables exist - ADMIN ONLY
-  app.get('/test-supabase-connection', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { SupabasePublicStorage } = await import('./supabase-public-storage');
-      const { supabase } = await import('./supabase-public-storage');
-
-      // Test connection by checking if bank_users table exists
-      const { data, error } = await supabase
-        .from('bank_users')
-        .select('id, full_name, email, balance')
-        .order('id', { ascending: false })
-        .limit(10);
-
-      if (error) {
-        res.json({ 
-          connected: false, 
-          message: 'Banking tables not found in Supabase',
-          error: error.message,
-          action: 'Please run the SQL in supabase-cleanup-and-setup.sql'
-        });
-      } else {
-        res.json({ 
-          connected: true, 
-          message: `Banking tables working! Found ${data?.length || 0} users`,
-          users: data,
-          details: 'International banking system ready with realtime synchronization'
-        });
-      }
-    } catch (error: any) {
-      res.status(500).json({ error: 'Connection test failed', details: error.message });
-    }
-  });
-
-  // SECURITY: Test user creation endpoint - ADMIN ONLY
-  app.post('/api/admin/create-test-user', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const testUser = await storage.createUser({
-        username: 'testuser',
-        email: req.body.email || 'test@example.com',
-        firstName: 'Test',
-        lastName: 'User',
-        phone: '1234567890',
-        password: 'supabase_auth',
-        profession: 'Developer',
-        accountNumber: '123456789',
-        accountId: 1001,
-        balance: '10000'
-      });
-      res.json({ success: true, user: testUser });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to create test user' });
-    }
-  });
-
-  // Get user by Supabase UUID
-  app.get('/api/users/supabase/:supabaseId', async (req: Request, res: Response) => {
-    try {
-      const { supabaseId } = req.params;
-
-      if (!supabaseId) {
-        return res.status(400).json({ error: 'Supabase ID required' });
-      }
-
-      const user = await (storage as any).getUserBySupabaseId(supabaseId);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      res.json(user);
-    } catch (error: unknown) {
-      res.status(500).json({ error: 'Failed to get user' });
-    }
-  });
-
-  // TRANSACTIONAL REGISTRATION ENDPOINT
-  // This endpoint handles BOTH Supabase Auth AND local database creation atomically
-  // If either step fails, it rolls back the other to prevent desynchronization
-  app.post('/api/auth/register-complete', registrationRateLimiter, async (req: Request, res: Response) => {
-    let supabaseUserId: string | null = null;
-
-    try {
-      const registrationData = req.body;
-
-      // SECURITY: Validate all input data with comprehensive schema
-      const validation = validateRequest(registrationSchema, registrationData);
-      if (!validation.success) {
-        return res.status(400).json({ 
-          error: 'Invalid registration data', 
-          details: validation.errors 
-        });
-      }
-
-      const validatedData = validation.data;
-
-      // SECURITY: Hash PIN before storing
-      const hashedPin = await bcrypt.hash(validatedData.transferPin, 10);
-
-      // Create Supabase service client
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-
-      // STEP 1: Create Supabase Auth account
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: validatedData.email,
-        password: validatedData.password,
-        email_confirm: true,
-        user_metadata: {
-          first_name: validatedData.firstName,
-          last_name: validatedData.lastName,
-          phone: validatedData.phone
-        }
-      });
-
-      if (authError || !authData.user) {
-        return res.status(500).json({ 
-          error: authError?.message || 'Failed to create authentication account' 
-        });
-      }
-
-      supabaseUserId = authData.user.id;
-
-      // STEP 2: Create local database profile - USING VALIDATED DATA ONLY
-      try {
-        const newUser = await storage.createUser({
-          username: validatedData.email.split('@')[0],
-          firstName: validatedData.firstName || validatedData.email.split('@')[0],
-          lastName: validatedData.lastName || 'User',
-          email: validatedData.email,
-          phone: validatedData.phone,
-          dateOfBirth: validatedData.dateOfBirth,
-          address: validatedData.address,
-          city: validatedData.city,
-          state: validatedData.state,
-          country: validatedData.country,
-          postalCode: validatedData.postalCode,
-          profession: validatedData.profession,
-          annualIncome: validatedData.annualIncome,
-          idType: validatedData.idType,
-          idNumber: validatedData.idNumber,
-          accountNumber: `${generateAccountNumber()}`,
-          accountId: Date.now(),
-          password: 'supabase_auth',
-          transferPin: hashedPin,
-          role: 'customer',
-          isVerified: false,
-          isActive: false,
-          balance: "0",
-        });
-
-
-        // Create initial checking account
-        await storage.createAccount({
-          userId: newUser.id,
-          accountNumber: newUser.accountNumber || `${generateAccountNumber()}`,
-          accountType: 'checking',
-          balance: '0.00',
-          currency: 'USD',
-          status: 'pending'
-        });
-
-        
-        // VERIFY user was actually saved
-        const verifyUser = await (storage).getUserByEmail(newUser.email || '');
-        if (!verifyUser) {
-          throw new Error('User created but not found in database');
-        }
-
-
-        res.status(201).json({ 
-          success: true,
-          message: 'Registration successful. Awaiting admin approval.',
-          user: {
-            email: newUser.email,
-            firstName: newUser.firstName,
-            lastName: newUser.lastName
-          }
-        });
-
-      } catch (dbError: any) {
-
-        // Attempt to rollback Supabase Auth account
-        if (supabaseUserId) {
-          const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(supabaseUserId);
-          if (deleteError) {
-          } else {
-          }
-        }
-
-        res.status(500).json({ 
-          error: 'Database error during registration',
-          details: dbError.message 
-        });
-        return;
-      }
-
-    } catch (error: any) {
-      res.status(500).json({ 
-        error: 'Registration failed',
-        details: error.message 
-      });
-    }
-  });
-
-  // Check email availability endpoint - checks both Supabase and local DB
-  app.post('/api/auth/check-email', authRateLimiter, async (req: Request, res: Response) => {
-    try {
-      const { email } = req.body;
-
-      if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-      }
-
-      // SECURITY: Use database as source of truth to prevent race conditions
-      // Check local database first (primary authority)
-      const existingUser = await (storage).getUserByEmail(email);
-      if (existingUser) {
-        return res.json({
-          available: false,
-          message: 'Email already registered in database'
-        });
-      }
-
-      // Check Supabase Auth as secondary confirmation
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-
-      // Use admin API to check if user exists
-      const { data: users, error } = await supabase.auth.admin.listUsers();
-      if (!users) { return res.status(500).json({ error: "Failed to fetch users" }); }
-
-      if (!error && users) {
-        const emailExists = users.users.some((u: any) => u.email === email);
-        if (emailExists) {
-          return res.json({
-            available: false,
-            message: 'Email already registered in authentication system'
-          });
-        }
-      }
-
-      res.json({
-        available: true,
-        message: 'Email available'
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to check email availability. Please try again.' });
-    }
-  });
-
-  // ADMIN: Reset user password in Supabase Auth - ADMIN ONLY
-  app.post('/api/admin/reset-user-password', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { email, newPassword } = req.body;
-
-      if (!email || !newPassword) {
-        return res.status(400).json({ error: 'Email and newPassword are required' });
-      }
-
-      // SECURITY: Enforce strong password policy - 12+ characters with complexity
-      if (newPassword.length < 12) {
-        return res.status(400).json({ 
-          error: 'Password must be at least 12 characters with uppercase, lowercase, and numbers' 
-        });
-      }
-      
-      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
-        return res.status(400).json({ 
-          error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' 
-        });
-      }
-
-      // Create Supabase admin client
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-
-      // Get user by email
-      const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-      if (listError || !users) {
-        return res.status(500).json({ error: 'Failed to list users' });
-      }
-
-      const user = users.users.find((u: any) => u.email === email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found in authentication system' });
-      }
-
-      // Update password
-      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-        user.id,
-        { password: newPassword }
-      );
-
-      if (updateError) {
-        return res.status(500).json({ error: 'Failed to update password', details: updateError.message });
-      }
-
-      res.json({ 
-        success: true, 
-        message: 'Password updated successfully',
-        email: email
-      });
-
-    } catch (error: any) {
-      res.status(500).json({ error: 'Password reset failed', details: error.message });
-    }
-  });
-
-  // User registration endpoint - Creates user profile in local database
-  // SECURITY: Password should NEVER be sent here - Supabase Auth handles passwords
-  app.post('/api/auth/register', async (req: Request, res: Response) => {
-    try {
-      const userData = req.body;
-
-      // SECURITY: Verify required fields (but NOT password - that's in Supabase Auth only)
-      if (!userData.email || !userData.supabaseUserId) {
-        return res.status(400).json({ 
-          error: 'Missing required fields: email and supabaseUserId are required' 
-        });
-      }
-
-      // SECURITY: Block if password is included - this is a security violation
-      if (userData.password) {
-        return res.status(400).json({ 
-          error: 'Invalid request - passwords must not be sent to this endpoint' 
-        });
-      }
-
-      // SECURITY: Block privilege escalation attempts
-      if (userData.role && userData.role !== 'customer') {
-        return res.status(400).json({ 
-          error: 'Invalid request - role cannot be set by client' 
-        });
-      }
-
-      // Check if user already exists in local database
-      const existingUser = await (storage).getUserByEmail(userData.email);
-      if (existingUser) {
-        return res.status(409).json({ error: 'User already exists' });
-      }
-
-      // Check if user exists in Supabase Auth (redundant if /api/auth/check-email is used correctly, but good as a safeguard)
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-      const { data: users, error: authError } = await supabase.auth.admin.listUsers();
-
-      if (!authError && users) {
-        const emailExistsInSupabase = users.users.some((u: any) => u.email === userData.email);
-        if (emailExistsInSupabase) {
-          // This case should ideally be caught by the /api/auth/check-email endpoint,
-          // but if it reaches here, it means the user is in Supabase Auth but not in our DB.
-          // We should still prevent creating a new local entry to maintain consistency.
-          return res.status(409).json({ error: 'User already exists in authentication system' });
-        }
-      } else if (authError) {
-        return res.status(500).json({ error: 'Unable to verify user in authentication system' });
-      }
-
-      // SECURITY: Generate secure random PIN for new user (1000-9999)
-      const newUserPin = generateTransferPin();
-      // SECURITY: Hash PIN before storing
-      const hashedNewUserPin = await bcrypt.hash(newUserPin, 10);
-
-      // SECURITY: Only accept whitelisted fields from client, hardcode privileged fields server-side
-      const newUser = await storage.createUser({
-        username: userData.username || userData.email.split('@')[0],
-        firstName: userData.firstName || userData.email.split('@')[0],
-        lastName: userData.lastName || 'User',
-        email: userData.email,
-        phone: userData.phone,
-        dateOfBirth: userData.dateOfBirth,
-        address: userData.address,
-        city: userData.city,
-        state: userData.state,
-        country: userData.country,
-        postalCode: userData.postalCode,
-        profession: userData.profession,
-        annualIncome: userData.annualIncome,
-        idType: userData.idType,
-        idNumber: userData.idNumber,
-        accountNumber: userData.accountNumber || `${generateAccountNumber()}`,
-        accountId: Date.now(),
-        password: 'supabase_auth',
-        transferPin: hashedNewUserPin,
-        role: 'customer',
-        isVerified: false,
-        isActive: false,
-        balance: "0",
-      });
-
-      // Create initial checking account
-      const accountNumber = `${generateAccountNumber()}`;
-      await storage.createAccount({
-        userId: newUser.id,
-        accountNumber: accountNumber,
-        accountType: 'checking',
-        balance: '0.00',
-        currency: 'USD',
-        status: 'pending'
-      });
-
-
-      res.status(201).json({ 
-        success: true,
-        message: 'User profile created successfully',
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          firstName: newUser.firstName,
-          lastName: newUser.lastName,
-          role: newUser.role
-        }
-      });
-    } catch (error: any) {
-      res.status(500).json({ 
-        error: 'Failed to create user profile',
-        details: error.message 
-      });
-    }
-  });
-
-  // SECURITY: Test user endpoint COMPLETELY DISABLED in production and dev for safety
-  app.post('/api/create-test-user', async (req: Request, res: Response) => {
-    // CRITICAL: This endpoint is disabled for security - use normal registration only
-    return res.status(403).json({ 
-      error: 'Forbidden',
-      message: 'Test user endpoint is disabled for security reasons. Use normal registration instead.'
-    });
-  });
-
-  // User endpoints - PROTECTED with JWT authentication
-  app.get('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const email = req.user!.email;
-      const userId = (req.user as any).id || (req.user as any).userId;
-      
-      console.log(`🔍 /api/user endpoint called for email: ${email}, userId: ${userId}`);
-      
-      // Try 1: Get by email
-      let user = await storage.getUserByEmail(email);
-      
-      // Try 2: If not found by email, try by Supabase ID
-      if (!user && userId && typeof storage.getUserBySupabaseId === 'function') {
-        console.log(`⚠️ User not found by email, trying Supabase ID: ${userId}`);
-        user = await storage.getUserBySupabaseId(userId);
-      }
-      
-      // Try 3: Get all users and find manually (fallback)
-      if (!user) {
-        console.log(`⚠️ User not found by email or ID, attempting manual search...`);
-        try {
-          const allUsers = await storage.getAllUsers();
-          user = allUsers.find(u => u.email === email);
-          if (!user) {
-            console.log(`❌ User not found in any search: ${email}`);
-            // Create user profile if it doesn't exist
-            console.log(`🆕 Creating new user profile for: ${email}`);
-            user = await storage.createUser({
-              username: email.split('@')[0],
-              email: email,
-              firstName: 'Customer',
-              lastName: 'Account',
-              phone: '0000000000',
-              password: 'supabase_auth',
-              profession: 'Banking Customer',
-              accountNumber: generateAccountNumber(),
-              accountId: Math.floor(Math.random() * 1000000),
-              balance: '0'
-            });
-            console.log(`✅ Created new user: ${user?.id}`);
-          }
-        } catch (searchError: any) {
-          console.error(`🔴 Error during manual user search/creation:`, searchError);
-        }
-      }
-      
-      if (!user) {
-        console.log(`❌ Final: User still not found after all attempts`);
-        return res.status(404).json({ message: 'User not found' });
-      }
-      
-      console.log(`✅ User retrieved successfully: ${user.id}`);
-      res.json(user);
-    } catch (error: any) {
-      console.error(`❌ /api/user error:`, error);
-      res.status(500).json({ error: 'Failed to get user', details: error?.message });
-    }
-  });
-  
-  // Get user by ID - PROTECTED with JWT authentication
-  app.get('/api/users/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const userId = validateId(req.params.id);
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      res.json(user);
-    } catch (error: any) {
-      res.status(500).json({ error: 'Failed to get user' });
-    }
-  });
-
-  // Real user profile endpoint - PROTECTED with JWT authentication
-  app.post('/api/user/profile', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      res.json(user);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to get user profile' });
-    }
-  });
-
-  // Upload user avatar/profile photo - PROTECTED with JWT authentication
-  app.post('/api/user/upload-avatar', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { avatarUrl } = req.body as { avatarUrl: string };
-      
-      if (!avatarUrl) {
-        return res.status(400).json({ error: 'Avatar URL required' });
-      }
-
-      // Validate it's a data URL (base64 encoded image)
-      if (!avatarUrl.startsWith('data:image/')) {
-        return res.status(400).json({ error: 'Invalid image format' });
-      }
-
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      // Update user with avatar - store in JSON metadata or skip if no field
-      // Note: profile photo storage can be handled via separate photo table if needed
-      const updatedUser = user;
-
-      res.json({
-        success: true,
-        message: 'Profile photo updated successfully',
-        user: updatedUser
-      });
-    } catch (error: any) {
-      console.error('❌ Avatar upload failed:', error);
-      res.status(500).json({ error: 'Failed to upload avatar', details: error.message });
-    }
-  });
-
-  // Real user accounts endpoint - PROTECTED with JWT authentication
-  app.post('/api/accounts/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      const accounts = await storage.getUserAccounts(user.id);
-      res.json(accounts);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to get user accounts' });
-    }
-  });
-
-  // SECURITY: Admin endpoints - PROTECTED with role-based access control
-
-  // Admin transaction creation - REQUIRES ADMIN ROLE
-  app.post('/api/admin/create-transaction', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const body = req.body as {
-        customerId: string;
-        type: string;
-        amount: string;
-        description: string;
-        category: string;
-        reference: string;
-        status: string;
-      };
-
-      const customerIdNum = validateId(body.customerId);
-      const accounts = await storage.getUserAccounts(customerIdNum);
-
-      if (accounts.length === 0) {
-        return res.status(404).json({ error: 'No accounts found for customer' });
-      }
-
-      const primaryAccount = accounts[0];
-
-      const transaction = await storage.createTransaction({
-        fromAccountId: primaryAccount.id,
-        type: body.type,
-        amount: body.amount,
-        description: body.description,
-        status: body.status || 'completed',
-        createdAt: new Date()
-      });
-
-      // Update account balance if it's a credit/debit
-      if (body.type === 'credit' || body.type === 'debit') {
-        const amountNum = validateAmount(body.amount);
-        const balanceChange = body.type === 'credit' ? amountNum : -amountNum;
-        await storage.updateUserBalance(customerIdNum, balanceChange);
-      }
-
-      // AUDIT TRAIL: Log admin action
-      const admin = await (storage).getUserByEmail(req.user!.email);
-      if (admin) {
-        await storage.createAdminAction({
-          adminId: admin.id,
-          action: 'create_transaction',
-          targetType: 'transaction',
-          targetId: transaction.id,
-          details: { customerId: customerIdNum, amount: body.amount, type: body.type }
-        });
-      }
-
-      res.json({ 
-        success: true, 
-        transaction,
-        message: 'Transaction created successfully'
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to create transaction' });
-    }
-  });
-
-  // Individual account balance update endpoint - REQUIRES ADMIN ROLE
-  app.post('/api/admin/accounts/:accountId/balance', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const accountId = parseInt(req.params.accountId, 10);
-      const body = req.body as { amount: string; description: string; type: 'credit' | 'debit' };
-
-      const amountNum = validateAmount(body.amount);
-      const balanceChange = body.type === 'credit' ? amountNum : -amountNum;
-
-      // Get account and update balance
-      const account = await storage.getAccount(accountId);
-      if (!account) {
-        return res.status(404).json({ error: 'Account not found' });
-      }
-
-      const newBalance = parseFloat((account.balance || '0').toString()) + balanceChange;
-      await storage.updateAccount?.(accountId, { balance: newBalance.toString() });
-
-      // Create transaction record
-      const transaction = await storage.createTransaction({
-        fromAccountId: accountId,
-        type: body.type,
-        amount: amountNum.toString(),
-        description: body.description,
-        status: 'success',
-        createdAt: new Date()
-      });
-
-      // AUDIT TRAIL: Log admin action
-      const admin = await (storage).getUserByEmail(req.user!.email);
-      if (admin) {
-        await storage.createAdminAction({
-          adminId: admin.id,
-          action: 'update_account_balance',
-          targetType: 'account',
-          targetId: accountId,
-          details: { accountId, amount: body.amount, type: body.type, oldBalance: account.balance, newBalance }
-        });
-      }
-
-      res.json({ 
-        success: true, 
-        message: 'Account balance updated successfully',
-        newBalance: newBalance,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to update account balance' });
-    }
-  });
-
-  // Balance update endpoint - REQUIRES ADMIN ROLE
-  app.post('/api/admin/customers/:id/balance', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const customerId = parseInt(req.params.id, 10);
-      const body = req.body as { amount: string; description: string };
-
-      const amountNum = validateAmount(body.amount);
-      const oldUser = await (storage).getUser(customerId);
-      const updatedUser = await storage.updateUserBalance(customerId, amountNum);
-
-      if (!updatedUser) {
-        return res.status(404).json({ error: 'Customer not found' });
-      }
-
-      // AUDIT TRAIL: Log admin action
-      const admin = await (storage).getUserByEmail(req.user!.email);
-      if (admin) {
-        await storage.createAdminAction({
-          adminId: admin.id,
-          action: 'update_customer_balance',
-          targetType: 'user',
-          targetId: customerId,
-          details: { customerId, amount: body.amount, oldBalance: oldUser?.balance, newBalance: updatedUser.balance, description: body.description }
-        });
-      }
-
-      res.json({ 
-        success: true, 
-        user: updatedUser,
-        message: 'Balance updated successfully',
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to update balance' });
-    }
-  });
-
-  // Customer update endpoint - REQUIRES ADMIN ROLE
-  app.patch('/api/admin/customers/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const customerId = parseInt(req.params.id, 10);
-      const updates = req.body as Record<string, any>;
-
-
-      const updatedUser = await storage.updateUser(customerId, updates);
-
-      if (!updatedUser) {
-        return res.status(404).json({ error: 'Customer not found' });
-      }
-
-
-      // AUDIT TRAIL: Log admin action
-      const admin = await (storage).getUserByEmail(req.user!.email);
-      if (admin) {
-        await storage.createAdminAction({
-          adminId: admin.id,
-          action: 'update_customer',
-          targetType: 'user',
-          targetId: customerId,
-          details: { customerId, updates }
-        });
-      }
-
-      res.json({ 
-        success: true, 
-        user: updatedUser,
-        message: 'Customer updated successfully'
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to update customer' });
-    }
-  });
-
-  // Get all transactions - REQUIRES ADMIN ROLE
-  app.get('/api/admin/transactions', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const transactions = await storage.getAllTransactions();
-      res.json(transactions);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to get transactions' });
-    }
-  });
-
-  // Verify PIN endpoint - Used after password verification, needs email + pin
-  app.post('/api/verify-pin', authRateLimiter, async (req: Request, res: Response) => {
-    try {
-      const body = req.body as { email?: string; username?: string; pin: string };
-      const identifier = body.email || body.username;
-
-      if (!identifier || !body.pin) {
-        return res.status(400).json({ message: 'Email and PIN required', verified: false });
-      }
-
-      // Lookup user by email
-      const user = await storage.getUserByEmail(identifier);
-
-      if (!user) {
-        return res.status(404).json({ message: 'User not found', verified: false });
-      }
-
-      // SECURITY: Check if account is active (approved by admin)
-      if (!user.isActive) {
-        return res.status(403).json({ 
-          message: 'Your account is pending approval by our customer support team. You will receive a notification once your account is activated.',
-          verified: false,
-          error: 'Account pending approval'
-        });
-      }
-
-      // SECURITY: Only accept valid PINs, no plaintext fallback
-      if (!user.transferPin || user.transferPin.length === 0) {
-        return res.status(400).json({ 
-          message: 'PIN not configured for account', 
-          verified: false,
-          error: 'Account PIN setup required'
-        });
-      }
-      
-      // SECURITY: Use bcrypt to compare hashed PIN
-      
-      let pinMatch = false;
-      
-      // Try bcrypt comparison if it's hashed
-      if (user.transferPin && user.transferPin.startsWith('$2')) {
-        pinMatch = await bcrypt.compare(body.pin, user.transferPin);
-      } else if (user.transferPin === body.pin) {
-        // Fallback for plaintext (legacy compatibility)
-        pinMatch = true;
-      }
-      
-      if (!pinMatch) {
-        return res.status(401).json({ message: 'Invalid PIN', verified: false });
-      }
-
-      res.json({ success: true, verified: true });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to verify PIN', verified: false });
-    }
-  });
-
-  // Get all transactions for authenticated user (across all accounts)
-  app.get('/api/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const accounts = await storage.getUserAccounts(user.id);
-      if (accounts.length === 0) {
-        return res.json([]); // No accounts, return empty transactions
-      }
-
-      // Fetch transactions for all user accounts
-      const allTransactions: Transaction[] = [];
-      for (const account of accounts) {
-        const txns = await storage.getAccountTransactions(account.id);
-        allTransactions.push(...txns);
-      }
-
-      // Sort by date descending
-      allTransactions.sort((a: Transaction, b: Transaction) => {
-        const dateA = new Date(a.createdAt || 0).getTime();
-        const dateB = new Date(b.createdAt || 0).getTime();
-        return dateB - dateA;
-      });
-
-      console.info('✅ Fetched', allTransactions.length, 'transactions for user:', req.user!.email);
-      res.json(allTransactions);
-    } catch (error: any) {
-      console.info('❌ Failed to fetch transactions:', error);
-      res.status(500).json({ error: 'Failed to fetch transactions' });
-    }
-  });
-
-  // Account endpoints - PROTECTED with JWT authentication
-  app.get('/api/accounts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const user = await (storage).getUserByEmail(req.user!.email);
-
-      if (!user) {
-        return res.status(404).json({ 
-          error: 'User not found',
-          message: 'Invalid user credentials'
-        });
-      }
-
-      const accounts = await storage.getUserAccounts(user.id);
-      console.info('✅ Fetched', accounts.length, 'accounts for user:', req.user!.email);
-      res.json(accounts);
-    } catch (error: any) {
-      console.info('❌ Failed to get accounts:', error);
-      res.status(500).json({ error: 'Failed to get accounts' });
-    }
-  });
-
-  app.get('/api/accounts/:id/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const accountId = validateId(req.params.id);
-
-      // SECURITY: Verify account belongs to authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const userAccounts = await storage.getUserAccounts(user.id);
-      const ownsAccount = userAccounts.some(acc => acc.id === accountId);
-
-      if (!ownsAccount) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-
-      const transactions = await storage.getAccountTransactions(accountId);
-      res.json(transactions);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to get transactions' });
-    }
-  });
-
-  // Admin pending registrations - REQUIRES ADMIN ROLE
-  app.get('/api/admin/pending-registrations', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const users = await storage.getAllUsers();
-      const pending = users.filter(user => !user.isActive && user.role === 'customer');
-      res.json(pending);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to get pending registrations' });
-    }
-  });
-
-  // Approve registration - REQUIRES ADMIN ROLE
-  app.post('/api/admin/approve-registration/:registrationId', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const registrationId = validateId(req.params.registrationId);
-
-      // SECURITY: Validate approval data
-      const validationData = { registrationId, ...req.body };
-      const validation = validateRequest(approvalSchema, validationData);
-      if (!validation.success) {
-        return res.status(400).json({ 
-          error: 'Invalid approval data', 
-          details: validation.errors 
-        });
-      }
-
-      const { initialBalance } = validation.data;
-
-      // ATOMIC TRANSACTION: Approve user with all updates
-      const transaction = new BankingTransaction();
-      let updatedUser: any = null;
-
-      transaction.addStep({
-        name: 'Activate user account',
-        execute: async () => {
-          updatedUser = await storage.updateUser(registrationId, {
-            isActive: true,
-            isVerified: true
-          });
-          if (!updatedUser) throw new Error('Registration not found');
-          return updatedUser;
-        }
-      });
-
-      transaction.addStep({
-        name: 'Activate user bank accounts',
-        execute: async () => {
-          const accounts = await storage.getUserAccounts(registrationId);
-          for (const account of accounts) {
-            await storage.updateAccount?.(account.id, { status: 'active' });
-          }
-          return accounts;
-        }
-      });
-
-      if (initialBalance && initialBalance > 0) {
-        transaction.addStep({
-          name: 'Set initial balance',
-          execute: async () => {
-            await storage.updateUserBalance(registrationId, initialBalance);
-          }
-        });
-      }
-
-      const result = await transaction.execute();
-      if (!result.success) {
-        return res.status(500).json({ error: result.error });
-      }
-
-      // AUDIT TRAIL: Log admin action
-      const admin = await (storage).getUserByEmail(req.user!.email);
-      if (admin) {
-        await storage.createAdminAction({
-          adminId: admin.id,
-          action: 'approve_registration',
-          targetType: 'user',
-          targetId: registrationId,
-          details: { userId: registrationId, initialBalance: initialBalance || 0 }
-        });
-      }
-
-      // BROADCAST: Notify all clients of admin change
-      try {
-        const { supabase } = await import('./supabase-public-storage');
-        const adminChannel = supabase.channel('admin-actions');
-        adminChannel.send({
-          type: 'broadcast',
-          event: 'registration_approved',
-          payload: { userId: registrationId, approvedBy: admin?.email, user: updatedUser }
-        });
-      } catch (error) {
-      }
-      
-      res.json({ 
-        success: true,
-        message: 'Registration approved successfully',
-        user: updatedUser
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to approve registration' });
-    }
-  });
-
-  // Reject registration - REQUIRES ADMIN ROLE
-  app.post('/api/admin/reject-registration/:registrationId', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const registrationId = validateId(req.params.registrationId);
-      const { reason } = req.body;
-
-      const user = await (storage).getUser(registrationId);
-      if (!user) {
-        return res.status(404).json({ error: 'Registration not found' });
-      }
-
-      // Update user with rejection reason
-      await storage.updateUser(registrationId, {
-        isActive: false,
-        isVerified: false,
-      });
-
-      // Create support ticket for the user explaining rejection
-      await storage.createSupportTicket({
-        userId: registrationId,
-        subject: 'Registration Status - Action Required',
-        description: `Your registration has been reviewed. ${reason || 'Please contact support for more information.'}`,
-        // category removed,
-        priority: 'high',
-        status: 'open'
-      });
-
-      // AUDIT TRAIL: Log admin action
-      const admin = await (storage).getUserByEmail(req.user!.email);
-      if (admin) {
-        await storage.createAdminAction({
-          adminId: admin.id,
-          action: 'reject_registration',
-          targetType: 'user',
-          targetId: registrationId,
-          details: { userId: registrationId, reason }
-        });
-      }
-
-      // BROADCAST: Notify all clients of admin change
-      try {
-        const { supabase } = await import('./supabase-public-storage');
-        const adminChannel = supabase.channel('admin-actions');
-        adminChannel.send({
-          type: 'broadcast',
-          event: 'registration_rejected',
-          payload: { userId: registrationId, rejectedBy: admin?.email, reason }
-        });
-      } catch (error) {
-      }
-
-      res.json({ 
-        success: true,
-        message: 'Registration rejected successfully'
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to reject registration' });
-    }
-  });
-
-  // PIN management endpoints - PROTECTED with JWT authentication
-  app.post('/api/user/change-pin', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      // SECURITY: Validate PIN format
-      const validation = validateRequest(pinChangeSchema, req.body);
-      if (!validation.success) {
-        return res.status(400).json({ 
-          error: 'Invalid PIN format', 
-          details: validation.errors 
-        });
-      }
-
-      const { currentPin, newPin } = validation.data;
-
-      // Get authenticated user (email from JWT token)
-      const user = await (storage).getUserByEmail(req.user!.email);
-
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      // SECURITY: Use bcrypt to compare current PIN
-      const pinMatch = await bcrypt.compare(currentPin, user.transferPin || '');
-      if (!pinMatch) {
-        return res.status(401).json({ message: 'Current PIN is incorrect' });
-      }
-
-      // Prevent reusing the same PIN
-      const newPinMatch = await bcrypt.compare(newPin, user.transferPin || '');
-      if (newPinMatch) {
-        return res.status(400).json({ message: 'New PIN must be different from current PIN' });
-      }
-
-      // SECURITY: Hash new PIN before storing
-      const hashedNewPin = await bcrypt.hash(newPin, 10);
-
-      // Use authenticated user's ID (not hardcoded)
-      await storage.updateUser(user.id, { transferPin: hashedNewPin });
-      res.json({ success: true, message: 'PIN updated successfully' });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to change PIN' });
-    }
-  });
-
-  // Note: Transfer endpoints moved to routes-transfer.ts
-  // Using /api/transfers (plural) with email-based authentication
-
-  // Setup transfer routes
+export async function registerRoutes(app: Express) {
+  // Register transfer routes first (they take priority for /api/transfers endpoints)
   setupTransferRoutes(app);
 
-  // ==================== CARDS API ROUTES - PROTECTED ====================
-  app.get('/api/cards', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // ==================== HEALTH CHECK ====================
+  app.get('/api/health', async (req: Request, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      const cards = await storage.getUserCards(user.id);
-      res.json(cards);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch cards' });
-    }
-  });
-
-  app.get('/api/cards/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const cardId = parseInt(req.params.id);
-
-      // SECURITY: Verify card belongs to authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const card = await storage.getCard(cardId);
-      if (!card) {
-        return res.status(404).json({ error: 'Card not found' });
-      }
-
-      // SECURITY: Verify card's account belongs to user
-      const account = await storage.getAccount(card.accountId);
-      if (!account || account.userId !== user.id) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-
-      res.json(card);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch card' });
-    }
-  });
-
-  app.post('/api/cards/lock', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { cardId, isLocked } = req.body;
-
-      // SECURITY: Verify card belongs to authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const card = await storage.getCard(cardId);
-      if (!card) {
-        return res.status(404).json({ error: 'Card not found' });
-      }
-
-      // SECURITY: Verify card's account belongs to user
-      const account = await storage.getAccount(card.accountId);
-      if (!account || account.userId !== user.id) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-
-      const updatedCard = await storage.updateCard(cardId, { status: isLocked ? 'locked' : 'active' });
-      res.json({ success: true, card: updatedCard });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to update card' });
-    }
-  });
-
-  app.post('/api/cards/settings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { cardId, dailyLimit, contactlessEnabled } = req.body;
-
-      // SECURITY: Verify card belongs to authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const card = await storage.getCard(cardId);
-      if (!card) {
-        return res.status(404).json({ error: 'Card not found' });
-      }
-
-      // SECURITY: Verify card's account belongs to user
-      const account = await storage.getAccount(card.accountId);
-      if (!account || account.userId !== user.id) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-
-      const updates: Record<string, any> = {};
-      if (dailyLimit !== undefined) updates.dailyLimit = dailyLimit;
-      if (contactlessEnabled !== undefined) updates.contactlessEnabled = contactlessEnabled;
-
-      const updatedCard = await storage.updateCard(cardId, updates);
-      res.json({ success: true, card: updatedCard });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to update card settings' });
-    }
-  });
-
-  // ==================== INVESTMENTS API ROUTES - PROTECTED ====================
-  app.get('/api/investments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      const investments = await storage.getUserInvestments(user.id);
-      res.json(investments);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch investments' });
-    }
-  });
-
-  app.get('/api/investments/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-
-      // SECURITY: Verify investment belongs to authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const investment = await storage.getInvestment(id);
-      if (!investment) {
-        return res.status(404).json({ error: 'Investment not found' });
-      }
-
-      if (investment.userId !== user.id) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-
-      res.json(investment);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch investment' });
-    }
-  });
-
-  // ==================== MARKET DATA API ROUTES - PROTECTED ====================
-  app.get('/api/market-rates', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const marketRates = await (storage).getMarketRates();
-
-      // Transform database format to frontend expected format
-      const transformedData: Record<string, any> = {};
-
-      marketRates.forEach((rate: any) => {
-        const assetType = rate.asset_type || rate.assetType;
-        transformedData[assetType] = {
-          change: rate.change_percent || rate.changePercent || 0,
-          trending: (rate.change_direction || rate.changeDirection || 'up') as 'up' | 'down'
-        };
+      return res.json({ 
+        status: 'ok', 
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
       });
-
-      // Ensure all required categories exist with fallbacks
-      const result = {
-        stocks: transformedData.stocks || { change: 0, trending: 'up' as const },
-        bonds: transformedData.bonds || { change: 0, trending: 'up' as const },
-        crypto: transformedData.crypto || { change: 0, trending: 'up' as const },
-        forex: transformedData.forex || { change: 0, trending: 'up' as const }
-      };
-
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch market rates' });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Health check failed' });
     }
   });
 
-  // ==================== MARKET INDICES API - PROTECTED ====================
-  app.get('/api/market-indices', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      // Return real-time market indices data
-      // In production, this should fetch from a financial data API (e.g., Alpha Vantage, IEX Cloud)
-      const indices = [
-        { name: 'S&P 500', value: '4,783.45', change: '+32.87', changePercent: '+0.69%', trend: 'up' },
-        { name: 'NASDAQ', value: '15,310.97', change: '+125.34', changePercent: '+0.83%', trend: 'up' },
-        { name: 'DOW JONES', value: '37,248.35', change: '-43.89', changePercent: '-0.12%', trend: 'down' },
-        { name: 'FTSE 100', value: '7,733.24', change: '+18.45', changePercent: '+0.24%', trend: 'up' },
-        { name: 'DAX', value: '16,784.86', change: '+92.12', changePercent: '+0.55%', trend: 'up' },
-        { name: 'NIKKEI 225', value: '33,377.42', change: '-124.56', changePercent: '-0.37%', trend: 'down' }
-      ];
-      res.json(indices);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch market indices' });
-    }
-  });
+  // ==================== USER PROFILE ENDPOINTS ====================
 
-  // ==================== TOP STOCKS API - PROTECTED ====================
-  app.get('/api/top-stocks', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // GET /api/user - Get current user profile
+  app.get('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Return top performing stocks
-      // In production, this should fetch from a financial data API
-      const stocks = [
-        { symbol: 'AAPL', name: 'Apple Inc.', price: '$185.92', change: '+2.34', changePercent: '+1.28%', trend: 'up' },
-        { symbol: 'MSFT', name: 'Microsoft Corp.', price: '$378.91', change: '+5.67', changePercent: '+1.52%', trend: 'up' },
-        { symbol: 'GOOGL', name: 'Alphabet Inc.', price: '$142.67', change: '-1.23', changePercent: '-0.85%', trend: 'down' },
-        { symbol: 'AMZN', name: 'Amazon.com Inc.', price: '$156.78', change: '+3.45', changePercent: '+2.25%', trend: 'up' },
-        { symbol: 'NVDA', name: 'NVIDIA Corp.', price: '$495.34', change: '+12.87', changePercent: '+2.67%', trend: 'up' },
-        { symbol: 'TSLA', name: 'Tesla Inc.', price: '$248.42', change: '-4.56', changePercent: '-1.80%', trend: 'down' }
-      ];
-      res.json(stocks);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch top stocks' });
-    }
-  });
-
-  // ==================== PORTFOLIO ASSETS API - PROTECTED ====================
-  app.get('/api/portfolio-assets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      // SECURITY: Get authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-
-      // Get user's investments and calculate portfolio breakdown
-      const investments = await storage.getUserInvestments(user.id);
-
-      // Calculate portfolio allocation by asset type
-      const assetAllocation: Record<string, { value: number, allocation: number, change: number }> = {};
-      let totalValue = 0;
-
-      investments.forEach((inv: any) => {
-        const assetType = inv.asset_type || inv.assetType || 'Other';
-        const value = parseFloat(inv.total_value || inv.totalValue || 0);
-        const gainLoss = parseFloat(inv.gain_loss || inv.gainLoss || 0);
-
-        totalValue += value;
-
-        if (!assetAllocation[assetType]) {
-          assetAllocation[assetType] = { value: 0, allocation: 0, change: 0 };
-        }
-        assetAllocation[assetType].value += value;
-        assetAllocation[assetType].change += gainLoss;
-      });
-
-      // Calculate allocation percentages
-      const assets = Object.keys(assetAllocation).map(name => ({
-        name,
-        value: `$${assetAllocation[name].value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        allocation: totalValue > 0 ? `${((assetAllocation[name].value / totalValue) * 100).toFixed(1)}%` : '0%',
-        change: assetAllocation[name].change >= 0 ? `+${assetAllocation[name].change.toFixed(2)}%` : `${assetAllocation[name].change.toFixed(2)}%`
-      }));
-
-      res.json(assets);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch portfolio assets' });
+      const userData = sanitizeUser(user) as Record<string, unknown>;
+      // Return accounts.balance as the primary balance
+      const { data: account } = await supabase.from('accounts').select('balance').eq('user_id', userData.id).eq('status', 'active').limit(1).single();
+      if (account) {
+        userData.balance = (account as Record<string, unknown>).balance;
+      }
+      return res.json(userData);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to fetch user profile' });
     }
   });
 
-  // ==================== CURRENCY EXCHANGE API ROUTES - PROTECTED ====================
-  app.post('/api/currency-exchange', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // PATCH /api/user - Update user profile
+  app.patch('/api/user', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { fromCurrency, toCurrency, amount } = req.body;
-
-      // SECURITY: Get authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-
-      // Validate required fields
-      if (!fromCurrency || !toCurrency || !amount) {
-        return res.status(400).json({ error: 'Missing required fields' });
-      }
-
-      // Mock exchange rate calculation - replace with real exchange rate API
-      const exchangeRates: Record<string, number> = {
-        'USD': 1.0,
-        'EUR': 0.92,
-        'GBP': 0.79,
-        'JPY': 149.5,
-        'CNY': 7.24,
-        'AUD': 1.53,
-        'CAD': 1.36,
-        'CHF': 0.88
-      };
-
-      const fromRate = exchangeRates[fromCurrency] || 1;
-      const toRate = exchangeRates[toCurrency] || 1;
-      const convertedAmount = (amount / fromRate) * toRate;
-      const exchangeRate = toRate / fromRate;
-
-      res.json({
-        success: true,
-        fromCurrency,
-        toCurrency,
-        originalAmount: amount,
-        convertedAmount: +convertedAmount.toFixed(2),
-        exchangeRate: +exchangeRate.toFixed(4),
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to process currency exchange' });
+      const { role, isVerified, isActive, id, ...allowedUpdates } = req.body;
+      const updatedUser = await storage.updateUser(user.id, allowedUpdates);
+      return res.json(sanitizeUser(updatedUser));
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to update user profile' });
     }
   });
 
-  // ==================== MESSAGES API ROUTES - PROTECTED ====================
-  app.get('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // GET /api/user/accounts - Get user accounts
+  app.get('/api/user/accounts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // SECURITY: Only return messages for authenticated user
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-
-      const messages = await storage.getUserMessages(user.id);
-
-      // Note: Messages schema doesn't have conversationId, so we return all user messages
-      res.json(messages);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch messages' });
+      const accounts = await storage.getUserAccounts(user.id);
+      return res.json(accounts);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to fetch accounts' });
     }
   });
 
-  app.get('/api/messages/user/:userId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // GET /api/accounts - Get user accounts (alias)
+  app.get('/api/accounts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      const messages = await storage.getUserMessages(user.id);
-      res.json(messages);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch user messages' });
+      const accounts = await storage.getUserAccounts(user.id);
+      return res.json(accounts);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to fetch accounts' });
     }
   });
 
-  app.post('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // GET /api/transactions - Get user transactions
+  app.get('/api/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-
-      const { content, recipientId, sessionId } = req.body;
-      if (!content) {
-        return res.status(400).json({ error: 'content required' });
-      }
-
-      const senderRole = req.user!.role === 'admin' ? 'admin' : 'customer';
-      const finalRecipientId = typeof recipientId === 'string' && recipientId === 'admin' ? 1 : (recipientId || 1);
-      const finalSessionId = sessionId || `session_${user.id}`;
-      
-      console.log('💬 Saving message:', { senderId: user.id, senderRole, recipientId: finalRecipientId, sessionId: finalSessionId, content });
-      
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          sender_id: user.id,
-          sender_role: senderRole,
-          recipient_id: finalRecipientId,
-          recipient_role: senderRole === 'admin' ? 'customer' : 'admin',
-          content: content,
-          session_id: finalSessionId,
-          is_read: false
-        })
-        .select();
-
-      if (error) {
-        console.error('❌ Supabase insert error:', error);
-        return res.status(500).json({ error: 'Failed to save message', details: error.message });
-      }
-      console.log('✅ Message saved successfully');
-      res.json(data?.[0] || { success: true });
-    } catch (error: any) {
-      console.error('❌ Message save error:', error);
-      res.status(500).json({ error: 'Failed to save message', details: error.message });
-    }
-  });
-
-  app.get('/api/messages/session/:sessionId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { sessionId } = req.params;
-      console.log('📨 Fetching messages for session:', sessionId);
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: true });
-      
-      if (error) {
-        console.error('Supabase message query error:', error);
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) {
         return res.json([]);
       }
-      console.log('✅ Found', data?.length || 0, 'messages for session:', sessionId);
-      res.json(data || []);
-    } catch (error) {
-      console.error('Message fetch error:', error);
-      res.json([]);
+      const allTxns: Transaction[] = [];
+      for (const account of accounts) {
+        const txns = await storage.getAccountTransactions(account.id);
+        allTxns.push(...txns);
+      }
+      allTxns.sort((a: Transaction, b: Transaction) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      return res.json(allTxns);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to fetch transactions' });
     }
   });
 
-  app.get('/api/admin/chat-sessions', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  // GET /api/transactions/:id - Get single transaction
+  app.get('/api/transactions/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { data, error } = await supabase
-        .from('bank_users')
-        .select('id, email, full_name')
-        .eq('role', 'customer')
-        .limit(20);
-      
-      if (error) throw error;
-      const sessions = (data || []).map((user: any) => ({
-        id: `session_${user.id}`,
-        customerId: user.id,
-        customerName: user.full_name || user.email,
-        status: 'active'
-      }));
-      res.json(sessions);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch chat sessions' });
+      const { id } = req.params;
+      const transaction = await storage.getTransactionById(id);
+      if (!transaction) {
+        return res.status(404).json({ error: 'Transaction not found' });
+      }
+      return res.json(transaction);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to fetch transaction' });
     }
   });
 
-  app.patch('/api/messages/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
+  // ==================== PIN MANAGEMENT ====================
 
-      // SECURITY: Only allow marking own messages as read
-      const user = await (storage).getUserByEmail(req.user!.email);
+  // POST /api/set-pin - Set transfer PIN
+  app.post('/api/set-pin', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { pin } = req.body;
+      if (!pin || String(pin).length !== 4) {
+        return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
+      }
+      const user = await storage.getUserByEmail(req.user!.email);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-
-      const userMessages = await storage.getUserMessages(user.id);
-      const ownsMessage = userMessages.some(msg => msg.id === id);
-
-      if (!ownsMessage) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-
-      const message = await storage.markMessageAsRead(id);
-      res.json(message);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to mark message as read' });
+      const pinHash = await bcrypt.hash(String(pin), 12);
+      await storage.updateUser(user.id, { transferPin: pinHash });
+      return res.json({ success: true, message: 'PIN set successfully' });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to set PIN' });
     }
   });
 
-  // ==================== ALERTS API ROUTES - PROTECTED ====================
-  app.get('/api/alerts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // POST /api/verify-pin - Verify transfer PIN
+  app.post('/api/verify-pin', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+      const { pin } = req.body;
+      const email = req.user!.email;
+      if (!email || !pin) {
+        return res.status(400).json({ error: 'Email and PIN required' });
       }
-      const { data, error } = await supabase
-        .from('alerts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Supabase alerts query error:', error);
-        return res.json([]);
+      const user = await storage.getUserByEmail(email);
+      if (!user || !user.transferPin) {
+        return res.status(401).json({ success: false, message: 'PIN not set on account' });
       }
-      res.json(data || []);
-    } catch (error) {
-      console.error('Alerts endpoint error:', error);
-      res.json([]);
+      const pinMatch = await bcrypt.compare(String(pin).trim(), String(user.transferPin).trim());
+      if (!pinMatch) {
+        return res.status(401).json({ success: false, message: 'Invalid PIN' });
+      }
+      return res.json({ success: true, message: 'PIN verified' });
+    } catch (error: unknown) {
+      return res.status(500).json({ success: false, message: 'PIN verification failed' });
     }
   });
 
-  app.get('/api/alerts/unread', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // POST /api/change-pin - Change transfer PIN
+  app.post('/api/change-pin', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+      const { currentPin, newPin } = req.body;
+      if (!currentPin || !newPin || String(newPin).length !== 4) {
+        return res.status(400).json({ error: 'Current PIN and new PIN (4 digits) required' });
       }
-      const alerts = await storage.getUnreadAlerts(user.id);
-      res.json(alerts);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch unread alerts' });
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user || !user.transferPin) {
+        return res.status(401).json({ error: 'PIN not set on account' });
+      }
+      const pinMatch = await bcrypt.compare(String(currentPin).trim(), String(user.transferPin).trim());
+      if (!pinMatch) {
+        return res.status(401).json({ error: 'Current PIN is incorrect' });
+      }
+      const pinHash = await bcrypt.hash(String(newPin), 12);
+      await storage.updateUser(user.id, { transferPin: pinHash });
+      return res.json({ success: true, message: 'PIN changed successfully' });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to change PIN' });
     }
   });
 
-  app.post('/api/alerts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      // SECURITY: Derive userId from authenticated user, not client input
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      // Create alert with authenticated user's ID
-      const alertData = {
-        ...req.body,
-        userId: user.id, // Override any client-supplied userId
-      };
-
-      const alert = await storage.createAlert(alertData);
-      res.json(alert);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to create alert' });
-    }
-  });
-
-  app.delete('/api/alerts/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-
-      // SECURITY: Only allow deleting own alerts
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      // Verify alert belongs to user before deleting
-      const alerts = await storage.getUserAlerts(user.id);
-      const alert = alerts.find((a: any) => a.id === id);
-
-      if (!alert) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-
-      await storage.deleteAlert(id);
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to delete alert' });
-    }
-  });
-
-  app.patch('/api/alerts/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-
-      // SECURITY: Only allow marking own alerts as read
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const userAlerts = await storage.getUserAlerts(user.id);
-      const ownsAlert = userAlerts.some(alert => alert.id === id);
-
-      if (!ownsAlert) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-
-      const alert = await storage.markAlertAsRead(id);
-      res.json(alert);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to mark alert as read' });
-    }
-  });
-
-  // ==================== SUPPORT TICKETS API ROUTES ====================
-  app.get('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      // Admin can see all tickets, customers see only their own
-      const tickets = user.role === 'admin' 
-        ? await storage.getSupportTickets()  // No userId = get all
-        : await storage.getSupportTickets(user.id);  // With userId = get user's tickets
-
-      res.json(tickets);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch support tickets' });
-    }
-  });
-
-  app.post('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const user = await (storage).getUserByEmail(req.user!.email);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-
-      const ticketData = {
-        userId: user.id,
-        subject: req.body.subject,
-        description: req.body.description,
-        priority: req.body.priority || 'medium',
-        status: 'open',
-        category: req.body.category
-      };
-
-      const ticket = await storage.createSupportTicket(ticketData);
-      res.json(ticket);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to create support ticket' });
-    }
-  });
-
-  app.patch('/api/support-tickets/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const id = parseInt(req.params.id);
-      const updates = req.body;
-
-      const ticket = await storage.getSupportTicket(id);
-      const updatedTicket = await storage.updateSupportTicket(id, updates);
-
-      // AUDIT TRAIL: Log admin action for ticket updates
-      const admin = await (storage).getUserByEmail(req.user!.email);
-      if (admin && updatedTicket) {
-        const actionDescription = updates.status 
-          ? `Updated ticket #${id} status to ${updates.status}`
-          : `Updated ticket #${id}`;
-        
-        await storage.createAdminAction({
-          adminId: admin.id,
-          action: 'update_support_ticket',
-          targetType: 'support_ticket',
-          targetId: id,
-          details: { ticketId: id, updates, previousStatus: ticket?.status }
-        });
-      }
-
-      res.json(updatedTicket);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to update support ticket' });
-    }
-  });
-
-  // ==================== OBJECT STORAGE API ROUTES ====================
-  // Branches endpoint
-  app.get('/api/branches', async (req: Request, res: Response) => {
-    try {
-      const branches = await storage.getBranches();
-      res.json(branches);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch branches' });
-    }
-  });
-
-  // ATMs endpoint
-  app.get('/api/atms', async (req: Request, res: Response) => {
-    try {
-      const atms = await storage.getAtms();
-      res.json(atms);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch ATMs' });
-    }
-  });
+  // ==================== ADMIN ENDPOINTS ====================
 
   // Exchange rates endpoint
   app.get('/api/exchange-rates', async (req: Request, res: Response) => {
     try {
       const rates = await storage.getExchangeRates();
-      // Convert to object format: { EUR: 0.92, GBP: 0.79, ... }
       const ratesObject: Record<string, number> = {};
-      rates.forEach((rate: any) => {
+      rates.forEach((rate: Record<string, any>) => {
         ratesObject[rate.targetCurrency || rate.target_currency] = parseFloat(rate.rate);
       });
-      res.json(ratesObject);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch exchange rates' });
+      return res.json(ratesObject);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to fetch exchange rates' });
     }
   });
 
   // Admin customers endpoint
-  // Get all pending transfers for admin review
-  app.get('/api/admin/pending-transfers', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const allTransfers = await storage.getAllTransactions();
-      const transfers = allTransfers.filter((t: any) => t.status === 'pending');
-      
-      // Format for admin dashboard
-      const formattedTransfers = transfers.map((t: any) => ({
-        id: t.id,
-        amount: t.amount,
-        currency: t.currency || 'USD',
-        recipientName: t.recipientName || 'Unknown',
-        recipientBank: t.recipientBank || 'Unknown',
-        customerName: t.fromAccountId ? `Account ${t.fromAccountId}` : 'Unknown',
-        customerEmail: 'customer@worldbank.com', // Would need to join with users table
-        createdAt: t.createdAt,
-        status: t.status
-      }));
-
-      res.json(formattedTransfers);
-    } catch (error: any) {
-      res.status(500).json({ message: 'Failed to fetch pending transfers', error: error.message });
-    }
-  });
-
-  // Get all support tickets for admin view
-  app.get('/api/admin/support-tickets', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const tickets = await storage.getSupportTickets();
-      
-      // Format for admin dashboard
-      const formattedTickets = await Promise.all(tickets.map(async (t) => {
-        // Try to get user info
-        let customerName = `User ${t.userId}`;
-        try {
-          const user = await storage.getUser(t.userId);
-          if (user) {
-            customerName = `${user.firstName} ${user.lastName}` || user.email || customerName;
-          }
-        } catch (e) {
-          // Use default
-        }
-
-        return {
-          id: t.id,
-          subject: t.description?.substring(0, 50) || 'Support Ticket',
-          customerName,
-          priority: t.priority || 'Medium',
-          status: t.status || 'Open',
-          createdAt: t.createdAt,
-          description: t.description || ''
-        };
-      }));
-
-      res.json(formattedTickets);
-    } catch (error: any) {
-      res.status(500).json({ message: 'Failed to fetch support tickets', error: error.message });
-    }
-  });
-
   app.get('/api/admin/customers', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const customers = await storage.getAllUsers();
-      // Filter out admins, only return customers
-      const customerList = customers.filter((user: any) => user.role === 'customer');
-      res.json(customerList);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch customers' });
+      const customerList = customers
+        .filter((user: User) => user.role !== 'admin' || req.query.includeAdmins === 'true')
+        .map((user: User) => ({
+          ...sanitizeUser(user),
+          fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown',
+          balance: parseFloat(String(user.balance || '0')) || 0
+        }));
+      return res.json(customerList);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to fetch customers' });
     }
   });
 
-  // Statements endpoint
-  app.get('/api/statements', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // PUT /api/admin/customers/:id - Update customer
+  app.put('/api/admin/customers/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = typeof req.user?.id === 'number' ? req.user.id : parseInt(String(req.user?.id) || '0');
-      if (!userId) {
-        return res.status(401).json({ error: 'User not authenticated' });
+      const id = req.params.id;
+      const updates = req.body;
+      const updatedUser = await storage.updateUser(id, updates);
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'Customer not found' });
       }
-
-      const statements = await storage.getStatementsByUserId(userId);
-      res.json(statements);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch statements' });
+      const admin = await storage.getUserByEmail(req.user!.email);
+      if (admin) {
+        await storage.createAdminAction({
+          adminId: admin.id,
+          action: 'update_customer',
+          targetType: 'user',
+          targetId: id,
+          details: updates
+        });
+      }
+      return res.json(sanitizeUser(updatedUser));
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to update customer' });
     }
   });
 
-  app.post('/api/objects/upload', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  // POST /api/admin/customers/:id/verify - Verify customer
+  app.post('/api/admin/customers/:id/verify', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Handle file upload for identity documents (ID cards, passports, etc.)
-      // This endpoint accepts base64 encoded files or multipart form data
-
-      const { file, fileName, fileType } = req.body;
-
-      if (!file || !fileName) {
-        return res.status(400).json({ error: 'Missing file or fileName' });
+      const id = req.params.id;
+      const { verified = true, active } = req.body;
+      const updates: Record<string, unknown> = { isVerified: verified };
+      if (typeof active !== 'undefined') updates.isActive = active;
+      else if (verified) updates.isActive = true;
+      const updatedUser = await storage.updateUser(id, updates);
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'Customer not found' });
       }
-
-      // Generate unique file ID
-      const fileId = `upload_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-
-      // Mock file storage - replace with actual object storage implementation
-      // In production, this should upload to Supabase Storage or similar service
-      const uploadResult = {
-        success: true,
-        fileId,
-        fileName,
-        fileType: fileType || 'image/jpeg',
-        uploadedAt: new Date().toISOString(),
-        url: `/uploads/${fileId}`, // Mock URL
-        message: 'File uploaded successfully'
-      };
-
-      res.json(uploadResult);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to upload file' });
+      const admin = await storage.getUserByEmail(req.user!.email);
+      if (admin) {
+        await storage.createAdminAction({
+          adminId: admin.id,
+          action: verified ? 'verify_customer' : 'unverify_customer',
+          targetType: 'user',
+          targetId: id,
+          details: { verified, active: updates.isActive }
+        });
+      }
+      return res.json({ success: true, user: updatedUser, message: verified ? 'Customer verified' : 'Customer unverified' });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to update customer verification' });
     }
   });
 
-  // ADMIN USER CREATION ENDPOINT - ADMIN ONLY
-  // Creates a complete admin user in both Supabase Auth and local database
-  // This is a one-time setup endpoint - should be secured in production
-  app.post('/api/admin/create-admin-user', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+  // GET /api/admin/stats - Dashboard statistics
+  app.get('/api/admin/stats', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { email, password, fullName } = req.body;
+      const allUsers = await storage.getAllUsers();
+      const customers = allUsers.filter((u: User) => u.role === 'customer');
+      const allTransactions = await storage.getAllTransactions();
+      const pendingTransactions = allTransactions.filter((t: { status?: string }) => t.status === 'pending');
+      const tickets = await storage.getSupportTickets();
+      const openTickets = tickets.filter((t: { status?: string }) => t.status !== 'resolved' && t.status !== 'closed');
+      return res.json({
+        totalCustomers: customers.length,
+        activeCustomers: customers.filter((u: User) => u.isActive).length,
+        pendingApprovals: customers.filter((u: User) => !u.isActive).length,
+        totalTransactions: allTransactions.length,
+        pendingTransactions: pendingTransactions.length,
+        openSupportTickets: openTickets.length,
+      });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to fetch stats' });
+    }
+  });
 
-      if (!email || !password || !fullName) {
-        return res.status(400).json({ error: 'Email, password, and fullName are required' });
+  // PATCH /api/admin/support-tickets/:id - Update support ticket
+  app.patch('/api/admin/support-tickets/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = req.params.id;
+      const updates = req.body;
+      const updatedTicket = await storage.updateSupportTicket(id, updates);
+      const admin = await storage.getUserByEmail(req.user!.email);
+      if (admin && updatedTicket) {
+        await storage.createAdminAction({
+          adminId: admin.id,
+          action: 'update_support_ticket',
+          targetType: 'support_ticket',
+          targetId: id,
+          details: { ticketId: id, updates }
+        });
+      }
+      return res.json(updatedTicket);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to update support ticket' });
+    }
+  });
+
+  // POST /api/admin/tickets/:id/respond - Respond to support ticket
+  app.post('/api/admin/tickets/:id/respond', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = req.params.id;
+      const { response: adminResponse, notes, status } = req.body;
+      const responseText = adminResponse || notes || '';
+      const supabase = getAdminClient();
+
+      // Fetch existing ticket to append to adminNotes
+      const { data: ticket } = await supabase.from('support_tickets').select('admin_notes').eq('id', id).single();
+      const existingNotes = (ticket as Record<string, unknown>)?.admin_notes || '';
+      const newNotes = existingNotes
+        ? `${existingNotes}\n---\n[${new Date().toISOString()}] ${responseText}`
+        : `[${new Date().toISOString()}] ${responseText}`;
+
+      await supabase.from('support_tickets').update({
+        admin_notes: newNotes,
+        status: status || 'responded',
+        updated_at: new Date().toISOString()
+      }).eq('id', id);
+
+      // Log admin action
+      await supabase.from('admin_actions').insert({
+        admin_id: req.user!.id,
+        action_type: 'ticket_respond',
+        target_id: id,
+        description: `Responded to support ticket ${id}`,
+        metadata: { response: responseText }
+      });
+
+      return res.json({ success: true, message: 'Reply sent successfully' });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to respond to ticket' });
+    }
+  });
+
+  // ==================== AUTH ENDPOINTS ====================
+
+  // LOGIN - Supabase Auth + Auto-sync to users table
+  app.post('/api/auth/login', authRateLimiter, async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password required' });
       }
 
-
-      // Create Supabase admin client
       const { createClient } = await import('@supabase/supabase-js');
-      const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY!;
+      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      });
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      if (!data.session || !data.user) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      const supabaseUser = data.user;
+
+      // Sync user to users table
+      let dbUser = await storage.getUserByEmail(email);
+      
+      if (!dbUser) {
+        dbUser = await storage.createUser({
+          username: email.split('@')[0],
+          email: email,
+          password: randomUUID(),
+          firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
+          lastName: supabaseUser.user_metadata?.last_name || 'User',
+          phone: supabaseUser.user_metadata?.phone || '',
+          profession: 'Not provided',
+          accountNumber: `${generateAccountNumber()}`,
+          accountId: randomUUID(),
+          balance: '0',
+          isActive: false,
+          isVerified: false,
+          transferPin: supabaseUser.user_metadata?.transfer_pin || '',
+          role: supabaseUser.app_metadata?.role || 'customer'
+        });
+        
+        await storage.createAccount({
+          userId: dbUser.id,
+          accountNumber: `${generateAccountNumber()}`,
+          accountType: 'checking',
+          balance: '0.00',
+          currency: 'USD',
+          status: 'active'
+        });
+      } else {
+        const userAccounts = await storage.getUserAccounts(dbUser.id);
+        if (userAccounts.length === 0) {
+          await storage.createAccount({
+            userId: dbUser.id,
+            accountNumber: `${generateAccountNumber()}`,
+            accountType: 'checking',
+            balance: '0.00',
+            currency: 'USD',
+            status: 'active'
+          });
+        }
+        const supabaseRole = supabaseUser.app_metadata?.role || 'customer';
+        const updates: Record<string, unknown> = { lastLogin: new Date() };
+        if (dbUser.role !== supabaseRole) {
+          updates.role = supabaseRole;
+        }
+        await storage.updateUser(dbUser.id, updates);
+        const refreshed = await storage.getUserByEmail(email);
+        if (refreshed) dbUser = refreshed;
+      }
+
+      const accessToken = data.session?.access_token;
+      if (!accessToken) {
+        return res.status(500).json({ error: 'Failed to generate authentication token' });
+      }
+
+      return res.json({ 
+        token: accessToken,
+        refreshToken: data.session?.refresh_token,
+        user: dbUser
+      });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Login failed', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
+    }
+  });
+
+  // LOGOUT
+  app.post('/api/auth/logout', async (req: Request, res: Response) => {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY!;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+      // Extract the access token from the Authorization header
+      const authHeader = req.headers.authorization;
+      const accessToken = authHeader?.replace('Bearer ', '');
+
+      // Use service role key to properly sign out the user's session
+      const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      });
+
+      // Revoke the refresh token if provided
+      const { refreshToken } = req.body || {};
+      if (refreshToken) {
+        await supabaseAdmin.auth.admin.signOut(refreshToken, 'refresh_token').catch(() => {});
+      }
+
+      // Also try to revoke the access token's session
+      if (accessToken) {
+        await supabaseAdmin.auth.admin.signOut(accessToken, 'access_token').catch(() => {});
+      }
+
+      return res.json({ message: "Logged out successfully", status: "ok" });
+    } catch (error: unknown) {
+      return res.json({ message: "Logged out successfully", status: "ok" });
+    }
+  });
+
+  // POST /api/auth/refresh - Refresh session token
+  app.post('/api/auth/refresh', async (req: Request, res: Response) => {
+    try {
+      const { refreshToken } = req.body;
+      if (!refreshToken) {
+        return res.status(400).json({ error: 'Refresh token required' });
+      }
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY!;
+      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      });
+      const { data, error } = await supabaseClient.auth.refreshSession({ refresh_token: refreshToken });
+      if (error || !data.session) {
+        return res.status(401).json({ error: 'Invalid refresh token' });
+      }
+      return res.json({
+        token: data.session.access_token,
+        refreshToken: data.session.refresh_token,
+        user: { id: data.user?.id, email: data.user?.email }
+      });
+    } catch (error) {
+      return res.status(500).json({ error: 'Token refresh failed' });
+    }
+  });
+
+  // POST /api/auth/change-password - Change user password
+  app.post('/api/auth/change-password', requireAuth, authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password required' });
+      if (newPassword.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
+      if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+        return res.status(400).json({ error: 'Password must contain uppercase, lowercase, and a number' });
+      }
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY!;
+      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      });
+
+      // Verify current password by signing in
+      const { error: signInError } = await supabaseClient.auth.signInWithPassword({
+        email: req.user!.email,
+        password: currentPassword
+      });
+      if (signInError) return res.status(401).json({ error: 'Current password is incorrect' });
+
+      // Update password
+      const { error: updateError } = await supabaseClient.auth.updateUser({
+        password: newPassword
+      });
+      if (updateError) throw updateError;
+
+      return res.json({ success: true, message: 'Password changed successfully' });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // Admin login
+  app.post('/api/admin/login', authRateLimiter, async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        return res.status(401).json({ error: 'Invalid admin credentials' });
+      }
+      const role = data.user.app_metadata?.role || 'customer';
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const accessToken = data.session?.access_token;
+      if (!accessToken) {
+        return res.status(500).json({ error: 'Failed to generate authentication token' });
+      }
+      return res.json({ 
+        token: accessToken,
+        refreshToken: data.session?.refresh_token,
+        user: { id: data.user.id, email: data.user.email, role }
+      });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Login failed' });
+    }
+  });
 
-      // STEP 1: Create Supabase Auth account with ADMIN role in app_metadata
+  // ==================== PAYMENT REQUESTS ====================
+
+  // GET /api/payment-requests
+  app.get('/api/payment-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) return res.json([]);
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) return res.json([]);
+      const allTxns: Transaction[] = [];
+      for (const account of accounts) {
+        const txns = await storage.getAccountTransactions(account.id);
+        allTxns.push(...txns);
+      }
+      const paymentRequests = allTxns.filter((t: Transaction) => t.type === 'payment_request' || (t.description?.toLowerCase()?.includes('payment request')));
+      return res.json(paymentRequests);
+    } catch (error: unknown) {
+      return res.json([]);
+    }
+  });
+
+  // POST /api/payment-requests - Create a payment request
+  app.post('/api/payment-requests', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { amount, currency = 'USD', description, recipientName } = req.body;
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ error: 'Valid amount required' });
+      }
+      const reference = `PR-${Date.now()}-${randomUUID().substring(0, 8).toUpperCase()}`;
+      const transactionData = {
+        fromUserId: req.user!.id,
+        amount: String(amount),
+        currency,
+        transactionType: 'payment_request',
+        status: 'pending',
+        referenceNumber: reference,
+        description: description || `Payment request to ${recipientName || 'recipient'}`,
+        recipientName: recipientName || '',
+      };
+      const transaction = await storage.createTransaction(transactionData);
+      return res.json({ success: true, reference, transaction });
+    } catch (error) {
+      return res.status(500).json({ error: 'Failed to create payment request' });
+    }
+  });
+
+  // POST /api/payment-requests/:id/pay - Fulfill a payment request
+  app.post('/api/payment-requests/:id/pay', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const supabase = getAdminClient();
+      const { data: request } = await supabase.from('transactions').select('*').eq('id', req.params.id).eq('transaction_type', 'payment_request').single();
+      if (!request) return res.status(404).json({ error: 'Payment request not found' });
+      if ((request as Record<string, unknown>).status !== 'pending') return res.status(400).json({ error: 'Payment request is no longer pending' });
+
+      const amount = parseFloat(String((request as Record<string, unknown>).amount));
+      // Check balance
+      const { data: userAccount } = await supabase.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (!userAccount) return res.status(404).json({ error: 'Account not found' });
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0'));
+      if (currentBalance < amount) return res.status(400).json({ error: 'Insufficient funds' });
+
+      // Debit payer
+      const newBalance = (currentBalance - amount).toFixed(2);
+      await supabase.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
+
+      // Mark request as paid
+      await supabase.from('transactions').update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        from_user_id: req.user!.id
+      }).eq('id', req.params.id);
+
+      // Create payment transaction
+      await supabase.from('transactions').insert({
+        from_user_id: req.user!.id,
+        to_user_id: (request as Record<string, unknown>).to_user_id,
+        amount: amount.toFixed(2),
+        currency: 'USD',
+        transaction_type: 'payment',
+        category: 'payment',
+        status: 'completed',
+        description: `Payment for request ${req.params.id}`,
+        reference_number: `PAY${Date.now()}${Math.floor(Math.random() * 10000)}`,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      });
+
+      // Create alert
+      await supabase.from('alerts').insert({
+        user_id: req.user!.id,
+        title: 'Payment Sent',
+        message: `Payment of ${amount.toFixed(2)} has been sent.`,
+        type: 'success',
+        priority: 'normal',
+        is_read: false
+      });
+
+      return res.json({ success: true, newBalance });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/add-funds - Add funds to account
+  app.post('/api/add-funds', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { method, amount } = req.body;
+      if (!method || !amount || isNaN(parseFloat(String(amount))) || parseFloat(String(amount)) <= 0) {
+        return res.status(400).json({ error: 'Method and valid amount are required' });
+      }
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      const accounts = await storage.getUserAccounts(user.id);
+      if (accounts.length === 0) return res.status(404).json({ error: 'No account found' });
+      const parsedAmount = parseFloat(String(amount));
+
+      try {
+        // Update balance first
+        const updated = await storage.updateUserBalance(user.id, parsedAmount);
+        if (!updated) {
+          return res.status(500).json({ error: 'Failed to update balance' });
+        }
+        // Sync accounts table balance
+        const newBalance = (parseFloat(String(updated.balance || '0'))).toFixed(2);
+        await supabase.from('accounts').update({
+          balance: newBalance,
+          updated_at: new Date().toISOString()
+        }).eq('user_id', user.id).eq('status', 'active');
+        // Then create transaction record
+        const transaction = await storage.createTransaction({
+          fromAccountId: accounts[0].id,
+          type: 'deposit',
+          amount: parsedAmount.toString(),
+          description: `Funds added via ${method}`,
+          status: 'completed',
+          currency: 'USD',
+          referenceNumber: `DEP-${Date.now()}`,
+          createdAt: new Date()
+        });
+
+        // Auto-create alert on transaction
+        await supabase.from('alerts').insert({
+          user_id: req.user!.id,
+          title: 'Funds Added',
+          message: `${parsedAmount.toFixed(2)} has been added to your account via ${method}.`,
+          type: 'success',
+          priority: 'normal',
+          is_read: false
+        });
+
+        return res.json({ success: true, transaction, amount: parsedAmount, newBalance: updated.balance });
+      } catch (error) {
+        // If transaction creation fails, reverse the balance update
+        await storage.updateUserBalance(user.id, -parsedAmount);
+        return res.status(500).json({ error: 'Failed to complete deposit' });
+      }
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to add funds' });
+    }
+  });
+
+  // ==================== SUPPLEMENTARY ENDPOINTS ====================
+
+  app.get('/api/transactions/recent', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) return res.json([]);
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) return res.json([]);
+      const allTxns: Transaction[] = [];
+      for (const account of accounts) {
+        const txns = await storage.getAccountTransactions(account.id);
+        allTxns.push(...txns);
+      }
+      allTxns.sort((a: Transaction, b: Transaction) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      return res.json(allTxns.slice(0, 10));
+    } catch (error: unknown) {
+      return res.json([]);
+    }
+  });
+
+  app.get('/api/currencies', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    return res.json([
+      { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
+      { code: 'EUR', name: 'Euro', symbol: '€', flag: '🇪🇺' },
+      { code: 'GBP', name: 'British Pound', symbol: '£', flag: '🇬🇧' },
+      { code: 'JPY', name: 'Japanese Yen', symbol: '¥', flag: '🇯🇵' },
+      { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', flag: '🇨🇳' },
+      { code: 'CAD', name: 'Canadian Dollar', symbol: 'CA$', flag: '🇨🇦' },
+      { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', flag: '🇦🇺' },
+      { code: 'CHF', name: 'Swiss Franc', symbol: 'Fr', flag: '🇨🇭' },
+      { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', flag: '🇸🇬' },
+      { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$', flag: '🇭🇰' },
+    ]);
+  });
+
+  app.get('/api/admin/customers-list', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const customers = await storage.getAllUsers();
+      const customerList = customers.filter((user: User) => user.role === 'customer');
+      return res.json(customerList);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to fetch customers list' });
+    }
+  });
+
+  app.get('/api/users', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const users = await storage.getAllUsers();
+      return res.json(sanitizeUsers(users));
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to fetch users' });
+    }
+  });
+
+  app.get('/api/card-transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) return res.json([]);
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) return res.json([]);
+      const allTxns: Transaction[] = [];
+      for (const account of accounts) {
+        const txns = await storage.getAccountTransactions(account.id, 20);
+        allTxns.push(...txns);
+      }
+      return res.json(allTxns.slice(0, 30));
+    } catch (error: unknown) {
+      return res.json([]);
+    }
+  });
+
+  app.get('/api/wallet-balance', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      return res.json({
+        balance: parseFloat(String(user.balance || '0')),
+        currency: 'USD',
+        available: parseFloat(String(user.balance || '0')),
+        pending: 0
+      });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to fetch wallet balance' });
+    }
+  });
+
+  app.get('/api/wallet-transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) return res.json([]);
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) return res.json([]);
+      const txns = await storage.getAccountTransactions(accounts[0].id, 20);
+      return res.json(txns);
+    } catch (error: unknown) {
+      return res.json([]);
+    }
+  });
+
+  app.get('/api/mobile-payments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) return res.json([]);
+      const accounts = await storage.getUserAccounts(user.id);
+      if (!accounts || accounts.length === 0) return res.json([]);
+      const txns = await storage.getAccountTransactions(accounts[0].id, 20);
+      const mobilePayments = txns.filter((t: Transaction) => t.type === 'mobile_pay' || t.description?.toLowerCase().includes('mobile'));
+      return res.json(mobilePayments);
+    } catch (error: unknown) {
+      return res.json([]);
+    }
+  });
+
+  app.get('/api/mobile-pay/merchants', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    return res.json([
+      { id: 1, name: 'Apple Pay', logo: '🍎', category: 'Digital Wallet' },
+      { id: 2, name: 'Google Pay', logo: '🔵', category: 'Digital Wallet' },
+      { id: 3, name: 'Samsung Pay', logo: '📱', category: 'Digital Wallet' },
+      { id: 4, name: 'PayPal', logo: '💙', category: 'Online Payment' },
+      { id: 5, name: 'Venmo', logo: '💜', category: 'P2P Transfer' },
+      { id: 6, name: 'Cash App', logo: '💚', category: 'P2P Transfer' },
+      { id: 7, name: 'Zelle', logo: '🟣', category: 'Bank Transfer' },
+    ]);
+  });
+
+  app.get('/api/user/activity-log', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) return res.json([]);
+      const accounts = await storage.getUserAccounts(user.id);
+      const recentActivity: Record<string, unknown>[] = [];
+      if (accounts && accounts.length > 0) {
+        const txns = await storage.getAccountTransactions(accounts[0].id, 10);
+        txns.forEach((t: Transaction) => {
+          recentActivity.push({
+            id: t.id,
+            action: `${t.type || 'Transaction'} of $${t.amount}`,
+            timestamp: t.createdAt,
+            ipAddress: '***.***.*.***',
+            device: 'Web Browser',
+            status: t.status || 'completed'
+          });
+        });
+      }
+      recentActivity.unshift({
+        id: 'login-recent',
+        action: 'Account login',
+        timestamp: user.lastLogin || new Date().toISOString(),
+        ipAddress: req.ip || '***',
+        device: req.get('user-agent')?.substring(0, 30) || 'Unknown',
+        status: 'success'
+      });
+      return res.json(recentActivity);
+    } catch (error: unknown) {
+      return res.json([]);
+    }
+  });
+
+  app.get('/api/user/trusted-devices', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    return res.json([
+      {
+        id: 1,
+        name: 'Current Browser',
+        type: 'web',
+        lastUsed: new Date().toISOString(),
+        trusted: true,
+        current: true
+      }
+    ]);
+  });
+
+  // Admin transaction routes
+  app.get('/api/admin/transaction-routes', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const allTransactions = await storage.getAllTransactions();
+      return res.json(allTransactions.map((t: Transaction) => ({
+        id: t.id,
+        amount: t.amount,
+        currency: t.currency || 'USD',
+        status: t.status,
+        type: t.type,
+        description: t.description,
+        recipientName: t.recipientName,
+        createdAt: t.createdAt
+      })));
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to fetch transaction routes' });
+    }
+  });
+
+  app.patch('/api/admin/transaction-routes/:id', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = req.params.id;
+      const { status, notes } = req.body;
+      const admin = await storage.getUserByEmail(req.user!.email);
+      const adminId = admin?.id || 0;
+      const transaction = await storage.updateTransactionStatus(id, status, adminId, notes);
+      return res.json({ success: true, transaction });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to update transaction route' });
+    }
+  });
+
+  app.post('/api/admin/transaction-routes', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { accountId, amount, description, type, status } = req.body;
+      const transaction = await storage.createTransaction({
+        fromAccountId: accountId,
+        type: type || 'transfer',
+        amount: String(amount),
+        description,
+        status: status || 'pending',
+        createdAt: new Date()
+      });
+      return res.json({ success: true, transaction });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to create transaction route' });
+    }
+  });
+
+  // ==================== RECENT CONTACTS ====================
+
+  app.get('/api/recent-contacts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('recent_contacts')
+        .select('*')
+        .eq('user_id', req.user!.id)
+        .order('updated_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // ==================== LOANS ENDPOINTS ====================
+
+  // GET /api/loans - Get all loans for the authenticated user
+  app.get('/api/loans', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('loans')
+        .select('*')
+        .eq('user_id', req.user!.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/loans/apply - Apply for a new loan
+  app.post('/api/loans/apply', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { loanType, principalAmount, interestRate, termMonths, transferPin } = req.body;
+      if (!loanType || !principalAmount || !interestRate || !termMonths) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      const principal = Number(principalAmount);
+      const rate = Number(interestRate);
+      const term = Number(termMonths);
+      if (isNaN(principal) || principal <= 0) return res.status(400).json({ error: 'Invalid principal amount' });
+      if (isNaN(rate) || rate < 0 || rate > 100) return res.status(400).json({ error: 'Invalid interest rate' });
+      if (isNaN(term) || term < 1 || term > 360) return res.status(400).json({ error: 'Invalid term (must be 1-360 months)' });
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      if (!user.transferPin) return res.status(400).json({ error: 'PIN not set' });
+      const pinMatch = await bcrypt.compare(String(transferPin), user.transferPin);
+      if (!pinMatch) return res.status(400).json({ error: 'Invalid PIN' });
+
+      const monthlyPayment = (Number(principalAmount) * (Number(interestRate) / 100 / 12)) / (1 - Math.pow(1 + Number(interestRate) / 100 / 12, -Number(termMonths)));
+      const totalInterest = monthlyPayment * Number(termMonths) - Number(principalAmount);
+      const totalPayable = Number(principalAmount) + totalInterest;
+      const loanNumber = `LN${Date.now()}${Math.floor(Math.random() * 10000)}`;
+
+      const { data, error } = await supabase
+        .from('loans')
+        .insert({
+          user_id: req.user!.id,
+          loan_number: loanNumber,
+          loan_type: loanType,
+          principal_amount: String(principalAmount),
+          interest_rate: String(interestRate),
+          term_months: termMonths,
+          monthly_payment: monthlyPayment.toFixed(2),
+          remaining_balance: String(principalAmount),
+          total_interest: totalInterest.toFixed(2),
+          total_payable: totalPayable.toFixed(2),
+          status: 'pending'
+        })
+        .select()
+        .single();
+      if (error) throw data;
+      // Notify admins of new loan application
+      const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin').eq('is_active', true);
+      if (admins && admins.length > 0) {
+        const adminAlerts = admins.map((admin: Record<string, unknown>) => ({
+          user_id: admin.id,
+          title: 'New Loan Application',
+          message: `Loan application for ${principalAmount} from ${req.user!.email} requires review.`,
+          type: 'warning',
+          priority: 'high',
+          is_read: false
+        }));
+        await supabase.from('alerts').insert(adminAlerts);
+      }
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/loans/:id/approve - Approve a loan (admin only)
+  app.post('/api/loans/:id/approve', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data: loan, error: loanError } = await supabase.from('loans').select('*').eq('id', req.params.id).single();
+      if (loanError || !loan) return res.status(404).json({ error: 'Loan not found' });
+      if (loan.status !== 'pending') return res.status(400).json({ error: 'Loan is not in pending status' });
+      const { data, error } = await supabase
+        .from('loans')
+        .update({
+          status: 'approved',
+          approved_by: req.user!.id,
+          approved_at: new Date().toISOString(),
+          disbursement_date: new Date().toISOString(),
+          maturity_date: new Date(Date.now() + (loan.term_months * 30 * 24 * 60 * 60 * 1000)).toISOString()
+        })
+        .eq('id', req.params.id)
+        .select()
+        .single();
+      if (error) throw error;
+
+      // Disburse loan funds to user account
+      const { data: account } = await supabase.from('accounts').select('id, balance').eq('user_id', loan.user_id).eq('status', 'active').limit(1).single();
+      if (account) {
+        const newBalance = (parseFloat(String((account as Record<string, unknown>).balance || '0')) + parseFloat(String(loan.principal_amount))).toFixed(2);
+        await supabase.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (account as Record<string, unknown>).id);
+
+        // Create disbursement transaction
+        await supabase.from('transactions').insert({
+          from_account_id: null,
+          to_account_id: (account as Record<string, unknown>).id,
+          from_user_id: null,
+          to_user_id: loan.user_id,
+          amount: parseFloat(String(loan.principal_amount)).toFixed(2),
+          currency: 'USD',
+          transaction_type: 'loan_disbursement',
+          category: 'loan',
+          status: 'completed',
+          description: `Loan disbursement - ${loan.loan_type} - ${loan.loan_number}`,
+          reference_number: `LOAN${Date.now()}${Math.floor(Math.random() * 10000)}`,
+          processed_at: new Date().toISOString(),
+          completed_at: new Date().toISOString()
+        });
+
+        // Create alert for user
+        await supabase.from('alerts').insert({
+          user_id: loan.user_id,
+          title: 'Loan Approved',
+          message: `Your ${loan.loan_type} loan of ${parseFloat(String(loan.principal_amount)).toFixed(2)} has been approved and disbursed to your account.`,
+          type: 'success',
+          priority: 'high',
+          is_read: false
+        });
+      }
+
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/loans/:id/reject - Reject a loan (admin only)
+  app.post('/api/loans/:id/reject', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data: loan, error: loanError } = await supabase.from('loans').select('status').eq('id', req.params.id).single();
+      if (loanError || !loan) return res.status(404).json({ error: 'Loan not found' });
+      if (loan.status !== 'pending') return res.status(400).json({ error: 'Loan is not in pending status' });
+      const { data, error } = await supabase
+        .from('loans')
+        .update({ status: 'rejected' })
+        .eq('id', req.params.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/admin/pending-loans - Get pending loans (admin only)
+  app.get('/api/admin/pending-loans', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('loans')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // ==================== ADMIN USER MANAGEMENT ====================
+
+  app.post('/api/admin/create-admin-user', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { email, password, fullName } = req.body;
+      if (!email || !password || !fullName) {
+        return res.status(400).json({ error: 'Email, password, and fullName are required' });
+      }
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
-        user_metadata: {
-          role: 'admin'
-        }
+        app_metadata: { role: 'admin' },
+        user_metadata: {}
       });
-
       if (authError || !authData.user) {
-        return res.status(500).json({ 
-          error: authError?.message || 'Failed to create admin authentication account' 
-        });
+        return res.status(500).json({ error: authError?.message || 'Failed to create admin auth account' });
       }
-
-
-      // STEP 2: Create local database profile
+      const adminPin = generateTransferPin();
+      const adminPinHash = await bcrypt.hash(adminPin, 12);
       try {
         const [firstName, ...lastNameParts] = fullName.split(' ');
         const lastName = lastNameParts.join(' ') || 'Admin';
@@ -2017,9 +1245,9 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           email: email,
           phone: '+1-000-000-0000',
           accountNumber: `ADMIN-${generateAccountNumber()}`,
-          accountId: Date.now(),
-          password: 'supabase_auth',
-          transferPin: generateTransferPin(),
+          accountId: randomUUID(),
+          password: randomUUID(),
+          transferPin: adminPinHash,
           role: 'admin',
           isVerified: true,
           isActive: true,
@@ -2035,10 +1263,7 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
           idType: 'Staff ID',
           idNumber: 'ADMIN-001'
         });
-
-        // SECURITY: NEVER log passwords
-
-        res.status(201).json({ 
+        return res.status(201).json({ 
           success: true,
           message: 'Admin user created successfully',
           user: {
@@ -2047,628 +1272,1064 @@ export async function registerFixedRoutes(app: Express): Promise<Server> {
             fullName: `${adminUser.firstName} ${adminUser.lastName}`,
             role: adminUser.role
           },
-          credentials: {
-            email: email,
-            note: 'Password was provided during creation'
-          }
+          credentials: { email, note: 'Password was provided during creation' }
         });
-
-      } catch (dbError: any) {
-        // ROLLBACK: Delete Supabase Auth account if database creation fails
-
+      } catch (dbError: unknown) {
         await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-
         throw dbError;
       }
-
-    } catch (error: any) {
-      res.status(500).json({ 
-        error: 'Admin user creation failed',
-        details: error.message 
-      });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Admin user creation failed', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
     }
   });
 
-  // IN-MEMORY SESSION CACHE FOR PIN VALIDATION
-  const sessionCache = new Map<string, any>();
-
-  // LOGIN - Supabase Auth + Auto-sync to bank_users table
-  app.post('/api/auth/login', async (req: Request, res: Response) => {
+  app.post('/api/admin/set-user-role', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { email, password } = req.body;
-      if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password required' });
+      const { userId, email, role } = req.body;
+      if (!role || !['admin', 'customer'].includes(role)) {
+        return res.status(400).json({ error: 'Role must be "admin" or "customer"' });
       }
-
-      // STEP 1: Authenticate via Supabase Auth
+      if (!userId && !email) {
+        return res.status(400).json({ error: 'userId or email required' });
+      }
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
-
-      const { data, error } = await supabaseAdmin.auth.signInWithPassword({
-        email,
-        password
+      let supabaseUserId = userId;
+      if (!supabaseUserId && email) {
+        const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+        const found = users?.users?.find((u: { id?: string; email?: string }) => u.email === email);
+        if (!found) return res.status(404).json({ error: 'User not found in Supabase Auth' });
+        supabaseUserId = found.id;
+      }
+      const { error: supabaseError } = await supabaseAdmin.auth.admin.updateUserById(supabaseUserId, {
+        app_metadata: { role }
       });
-
-      if (error) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+      if (supabaseError) {
+        return res.status(500).json({ error: 'Failed to update Supabase role', details: supabaseError.message });
       }
-
-      if (!data.session || !data.user) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+      const targetUser = email
+        ? await storage.getUserByEmail(email)
+        : await storage.getUser(supabaseUserId);
+      if (targetUser) {
+        await storage.updateUser(targetUser.id, { role });
       }
-
-      const supabaseUser = data.user;
-
-      // STEP 2: Sync user to bank_users table
-      let dbUser = await storage.getUserByEmail(email);
-      
-      if (!dbUser) {
-        // User authenticated but not in bank_users - create them NOW
-        try {
-          console.info('🔄 Creating new user in bank_users:', email);
-          dbUser = await storage.createUser({
-            username: email.split('@')[0],
-            email: email,
-            password: 'supabase_auth',
-            firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
-            lastName: supabaseUser.user_metadata?.last_name || 'User',
-            phone: supabaseUser.user_metadata?.phone || '',
-            profession: 'Not provided',
-            accountNumber: `${generateAccountNumber()}`,
-            accountId: Date.now(),
-            balance: '0',
-            isActive: true,
-            isVerified: true,
-            transferPin: supabaseUser.user_metadata?.transfer_pin || '0192',
-            role: supabaseUser.app_metadata?.role || 'customer'
-          });
-          console.info('✅ User created:', { id: dbUser.id, email });
-          
-          // Also create initial account for user
-          console.info('🔄 Creating initial account for user...');
-          await storage.createAccount({
-            userId: dbUser.id,
-            accountNumber: `${generateAccountNumber()}`,
-            accountType: 'checking',
-            balance: '0.00',
-            currency: 'USD',
-            status: 'active'
-          });
-          console.info('✅ Initial account created');
-        } catch (dbError: any) {
-          console.info('❌ Failed to create user in bank_users:', dbError);
-          // User authenticated - still return token even if DB create fails
-        }
-      } else {
-        // User exists - verify they have at least one account
-        const userAccounts = await storage.getUserAccounts(dbUser.id);
-        if (userAccounts.length === 0) {
-          console.info('🔄 User has no accounts, creating one...');
-          await storage.createAccount({
-            userId: dbUser.id,
-            accountNumber: `${generateAccountNumber()}`,
-            accountType: 'checking',
-            balance: '0.00',
-            currency: 'USD',
-            status: 'active'
-          });
-          console.info('✅ Account created for existing user');
-        }
-      }
-
-      // STEP 3: Cache session data in memory for PIN validation
-      const cacheKey = email.toLowerCase();
-      sessionCache.set(cacheKey, {
-        email,
-        id: supabaseUser.id,
-        role: supabaseUser.app_metadata?.role || 'customer',
-        firstName: supabaseUser.user_metadata?.first_name || email.split('@')[0],
-        lastName: supabaseUser.user_metadata?.last_name || 'User',
-        phone: supabaseUser.user_metadata?.phone || '',
-        transferPin: supabaseUser.user_metadata?.transfer_pin || '0192',
-        isActive: true,
-        balance: '0',
-        lastLogin: Date.now()
-      });
-
-      // STEP 4: Return REAL Supabase JWT (NOT base64 token)
-      const accessToken = data.session?.access_token;
-      if (!accessToken) {
-        return res.status(500).json({ error: 'Failed to generate authentication token' });
-      }
-
-      console.info('✅ LOGIN SUCCESS:', { email, userId: supabaseUser.id, tokenType: 'Supabase JWT' });
-
-      res.json({ 
-        token: accessToken,
-        refreshToken: data.session?.refresh_token,
-        user: dbUser || {
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          role: supabaseUser.app_metadata?.role || 'customer'
-        }
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: 'Login failed', details: error.message });
+      return res.json({ success: true, message: `User role updated to ${role}` });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to set user role', details: (error instanceof Error ? error.message : 'Internal server error') });
     }
   });
 
-  // LOGOUT ENDPOINT - Terminates session and clears credentials
-  app.post('/api/auth/logout', async (req: Request, res: Response) => {
+  app.post('/api/admin/reset-password', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // Clear session from memory cache
-      const authHeader = req.headers.authorization;
-      if (authHeader) {
-        const token = authHeader.replace('Bearer ', '');
-        // Token is from Supabase JWT - logging is sufficient for session termination
-        // Supabase invalidates JWTs on server side automatically
+      const { email, newPassword } = req.body;
+      if (!email || !newPassword) {
+        return res.status(400).json({ error: 'Email and new password are required' });
       }
-      
-      res.json({ 
-        message: "Logged out successfully",
-        status: "ok"
-      });
-    } catch (error) {
-      // Even if error, consider logout successful
-      res.json({ 
-        message: "Logged out successfully",
-        status: "ok"
-      });
-    }
-  });
-
-  // BOOTSTRAP: List all users in Supabase Auth (for debugging)
-  app.get('/api/admin/list-users', async (req: Request, res: Response) => {
-    try {
       const { createClient } = await import('@supabase/supabase-js');
       const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { auth: { autoRefreshToken: false, persistSession: false } }
       );
-
-      const { data, error } = await supabaseAdmin.auth.admin.listUsers();
-      if (error) {
-        return res.status(500).json({ error: 'Failed to list users', details: error.message });
+      const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError) {
+        return res.status(500).json({ error: 'Failed to list users' });
       }
+      const userToUpdate = users.users.find((u: { id?: string; email?: string }) => u.email === email);
+      if (!userToUpdate) {
+        return res.status(404).json({ error: 'User not found in Supabase Auth' });
+      }
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        userToUpdate.id,
+        { password: newPassword }
+      );
+      if (updateError) {
+        return res.status(500).json({ error: 'Failed to reset password', details: updateError.message });
+      }
+      return res.json({ success: true, message: `Password reset successfully for ${email}.`, email });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to reset password', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
+    }
+  });
 
-      res.json({
+  app.post('/api/admin/delete-user/:email', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { email } = req.params;
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseAdmin = createClient(
+        process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      );
+      const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError) {
+        return res.status(500).json({ error: 'Failed to list users' });
+      }
+      const userToDelete = users.users.find((u: { id?: string; email?: string }) => u.email === email);
+      if (!userToDelete) {
+        return res.status(404).json({ error: 'User not found in Supabase Auth' });
+      }
+      const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userToDelete.id);
+      if (deleteAuthError) {
+        return res.status(500).json({ error: 'Failed to delete from authentication system' });
+      }
+      return res.json({ success: true, message: `User ${email} deleted successfully`, deleted_email: email });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to delete user', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
+    }
+  });
+
+  // Transaction reversal
+  app.post('/api/transactions/:id/reverse', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      const txnId = id;
+      if (!txnId) {
+        return res.status(400).json({ error: 'Invalid transaction ID' });
+      }
+      const allTransactions = await storage.getAllTransactions();
+      const transaction = allTransactions.find((t: Transaction) => t.id === txnId);
+      if (!transaction) {
+        return res.status(404).json({ error: 'Transaction not found' });
+      }
+      if (transaction.status === 'reversed') {
+        return res.status(400).json({ error: 'Transaction already reversed' });
+      }
+      if (transaction.fromAccountId) {
+        const fromAccount = await storage.getAccount(transaction.fromAccountId);
+        if (fromAccount) {
+          const refundAmount = parseFloat(String(transaction.amount)) || 0;
+          const currentBalance = parseFloat(String(fromAccount.balance)) || 0;
+          const newBalance = currentBalance + refundAmount;
+          if (storage.updateAccount) {
+            await storage.updateAccount(transaction.fromAccountId, { balance: newBalance.toString() });
+          }
+        }
+      }
+      const reversalTxn = await storage.createTransaction({
+        fromAccountId: transaction.toAccountId || transaction.fromAccountId,
+        toAccountId: transaction.fromAccountId,
+        type: 'reversal',
+        amount: String(transaction.amount),
+        status: 'reversed',
+        description: `Reversal of transaction #${txnId}. Reason: ${reason || 'No reason provided'}`,
+        currency: transaction.currency || 'USD'
+      });
+      await storage.updateTransactionStatus(txnId, 'reversed', req.user?.id ? (typeof req.user.id === 'number' ? req.user.id : req.user.id) : 1, reason);
+      return res.json({ 
+        success: true, 
+        message: 'Transaction reversed successfully',
+        reversalTransactionId: reversalTxn.id,
+        amountRefunded: transaction.amount
+      });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to reverse transaction', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
+    }
+  });
+
+  // Statements endpoint
+  app.get('/api/statements', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = typeof req.user?.id === 'number' ? req.user.id : (String(req.user?.id) || '0');
+      if (!userId) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+      const statements = await storage.getStatementsByUserId(userId);
+      return res.json(statements);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to fetch statements' });
+    }
+  });
+
+  // File upload
+  app.post('/api/objects/upload', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { file, fileName, fileType } = req.body;
+      if (!file || !fileName) {
+        return res.status(400).json({ error: 'Missing file or fileName' });
+      }
+      const fileId = `upload_${Date.now()}_${randomUUID().substring(0, 8)}`;
+      return res.json({
+        success: true,
+        fileId,
+        fileName,
+        fileType: fileType || 'image/jpeg',
+        uploadedAt: new Date().toISOString(),
+        url: `/uploads/${fileId}`,
+        message: 'File uploaded successfully'
+      });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to upload file' });
+    }
+  });
+
+  // Admin list users
+  app.get('/api/admin/list-users', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.auth.admin.listUsers();
+      if (error) {
+        return res.status(500).json({ error: 'Failed to list users', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
+      }
+      return res.json({
         total: data.users.length,
-        users: data.users.map((u: any) => ({
+        users: data.users.map((u: { id?: string; email?: string; app_metadata?: { role?: string }; email_confirmed_at?: string }) => ({
           id: u.id,
           email: u.email,
           role: u.app_metadata?.role || 'customer',
           verified: u.email_confirmed_at ? 'yes' : 'no'
         }))
       });
-    } catch (error: any) {
-      res.status(500).json({ error: 'Failed to list users', details: error.message });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to list users', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
     }
   });
 
-  // Admin login endpoint - Validates admin credentials from Supabase app_metadata
-  app.post('/api/admin/login', async (req: Request, res: Response) => {
+  // Admin profile photo
+  app.post('/api/admin/users/:id/profile-photo', requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { email, password } = req.body;
-
-      if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password are required' });
+      const { id } = req.params;
+      const { photoUrl } = req.body;
+      if (!id || !photoUrl) {
+        return res.status(400).json({ error: 'User ID and photo URL required' });
       }
-
-      // Use Supabase Auth for admin authentication
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) {
-        return res.status(401).json({ error: 'Invalid admin credentials' });
+      const updatedUser = await storage.updateUser(id, { profilePhoto: photoUrl });
+      if (!updatedUser) {
+        return res.status(404).json({ error: 'User not found' });
       }
-
-      // CRITICAL: Check admin role from app_metadata (server-controlled)
-      const role = data.user.app_metadata?.role || 'customer';
-
-      if (role !== 'admin') {
-        return res.status(403).json({ error: 'Admin access required. Contact system administrator.' });
-      }
-
-      // Return REAL Supabase JWT (NOT base64 token)
-      const accessToken = data.session?.access_token;
-      if (!accessToken) {
-        return res.status(500).json({ error: 'Failed to generate authentication token' });
-      }
-
-      console.info('✅ ADMIN LOGIN SUCCESS:', { email, userId: data.user.id, tokenType: 'Supabase JWT' });
-
-      res.json({ 
-        token: accessToken,
-        refreshToken: data.session?.refresh_token,
-        user: {
-          id: data.user.id,
-          email: data.user.email,
-          role: role
-        }
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Login failed' });
+      return res.json({ success: true, message: 'Profile photo updated successfully', user: updatedUser });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to upload profile photo', details: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
     }
   });
 
-  // ADMIN ONLY: Reset user password in Supabase Auth
-  app.post('/api/admin/reset-password', async (req: Request, res: Response) => {
+  // ==================== MISSING API ENDPOINTS ====================
+
+  // -------- Cards endpoints --------
+
+  // GET /api/cards - list user's cards
+  app.get('/api/cards', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { email, newPassword } = req.body;
-      
-      if (!email || !newPassword) {
-        return res.status(400).json({ error: 'Email and new password are required' });
-      }
-
-
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-
-      // List all users to find the one to update
-      const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-      if (listError) {
-        return res.status(500).json({ error: 'Failed to list users' });
-      }
-
-      const userToUpdate = users.users.find((u: any) => u.email === email);
-      if (!userToUpdate) {
-        return res.status(404).json({ error: 'User not found in Supabase Auth' });
-      }
-
-      // Update password in Supabase Auth
-      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-        userToUpdate.id,
-        { password: newPassword }
-      );
-
-      if (updateError) {
-        return res.status(500).json({ error: 'Failed to reset password', details: updateError.message });
-      }
-
-
-      res.json({ 
-        success: true, 
-        message: `Password reset successfully for ${email}. You can now login with the new password.`,
-        email: email
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: 'Failed to reset password', details: error.message });
+      const { data, error } = await supabase.from('cards').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
     }
   });
 
-  // ADMIN ONLY: Delete user from Supabase Auth and local database
-  app.post('/api/admin/delete-user/:email', async (req: Request, res: Response) => {
+  // POST /api/cards/lock - lock/unlock a card
+  app.post('/api/cards/lock', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { email } = req.params;
-      
-      if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-      }
-
-
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseAdmin = createClient(
-        process.env.VITE_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      );
-
-      // List all users to find the one to delete
-      const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-      if (listError) {
-        return res.status(500).json({ error: 'Failed to list users' });
-      }
-
-      const userToDelete = users.users.find((u: any) => u.email === email);
-      if (!userToDelete) {
-        return res.status(404).json({ error: 'User not found in Supabase Auth' });
-      }
-
-      // Delete from Supabase Auth
-      const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userToDelete.id);
-      if (deleteAuthError) {
-        return res.status(500).json({ error: 'Failed to delete from authentication system' });
-      }
-
-
-      res.json({ 
-        success: true, 
-        message: `User ${email} deleted successfully from Supabase Auth`,
-        deleted_email: email
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: 'Failed to delete user', details: error.message });
+      const { cardId, locked } = req.body;
+      if (!cardId) return res.status(400).json({ error: 'Card ID required' });
+      const { data, error } = await supabase.from('cards').update({
+        status: locked ? 'locked' : 'active',
+        updated_at: new Date().toISOString()
+      }).eq('id', cardId).eq('user_id', req.user!.id).select().single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
     }
   });
 
-  // ==================== TRANSFER WORKFLOW ENDPOINTS ====================
-  
-  // Idempotency cache for transfers (prevent duplicates within 5 minutes)
-  const transferIdempotencyCache = new Map<string, { response: any; timestamp: number }>();
-  
-  // Create a transfer with IDEMPOTENCY protection
-  app.post('/api/transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // POST /api/cards/settings - update card settings
+  app.post('/api/cards/settings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { amount, recipientName, recipientCountry, recipientAccount, purpose, transferPin, idempotencyKey } = req.body;
-      
-      console.error('\n📤 POST /api/transfers', { 
-        amount, 
-        recipientName, 
-        recipientCountry, 
-        recipientAccount,
-        authenticatedUser: req.user?.email,
-        hasIdempotencyKey: !!idempotencyKey
+      const { cardId, dailyLimit, monthlyLimit, isContactless } = req.body;
+      if (!cardId) return res.status(400).json({ error: 'Card ID required' });
+      if (dailyLimit !== undefined && parseFloat(String(dailyLimit)) < 0) return res.status(400).json({ error: 'Daily limit cannot be negative' });
+      if (monthlyLimit !== undefined && parseFloat(String(monthlyLimit)) < 0) return res.status(400).json({ error: 'Monthly limit cannot be negative' });
+      const { data, error } = await supabase.from('cards').update({
+        daily_limit: dailyLimit,
+        monthly_limit: monthlyLimit,
+        is_contactless: isContactless,
+        updated_at: new Date().toISOString()
+      }).eq('id', cardId).eq('user_id', req.user!.id).select().single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/cards - Create a new card
+  app.post('/api/cards', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { cardType, cardholderName } = req.body;
+      if (!cardType || !cardholderName) return res.status(400).json({ error: 'Card type and cardholder name required' });
+      const supabase = getAdminClient();
+
+      // Get user's account
+      const { data: account } = await supabase.from('accounts').select('id').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (!account) return res.status(404).json({ error: 'No active account found' });
+
+      const cardNumber = '4' + Math.floor(Math.random() * 9000000000000000 + 1000000000000000).toString();
+      const expiryMonth = Math.floor(Math.random() * 12) + 1;
+      const expiryYear = new Date().getFullYear() + 4;
+
+      const { data, error } = await supabase.from('cards').insert({
+        user_id: req.user!.id,
+        account_id: (account as Record<string, unknown>).id,
+        card_number: cardNumber,
+        card_type: cardType,
+        cardholder_name: cardholderName,
+        expiry_month: expiryMonth,
+        expiry_year: expiryYear,
+        status: 'active',
+        is_contactless: true,
+        daily_limit: '5000.00',
+        monthly_limit: '50000.00',
+        pin_set: false
+      }).select().single();
+      if (error) throw error;
+
+      await supabase.from('alerts').insert({
+        user_id: req.user!.id,
+        title: 'New Card Created',
+        message: `A new ${cardType} card has been created for your account.`,
+        type: 'success',
+        priority: 'normal',
+        is_read: false
       });
-      
-      // IDEMPOTENCY: Check for duplicate request
-      if (idempotencyKey) {
-        const cached = transferIdempotencyCache.get(idempotencyKey);
-        if (cached && Date.now() - cached.timestamp < 300000) { // 5 minute window
-          console.info('✅ IDEMPOTENT: Returning cached transfer response');
-          return res.json(cached.response);
-        }
-      }
-      
-      if (!amount || !recipientName || !recipientAccount || !transferPin) {
-        console.info('❌ Missing required fields:', { amount: !!amount, recipientName: !!recipientName, recipientAccount: !!recipientAccount, transferPin: !!transferPin });
-        return res.status(400).json({ error: 'Missing required fields', fields: { amount: !!amount, recipientName: !!recipientName, recipientAccount: !!recipientAccount, transferPin: !!transferPin } });
+
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Alerts endpoints --------
+
+  // GET /api/alerts - list user's alerts
+  app.get('/api/alerts', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('alerts').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // PATCH /api/alerts/:id/read - mark alert as read
+  app.patch('/api/alerts/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('alerts').update({
+        is_read: true,
+        read_at: new Date().toISOString()
+      }).eq('id', req.params.id).eq('user_id', req.user!.id).select().single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // DELETE /api/alerts/:id - delete an alert
+  app.delete('/api/alerts/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { error } = await supabase.from('alerts').delete().eq('id', req.params.id).eq('user_id', req.user!.id);
+      if (error) throw error;
+      return res.json({ success: true });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Investments endpoints --------
+
+  // GET /api/investments - list user's investments
+  app.get('/api/investments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('investments').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/market-rates - get market rates from forex table
+  app.get('/api/market-rates', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('forex').select('*').order('currency', { ascending: true });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Currency exchange endpoint --------
+
+  // POST /api/currency-exchange - exchange currency
+  app.post('/api/currency-exchange', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { fromCurrency, toCurrency, amount } = req.body;
+      if (!fromCurrency || !toCurrency || !amount) return res.status(400).json({ error: 'Missing required fields' });
+      const numAmount = parseFloat(String(amount));
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Amount must be greater than zero' });
+
+      // Get exchange rate
+      const { data: rate, error: rateError } = await supabase.from('forex').select('rate').eq('currency', toCurrency).single();
+      if (rateError || !rate) return res.status(400).json({ error: 'Exchange rate not found' });
+
+      const exchangeRate = parseFloat(String((rate as Record<string, unknown>).rate));
+      const convertedAmount = numAmount * exchangeRate;
+
+      // Check balance first
+      const { data: userAccount } = await supabase.from('accounts').select('balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (!userAccount) return res.status(404).json({ error: 'Account not found' });
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0')));
+      if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
+
+      // Debit the amount
+      const newBalance = (currentBalance - numAmount).toFixed(2);
+      await supabase.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', req.user!.id).eq('status', 'active');
+
+      // Create transaction record
+      const reference = `EXC${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const { data: txn, error: txnError } = await supabase.from('transactions').insert({
+        from_account_id: null,
+        to_account_id: null,
+        from_user_id: req.user!.id,
+        amount: numAmount.toFixed(2),
+        currency: fromCurrency,
+        exchange_rate: exchangeRate.toFixed(4),
+        converted_amount: convertedAmount.toFixed(2),
+        transaction_type: 'currency_exchange',
+        category: 'exchange',
+        status: 'completed',
+        description: `Currency exchange: ${numAmount} ${fromCurrency} to ${convertedAmount.toFixed(2)} ${toCurrency}`,
+        reference_number: reference,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      }).select().single();
+      if (txnError) throw txnError;
+
+      return res.json({ transaction: txn, convertedAmount: convertedAmount.toFixed(2), rate: exchangeRate });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Support tickets endpoints --------
+
+  // GET /api/support-tickets - list user's support tickets
+  app.get('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('support_tickets').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/support-tickets - create a support ticket
+  app.post('/api/support-tickets', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { subject, description, priority } = req.body;
+      if (!subject || !description) return res.status(400).json({ error: 'Subject and description required' });
+      const ticketId = `TKT${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const { data, error } = await supabase.from('support_tickets').insert({
+        user_id: req.user!.id,
+        ticket_id: ticketId,
+        subject,
+        description,
+        priority: priority || 'medium',
+        status: 'open'
+      }).select().single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/admin/support-tickets - list all support tickets (admin)
+  app.get('/api/admin/support-tickets', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('support_tickets').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Admin transactions list endpoints --------
+
+  // GET /api/admin/transactions - list all transactions (admin)
+  app.get('/api/admin/transactions', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('transactions').select('*').order('created_at', { ascending: false }).limit(100);
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/admin/transactions - create transaction (admin)
+  app.post('/api/admin/transactions', requireAuth, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { accountId, userId, amount, type, description } = req.body;
+      if (!accountId || !amount || !type) return res.status(400).json({ error: 'Missing required fields' });
+      const reference = `ADM${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const { data, error } = await supabase.from('transactions').insert({
+        from_account_id: accountId,
+        to_account_id: null,
+        from_user_id: userId || req.user!.id,
+        amount: Number(amount).toFixed(2),
+        transaction_type: type,
+        category: 'admin',
+        status: 'completed',
+        description: description || 'Admin transaction',
+        reference_number: reference,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      }).select().single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // -------- Savings endpoint --------
+
+  // GET /api/savings - list user's savings accounts
+  app.get('/api/savings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('savings').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/savings - create a savings account
+  app.post('/api/savings', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { accountType, initialDeposit, goalName, targetAmount } = req.body;
+      const supabaseClient = getAdminClient();
+      const deposit = parseFloat(String(initialDeposit || '0'));
+      if (isNaN(deposit) || deposit < 0) return res.status(400).json({ error: 'Invalid deposit amount' });
+
+      // Check balance if initial deposit
+      if (deposit > 0) {
+        const { data: userAccount } = await supabaseClient.from('accounts').select('balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+        if (!userAccount) return res.status(404).json({ error: 'Account not found' });
+        const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0')));
+        if (currentBalance < deposit) return res.status(400).json({ error: 'Insufficient funds for initial deposit' });
+        // Debit from checking
+        const newBalance = (currentBalance - deposit).toFixed(2);
+        await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('user_id', req.user!.id).eq('status', 'active');
       }
 
-      // Validate amount is positive number
-      if (isNaN(Number(amount)) || Number(amount) <= 0) {
-        return res.status(400).json({ error: 'Invalid amount - must be positive number' });
+      const savingsNumber = `SAV${Date.now()}${Math.floor(Math.random() * 10000)}`;
+      const { data, error } = await supabaseClient.from('savings').insert({
+        user_id: req.user!.id,
+        account_number: savingsNumber,
+        account_type: accountType || 'savings',
+        balance: deposit.toFixed(2),
+        goal_name: goalName || null,
+        target_amount: targetAmount || null,
+        interest_rate: '2.50',
+        status: 'active'
+      }).select().single();
+      if (error) throw error;
+
+      if (deposit > 0) {
+        await supabaseClient.from('transactions').insert({
+          from_user_id: req.user!.id,
+          to_user_id: req.user!.id,
+          amount: deposit.toFixed(2),
+          currency: 'USD',
+          transaction_type: 'savings_deposit',
+          category: 'savings',
+          status: 'completed',
+          description: `Initial deposit to savings account ${savingsNumber}`,
+          reference_number: `SAV${Date.now()}${Math.floor(Math.random() * 10000)}`,
+          processed_at: new Date().toISOString(),
+          completed_at: new Date().toISOString()
+        });
       }
 
-      const referenceNumber = generateReferenceNumber('WB');
-      console.info('🔄 Creating transaction with reference:', referenceNumber);
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
 
-      // Get authenticated user's account
-      const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 1);
-      const userAccounts = await storage.getUserAccounts(userId);
-      if (!userAccounts || userAccounts.length === 0) {
-        return res.status(400).json({ error: 'User has no accounts' });
-      }
-      
-      const senderAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
+  // POST /api/savings/deposit - deposit to savings
+  app.post('/api/savings/deposit', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { savingsId, amount } = req.body;
+      if (!savingsId || !amount) return res.status(400).json({ error: 'Missing required fields' });
+      const numAmount = parseFloat(String(amount));
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Amount must be greater than zero' });
 
-      const transfer = await storage.createTransaction({
-        fromAccountId: senderAccountId,
-        type: 'transfer',
-        amount: amount.toString(),
-        description: `Transfer to ${recipientName} in ${recipientCountry}`,
-        status: 'pending_approval',
+      const supabaseClient = getAdminClient();
+      // Check and debit checking account
+      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (!userAccount) return res.status(404).json({ error: 'Account not found' });
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0')));
+      if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
+
+      const newCheckingBalance = (currentBalance - numAmount).toFixed(2);
+      await supabaseClient.from('accounts').update({ balance: newCheckingBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
+
+      // Credit savings account
+      const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user!.id).single();
+      if (!savings) return res.status(404).json({ error: 'Savings account not found' });
+      const newSavingsBalance = (parseFloat(String((savings as Record<string, unknown>).balance || '0')) + numAmount).toFixed(2);
+      await supabaseClient.from('savings').update({ balance: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId);
+
+      await supabaseClient.from('transactions').insert({
+        from_user_id: req.user!.id,
+        to_user_id: req.user!.id,
+        amount: numAmount.toFixed(2),
         currency: 'USD',
-        referenceNumber: referenceNumber
+        transaction_type: 'savings_deposit',
+        category: 'savings',
+        status: 'completed',
+        description: `Deposit to savings account`,
+        reference_number: `SAV${Date.now()}${Math.floor(Math.random() * 10000)}`,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
       });
 
-      // ATOMIC: Update sender account balance (deduct amount)
-      try {
-        const senderAccount = userAccounts[0];
-        const currentBalanceStr = String(senderAccount?.balance || '0');
-        const currentBalance = parseFloat(currentBalanceStr);
-        const newBalance = (currentBalance - parseFloat(amount.toString())).toFixed(2);
-        await storage.updateAccount(senderAccountId, { balance: parseFloat(newBalance) as any });
-      } catch (balanceError) {
-        // Log non-blocking balance update errors
-      }
-
-      const response = {
-        id: transfer.id,
-        transactionId: transfer.referenceNumber,
-        status: 'pending_approval'
-      };
-
-      // Cache the response for idempotency
-      if (idempotencyKey) {
-        transferIdempotencyCache.set(idempotencyKey, { response, timestamp: Date.now() });
-      }
-
-      res.json(response);
-    } catch (error: any) {
-      console.info('❌ Transfer creation FAILED:', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-        timestamp: new Date().toISOString()
-      });
-      res.status(500).json({ error: error.message || 'Failed to create transfer', details: error.toString() });
+      return res.json({ success: true, newSavingsBalance });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
     }
   });
 
-  // Get transfer status
-  app.get('/api/transfers/:id/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // POST /api/savings/withdraw - withdraw from savings
+  app.post('/api/savings/withdraw', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const id = req.params.id;
-      console.error('📥 GET /api/transfers/:id/status', { id, user: req.user?.email });
-      
-      const allTransactions = await storage.getAllTransactions();
-      console.error(`🔍 Found ${allTransactions.length} total transactions`);
-      
-      const transfer = allTransactions.find((t: any) => {
-        const idMatch = t.id?.toString() === id?.toString();
-        const refMatch = t.referenceNumber === id;
-        return idMatch || refMatch;
-      });
-      
-      if (!transfer) {
-        console.warn('⚠️ Transfer not found:', { id, totalTransactions: allTransactions.length });
-        return res.status(404).json({ error: 'Transfer not found', searchedId: id });
+      const { savingsId, amount } = req.body;
+      if (!savingsId || !amount) return res.status(400).json({ error: 'Missing required fields' });
+      const numAmount = parseFloat(String(amount));
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Amount must be greater than zero' });
+
+      const supabaseClient = getAdminClient();
+      const { data: savings } = await supabaseClient.from('savings').select('balance').eq('id', savingsId).eq('user_id', req.user!.id).single();
+      if (!savings) return res.status(404).json({ error: 'Savings account not found' });
+      const savingsBalance = parseFloat(String((savings as Record<string, unknown>).balance || '0')));
+      if (savingsBalance < numAmount) return res.status(400).json({ error: 'Insufficient savings balance' });
+
+      // Debit savings
+      const newSavingsBalance = (savingsBalance - numAmount).toFixed(2);
+      await supabaseClient.from('savings').update({ balance: newSavingsBalance, updated_at: new Date().toISOString() }).eq('id', savingsId);
+
+      // Credit checking
+      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (userAccount) {
+        const newCheckingBalance = (parseFloat(String((userAccount as Record<string, unknown>).balance || '0')) + numAmount).toFixed(2);
+        await supabaseClient.from('accounts').update({ balance: newCheckingBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
       }
 
-      console.info('✅ Transfer found:', { id: transfer.id, status: transfer.status, referenceNumber: transfer.referenceNumber });
-
-      res.json({
-        id: transfer.id,
-        status: transfer.status,
-        referenceNumber: transfer.referenceNumber,
-        amount: transfer.amount,
-        type: transfer.type,
-        currency: transfer.currency,
-        description: transfer.description,
-        recipientName: transfer.recipientName,
-        recipientCountry: transfer.recipientCountry,
-        createdAt: transfer.createdAt,
-        updatedAt: transfer.updatedAt
-      });
-    } catch (error: any) {
-      console.info('❌ Transfer status error:', error.message, error);
-      res.status(500).json({ error: error.message || 'Failed to fetch transfer status', details: error.toString() });
-    }
-  });
-
-  // Idempotency cache for international transfers
-  const intlTransferIdempotencyCache = new Map<string, { response: any; timestamp: number }>();
-  
-  // Create international transfer with IDEMPOTENCY protection
-  app.post('/api/international-transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { amount, recipientCountry, transferPin, idempotencyKey } = req.body;
-      
-      console.error('📤 POST /api/international-transfers', { amount, recipientCountry, hasIdempotencyKey: !!idempotencyKey });
-      
-      // IDEMPOTENCY: Check for duplicate request
-      if (idempotencyKey) {
-        const cached = intlTransferIdempotencyCache.get(idempotencyKey);
-        if (cached && Date.now() - cached.timestamp < 300000) { // 5 minute window
-          console.info('✅ IDEMPOTENT: Returning cached international transfer response');
-          return res.json(cached.response);
-        }
-      }
-      
-      if (!amount || !recipientCountry || !transferPin) {
-        console.info('❌ Missing required fields:', { amount, recipientCountry, transferPin });
-        return res.status(400).json({ error: 'Missing required fields' });
-      }
-
-      // Validate amount is positive number
-      if (isNaN(Number(amount)) || Number(amount) <= 0) {
-        return res.status(400).json({ error: 'Invalid amount - must be positive number' });
-      }
-
-      const referenceNumber = generateReferenceNumber('INT');
-      
-      // Get authenticated user's account
-      const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 1);
-      const userAccounts = await storage.getUserAccounts(userId);
-      if (!userAccounts || userAccounts.length === 0) {
-        return res.status(400).json({ error: 'User has no accounts' });
-      }
-      
-      const senderAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
-
-      const transfer = await storage.createTransaction({
-        fromAccountId: senderAccountId,
-        type: 'international_transfer',
-        amount: amount.toString(),
-        description: `International transfer to ${recipientCountry}`,
-        status: 'pending_approval',
+      await supabaseClient.from('transactions').insert({
+        from_user_id: req.user!.id,
+        to_user_id: req.user!.id,
+        amount: numAmount.toFixed(2),
         currency: 'USD',
-        referenceNumber: referenceNumber
+        transaction_type: 'savings_withdrawal',
+        category: 'savings',
+        status: 'completed',
+        description: `Withdrawal from savings account`,
+        reference_number: `SAW${Date.now()}${Math.floor(Math.random() * 10000)}`,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
       });
 
-      const response = {
-        id: transfer.id,
-        transactionId: transfer.referenceNumber,
-        status: 'pending_approval'
-      };
-
-      // Cache the response for idempotency
-      if (idempotencyKey) {
-        intlTransferIdempotencyCache.set(idempotencyKey, { response, timestamp: Date.now() });
-      }
-
-      res.json(response);
-    } catch (error: any) {
-      console.info('❌ International transfer error:', error.message, error);
-      res.status(500).json({ error: error.message || 'Failed to create international transfer', details: error.toString() });
+      return res.json({ success: true, newSavingsBalance });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
     }
   });
 
-  // ==================== MESSAGE ENDPOINTS ====================
-  
-  // POST /api/messages - Save a new message
-  app.post('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // -------- Investment endpoints --------
+
+  // POST /api/investments/buy - buy an investment
+  app.post('/api/investments/buy', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { content, recipientId, sessionId } = req.body;
-      
-      if (!content || !sessionId) {
-        return res.status(400).json({ error: 'Content and sessionId required' });
+      const { symbol, assetType, shares, price } = req.body;
+      if (!symbol || !shares || !price) return res.status(400).json({ error: 'Missing required fields' });
+      const numShares = parseFloat(String(shares));
+      const numPrice = parseFloat(String(price));
+      if (isNaN(numShares) || numShares <= 0) return res.status(400).json({ error: 'Invalid shares amount' });
+      if (isNaN(numPrice) || numPrice <= 0) return res.status(400).json({ error: 'Invalid price' });
+
+      const totalCost = numShares * numPrice;
+      const supabaseClient = getAdminClient();
+
+      // Check balance
+      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (!userAccount) return res.status(404).json({ error: 'Account not found' });
+      const currentBalance = parseFloat(String((userAccount as Record<string, unknown>).balance || '0')));
+      if (currentBalance < totalCost) return res.status(400).json({ error: 'Insufficient funds' });
+
+      // Debit account
+      const newBalance = (currentBalance - totalCost).toFixed(2);
+      await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
+
+      // Create or update investment
+      const { data: existing } = await supabaseClient.from('investments').select('id, shares, average_price').eq('user_id', req.user!.id).eq('symbol', symbol).limit(1);
+      if (existing && existing.length > 0) {
+        const existingShares = parseFloat(String((existing[0] as Record<string, unknown>).shares || '0'));
+        const existingAvg = parseFloat(String((existing[0] as Record<string, unknown>).average_price || '0'));
+        const newTotalShares = existingShares + numShares;
+        const newAvgPrice = ((existingAvg * existingShares) + (numPrice * numShares)) / newTotalShares;
+        await supabaseClient.from('investments').update({
+          shares: newTotalShares.toString(),
+          average_price: newAvgPrice.toFixed(2),
+          current_price: numPrice.toFixed(2),
+          updated_at: new Date().toISOString()
+        }).eq('id', (existing[0] as Record<string, unknown>).id);
+      } else {
+        await supabaseClient.from('investments').insert({
+          user_id: req.user!.id,
+          symbol,
+          asset_type: assetType || 'stock',
+          shares: numShares.toString(),
+          average_price: numPrice.toFixed(2),
+          current_price: numPrice.toFixed(2),
+          status: 'active'
+        });
       }
 
-      const senderId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 0);
-      const message = await storage.createMessage({
-        senderId: senderId,
-        senderRole: req.user?.role === 'admin' ? 'admin' : 'customer',
-        recipientId: recipientId ? parseInt(recipientId) : undefined,
-        recipientRole: recipientId ? 'admin' : 'customer',
-        content: content,
-        sessionId: sessionId,
-        isRead: false
+      // Create transaction
+      await supabaseClient.from('transactions').insert({
+        from_user_id: req.user!.id,
+        amount: totalCost.toFixed(2),
+        currency: 'USD',
+        transaction_type: 'investment_buy',
+        category: 'investment',
+        status: 'completed',
+        description: `Bought ${numShares} shares of ${symbol} at ${numPrice.toFixed(2)}`,
+        reference_number: `INV${Date.now()}${Math.floor(Math.random() * 10000)}`,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
       });
 
-      console.info('✅ Message saved:', { id: message.id, sessionId, timestamp: new Date().toISOString() });
-      res.json(message);
-    } catch (error: any) {
-      console.error('❌ Failed to save message:', error.message);
-      res.status(500).json({ error: 'Failed to save message', details: error.message });
+      return res.json({ success: true, totalCost: totalCost.toFixed(2), newBalance });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
     }
   });
 
-  // GET /api/messages/session/:sessionId - Fetch messages for a session
-  app.get('/api/messages/session/:sessionId', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // POST /api/investments/sell - sell an investment
+  app.post('/api/investments/sell', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { sessionId } = req.params;
-      
-      if (!sessionId) {
-        return res.status(400).json({ error: 'sessionId required' });
+      const { investmentId, shares, price } = req.body;
+      if (!investmentId || !shares || !price) return res.status(400).json({ error: 'Missing required fields' });
+      const numShares = parseFloat(String(shares));
+      const numPrice = parseFloat(String(price));
+      if (isNaN(numShares) || numShares <= 0) return res.status(400).json({ error: 'Invalid shares amount' });
+      if (isNaN(numPrice) || numPrice <= 0) return res.status(400).json({ error: 'Invalid price' });
+
+      const totalProceeds = numShares * numPrice;
+      const supabaseClient = getAdminClient();
+
+      // Check investment
+      const { data: investment } = await supabaseClient.from('investments').select('id, shares, average_price, symbol').eq('id', investmentId).eq('user_id', req.user!.id).single();
+      if (!investment) return res.status(404).json({ error: 'Investment not found' });
+      const heldShares = parseFloat(String((investment as Record<string, unknown>).shares || '0')));
+      if (heldShares < numShares) return res.status(400).json({ error: 'Insufficient shares' });
+
+      // Credit account
+      const { data: userAccount } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (userAccount) {
+        const newBalance = (parseFloat(String((userAccount as Record<string, unknown>).balance || '0')) + totalProceeds).toFixed(2);
+        await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (userAccount as Record<string, unknown>).id);
       }
 
-      // Fetch all messages for this session
-      const messages = await storage.getMessages(sessionId);
-      
-      console.info('✅ Fetched', messages.length, 'messages for session:', sessionId);
-      res.json(messages);
-    } catch (error: any) {
-      console.error('❌ Failed to fetch messages:', error.message);
-      res.status(500).json({ error: 'Failed to fetch messages', details: error.message });
+      // Update or delete investment
+      const remainingShares = heldShares - numShares;
+      if (remainingShares > 0) {
+        await supabaseClient.from('investments').update({ shares: remainingShares.toString(), current_price: numPrice.toFixed(2), updated_at: new Date().toISOString() }).eq('id', investmentId);
+      } else {
+        await supabaseClient.from('investments').update({ shares: '0', status: 'sold', updated_at: new Date().toISOString() }).eq('id', investmentId);
+      }
+
+      const symbol = (investment as Record<string, unknown>).symbol as string;
+      await supabaseClient.from('transactions').insert({
+        from_user_id: null,
+        to_user_id: req.user!.id,
+        amount: totalProceeds.toFixed(2),
+        currency: 'USD',
+        transaction_type: 'investment_sell',
+        category: 'investment',
+        status: 'completed',
+        description: `Sold ${numShares} shares of ${symbol} at ${numPrice.toFixed(2)}`,
+        reference_number: `SEL${Date.now()}${Math.floor(Math.random() * 10000)}`,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      });
+
+      return res.json({ success: true, totalProceeds: totalProceeds.toFixed(2) });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
     }
   });
 
-  // GET /api/messages - Fetch user messages
-  app.get('/api/messages', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // -------- Payments endpoint --------
+
+  // GET /api/payments - list user's payments
+  app.get('/api/payments', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const userId = typeof req.user?.id === 'string' ? parseInt(req.user.id) : (req.user?.id || 0);
-      const messages = await storage.getUserMessages(userId);
-      console.info('✅ Fetched', messages.length, 'user messages');
-      res.json(messages);
-    } catch (error: any) {
-      console.error('❌ Failed to fetch user messages:', error.message);
-      res.status(500).json({ error: 'Failed to fetch messages', details: error.message });
+      const { data, error } = await supabase.from('payments').select('*').eq('user_id', req.user!.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      return res.json(data || []);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
     }
   });
 
-  // Return server for WebSocket and Vite setup in index.ts
+  // -------- KYC endpoints --------
+
+  // GET /api/kyc/status - get user's KYC verification status
+  app.get('/api/kyc/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('kyc').select('*').eq('user_id', req.user!.id).limit(1).single();
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      // Also get user's verification fields
+      const { data: user } = await supabase.from('users').select('is_verified, kyc_status, email, phone, full_name, address, city, country, profession, annual_income').eq('id', req.user!.id).single();
+      
+      const verificationItems = [
+        { id: 'identity', name: 'Identity Verification', status: user?.is_verified ? 'verified' : 'pending', completedAt: user?.is_verified ? new Date().toISOString() : null },
+        { id: 'email', name: 'Email Verification', status: user?.email ? 'verified' : 'pending', completedAt: user?.email ? new Date().toISOString() : null },
+        { id: 'phone', name: 'Phone Verification', status: user?.phone ? 'verified' : 'pending', completedAt: null },
+        { id: 'address', name: 'Address Verification', status: user?.address ? 'verified' : 'required', completedAt: null },
+        { id: 'income', name: 'Income Verification', status: user?.annual_income ? 'verified' : 'required', completedAt: null },
+        { id: 'kyc', name: 'KYC Compliance', status: user?.kyc_status || 'pending', completedAt: user?.kyc_status === 'approved' ? new Date().toISOString() : null },
+      ];
+      
+      return res.json({ kycRecord: data, verificationItems, user: { isVerified: user?.is_verified, kycStatus: user?.kyc_status } });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/kyc/submit - submit KYC documents
+  app.post('/api/kyc/submit', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { documentType, documentNumber, fullName, dateOfBirth, nationality, address } = req.body;
+      if (!documentType || !fullName) return res.status(400).json({ error: 'Document type and full name required' });
+      
+      const supabaseClient = getAdminClient();
+      const { data, error } = await supabaseClient.from('kyc').upsert({
+        user_id: req.user!.id,
+        document_type: documentType,
+        document_number: documentNumber || null,
+        full_name: fullName,
+        date_of_birth: dateOfBirth || null,
+        nationality: nationality || null,
+        address: address || null,
+        status: 'pending',
+        submitted_at: new Date().toISOString()
+      }).select().single();
+      if (error) throw error;
+      
+      // Update user's kyc_status
+      await supabaseClient.from('users').update({ kyc_status: 'in_review' }).eq('id', req.user!.id);
+      
+      // Create alert
+      await supabaseClient.from('alerts').insert({
+        user_id: req.user!.id,
+        title: 'KYC Submitted',
+        message: 'Your KYC documents have been submitted for review.',
+        type: 'info',
+        priority: 'normal',
+        is_read: false
+      });
+      
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/user/preferences
+  app.get('/api/user/preferences', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('users').select('notification_preferences, privacy_preferences, display_preferences, security_preferences').eq('id', req.user!.id).single();
+      if (error) throw error;
+      return res.json({
+        notificationPreferences: data?.notification_preferences || {},
+        privacyPreferences: data?.privacy_preferences || {},
+        displayPreferences: data?.display_preferences || {},
+        securityPreferences: data?.security_preferences || {}
+      });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // PUT /api/user/preferences
+  app.put('/api/user/preferences', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { notificationPreferences, privacyPreferences, displayPreferences, securityPreferences } = req.body;
+      const updateData: Record<string, unknown> = {};
+      if (notificationPreferences) updateData.notification_preferences = notificationPreferences;
+      if (privacyPreferences) updateData.privacy_preferences = privacyPreferences;
+      if (displayPreferences) updateData.display_preferences = displayPreferences;
+      if (securityPreferences) updateData.security_preferences = securityPreferences;
+      
+      const { error } = await supabase.from('users').update(updateData).eq('id', req.user!.id);
+      if (error) throw error;
+      return res.json({ success: true });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // PUT /api/user/security-questions
+  app.put('/api/user/security-questions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { securityQuestion1, securityAnswer1, securityQuestion2, securityAnswer2 } = req.body;
+      if (!securityQuestion1 || !securityAnswer1 || !securityQuestion2 || !securityAnswer2) {
+        return res.status(400).json({ error: 'Both security questions and answers are required' });
+      }
+      const { error } = await supabase.from('users').update({
+        security_question_1: securityQuestion1,
+        security_answer_1: securityAnswer1,
+        security_question_2: securityQuestion2,
+        security_answer_2: securityAnswer2
+      }).eq('id', req.user!.id);
+      if (error) throw error;
+      return res.json({ success: true });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/transactions/export - export transactions as CSV
+  app.get('/api/transactions/export', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data: accounts } = await supabase.from('accounts').select('id').eq('user_id', req.user!.id);
+      if (!accounts || accounts.length === 0) return res.status(404).json({ error: 'No accounts found' });
+      
+      const accountIds = accounts.map((a: Record<string, unknown>) => a.id);
+      const { data: transactions } = await supabase.from('transactions').select('*').in('from_account_id', accountIds).or(`to_account_id.in.(${accountIds.join(',')})`).order('created_at', { ascending: false }).limit(1000);
+      
+      const csvHeader = 'Date,Reference,Type,Amount,Currency,Status,Description\n';
+      const csvRows = (transactions || []).map((t: Record<string, unknown>) => 
+        `${t.created_at || ''},${t.reference_number || ''},${t.transaction_type || ''},${t.amount || '0'},${t.currency || 'USD'},${t.status || ''},"${String(t.description || '').replace(/"/g, '""')}"`
+      ).join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=transactions.csv');
+      return res.send(csvHeader + csvRows);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // POST /api/loans/:id/repay - repay a loan
+  app.post('/api/loans/:id/repay', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { amount } = req.body;
+      if (!amount) return res.status(400).json({ error: 'Amount required' });
+      const numAmount = parseFloat(String(amount));
+      if (isNaN(numAmount) || numAmount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+      
+      const supabaseClient = getAdminClient();
+      const { data: loan } = await supabaseClient.from('loans').select('*').eq('id', req.params.id).eq('user_id', req.user!.id).single();
+      if (!loan) return res.status(404).json({ error: 'Loan not found' });
+      if ((loan as Record<string, unknown>).status !== 'approved' && (loan as Record<string, unknown>).status !== 'active') {
+        return res.status(400).json({ error: 'Loan is not active' });
+      }
+      
+      // Check balance
+      const { data: account } = await supabaseClient.from('accounts').select('id, balance').eq('user_id', req.user!.id).eq('status', 'active').limit(1).single();
+      if (!account) return res.status(404).json({ error: 'Account not found' });
+      const currentBalance = parseFloat(String((account as Record<string, unknown>).balance || '0'));
+      if (currentBalance < numAmount) return res.status(400).json({ error: 'Insufficient funds' });
+      
+      // Debit account
+      const newBalance = (currentBalance - numAmount).toFixed(2);
+      await supabaseClient.from('accounts').update({ balance: newBalance, updated_at: new Date().toISOString() }).eq('id', (account as Record<string, unknown>).id);
+      
+      // Update loan balance
+      const remainingBalance = parseFloat(String((loan as Record<string, unknown>).remaining_balance || (loan as Record<string, unknown>).principal_amount || '0'))) - numAmount;
+      await supabaseClient.from('loans').update({ 
+        remaining_balance: remainingBalance.toFixed(2),
+        status: remainingBalance <= 0 ? 'completed' : 'active',
+        updated_at: new Date().toISOString()
+      }).eq('id', req.params.id);
+      
+      // Create transaction
+      await supabaseClient.from('transactions').insert({
+        from_user_id: req.user!.id,
+        amount: numAmount.toFixed(2),
+        currency: 'USD',
+        transaction_type: 'loan_repayment',
+        category: 'loan',
+        status: 'completed',
+        description: `Loan repayment for loan ${req.params.id}`,
+        reference_number: `LRP${Date.now()}${Math.floor(Math.random() * 10000)}`,
+        processed_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      });
+      
+      // Create alert
+      await supabaseClient.from('alerts').insert({
+        user_id: req.user!.id,
+        title: 'Loan Payment Made',
+        message: `Payment of ${numAmount.toFixed(2)} applied to your loan. Remaining balance: ${remainingBalance.toFixed(2)}.`,
+        type: 'success',
+        priority: 'normal',
+        is_read: false
+      });
+      
+      return res.json({ success: true, newBalance, remainingBalance: remainingBalance.toFixed(2) });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/loans/:id - get single loan
+  app.get('/api/loans/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase.from('loans').select('*').eq('id', req.params.id).eq('user_id', req.user!.id).single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // GET /api/cards/:id - get single card
+  app.get('/api/cards/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data: account } = await supabase.from('accounts').select('id').eq('user_id', req.user!.id);
+      if (!account) return res.status(404).json({ error: 'Account not found' });
+      const { data, error } = await supabase.from('cards').select('*').eq('id', req.params.id).in('account_id', account.map((a: Record<string, unknown>) => a.id)).single();
+      if (error) throw error;
+      return res.json(data);
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') });
+    }
+  });
+
+  // Return server
   const httpServer = createServer(app);
-  
   return httpServer;
 }
 
@@ -2677,32 +2338,96 @@ export async function registerLiveChatRoutes(app: Express) {
   const { getChatHistory, getActiveSessions, createTicketFromChat } = await import('./supabase-live-chat');
   const { supabase } = await import('./supabase-public-storage');
   
-  // Get chat history
   app.get('/api/chat/history', getChatHistory);
-
-  // Get active chat sessions (admin only)
   app.get('/api/chat/sessions', requireAdmin, getActiveSessions);
-
-  // Create support ticket from chat
   app.post('/api/chat/create-ticket', requireAuth, createTicketFromChat);
 
-  // Real-time notifications
+  app.post('/api/chat/send', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { message } = req.body;
+      if (!message || !message.trim()) {
+        return res.status(400).json({ error: 'Message is required' });
+      }
+      const user = await storage.getUserByEmail(req.user!.email);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+
+      let adminUserId = 1;
+      try {
+        const { data: adminUsers } = await supabase
+          .from('users')
+          .select('id')
+          .eq('role', 'admin')
+          .limit(1)
+          .single();
+        if (adminUsers?.id) adminUserId = adminUsers.id;
+      } catch (error: unknown) {
+        console.warn('Failed to query admin users:', error instanceof Error ? error.message : 'Unknown error');
+      }
+
+      const { data: savedMsg, error } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: user.id,
+          sender_role: 'customer',
+          recipient_id: adminUserId,
+          recipient_role: 'admin',
+          content: message.trim(),
+          session_id: `session_${user.id}`,
+          is_read: false,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        return res.json({ success: true, message: 'Message queued', persisted: false });
+      }
+
+      const adminChannel = supabase.channel('admin-chat-inbox');
+      adminChannel.send({
+        type: 'broadcast',
+        event: 'new_customer_message',
+        payload: {
+          userId: user.id,
+          userName: `${user.firstName} ${user.lastName}`,
+          message: message.trim(),
+          messageId: savedMsg?.id,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      // Also create alerts for admins
+      const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin').eq('is_active', true);
+      if (admins && admins.length > 0) {
+        const adminAlerts = admins.map((admin: Record<string, unknown>) => ({
+          user_id: admin.id,
+          title: 'New Chat Message',
+          message: `New message from ${req.user!.email}`,
+          type: 'info',
+          priority: 'normal',
+          is_read: false
+        }));
+        await supabase.from('alerts').insert(adminAlerts);
+      }
+
+      return res.json({ success: true, messageId: savedMsg?.id });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: 'Failed to send message' });
+    }
+  });
+
   app.post('/api/chat/notify', requireAuth, async (req: Request, res: Response) => {
     try {
       const { userId, type, message } = req.body;
-      
-      // Send via Supabase real-time
       const channel = supabase.channel(`notifications:${userId}`);
       channel.send({
         type: 'broadcast',
         event: type,
         payload: { message, timestamp: new Date() }
       });
-
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.json({ success: true });
+    } catch (error: unknown) {
+      return res.status(500).json({ error: (error instanceof Error ? error.message : 'Internal server error') || "Unknown error" });
     }
   });
 }
-

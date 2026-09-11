@@ -33,7 +33,7 @@ export function useRealtimeChat(
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'chat_messages',
+          table: 'messages',
           filter: `recipient_id=eq.${userId}`
         },
         (payload) => {
@@ -41,7 +41,7 @@ export function useRealtimeChat(
             onMessageReceived({
               id: payload.new.id,
               senderId: payload.new.sender_id,
-              senderName: payload.new.sender_name,
+              senderName: payload.new.sender_role === 'admin' ? 'Support Agent' : 'Customer',
               senderRole: payload.new.sender_role,
               recipientId: payload.new.recipient_id,
               content: payload.new.content,

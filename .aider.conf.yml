@@ -1,0 +1,50 @@
+# Aider AI Programmer Configuration
+# World Bank Digital Banking Application
+
+openrouter: true
+model: google/gemini-2.0-flash-exp:free
+weak-model: deepseek/deepseek-chat:free
+fallback-model: deepseek/deepseek-r1:free
+openrouter-api-key: ${OPENROUTER_API_KEY}
+
+auto-commits: true
+commit-prompt: "feat({scope}): {description}\n\n- Modified by Aider AI via OpenRouter\n- Model: {model}\n- Files: {files}"
+dirty-commits: true
+commit-before-edits: true
+
+edit-format: diff
+auto-test: false
+show-diffs: true
+
+file-restrictions:
+  allowed:
+    - "client/src/**"
+    - "server/**"
+    - "shared/**"
+    - "supabase/**"
+    - "infrastructure/**"
+    - ".vscode/**"
+  forbidden:
+    - "node_modules/**"
+    - "dist/**"
+    - "build/**"
+    - ".git/**"
+    - "*.env"
+    - ".env.example"
+    - "package-lock.json"
+
+gitignore: true
+git-author-name: "World Bank AI Agent"
+git-author-email: "noreply@worldbankfinancials.com"
+
+cache-prompts: true
+stream: true
+verify-imports: true
+check-update: false
+
+map-tokens: 2048
+max-chat-history-tokens: 8192
+
+editor: code --wait
+dark-mode: true
+pretty: true
