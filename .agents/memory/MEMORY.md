@@ -1,0 +1,3 @@
+- [Admin API field naming](admin-api-naming.md) — admin photo upload endpoint expects JSON `profilePhoto` not FormData; transaction creator expects `accountId` not `fromAccountId`
+- [Admin endpoints inventory](admin-endpoints.md) — key missing/wrong endpoints found and fixed; always check before adding new routes
+- [Snake vs camelCase](snake-camel.md) — mapTransaction/mapAccount return camelCase; any display layer using snake_case fields will show blank

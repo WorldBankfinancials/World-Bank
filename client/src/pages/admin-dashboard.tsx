@@ -33,6 +33,8 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useRealtimeTransactions } from "@/hooks/useRealtimeTransactions";
 import { CustomerData } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 
 
 interface SupportTicket {
@@ -65,9 +67,22 @@ export default function AdminDashboard() {
   const [adminNotes, setAdminNotes] = useState<{ [key: number]: string }>({});
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const { user, userProfile, loading: authLoading } = useAuth();
+
+  // Role guard — redirect non-admins
+  useEffect(() => {
+    if (authLoading) return;
+    const storedProfile = localStorage.getItem('userProfile');
+    const profile = storedProfile ? JSON.parse(storedProfile) : null;
+    const role = profile?.role || userProfile?.role;
+    if (role && role !== 'admin') {
+      toast({ title: 'Access Denied', description: 'Admin role required.', variant: 'destructive' });
+      setLocation('/login');
+    }
+  }, [user, userProfile, authLoading]);
 
   // Real-time updates via Supabase Realtime
-  useRealtimeTransactions(undefined, true);
+  useRealtimeTransactions();
 
   // Fetch real customer data from API
   const { data: customers = [], isLoading: customersLoading } = useQuery<CustomerData[]>({
@@ -95,12 +110,16 @@ export default function AdminDashboard() {
   const uploadProfilePicMutation = useMutation({
     mutationFn: async ({ userId, imageFile }: { userId: number | string; imageFile: File }) => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const formData = new FormData();
-      formData.append('profilePic', imageFile);
-      
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
+      });
       const response = await authenticatedFetch(`/api/admin/customers/${userId}/profile-picture`, {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profilePhoto: base64 }),
       });
       
       if (!response.ok) {
@@ -222,7 +241,7 @@ export default function AdminDashboard() {
     updateTicketMutation.mutate({ ticketId, status, resolution });
   };
 
-  const adminUser = {
+  const adminUser: any = {
     id: 1,
     username: "admin",
     firstName: "World",
@@ -233,8 +252,30 @@ export default function AdminDashboard() {
     accountId: 1,
     profession: "Banking Administrator",
     isVerified: true,
-    role: "admin"
+    role: "admin",
+    fullName: "World Bank",
+    idType: null,
+    idNumber: null,
+    transferPin: null,
+    annualIncome: null,
+    address: null,
+    city: null,
+    state: null,
+    postalCode: null,
+    country: null,
+    dateOfBirth: null,
+    mothersMaidenName: null,
+    citizenship: null,
+    taxId: null,
+    industry: null,
+    phone: null,
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: null
   };
+
+  // Render guard — block non-admins from seeing admin content
+  if (userProfile && userProfile.role !== 'admin') return null;
 
   // Show loading state
   if (customersLoading || transfersLoading || ticketsLoading) {
@@ -291,7 +332,7 @@ export default function AdminDashboard() {
                 <Users className="w-5 h-5 text-blue-600" />
                 <div>
                   <p className="text-sm text-gray-600">Customers</p>
-                  <p className="text-xl font-bold">{adminStats && 'totalCustomers' in adminStats ? adminStats.totalCustomers : 0}</p>
+                  <p className="text-xl font-bold">{(adminStats as any)?.totalCustomers || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -303,7 +344,7 @@ export default function AdminDashboard() {
                 <CreditCard className="w-5 h-5 text-green-600" />
                 <div>
                   <p className="text-sm text-gray-600">Today's Volume</p>
-                  <p className="text-xl font-bold">${adminStats && 'todayVolume' in adminStats ? adminStats.todayVolume : 0}</p>
+                  <p className="text-xl font-bold">${(adminStats as any)?.todayVolume || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -324,6 +365,18 @@ export default function AdminDashboard() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow border-2 border-blue-500 bg-blue-50" onClick={() => setLocation("/admin-panel")}>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <Shield className="w-8 h-8 text-blue-600" />
+                <div>
+                  <h3 className="font-semibold text-blue-700">Admin Control Center</h3>
+                  <p className="text-sm text-blue-600">Full banking management panel</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/customer-management")}>
             <CardContent className="p-4">
               <div className="flex items-center space-x-3">

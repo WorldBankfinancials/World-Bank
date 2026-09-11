@@ -37,107 +37,182 @@ import TransferPending from "@/pages/transfer-pending";
 import TransferSuccess from "@/pages/transfer-success";
 import TransferFailed from "@/pages/transfer-failed";
 import Transfer from "@/pages/transfer";
-import Cards from "@/pages/cards";
-import Receive from "@/pages/receive";
-import AddMoney from "@/pages/add-money";
-import Alerts from "@/pages/alerts";
-import CustomerManagement from "@/pages/customer-management";
-import FundManagement from "@/pages/fund-management";
+import TransferProcess from "@/pages/transfer-process";
+import AdminPanel from "@/pages/admin-panel";
+import AdminAccounts from "@/pages/admin-accounts";
 import AdminLiveChat from "@/pages/admin-live-chat";
-import CustomerServicePortal from "@/pages/customer-service-portal";
-import VerificationCenter from "@/pages/verification";
-import AccountPreferences from "@/pages/account-preferences";
 import AdminTransactionDashboard from "@/pages/admin-transaction-dashboard";
 import AdminTransactionCreator from "@/pages/admin-transaction-creator";
-import TransactionRouter from "@/pages/transaction-router";
-import About from "@/pages/about";
-import Investment from "@/pages/investment";
+import CustomerServicePortal from "@/pages/customer-service-portal";
+import CustomerManagement from "@/pages/customer-management";
+import FundManagement from "@/pages/fund-management";
 import Exchange from "@/pages/exchange";
-
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import AddMoney from "@/pages/add-money";
+import Receive from "@/pages/receive";
+import Alerts from "@/pages/alerts";
+import AccountPreferences from "@/pages/account-preferences";
+import SecurityCenterPage from "@/pages/security-center";
+import Verification from "@/pages/verification";
+import About from "@/pages/about";
+import { ProtectedRoute, AdminRoute } from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import BottomNavigation from "@/components/BottomNavigation";
+import LiveChat from "@/components/LiveChat";
 
 function App() {
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <AuthProvider>
-            <LanguageProvider>
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <LanguageProvider>
+            <ErrorBoundary>
               <Switch>
                 <Route path="/about" component={About} />
                 <Route path="/login" component={Login} />
                 <Route path="/register" component={Register} />
-            <Route path="/register-multi" component={MultiStepRegister} />
+                <Route path="/register-multi-step" component={MultiStepRegister} />
                 <Route path="/admin-login" component={AdminLogin} />
-                <Route path="/admin-dashboard" component={AdminDashboard} />
-                <Route path="/simple-admin" component={SimpleAdmin} />
-                <Route path="/admin-live-chat" component={AdminLiveChat} />
-                <Route path="/customer-service" component={CustomerServicePortal} />
-                <Route path="/transfer-processing" component={TransferProcessing} />
-                <Route path="/transfer-pending" component={TransferPending} />
-                <Route path="/transfer-success" component={TransferSuccess} />
-                <Route path="/transfer-failed" component={TransferFailed} />
+                <Route path="/banking-services" component={BankingServices} />
+                <Route path="/business-banking" component={BusinessBanking} />
 
-                <Route path="/" nest>
-                  <ProtectedRoute>
-                    <div className="pb-20">
-                      <Switch>
-                        <Route path="/" component={Dashboard} />
-                        <Route path="/dashboard" component={Dashboard} />
-                        <Route path="/transfer-funds" component={TransferFunds} />
-                        <Route path="/profile-settings" component={ProfileSettings} />
-                        <Route path="/security-settings" component={SecuritySettings} />
-                        <Route path="/pin-settings" component={PinSettings} />
-                        <Route path="/credit-cards" component={CreditCards} />
-                        <Route path="/transaction-history" component={TransactionHistory} />
-                        <Route path="/history" component={History} />
-                        <Route path="/statements-reports" component={StatementsReports} />
-                        <Route path="/investment-portfolio" component={InvestmentPortfolio} />
-                        <Route path="/wealth-management" component={WealthManagement} />
-                        <Route path="/support-center" component={SupportCenter} />
-                        <Route path="/customer-support" component={CustomerSupport} />
-                        <Route path="/banking-services" component={BankingServices} />
-                        <Route path="/digital-wallet" component={DigitalWallet} />
-                        <Route path="/mobile-pay" component={MobilePay} />
-                        <Route path="/security-center" component={SecurityCenter} />
-                        <Route path="/find-branches" component={FindBranches} />
-                        <Route path="/international-transfer" component={Transfer} />
-                        <Route path="/investment-trading" component={InvestmentTrading} />
-                        <Route path="/business-banking" component={BusinessBanking} />
-                        <Route path="/cards" component={Cards} />
-                        <Route path="/transfer" component={InternationalTransfer} />
-                        <Route path="/receive" component={Receive} />
-                        <Route path="/add-money" component={AddMoney} />
-                        <Route path="/alerts" component={Alerts} />
-                        <Route path="/verification" component={VerificationCenter} />
-                        <Route path="/account-preferences" component={AccountPreferences} />
-                        <Route path="/admin-transaction-dashboard" component={AdminTransactionDashboard} />
-                        <Route path="/admin-transaction-creator" component={AdminTransactionCreator} />
-                        <Route path="/transaction-router" component={TransactionRouter} />
-                        <Route path="/customer-management" component={CustomerManagement} />
-                        <Route path="/fund-management" component={FundManagement} />
-                        <Route path="/investment" component={Investment} />
-                        <Route path="/exchange" component={Exchange} />
-                        <Route path="/about" component={About} />
-
-                        <Route component={NotFound} />
-                      </Switch>
-                    </div>
-                    <BottomNavigation />
-                  </ProtectedRoute>
+                <Route path="/admin-dashboard">
+                  <AdminRoute><AdminDashboard /></AdminRoute>
                 </Route>
+                <Route path="/admin-panel">
+                  <AdminRoute><AdminPanel /></AdminRoute>
+                </Route>
+                <Route path="/simple-admin">
+                  <AdminRoute><SimpleAdmin /></AdminRoute>
+                </Route>
+                <Route path="/admin-live-chat">
+                  <AdminRoute><AdminLiveChat /></AdminRoute>
+                </Route>
+                <Route path="/admin-accounts">
+                  <AdminRoute><AdminAccounts onBack={() => window.history.back()} /></AdminRoute>
+                </Route>
+                <Route path="/admin-transaction-dashboard">
+                  <AdminRoute><AdminTransactionDashboard /></AdminRoute>
+                </Route>
+                <Route path="/admin-transaction-creator">
+                  <AdminRoute><AdminTransactionCreator /></AdminRoute>
+                </Route>
+                <Route path="/customer-service-portal">
+                  <AdminRoute><CustomerServicePortal /></AdminRoute>
+                </Route>
+                <Route path="/customer-management">
+                  <AdminRoute><CustomerManagement /></AdminRoute>
+                </Route>
+                <Route path="/fund-management">
+                  <AdminRoute><FundManagement /></AdminRoute>
+                </Route>
+
+                <Route path="/dashboard">
+                  <ProtectedRoute><Dashboard /></ProtectedRoute>
+                </Route>
+                <Route path="/transfer-funds">
+                  <ProtectedRoute><TransferFunds /></ProtectedRoute>
+                </Route>
+                <Route path="/transfer-processing">
+                  <ProtectedRoute><TransferProcessing /></ProtectedRoute>
+                </Route>
+                <Route path="/transfer-pending">
+                  <ProtectedRoute><TransferPending /></ProtectedRoute>
+                </Route>
+                <Route path="/transfer-success">
+                  <ProtectedRoute><TransferSuccess /></ProtectedRoute>
+                </Route>
+                <Route path="/transfer-failed">
+                  <ProtectedRoute><TransferFailed /></ProtectedRoute>
+                </Route>
+                <Route path="/transfer">
+                  <ProtectedRoute><Transfer /></ProtectedRoute>
+                </Route>
+                <Route path="/transfer-process">
+                  <ProtectedRoute><TransferProcess /></ProtectedRoute>
+                </Route>
+                <Route path="/international-transfer">
+                  <ProtectedRoute><InternationalTransfer /></ProtectedRoute>
+                </Route>
+                <Route path="/profile-settings">
+                  <ProtectedRoute><ProfileSettings /></ProtectedRoute>
+                </Route>
+                <Route path="/security-settings">
+                  <ProtectedRoute><SecuritySettings /></ProtectedRoute>
+                </Route>
+                <Route path="/pin-settings">
+                  <ProtectedRoute><PinSettings /></ProtectedRoute>
+                </Route>
+                <Route path="/credit-cards">
+                  <ProtectedRoute><CreditCards /></ProtectedRoute>
+                </Route>
+                <Route path="/transaction-history">
+                  <ProtectedRoute><TransactionHistory /></ProtectedRoute>
+                </Route>
+                <Route path="/history">
+                  <ProtectedRoute><History /></ProtectedRoute>
+                </Route>
+                <Route path="/statements-reports">
+                  <ProtectedRoute><StatementsReports /></ProtectedRoute>
+                </Route>
+                <Route path="/investment-portfolio">
+                  <ProtectedRoute><InvestmentPortfolio /></ProtectedRoute>
+                </Route>
+                <Route path="/wealth-management">
+                  <ProtectedRoute><WealthManagement /></ProtectedRoute>
+                </Route>
+                <Route path="/investment-trading">
+                  <ProtectedRoute><InvestmentTrading /></ProtectedRoute>
+                </Route>
+                <Route path="/support-center">
+                  <ProtectedRoute><SupportCenter /></ProtectedRoute>
+                </Route>
+                <Route path="/customer-support">
+                  <ProtectedRoute><CustomerSupport /></ProtectedRoute>
+                </Route>
+                <Route path="/digital-wallet">
+                  <ProtectedRoute><DigitalWallet /></ProtectedRoute>
+                </Route>
+                <Route path="/mobile-pay">
+                  <ProtectedRoute><MobilePay /></ProtectedRoute>
+                </Route>
+                <Route path="/security-center">
+                  <ProtectedRoute><SecurityCenter /></ProtectedRoute>
+                </Route>
+                <Route path="/find-branches">
+                  <ProtectedRoute><FindBranches /></ProtectedRoute>
+                </Route>
+                <Route path="/exchange">
+                  <ProtectedRoute><Exchange /></ProtectedRoute>
+                </Route>
+                <Route path="/add-money">
+                  <ProtectedRoute><AddMoney /></ProtectedRoute>
+                </Route>
+                <Route path="/receive">
+                  <ProtectedRoute><Receive /></ProtectedRoute>
+                </Route>
+                <Route path="/alerts">
+                  <ProtectedRoute><Alerts /></ProtectedRoute>
+                </Route>
+                <Route path="/account-preferences">
+                  <ProtectedRoute><AccountPreferences /></ProtectedRoute>
+                </Route>
+                <Route path="/verification">
+                  <ProtectedRoute><Verification /></ProtectedRoute>
+                </Route>
+
+                <Route component={NotFound} />
               </Switch>
-            </div>
+
+              <LiveChat />
+              <Toaster />
+            </ErrorBoundary>
           </LanguageProvider>
         </AuthProvider>
       </TooltipProvider>
-      <Toaster />
     </QueryClientProvider>
-    </ErrorBoundary>
   );
 }
 

@@ -1,38 +1,28 @@
 /**
- * SAFE VALIDATION HELPERS - Prevent silent failures
- * Use these instead of raw operations to validate and parse safely
+ * Validation helper utilities
  */
 
-export function safeParseFloat(value: unknown): number {
-  if (value === null || value === undefined) return 0;
-  const num = parseFloat(String(value));
-  return isNaN(num) ? 0 : num;
+export function validateEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export function safeToLocaleString(value: unknown, options?: Intl.NumberFormatOptions): string {
-  try {
-    const num = safeParseFloat(value);
-    return num.toLocaleString('en-US', options || { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  } catch (e) {
-    return '0.00';
-  }
+export function validatePhone(phone: string): boolean {
+  return /^\+?[\d\s\-\(\)]{7,20}$/.test(phone);
 }
 
-export function safeGetStorageItem(key: string, defaultValue?: any): any {
-  try {
-    const item = localStorage.getItem(key) || sessionStorage.getItem(key);
-    if (!item) return defaultValue;
-    return JSON.parse(item);
-  } catch (e) {
-    return defaultValue;
-  }
+export function validateAmount(amount: string | number): boolean {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  return !isNaN(num) && num > 0;
 }
 
-export function safeValidateToken(token: unknown): boolean {
-  return typeof token === 'string' && token.length > 0;
+export function validatePin(pin: string): boolean {
+  return /^\d{4,6}$/.test(pin);
 }
 
-export function safeToString(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  return String(value);
+export function validatePassword(password: string): boolean {
+  return password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password);
+}
+
+export function sanitizeInput(input: string): string {
+  return input.trim().replace(/[<>]/g, '');
 }

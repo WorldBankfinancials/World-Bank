@@ -32,12 +32,23 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
 
     // Parse user info from connection
     const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const token = url.searchParams.get('token') || '';
     const userId = url.searchParams.get('userId') || '';
     const userRole = (url.searchParams.get('role') || 'customer') as 'admin' | 'customer';
     const userEmail = url.searchParams.get('email') || '';
 
-    if (!userId) {
-      ws.close(1008, 'User ID required');
+    if (!token || !userId) {
+      ws.close(1008, 'Authentication required');
+      return;
+    }
+    try {
+      const { data, error } = await supabase.auth.getUser(token);
+      if (error || !data?.user || data.user.id !== userId) {
+        ws.close(1008, 'Invalid authentication token');
+        return;
+      }
+    } catch {
+      ws.close(1008, 'Authentication failed');
       return;
     }
 
@@ -51,20 +62,19 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
     });
 
 
-    // Subscribe to real-time chat messages for this user
+    // Subscribe to real-time chat messages for this user (uses correct 'messages' table + snake_case column)
     const chatChannel = supabase
-      .channel(`chat:${userId}`)
+      .channel(`chat_ws:${userId}`)
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
-          table: 'chat_messages',
-          filter: `receiverId=eq.${userId}`
+          table: 'messages',
+          filter: `recipient_id=eq.${userId}`
         },
         (payload) => {
-          if (payload.eventType === 'INSERT') {
-            // Broadcast new message to connected client
+          if (ws.readyState === ws.OPEN) {
             ws.send(JSON.stringify({
               type: 'chat_message',
               data: payload.new,
@@ -286,12 +296,12 @@ export async function createTicketFromChat(req: Request, res: Response) {
       .from('support_tickets')
       .insert([
         {
-          userId,
+          user_id: userId,
           subject,
           description,
           priority: priority || 'normal',
           status: 'open',
-          createdAt: new Date()
+          created_at: new Date()
         }
       ])
       .select()

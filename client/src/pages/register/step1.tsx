@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { BankLogo } from '@/components/BankLogo';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
-import { publicFetch } from '@/lib/fetch-client';
+import { publicFetch } from '@/lib/queryClient';
 import { ArrowRight, User } from 'lucide-react';
 
 const step1Schema = z.object({
@@ -45,7 +45,6 @@ export default function RegistrationStep1({ initialData = {}, onNext }: Step1Pro
   const onSubmit = async (data: Step1Data) => {
     setIsLoading(true);
     try {
-      // Check if email already exists via server API
       const response = await publicFetch('/api/auth/check-email', {
         method: 'POST',
         body: JSON.stringify({ email: data.email }),
@@ -72,7 +71,6 @@ export default function RegistrationStep1({ initialData = {}, onNext }: Step1Pro
         return;
       }
       
-      // Check if email is already registered
       if (!result.available) {
         toast({
           title: 'Email Already Registered',
@@ -82,7 +80,6 @@ export default function RegistrationStep1({ initialData = {}, onNext }: Step1Pro
         return;
       }
       
-      // Email is available, proceed to next step
       onNext(data);
     } finally {
       setIsLoading(false);

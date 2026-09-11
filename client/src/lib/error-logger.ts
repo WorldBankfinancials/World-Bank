@@ -1,27 +1,18 @@
 /**
- * ERROR LOGGING UTILITY
- * Prevents empty error objects and provides proper error context
+ * Error logger utility
  */
 
-export function logErrorWithContext(context: string, error: unknown) {
-  try {
-    if (error instanceof Error) {
-    } else if (typeof error === 'object' && error !== null) {
-    } else if (typeof error === 'string') {
-    } else {
-    }
-  } catch (e) {
+export function logError(error: Error | string, context?: string) {
+  const timestamp = new Date().toISOString();
+  const message = typeof error === 'string' ? error : error.message;
+  const stack = error instanceof Error ? error.stack : '';
+  
+  console.error(`[${timestamp}] [${context || 'App'}] ${message}`);
+  if (stack) {
+    console.error(stack);
   }
 }
 
-export function setupGlobalErrorHandler() {
-  // Catch unhandled promise rejections
-  window.addEventListener('unhandledrejection', event => {
-    logErrorWithContext('UnhandledPromiseRejection', event.reason);
-  });
-
-  // Catch global errors
-  window.addEventListener('error', event => {
-    logErrorWithContext('GlobalError', event.error || event.message);
-  });
+export function logApiError(url: string, error: any) {
+  logError(error, `API: ${url}`);
 }

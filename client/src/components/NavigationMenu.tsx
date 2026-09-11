@@ -21,7 +21,7 @@ interface NavigationMenuProps {
 export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps) {
   if (!isOpen) return null;
   
-  const { userProfile } = useAuth();
+  const { userProfile, signOut } = useAuth();
 
   const menuSections = [
     {
@@ -120,7 +120,7 @@ export default function NavigationMenu({ isOpen, onClose }: NavigationMenuProps)
               ))}
 
               <div className="border-t pt-4">
-                <div className="flex items-center space-x-3 p-3 hover:bg-red-50 rounded-lg cursor-pointer text-red-600">
+                <div onClick={async () => { await signOut(); onClose(); }} className="flex items-center space-x-3 p-3 hover:bg-red-50 rounded-lg cursor-pointer text-red-600 transition-colors">
                   <LogOut className="w-5 h-5" />
                   <span>Sign Out</span>
                 </div>

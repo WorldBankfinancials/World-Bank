@@ -25,7 +25,7 @@ export default function RealtimeAlerts() {
       if (!response.ok) return [];
       return response.json().catch(() => []);
     },
-    refetchInterval: 30000, // Poll every 30 seconds
+    refetchInterval: 30000,
   });
 
   useEffect(() => {
@@ -34,7 +34,6 @@ export default function RealtimeAlerts() {
       const unread = fetchedAlerts.filter((a: Alert) => !a.read).length;
       setUnreadCount(unread);
 
-      // Show toast for new unread alerts
       fetchedAlerts.forEach((alert: Alert) => {
         if (!alert.read) {
           toast({

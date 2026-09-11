@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit, Trash2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Account {
   id: number;
@@ -25,13 +26,14 @@ interface AccountManagementProps {
 }
 
 export default function AdminAccountManagement({ onBack }: AccountManagementProps) {
+  const { t } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: accounts = [], isLoading: accountsLoading } = useQuery<Account[]>({
-    queryKey: ['/api/accounts'],
+    queryKey: ['/api/admin/accounts'],
     queryFn: async () => {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch('/api/accounts');
+      const response = await authenticatedFetch('/api/admin/accounts');
       return response.ok ? response.json() : [];
     }
   });
@@ -39,7 +41,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [formData, setFormData] = useState({
-    userId: 1,
+    userId: '' as string | number,
     accountType: 'checking' as 'checking' | 'savings' | 'investment',
     accountName: '',
     balance: '0.00',
@@ -68,10 +70,10 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
       });
 
       if (response.ok) {
-        queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/accounts'] });
         setShowCreateForm(false);
         setFormData({
-          userId: 1,
+          userId: '',
           accountType: 'checking',
           accountName: '',
           balance: '0.00',
@@ -109,7 +111,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
       });
 
       if (response.ok) {
-        queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/accounts'] });
         setEditingAccount(null);
         toast({
           title: 'Account Updated',
@@ -137,7 +139,7 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
       });
 
       if (response.ok) {
-        queryClient.invalidateQueries({ queryKey: ['/api/accounts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/accounts'] });
         toast({
           title: 'Account Deleted',
           description: 'Account has been deleted successfully.',
@@ -233,6 +235,15 @@ export default function AdminAccountManagement({ onBack }: AccountManagementProp
               <CardTitle>Create New Account</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <Label>Customer ID</Label>
+                <Input
+                  type="number"
+                  value={formData.userId}
+                  onChange={(e) => setFormData(prev => ({ ...prev, userId: parseInt(e.target.value) || '' }))}
+                  placeholder="Enter customer's user ID"
+                />
+              </div>
               <div>
                 <Label>Account Type</Label>
                 <Select value={formData.accountType} onValueChange={(value: any) =>

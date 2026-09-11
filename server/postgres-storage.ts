@@ -227,17 +227,23 @@ export class PostgresStorage implements IStorage {
 
   async updateUserBalance(id: number, amount: number): Promise<User | undefined> {
     try {
+      const numAmount = parseFloat(String(amount));
       const result = await getConnection()`
         UPDATE public.bank_users 
-        SET balance = ${amount}, updated_at = CURRENT_TIMESTAMP
+        SET balance = ${numAmount}, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
         RETURNING *
       `;
 
-      if (result.length === 0) return undefined;
+      if (result.length === 0) {
+        console.error('No user found to update balance:', id, numAmount);
+        return undefined;
+      }
       
+      console.log('Balance updated successfully:', id, numAmount);
       return this.mapDbUser(result[0]);
     } catch (error) {
+      console.error('Postgres updateUserBalance error:', error);
       return undefined;
     }
   }
@@ -274,7 +280,7 @@ export class PostgresStorage implements IStorage {
 
   async createAccount(account: InsertAccount): Promise<Account> {
     try {
-      const balance = account.balance ? parseFloat(account.balance as string) : 0.00;
+      const balance = account.balance ? parseFloat(account.balance) : 0.00;
       const userId = account.userId ?? 0;
       const accountNumber = account.accountNumber ?? '';
       const accountType = account.accountType ?? 'savings';
@@ -469,6 +475,8 @@ export class PostgresStorage implements IStorage {
       idType: data.id_type,
       idNumber: data.id_number,
       transferPin: data.transfer_pin,
+      lastLogin: data.last_login || null,
+      profilePhoto: data.profile_photo || null,
       role: data.role,
       isVerified: data.is_verified,
       isActive: data.is_active,

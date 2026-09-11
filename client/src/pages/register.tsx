@@ -380,6 +380,7 @@ export default function RegisterPage() {
                   type="password"
                   {...form.register('password')}
                   placeholder={t('enter_password')}
+                  autoComplete="new-password"
                 />
                 {form.formState.errors.password && (
                   <p className="text-sm text-red-600">{form.formState.errors.password.message}</p>
@@ -393,6 +394,7 @@ export default function RegisterPage() {
                   type="password"
                   {...form.register('confirmPassword')}
                   placeholder={t('confirm_your_password')}
+                  autoComplete="new-password"
                 />
                 {form.formState.errors.confirmPassword && (
                   <p className="text-sm text-red-600">{form.formState.errors.confirmPassword.message}</p>
