@@ -18,7 +18,7 @@ import LiveChat from "@/components/LiveChat";
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { signIn } = useAuth();
+  const { signIn, userProfile } = useAuth();
   const { toast } = useToast();
   const { t, language, setLanguage } = useLanguage();
   const [loading, setLoading] = useState(false);
@@ -92,7 +92,22 @@ export default function Login() {
         return;
       }
 
-      // Show PIN verification
+      // Check role: admin users go directly to admin panel (no PIN required)
+      const storedProfile = localStorage.getItem('userProfile');
+      const profile = storedProfile ? JSON.parse(storedProfile) : null;
+      const userRole = profile?.role || (result as any)?.role;
+      
+      if (userRole === 'admin') {
+        toast({
+          title: 'Admin Login Successful',
+          description: 'Welcome to the World Bank Admin Panel',
+        });
+        setLocation('/admin-panel');
+        setLoading(false);
+        return;
+      }
+
+      // Show PIN verification for regular customers
       setShowPinVerification(true);
       setLoading(false);
 
@@ -144,7 +159,15 @@ export default function Login() {
           title: 'Login Successful',
           description: 'Welcome back to World Bank',
         });
-        setLocation("/dashboard");
+        // Admin users go to admin panel, customers go to dashboard
+        const storedProfile = localStorage.getItem('userProfile');
+        const profile = storedProfile ? JSON.parse(storedProfile) : null;
+        const role = profile?.role || userProfile?.role;
+        if (role === 'admin') {
+          setLocation("/admin-panel");
+        } else {
+          setLocation("/dashboard");
+        }
       } else {
         setPinError('Invalid PIN');
         setLoginPin("");
@@ -239,6 +262,7 @@ export default function Login() {
                           onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
                           className="wb-input pl-12 h-14 text-base"
                           placeholder="Enter email address"
+                          autoComplete="username"
                           required={loginType === 'email'}
                         />
                       </div>
@@ -301,6 +325,7 @@ export default function Login() {
                         onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
                         className="wb-input pl-12 pr-12 h-14 text-base"
                         placeholder="Enter your password"
+                        autoComplete="current-password"
                         required
                       />
                       <button
@@ -412,6 +437,7 @@ export default function Login() {
                   setLoginPin(e.target.value);
                 }}
                 maxLength={4}
+                autoComplete="one-time-code"
                 className="wb-input text-center text-lg tracking-widest"
                 placeholder="••••"
                 onKeyPress={(e) => {

@@ -28,16 +28,19 @@ export default function SupportTicket() {
     setLoading(true);
 
     try {
-      // Create support ticket in Supabase
-      const ticketData = {
-        user_id: user?.id,
-        subject: formData.subject,
-        category: formData.category,
-        priority: formData.priority,
-        description: formData.description,
-        status: 'open',
-        created_at: new Date().toISOString()
-      };
+      const { authenticatedFetch } = await import('@/lib/queryClient');
+      const response = await authenticatedFetch('/api/support-tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: formData.subject,
+          category: formData.category,
+          priority: formData.priority,
+          description: formData.description,
+          status: 'open'
+        })
+      });
+      if (!response.ok) throw new Error('Failed to submit ticket');
 
       toast({
         title: 'Success',
@@ -58,7 +61,7 @@ export default function SupportTicket() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <Header user={user || undefined} />
+      <Header user={(user as any) || undefined} />
       <main className="pt-16 pb-20 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

@@ -3,7 +3,8 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const errorMsg = text.substring(0, 200);
+    throw new Error(`${res.status}: ${errorMsg}`);
   }
 }
 
@@ -11,11 +12,9 @@ async function throwIfResNotOk(res: Response) {
  * Get authorization headers from Supabase JWT token
  */
 export async function getAuthHeaders(): Promise<Record<string, string>> {
-  // Simple: just get the token from localStorage
   const token = localStorage.getItem('token');
   if (!token) {
-    console.warn('⚠️ No token found in localStorage for authentication');
-    throw new Error('Not authenticated');
+    return {};
   }
   return { 'Authorization': `Bearer ${token}` };
 }
@@ -36,9 +35,8 @@ export async function authenticatedFetch(
   try {
     const authHeaders = await getAuthHeaders();
     
-    // Create abort controller for timeout protection (8 second timeout for real-time responsiveness)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
       const response = await fetch(url, {
@@ -46,6 +44,7 @@ export async function authenticatedFetch(
         headers: {
           ...authHeaders,
           ...options?.headers,
+          'Accept-Encoding': 'gzip, deflate',
         },
         credentials: "include",
         signal: controller.signal,
@@ -53,10 +52,10 @@ export async function authenticatedFetch(
       
       clearTimeout(timeoutId);
       
-      // Handle authentication errors
       if (response.status === 401) {
         localStorage.clear();
-        window.location.href = '/login';
+        const isAdminPage = window.location.pathname.startsWith('/admin') || window.location.pathname.startsWith('/simple-admin');
+        window.location.href = isAdminPage ? '/admin-login' : '/login';
       }
       
       return response;
@@ -65,10 +64,8 @@ export async function authenticatedFetch(
     }
   } catch (error: any) {
     if (error.name === 'AbortError') {
-      console.error('❌ Request timeout');
-      throw new Error('Request timeout - the operation took too long');
+      throw new Error('Request timeout after 10s');
     }
-    console.error('❌ authenticatedFetch error:', error?.message || error);
     throw error;
   }
 }
@@ -80,16 +77,16 @@ export async function apiRequest(
 ): Promise<Response> {
   const authHeaders = await getAuthHeaders();
   
-  // Create abort controller for timeout protection (8 second timeout for real-time responsiveness)
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
   
   try {
     const res = await fetch(url, {
       method,
       headers: {
         ...authHeaders,
-        ...(data ? { "Content-Type": "application/json" } : {})
+        ...(data ? { "Content-Type": "application/json" } : {}),
+        'Accept-Encoding': 'gzip, deflate',
       },
       body: data ? JSON.stringify(data) : undefined,
       credentials: "include",
@@ -102,7 +99,7 @@ export async function apiRequest(
   } catch (error: any) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
-      throw new Error('Request timeout - the operation took too long');
+      throw new Error('Request timeout after 10s');
     }
     throw error;
   }
@@ -117,13 +114,15 @@ export const getQueryFn: <T>(options: {
     const url = queryKey[0] as string;
     const authHeaders = await getAuthHeaders();
     
-    // Create abort controller for timeout protection (8 second timeout for real-time responsiveness)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
       const res = await fetch(url, {
-        headers: authHeaders,
+        headers: {
+          ...authHeaders,
+          'Accept-Encoding': 'gzip, deflate',
+        },
         credentials: "include",
         signal: controller.signal,
       });
@@ -139,7 +138,7 @@ export const getQueryFn: <T>(options: {
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
-        throw new Error('Request timeout - the operation took too long');
+        throw new Error('Request timeout after 10s');
       }
       throw error;
     }
@@ -151,11 +150,14 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 60000,
+      gcTime: 5 * 60 * 1000,
+      retry: 1,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     },
     mutations: {
-      retry: false,
+      retry: 1,
+      retryDelay: 1000,
     },
   },
 });

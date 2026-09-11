@@ -44,6 +44,7 @@ import Alerts from "@/pages/alerts";
 import CustomerManagement from "@/pages/customer-management";
 import FundManagement from "@/pages/fund-management";
 import AdminLiveChat from "@/pages/admin-live-chat";
+import AdminPanel from "@/pages/admin-panel";
 import CustomerServicePortal from "@/pages/customer-service-portal";
 import VerificationCenter from "@/pages/verification";
 import AccountPreferences from "@/pages/account-preferences";
@@ -53,6 +54,8 @@ import TransactionRouter from "@/pages/transaction-router";
 import About from "@/pages/about";
 import Investment from "@/pages/investment";
 import Exchange from "@/pages/exchange";
+import SupportTicket from "@/pages/support-ticket";
+import AdminAccounts from "@/pages/admin-accounts";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -71,16 +74,26 @@ function App() {
                 <Route path="/about" component={About} />
                 <Route path="/login" component={Login} />
                 <Route path="/register" component={Register} />
-            <Route path="/register-multi" component={MultiStepRegister} />
+                <Route path="/register-multi" component={MultiStepRegister} />
                 <Route path="/admin-login" component={AdminLogin} />
-                <Route path="/admin-dashboard" component={AdminDashboard} />
-                <Route path="/simple-admin" component={SimpleAdmin} />
-                <Route path="/admin-live-chat" component={AdminLiveChat} />
-                <Route path="/customer-service" component={CustomerServicePortal} />
-                <Route path="/transfer-processing" component={TransferProcessing} />
-                <Route path="/transfer-pending" component={TransferPending} />
-                <Route path="/transfer-success" component={TransferSuccess} />
-                <Route path="/transfer-failed" component={TransferFailed} />
+                <Route path="/admin-dashboard">
+                  <ProtectedRoute><AdminDashboard /></ProtectedRoute>
+                </Route>
+                <Route path="/admin-panel">
+                  <ProtectedRoute><AdminPanel /></ProtectedRoute>
+                </Route>
+                <Route path="/simple-admin">
+                  <ProtectedRoute><SimpleAdmin /></ProtectedRoute>
+                </Route>
+                <Route path="/admin-live-chat">
+                  <ProtectedRoute><AdminLiveChat /></ProtectedRoute>
+                </Route>
+                <Route path="/admin-accounts">
+                  <ProtectedRoute><AdminAccounts onBack={() => window.history.back()} /></ProtectedRoute>
+                </Route>
+                <Route path="/customer-service">
+                  <ProtectedRoute><CustomerServicePortal /></ProtectedRoute>
+                </Route>
 
                 <Route path="/" nest>
                   <ProtectedRoute>
@@ -89,6 +102,10 @@ function App() {
                         <Route path="/" component={Dashboard} />
                         <Route path="/dashboard" component={Dashboard} />
                         <Route path="/transfer-funds" component={TransferFunds} />
+                        <Route path="/transfer-processing" component={TransferProcessing} />
+                        <Route path="/transfer-pending" component={TransferPending} />
+                        <Route path="/transfer-success" component={TransferSuccess} />
+                        <Route path="/transfer-failed" component={TransferFailed} />
                         <Route path="/profile-settings" component={ProfileSettings} />
                         <Route path="/security-settings" component={SecuritySettings} />
                         <Route path="/pin-settings" component={PinSettings} />
@@ -100,16 +117,17 @@ function App() {
                         <Route path="/wealth-management" component={WealthManagement} />
                         <Route path="/support-center" component={SupportCenter} />
                         <Route path="/customer-support" component={CustomerSupport} />
+                        <Route path="/support-ticket" component={SupportTicket} />
                         <Route path="/banking-services" component={BankingServices} />
                         <Route path="/digital-wallet" component={DigitalWallet} />
                         <Route path="/mobile-pay" component={MobilePay} />
                         <Route path="/security-center" component={SecurityCenter} />
                         <Route path="/find-branches" component={FindBranches} />
-                        <Route path="/international-transfer" component={Transfer} />
+                        <Route path="/transfer" component={Transfer} />
+                        <Route path="/international-transfer" component={InternationalTransfer} />
                         <Route path="/investment-trading" component={InvestmentTrading} />
                         <Route path="/business-banking" component={BusinessBanking} />
                         <Route path="/cards" component={Cards} />
-                        <Route path="/transfer" component={InternationalTransfer} />
                         <Route path="/receive" component={Receive} />
                         <Route path="/add-money" component={AddMoney} />
                         <Route path="/alerts" component={Alerts} />
@@ -122,7 +140,6 @@ function App() {
                         <Route path="/fund-management" component={FundManagement} />
                         <Route path="/investment" component={Investment} />
                         <Route path="/exchange" component={Exchange} />
-                        <Route path="/about" component={About} />
 
                         <Route component={NotFound} />
                       </Switch>

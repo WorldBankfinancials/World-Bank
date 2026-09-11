@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Search, Edit3, UserCheck, AlertTriangle, Save, X } from "lucide-react";
@@ -46,6 +47,7 @@ interface Customer {
 export default function CustomerManagement() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -74,7 +76,7 @@ export default function CustomerManagement() {
   // Update customer mutation
   const updateCustomerMutation = useMutation({
     mutationFn: async (data: { customerId: number; updates: Partial<Customer> }) => {
-      return apiRequest(`/api/admin/customers/${data.customerId}`, "PUT", data.updates);
+      return apiRequest("PUT", `/api/admin/customers/${data.customerId}`, data.updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
@@ -141,7 +143,7 @@ export default function CustomerManagement() {
   if (user?.role !== "admin") {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header user={user || undefined} />
+        <Header user={(user as any) || undefined} />
         <div className="container mx-auto px-4 py-8">
           <Card>
             <CardContent className="flex items-center justify-center h-32">
@@ -158,7 +160,7 @@ export default function CustomerManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={user || undefined} />
+      <Header user={(user as any) || undefined} />
       
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">

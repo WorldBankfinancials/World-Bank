@@ -8,6 +8,7 @@ import { Navigation, Route, MapPin, ArrowRight, Settings } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 
 interface TransactionRoute {
   id: string;

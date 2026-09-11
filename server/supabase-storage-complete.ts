@@ -191,7 +191,6 @@ export class CompleteSupabaseStorage implements IStorage {
       .select()
       .single();
     if (error) {
-      console.error('Transaction insert error details:', error);
       throw error;
     }
     return mapSupabaseTransactionToTransaction(data);
@@ -428,7 +427,6 @@ export class CompleteSupabaseStorage implements IStorage {
         .eq('user_id', userId.toString())
         .order('created_at', { ascending: false });
       if (error) {
-        console.warn('Alerts query error, trying numeric approach:', error);
         // Fallback: try without conversion
         const { data: fallbackData } = await supabase
           .from('alerts')

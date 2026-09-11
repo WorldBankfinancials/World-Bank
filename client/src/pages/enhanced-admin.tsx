@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -60,6 +61,7 @@ interface Document {
 }
 
 export default function EnhancedAdmin() {
+  const { t } = useLanguage();
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerProfile | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('accounts');
@@ -374,7 +376,7 @@ export default function EnhancedAdmin() {
                                 <Button
                                   size="sm"
                                   onClick={() => {
-                                    const textarea = document.getElementById(`notes-${document.id}`) as HTMLTextAreaElement;
+                                    const textarea = window.document.getElementById(`notes-${document.id}`) as HTMLTextAreaElement;
                                     const notes = textarea?.value || '';
                                     verifyDocument(document.id, 'approved', notes);
                                   }}
@@ -387,7 +389,7 @@ export default function EnhancedAdmin() {
                                   size="sm"
                                   variant="destructive"
                                   onClick={() => {
-                                    const textarea = document.getElementById(`notes-${document.id}`) as HTMLTextAreaElement;
+                                    const textarea = window.document.getElementById(`notes-${document.id}`) as HTMLTextAreaElement;
                                     const notes = textarea?.value || '';
                                     verifyDocument(document.id, 'rejected', notes);
                                   }}

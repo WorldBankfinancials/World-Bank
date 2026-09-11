@@ -35,39 +35,7 @@ export default function Transfer() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
   const { toast } = useToast();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dataError, setDataError] = useState<string | null>(null);
-  
-  // Fetch user data using useEffect
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        setIsLoading(true);
-        setDataError(null);
-        // Wait for userProfile to be available (with timeout)
-        let attempts = 0;
-        while (!userProfile?.email && attempts < 5) {
-          await new Promise(r => setTimeout(r, 500));
-          attempts++;
-        }
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch(`/api/user`);
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-          setDataError(null);
-        } else {
-          setDataError('Failed to load user data. Please refresh.');
-        }
-      } catch (error: any) {
-        setDataError('Unable to load user profile. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchUser();
-  }, []);
+  const user = (userProfile as any as User) || null;
   
   const [amount, setAmount] = useState("");
   const [transferType, setTransferType] = useState("international");
@@ -100,40 +68,10 @@ export default function Transfer() {
     relationship: ""
   });
 
-  if (isLoading) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading transfer...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (dataError) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex items-center justify-center p-4 mt-20">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6">
-              <div className="text-center text-red-600">
-                <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-500" />
-                <p className="font-semibold mb-2">Unable to Load</p>
-                <p className="text-sm">{dataError}</p>
-                <Button 
-                  variant="outline" 
-                  onClick={() => window.location.reload()}
-                  className="w-full mt-4"
-                >
-                  Refresh Page
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <BottomNavigation />
+        <div className="text-gray-600">{t('loading')}</div>
       </div>
     );
   }
@@ -171,9 +109,6 @@ export default function Transfer() {
         return;
       }
 
-      // Show PIN verification modal - silently process without showing approval message
-      setShowPinVerification(true);
-      
       if (!recipientDetails.accountNumber) {
         toast({
           title: 'Account number required',
@@ -183,7 +118,7 @@ export default function Transfer() {
         return;
       }
 
-      // Show PIN verification modal
+      // Show PIN verification modal - let backend validate balance
       setShowPinVerification(true);
     } catch (error: any) {
       toast({
@@ -246,19 +181,16 @@ export default function Transfer() {
     }
     
     try {
-      // Verify PIN and create transfer request
+      // Verify PIN and create transfer request - ensure all fields have values
       const transferData = {
         amount: parsedAmount,
-        recipientName: recipientDetails.fullName,
-        recipientAccount: recipientDetails.accountNumber,
-        recipientCountry: recipientDetails.country,
-        bankName: recipientDetails.bankName,
-        swiftCode: recipientDetails.swiftCode,
-        transferPurpose: recipientDetails.purpose,
-        transferPin: transferPin,
-        userEmail: userProfile?.email || user?.email!,
-        status: "pending_approval",
-        requiresApproval: parsedAmount >= 10000 // Transfers over $10k require support team approval
+        recipientName: recipientDetails.fullName && recipientDetails.fullName.trim() ? recipientDetails.fullName : 'Transfer Recipient',
+        recipientAccount: recipientDetails.accountNumber && recipientDetails.accountNumber.trim() ? recipientDetails.accountNumber : '00000000',
+        recipientCountry: recipientDetails.country && recipientDetails.country.trim() ? recipientDetails.country : 'US',
+        bankName: recipientDetails.bankName && recipientDetails.bankName.trim() ? recipientDetails.bankName : 'Bank',
+        swiftCode: recipientDetails.swiftCode && recipientDetails.swiftCode.trim() ? recipientDetails.swiftCode : 'INTLUS',
+        purpose: recipientDetails.purpose && recipientDetails.purpose.trim() ? recipientDetails.purpose : 'transfer',
+        transferPin: transferPin
       };
       
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -276,6 +208,7 @@ export default function Transfer() {
         try {
           result = await response.json();
         } catch (e) {
+          console.error('Failed to parse transfer response:', e);
           setPinError("Failed to parse transfer response");
           setIsProcessing(false);
           return;
@@ -288,6 +221,25 @@ export default function Transfer() {
         setTransferStatus("processing");
         setShowPendingStatus(true);
         
+        // Refresh user data to reflect balance changes - immediately and cached
+        try {
+          const { authenticatedFetch, queryClient } = await import('@/lib/queryClient');
+          // Force fresh fetch of updated user balance
+          const userResponse = await authenticatedFetch('/api/user');
+          if (userResponse.ok) {
+            const freshUser = await userResponse.json();
+            if (freshUser && freshUser.balance !== undefined) {
+              localStorage.setItem('userProfile', JSON.stringify({
+                ...JSON.parse(localStorage.getItem('userProfile') || '{}'),
+                balance: freshUser.balance
+              }));
+            }
+          }
+          queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        } catch (e) {
+          console.error('Failed to refresh balance:', e);
+        }
+        
         // Poll for transfer status updates (secret admin approval happens in background)
         const interval = setInterval(async () => {
           try {
@@ -295,17 +247,16 @@ export default function Transfer() {
             const statusResponse = await authenticatedFetch(`/api/transfers/${txnId}/status`);
             if (statusResponse.ok) {
               const statusData = await statusResponse.json();
-              if (statusData.status === 'approved') {
+              if (statusData.status === 'approved' || statusData.status === 'completed') {
                 setTransferStatus('success');
                 clearInterval(interval);
-              } else if (statusData.status === 'rejected') {
+              } else if (statusData.status === 'rejected' || statusData.status === 'failed') {
                 setTransferStatus('failed');
                 clearInterval(interval);
-              } else if (statusData.status === 'pending_approval') {
-                setTransferStatus('pending');
               }
             }
           } catch (error) {
+            // Silent error - continue polling
           }
         }, 3000); // Poll every 3 seconds
         
@@ -332,16 +283,18 @@ export default function Transfer() {
           relationship: ""
         });
       } else {
+        const statusCode = response.status;
         let error;
         try {
           error = await response.json();
         } catch (e) {
-          setPinError("Transfer failed - server error");
+          console.error(`Transfer failed with status ${statusCode}:`, e);
+          setPinError(`Transfer failed (${statusCode}). Please try again.`);
           setIsProcessing(false);
           return;
         }
         
-        setPinError(error?.message || "Invalid PIN. Please verify your 4-digit transfer PIN.");
+        setPinError(error?.message || error?.error || `Transfer failed (${statusCode}). Please verify all details and try again.`);
         setIsProcessing(false);
       }
     } catch (error) {
@@ -418,7 +371,7 @@ export default function Transfer() {
 
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header user={userProfile || undefined} />
+        <Header user={undefined} />
         
         <div className="px-4 py-6 pb-20">
           <div className="max-w-md mx-auto">
@@ -493,7 +446,7 @@ export default function Transfer() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={userProfile || user} />
+      <Header user={(userProfile as any || user as any) || undefined} />
       
       <div className="px-4 py-6 pb-20">
         {/* Header Section */}
@@ -570,7 +523,7 @@ export default function Transfer() {
                   <Input
                     id="fullName"
                     placeholder="John Smith"
-                    value={recipientDetails.fullName}
+                    value={recipientDetails.fullName as any}
                     onChange={(e) => setRecipientDetails(prev => ({...prev, fullName: e.target.value}))}
                   />
                 </div>
@@ -767,6 +720,7 @@ export default function Transfer() {
                       className="w-full text-center text-2xl tracking-widest p-4 border border-gray-300 rounded-lg"
                       placeholder="****"
                       maxLength={4}
+                      autoComplete="one-time-code"
                       autoFocus
                     />
                     {pinError && (

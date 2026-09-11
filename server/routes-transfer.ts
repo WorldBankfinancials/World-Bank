@@ -1,6 +1,8 @@
 import { Express, Request, Response } from 'express';
 import { storage } from './storage-factory';
 import { requireAuth, requireAdmin, AuthenticatedRequest } from './auth-middleware';
+import { transactionRateLimiter } from './rate-limiter';
+import * as bcrypt from 'bcryptjs';
 
 function generateReferenceNumber(): string {
   return `WB-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
@@ -8,7 +10,7 @@ function generateReferenceNumber(): string {
 
 export function setupTransferRoutes(app: Express) {
   // Regular Transfer API - PROTECTED: requires authentication
-  app.post('/api/transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/transfers', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const {
         amount,
@@ -28,9 +30,15 @@ export function setupTransferRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Validate required fields first
-      if (!amount || !recipientName || !recipientAccount) {
-        return res.status(400).json({ message: "Missing required transfer details: amount, recipient name, and account number" });
+      // Validate required fields first - with better error messaging
+      if (!amount) {
+        return res.status(400).json({ message: "Amount is required" });
+      }
+      if (!recipientName) {
+        return res.status(400).json({ message: "Recipient name is required" });
+      }
+      if (!recipientAccount) {
+        return res.status(400).json({ message: "Recipient account/number is required" });
       }
 
       // PIN VALIDATION - Verify against stored PIN
@@ -44,10 +52,8 @@ export function setupTransferRoutes(app: Express) {
         return res.status(401).json({ message: "PIN not set on account" });
       }
 
-      const storedPin = String(userForPin.transferPin).trim();
-      const providedPin = String(transferPin).trim();
-
-      if (storedPin !== providedPin) {
+      const pinMatch = await bcrypt.compare(String(transferPin).trim(), String(userForPin.transferPin).trim());
+      if (!pinMatch) {
         return res.status(401).json({ message: "Incorrect PIN - transfer denied" });
       }
 
@@ -63,18 +69,34 @@ export function setupTransferRoutes(app: Express) {
         
         // ✅ CRITICAL: DEBIT ACCOUNT IMMEDIATELY WHEN TRANSFER SUBMITTED
         const numAmount = parseFloat(String(amount));
-        const currentBalance = parseFloat(String(user.balance || '0'));
         
-        if (currentBalance < numAmount) {
-          return res.status(400).json({ message: "Insufficient funds for this transfer" });
+        // FIX: Get actual balance from all user accounts, not from bank_users.balance
+        const userAccounts = await storage.getUserAccounts(user.id);
+        let currentBalance = 0;
+        if (userAccounts && userAccounts.length > 0) {
+          currentBalance = userAccounts.reduce((sum, acc) => sum + parseFloat(String(acc.balance || '0')), 0);
         }
         
-        // Deduct amount from user balance
+        if (currentBalance < numAmount) {
+          return res.status(400).json({ message: `Insufficient funds. Your total balance is $${currentBalance.toFixed(2)} but you're trying to transfer $${numAmount.toFixed(2)}` });
+        }
+        
+        // Deduct amount from user balance (updateUserBalance takes a DELTA - negative to deduct)
         const newBalance = currentBalance - numAmount;
-        await storage.updateUserBalance(user.id, newBalance);
+        await storage.updateUserBalance(user.id, -numAmount);
+        
+        // Use existing userAccounts from above - already fetched
+        if (!userAccounts || userAccounts.length === 0) {
+          return res.status(400).json({ message: "User has no account" });
+        }
+        const fromAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
+        if (!fromAccountId || fromAccountId <= 0) {
+          return res.status(400).json({ message: "Invalid account ID" });
+        }
         
         const transactionData: any = {
           fromUserId: user.id,
+          fromAccountId: fromAccountId,
           amount: String(amount),
           currency: 'USD',
           type: 'transfer',
@@ -98,9 +120,8 @@ export function setupTransferRoutes(app: Express) {
           amount: amount,
           newBalance: newBalance
         });
-      } catch (dbError: any) {
-        console.error('Transfer creation error:', dbError);
-        return res.status(500).json({ message: "Failed to submit transfer", error: dbError.message });
+      } catch (dbError: unknown) {
+        return res.status(500).json({ message: "Failed to submit transfer", error: (dbError as Error).message });
       }
     } catch (error) {
       res.status(500).json({ message: "Transfer system error" });
@@ -108,7 +129,7 @@ export function setupTransferRoutes(app: Express) {
   });
 
   // International Transfer API - PROTECTED: requires authentication
-  app.post('/api/international-transfers', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/international-transfers', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const {
         amount,
@@ -139,10 +160,8 @@ export function setupTransferRoutes(app: Express) {
         return res.status(401).json({ message: "PIN not set on account" });
       }
 
-      const storedPin = String(userForPin.transferPin).trim();
-      const providedPin = String(transferPin).trim();
-
-      if (storedPin !== providedPin) {
+      const intlPinMatch = await bcrypt.compare(String(transferPin).trim(), String(userForPin.transferPin).trim());
+      if (!intlPinMatch) {
         return res.status(401).json({ message: "Incorrect PIN - transfer denied" });
       }
 
@@ -157,22 +176,38 @@ export function setupTransferRoutes(app: Express) {
       try {
         // ✅ CRITICAL: DEBIT ACCOUNT IMMEDIATELY FOR INTERNATIONAL TRANSFER
         const numAmount = parseFloat(String(amount));
-        const currentBalance = parseFloat(String(user.balance || '0'));
         
-        if (currentBalance < numAmount) {
-          return res.status(400).json({ message: "Insufficient funds for this international transfer" });
+        // FIX: Get actual balance from all user accounts, not from bank_users.balance
+        const userAccounts = await storage.getUserAccounts(user.id);
+        let currentBalance = 0;
+        if (userAccounts && userAccounts.length > 0) {
+          currentBalance = userAccounts.reduce((sum, acc) => sum + parseFloat(String(acc.balance || '0')), 0);
         }
         
-        // Deduct amount from user balance
+        if (currentBalance < numAmount) {
+          return res.status(400).json({ message: `Insufficient funds. Your total balance is $${currentBalance.toFixed(2)} but you're trying to transfer $${numAmount.toFixed(2)}` });
+        }
+        
+        // Deduct amount from user balance (updateUserBalance takes a DELTA - negative to deduct)
         const newBalance = currentBalance - numAmount;
-        await storage.updateUserBalance(user.id, newBalance);
+        await storage.updateUserBalance(user.id, -numAmount);
         
         // Truncate all fields to match database constraints
         const recipientNameTrunc = String(recipientName).substring(0, 20);
         const recipientCountryTrunc = String(recipientCountry).substring(0, 20);
         
+        // Use existing userAccounts from above - already fetched
+        if (!userAccounts || userAccounts.length === 0) {
+          return res.status(400).json({ message: "User has no account" });
+        }
+        const fromAccountId = typeof userAccounts[0].id === 'string' ? parseInt(userAccounts[0].id) : userAccounts[0].id;
+        if (!fromAccountId || fromAccountId <= 0) {
+          return res.status(400).json({ message: "Invalid account ID" });
+        }
+        
         const transactionData: any = {
           fromUserId: user.id,
+          fromAccountId: fromAccountId,
           amount: String(amount),
           currency: 'USD',
           type: 'transfer',
@@ -195,9 +230,8 @@ export function setupTransferRoutes(app: Express) {
           amount: amount,
           newBalance: newBalance
         });
-      } catch (dbError: any) {
-        console.error('International transfer creation error:', dbError);
-        return res.status(500).json({ message: "Failed to submit international transfer", error: dbError.message });
+      } catch (dbError: unknown) {
+        return res.status(500).json({ message: "Failed to submit international transfer", error: (dbError as Error).message });
       }
     } catch (error) {
       res.status(500).json({ message: "International transfer system error" });
@@ -205,7 +239,7 @@ export function setupTransferRoutes(app: Express) {
   });
 
   // Enhanced Transfer API with proper workflow - PROTECTED: requires authentication
-  app.post('/api/transactions', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/transactions', requireAuth, transactionRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
     try {
       // SECURITY: Get user from authenticated JWT (set by requireAuth middleware)
       const user = await storage.getUserByEmail(req.user!.email);
@@ -223,8 +257,7 @@ export function setupTransferRoutes(app: Express) {
         bankName,
         swiftCode,
         transferType,
-        purpose,
-        status = 'pending_approval'
+        purpose
       } = req.body;
 
       // Validate required fields
@@ -240,7 +273,7 @@ export function setupTransferRoutes(app: Express) {
 
       const fromAccount = accounts[0];
 
-      // Create transaction record for admin approval (all transfers require approval)
+      // Create transaction record as "processing" - admin approval happens secretly in admin dashboard
       const transaction = await storage.createTransaction({
         fromAccountId: fromAccount.id,
         type: transferType || "international_transfer",
@@ -249,7 +282,7 @@ export function setupTransferRoutes(app: Express) {
         recipientName: recipientName,
         recipientCountry: recipientCountry || "Unknown",
         currency: currency || "USD",
-        status: "pending_approval"
+        status: "processing"
       });
 
       res.json({ 
@@ -330,13 +363,9 @@ export function setupTransferRoutes(app: Express) {
       // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
       // If reverseToAccount = true, credit back to user's account
       if (reverseToAccount && targetTxn.fromUserId) {
-        const customer = await storage.getUser(targetTxn.fromUserId);
-        if (customer) {
-          const numAmount = parseFloat(String(targetTxn.amount));
-          const currentBalance = parseFloat(String(customer.balance || '0'));
-          const reversedBalance = currentBalance + numAmount;
-          await storage.updateUserBalance(targetTxn.fromUserId, reversedBalance);
-        }
+        const numAmount = parseFloat(String(targetTxn.amount));
+        // updateUserBalance takes a DELTA — credit back the amount (positive delta)
+        await storage.updateUserBalance(targetTxn.fromUserId, +numAmount);
       }
       
       if (transaction) {
@@ -454,13 +483,9 @@ export function setupTransferRoutes(app: Express) {
       // ✅ CRITICAL: Admin MUST EXPLICITLY DECIDE if funds should be reversed
       // If reverseToAccount = true, credit back to user's account
       if (reverseToAccount && targetTxn.fromUserId) {
-        const customer = await storage.getUser(targetTxn.fromUserId);
-        if (customer) {
-          const numAmount = parseFloat(String(targetTxn.amount));
-          const currentBalance = parseFloat(String(customer.balance || '0'));
-          const reversedBalance = currentBalance + numAmount;
-          await storage.updateUserBalance(targetTxn.fromUserId, reversedBalance);
-        }
+        const numAmount = parseFloat(String(targetTxn.amount));
+        // updateUserBalance takes a DELTA — credit back the amount (positive delta)
+        await storage.updateUserBalance(targetTxn.fromUserId, +numAmount);
       }
       
       if (transaction) {
@@ -511,7 +536,8 @@ export function setupTransferRoutes(app: Express) {
       }
 
       // Get all user transactions and find by reference ID
-      const transactions = await storage.getUserTransactions(user.id);
+      const allTransactions = await storage.getAllTransactions();
+      const transactions = allTransactions.filter((t: any) => t.fromUserId === user.id);
       const transaction = transactions.find((t: any) => {
         // Match by transaction ID or description containing the reference
         return String(t.id) === id || String(t.transactionId) === id;
@@ -543,7 +569,8 @@ export function setupTransferRoutes(app: Express) {
       }
 
       // Get all user transactions and find by reference ID
-      const transactions = await storage.getUserTransactions(user.id);
+      const allTransactions = await storage.getAllTransactions();
+      const transactions = allTransactions.filter((t: any) => t.fromUserId === user.id);
       const transaction = transactions.find((t: any) => {
         // Match by transaction ID or ID string
         return String(t.id) === id || String(t.transactionId) === id || t.id === id;

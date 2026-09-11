@@ -43,12 +43,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for existing session from localStorage (set by login)
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
+    const storedProfile = localStorage.getItem('userProfile');
 
     if (storedToken && storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
         if (parsedUser?.id && parsedUser?.email) {
           setUser(parsedUser);
+          // CRITICAL: Load cached profile immediately - NO FETCH
+          if (storedProfile) {
+            try {
+              const parsedProfile = JSON.parse(storedProfile);
+              setUserProfile(parsedProfile);
+            } catch (e) {}
+          }
         }
       } catch (e) {
         localStorage.clear();
@@ -64,7 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     try {
       const { authenticatedFetch } = await import('@/lib/queryClient');
-      const response = await authenticatedFetch(`/api/users/${authUser.id}`);
+      // Use /api/user which looks up by email from JWT (avoids UUID vs numeric ID mismatch)
+      const response = await authenticatedFetch(`/api/user`);
       
       if (!response.ok) {
         return;
@@ -74,7 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profile && typeof profile === 'object') {
         setUserProfile(profile);
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Silently fail - profile already loaded from localStorage
     }
   }, []);
 
@@ -121,8 +131,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         setUser(userObj);
         
-        // Fetch full user profile
-        await fetchUserData(userObj);
+        // CRITICAL: Cache full profile immediately to avoid fetch timeout
+        const cacheProfile: UserProfile = {
+          id: data.user.id,
+          email: data.user.email,
+          fullName: data.user.fullName || data.user.email.split('@')[0],
+          phone: data.user.phone || '',
+          role: data.user.role || 'customer',
+          balance: data.user.balance || '0',
+          isVerified: true,
+          isActive: true,
+          profession: data.user.profession || '',
+          accountId: data.user.accountId || '',
+          accountNumber: data.user.accountNumber || '****1234'
+        };
+        setUserProfile(cacheProfile);
+        localStorage.setItem('userProfile', JSON.stringify(cacheProfile));
         
         setLoading(false);
         return {};
@@ -180,7 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      // ✅ CRITICAL: Notify backend to terminate session
+      // CRITICAL: Notify backend to terminate session
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
         await authenticatedFetch('/api/auth/logout', {

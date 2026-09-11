@@ -133,7 +133,9 @@ export default function TransferFunds() {
           amount: Number(formData.amount),
           recipientName: formData.recipientName,
           recipientCountry: formData.recipientCountry,
-          recipientAccount: formData.accountNumber || formData.recipientAccount,
+          recipientAccount: formData.accountNumber,
+          bankName: formData.bankName,
+          swiftCode: formData.swiftCode,
           purpose: formData.purpose,
           transferPin: String(transferPin)
         })
@@ -151,25 +153,39 @@ export default function TransferFunds() {
         setHasSubmitted(true);
         form.reset();
         
+        // Refresh user data to reflect balance changes
+        const { queryClient } = await import('@/lib/queryClient');
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        
         // Poll for transfer status updates
+        let pollFailures = 0;
         const interval = setInterval(async () => {
           try {
             const { authenticatedFetch } = await import('@/lib/queryClient');
             const statusResponse = await authenticatedFetch(`/api/transfers/${txnId}/status`);
             if (statusResponse.ok) {
+              pollFailures = 0;
               const statusData = await statusResponse.json();
-              if (statusData.status === 'approved') {
+              if (statusData.status === 'approved' || statusData.status === 'completed') {
                 setTransferStatus('success');
                 clearInterval(interval);
-              } else if (statusData.status === 'rejected') {
+              } else if (statusData.status === 'rejected' || statusData.status === 'failed') {
                 setTransferStatus('failed');
                 clearInterval(interval);
-              } else if (statusData.status === 'pending_approval') {
-                setTransferStatus('pending');
+              }
+            } else {
+              pollFailures++;
+              if (pollFailures >= 5) {
+                clearInterval(interval);
+                toast({ title: 'Status Update Error', description: 'Unable to get transfer status. Please check your transaction history.', variant: 'destructive' });
               }
             }
           } catch (error) {
-            // Silent error - continue polling
+            pollFailures++;
+            if (pollFailures >= 5) {
+              clearInterval(interval);
+              toast({ title: 'Status Update Error', description: 'Unable to get transfer status. Please check your transaction history.', variant: 'destructive' });
+            }
           }
         }, 3000);
         
@@ -279,7 +295,7 @@ export default function TransferFunds() {
 
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header user={userProfile || undefined} />
+        <Header user={(userProfile as any) || undefined} />
         
         <div className="px-4 py-6 pb-20">
           <div className="max-w-md mx-auto">
@@ -340,7 +356,7 @@ export default function TransferFunds() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <Header user={userProfile || undefined} />
+      <Header user={(userProfile as any) || undefined} />
       
       <div className="max-w-3xl mx-auto px-4 py-6">
         {/* Page Title */}
@@ -617,6 +633,7 @@ export default function TransferFunds() {
                 type="password"
                 maxLength={4}
                 placeholder="••••"
+                autoComplete="one-time-code"
                 value={transferPin}
                 onChange={(e) => setTransferPin(e.target.value.slice(0, 4))}
                 className="text-center text-2xl tracking-widest mt-2 py-3 font-bold"
