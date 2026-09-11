@@ -100,7 +100,7 @@ export default function Dashboard() {
     queryFn: async () => {
       try {
         const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch('/api/transactions');
+        const response = await authenticatedFetch('/api/transactions/recent');
         if (!response.ok) {
           return [];
         }
@@ -135,18 +135,14 @@ export default function Dashboard() {
     queryKey: ['/api/alerts'],
     queryFn: async () => {
       try {
-        console.log('🔔 Fetching alerts...');
         const { authenticatedFetch } = await import('@/lib/queryClient');
         const response = await authenticatedFetch('/api/alerts');
         if (!response.ok) {
-          console.error('❌ Alerts response not ok:', response.status);
           return [];
         }
         const data = await response.json();
-        console.log('✅ Fetched', data.length, 'alerts');
         return data;
       } catch (error) {
-        console.error('❌ Failed to fetch alerts:', error);
         return [];
       }
     },
@@ -421,7 +417,7 @@ export default function Dashboard() {
               </div>
               <div className="text-right">
                 <p className="text-blue-100 text-sm">{t('account')}</p>
-                <p className="text-sm font-medium">****1234</p>
+                <p className="text-sm font-medium">{accounts.length > 0 ? accounts[0].number : '••••'}</p>
               </div>
             </div>
 
@@ -676,12 +672,12 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="max-h-96 overflow-y-auto">
               <div className="space-y-3">
-                {(notifications.length > 0 ? notifications : [
-                  { title: "Account Security", message: "New login detected on your account - November 30, 2:15 PM from Replit", type: "warning" },
-                  { title: "Transaction Completed", message: "Transfer of $5,000 to John Smith completed successfully", type: "success" },
-                  { title: "Low Balance Alert", message: "Your checking account balance is below $1,000", type: "warning" },
-                  { title: "Payment Received", message: "You received $2,500 from ABC Corporation", type: "success" }
-                ]).map((notif, idx) => (
+                {notifications.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="text-sm">No notifications at this time.</p>
+                  </div>
+                ) : null}
+                {notifications.map((notif, idx) => (
                   <div
                     key={`notif-${idx}`}
                     className={`p-4 rounded-lg border ${

@@ -1,149 +1,81 @@
 /**
- * WEBSOCKET RECONNECTION MANAGER
- * Handles automatic reconnection with exponential backoff
- * CRITICAL for production real-time features
+ * WebSocket reconnection utility with exponential backoff
  */
 
-interface ReconnectConfig {
-  url: string;
-  maxRetries?: number;
-  initialDelay?: number;
-  maxDelay?: number;
-  onMessage?: (event: MessageEvent) => void;
-  onOpen?: () => void;
-  onError?: (error: Event) => void;
-  onClose?: () => void;
-}
+type MessageHandler = (data: any) => void;
+type StatusHandler = (status: 'connecting' | 'connected' | 'disconnected') => void;
 
-export class WebSocketReconnect {
+export class WebSocketManager {
   private ws: WebSocket | null = null;
   private url: string;
-  private maxRetries: number;
-  private initialDelay: number;
-  private maxDelay: number;
-  private retryCount: number = 0;
-  private reconnectTimeout: NodeJS.Timeout | null = null;
-  private isIntentionallyClosed: boolean = false;
-  
-  private onMessage?: (event: MessageEvent) => void;
-  private onOpen?: () => void;
-  private onError?: (error: Event) => void;
-  private onClose?: () => void;
+  private retries = 0;
+  private maxRetries = 5;
+  private handlers: Map<string, Set<MessageHandler>> = new Map();
+  private statusHandlers: Set<StatusHandler> = new Set();
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(config: ReconnectConfig) {
-    this.url = config.url;
-    this.maxRetries = config.maxRetries ?? 10;
-    this.initialDelay = config.initialDelay ?? 1000;
-    this.maxDelay = config.maxDelay ?? 30000;
-    
-    this.onMessage = config.onMessage;
-    this.onOpen = config.onOpen;
-    this.onError = config.onError;
-    this.onClose = config.onClose;
+  constructor(url: string) {
+    this.url = url;
   }
 
-  /**
-   * Connect or reconnect to WebSocket
-   */
   connect() {
+    this.notifyStatus('connecting');
+    this.ws = new WebSocket(this.url);
+
+    this.ws.onopen = () => {
+      this.retries = 0;
+      this.notifyStatus('connected');
+    };
+
+    this.ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        const handlers = this.handlers.get(data.type) || new Set();
+        handlers.forEach(h => h(data));
+      } catch (e) {
+        console.error('WebSocket parse error:', e);
+      }
+    };
+
+    this.ws.onclose = () => {
+      this.notifyStatus('disconnected');
+      this.attemptReconnect();
+    };
+
+    this.ws.onerror = () => {
+      this.ws?.close();
+    };
+  }
+
+  private attemptReconnect() {
+    if (this.retries >= this.maxRetries) return;
+    const delay = Math.min(1000 * 2 ** this.retries, 30000);
+    this.retries++;
+    this.reconnectTimer = setTimeout(() => this.connect(), delay);
+  }
+
+  on(type: string, handler: MessageHandler) {
+    if (!this.handlers.has(type)) this.handlers.set(type, new Set());
+    this.handlers.get(type)!.add(handler);
+  }
+
+  onStatus(handler: StatusHandler) {
+    this.statusHandlers.add(handler);
+  }
+
+  send(data: any) {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      return;
-    }
-
-    try {
-      this.ws = new WebSocket(this.url);
-
-      this.ws.onopen = () => {
-        this.retryCount = 0; // Reset retry count on successful connection
-        this.isIntentionallyClosed = false;
-        this.onOpen?.();
-      };
-
-      this.ws.onmessage = (event) => {
-        this.onMessage?.(event);
-      };
-
-      this.ws.onerror = (error) => {
-        this.onError?.(error);
-      };
-
-      this.ws.onclose = () => {
-        this.onClose?.();
-        
-        // Only attempt reconnect if not intentionally closed
-        if (!this.isIntentionallyClosed) {
-          this.scheduleReconnect();
-        }
-      };
-
-    } catch (error) {
-      this.scheduleReconnect();
+      this.ws.send(JSON.stringify(data));
     }
   }
 
-  /**
-   * Schedule reconnection with exponential backoff
-   */
-  private scheduleReconnect() {
-    if (this.retryCount >= this.maxRetries) {
-      return;
-    }
-
-    // Calculate delay with exponential backoff: delay = min(initialDelay * 2^retryCount, maxDelay)
-    const delay = Math.min(
-      this.initialDelay * Math.pow(2, this.retryCount),
-      this.maxDelay
-    );
-
-    this.retryCount++;
-    
-
-    this.reconnectTimeout = setTimeout(() => {
-      this.connect();
-    }, delay);
+  disconnect() {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.ws?.close();
+    this.ws = null;
   }
 
-  /**
-   * Send message through WebSocket
-   */
-  send(data: string | object) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      const message = typeof data === 'string' ? data : JSON.stringify(data);
-      this.ws.send(message);
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  /**
-   * Close WebSocket connection (prevents auto-reconnect)
-   */
-  close() {
-    this.isIntentionallyClosed = true;
-    
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = null;
-    }
-    
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
-  }
-
-  /**
-   * Get current connection state
-   */
-  getState(): number {
-    return this.ws?.readyState ?? WebSocket.CLOSED;
-  }
-
-  /**
-   * Check if connected
-   */
-  isConnected(): boolean {
-    return this.ws?.readyState === WebSocket.OPEN;
+  private notifyStatus(status: 'connecting' | 'connected' | 'disconnected') {
+    this.statusHandlers.forEach(h => h(status));
   }
 }

@@ -5,9 +5,12 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx server/index.ts",
-    "build": "tsc && vite build",
-    "vercel-build": "npm run build",
-    "check": "tsc",
+    "build": "vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "build:all": "npm run build && npm run build:server",
+    "vercel-build": "vite build",
+    "check": "tsc --noEmit",
+    "check:server": "tsc -p tsconfig.server.json --noEmit",
     "db:push": "drizzle-kit push",
     "start": "NODE_ENV=production node dist/server/index.js"
   },

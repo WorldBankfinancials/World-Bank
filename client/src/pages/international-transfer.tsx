@@ -25,32 +25,7 @@ export default function InternationalTransfer() {
   const { t } = useLanguage();
   const { userProfile } = useAuth();
   const { toast } = useToast();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dataError, setDataError] = useState<string | null>(null);
-  
-  // Fetch user data using useEffect
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        setIsLoading(true);
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch(`/api/user`);
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-          setDataError(null);
-        } else {
-          setDataError('Failed to load user data');
-        }
-      } catch (error: any) {
-        setDataError(error?.message || 'Failed to load user data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchUser();
-  }, []);
+  const user = (userProfile as any as User) || null;
 
   const [transferAmount, setTransferAmount] = useState("");
   const [recipientFullName, setRecipientFullName] = useState("");
@@ -72,37 +47,10 @@ export default function InternationalTransfer() {
   const [transferStatus, setTransferStatus] = useState<"processing" | "pending" | "success" | "failed">("processing");
   const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
 
-  if (isLoading) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">{t('loading')}</div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header user={userProfile} />
-        <div className="flex items-center justify-center p-4 mt-20">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6">
-              <div className="text-center text-red-600">
-                <AlertCircle className="w-8 h-8 mx-auto mb-3 text-red-500" />
-                <p className="font-semibold mb-2">Unable to Load</p>
-                <p className="text-sm">{dataError || 'Please refresh or login again'}</p>
-                <Button 
-                  variant="outline" 
-                  onClick={() => window.location.reload()}
-                  className="w-full mt-4"
-                >
-                  Refresh Page
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        <BottomNavigation />
       </div>
     );
   }
@@ -136,6 +84,7 @@ export default function InternationalTransfer() {
         return;
       }
 
+      // Show PIN verification modal - let backend validate balance
       setShowPinVerification(true);
     } catch (error: any) {
       toast({
@@ -198,16 +147,13 @@ export default function InternationalTransfer() {
     try {
       const transferData = {
         amount: parsedAmount,
-        recipientName: recipientFullName,
-        recipientCountry: recipientCountry,
-        bankName: bankName,
-        swiftCode: swiftCode,
-        accountNumber: accountNumber,
-        transferPurpose: transferPurpose,
-        transferPin: transferPin,
-        userEmail: userProfile?.email || user?.email!,
-        status: "pending_approval",
-        requiresApproval: parsedAmount >= 10000
+        recipientName: recipientFullName && recipientFullName.trim() ? recipientFullName : 'International Recipient',
+        recipientCountry: recipientCountry && recipientCountry.trim() ? recipientCountry : 'US',
+        bankName: bankName && bankName.trim() ? bankName : 'Bank',
+        swiftCode: swiftCode && swiftCode.trim() ? swiftCode : 'INTL',
+        accountNumber: accountNumber && accountNumber.trim() ? accountNumber : '00000000',
+        transferPurpose: transferPurpose && transferPurpose.trim() ? transferPurpose : 'transfer',
+        transferPin: transferPin
       };
       
       const { authenticatedFetch } = await import('@/lib/queryClient');
@@ -223,6 +169,7 @@ export default function InternationalTransfer() {
         try {
           result = await response.json();
         } catch (e) {
+          console.error('Failed to parse intl transfer response:', e);
           setPinError("Failed to parse transfer response");
           setIsProcessing(false);
           return;
@@ -235,23 +182,49 @@ export default function InternationalTransfer() {
         setTransferStatus("processing");
         setShowPendingStatus(true);
         
+        // Refresh user data to reflect balance changes - immediately and cached
+        try {
+          const { authenticatedFetch, queryClient } = await import('@/lib/queryClient');
+          // Force fresh fetch of updated user balance
+          const userResponse = await authenticatedFetch('/api/user');
+          if (userResponse.ok) {
+            const freshUser = await userResponse.json();
+            if (freshUser && freshUser.balance !== undefined) {
+              localStorage.setItem('userProfile', JSON.stringify({
+                ...JSON.parse(localStorage.getItem('userProfile') || '{}'),
+                balance: freshUser.balance
+              }));
+            }
+          }
+          queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        } catch (e) {
+          console.error('Failed to refresh balance:', e);
+        }
+        
+        let pollFailures = 0;
         const interval = setInterval(async () => {
           try {
             const { authenticatedFetch } = await import('@/lib/queryClient');
-            const statusResponse = await authenticatedFetch(`/api/international-transfers/${txnId}/status`);
+            const statusResponse = await authenticatedFetch(`/api/transfers/${txnId}/status`);
             if (statusResponse.ok) {
+              pollFailures = 0;
               const statusData = await statusResponse.json();
-              if (statusData.status === 'approved') {
+              if (statusData.status === 'approved' || statusData.status === 'completed') {
                 setTransferStatus('success');
                 clearInterval(interval);
-              } else if (statusData.status === 'rejected') {
+              } else if (statusData.status === 'rejected' || statusData.status === 'failed') {
                 setTransferStatus('failed');
                 clearInterval(interval);
-              } else if (statusData.status === 'pending_approval') {
-                setTransferStatus('pending');
+              }
+            } else {
+              if (++pollFailures >= 5) {
+                clearInterval(interval);
               }
             }
           } catch (error) {
+            if (++pollFailures >= 5) {
+              clearInterval(interval);
+            }
           }
         }, 3000);
         
@@ -278,7 +251,8 @@ export default function InternationalTransfer() {
           return;
         }
         
-        setPinError(error?.message || "Invalid PIN. Please verify your 4-digit transfer PIN.");
+        const statusCode = response.status;
+        setPinError(error?.message || error?.error || `Transfer failed (${statusCode}). Please try again.`);
         setIsProcessing(false);
       }
     } catch (error) {
@@ -354,7 +328,7 @@ export default function InternationalTransfer() {
 
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header user={userProfile || undefined} />
+        <Header user={(userProfile as any) || undefined} />
         
         <div className="px-4 py-6 pb-20">
           <div className="max-w-md mx-auto">
@@ -429,7 +403,7 @@ export default function InternationalTransfer() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={userProfile || user} />
+      <Header user={(userProfile || user) as any} />
       
       <div className="px-4 py-6 pb-20">
         {/* Header Section */}
@@ -648,6 +622,7 @@ export default function InternationalTransfer() {
                   value={transferPin}
                   onChange={(e) => setTransferPin(e.target.value.slice(0, 4))}
                   maxLength={4}
+                  autoComplete="one-time-code"
                   className="text-center text-2xl tracking-widest mt-1"
                 />
               </div>

@@ -1,0 +1,50 @@
+{
+  "project": "world-bank-digital-banking",
+  "triggerDev": {
+    "apiUrl": "https://api.trigger.dev",
+    "apiKeyEnv": "TRIGGER_API_KEY",
+    "endpoint": "http://localhost:8888",
+    "logLevel": "info"
+  },
+  "tasks": [
+    {
+      "id": "world-bank-financial-indexes-sync",
+      "name": "World Bank Financial Indexes Nightly Sync",
+      "description": "Fetches global financial statistical indexes from the free official World Bank API and streams them into Supabase database tables",
+      "schedule": { "type": "cron", "expression": "0 2 * * *", "timezone": "UTC" },
+      "retry": { "maxAttempts": 3, "delaySeconds": 60, "backoffMultiplier": 2 },
+      "source": {
+        "api": "World Bank Open Data API",
+        "baseUrl": "https://api.worldbank.org/v2",
+        "format": "json",
+        "endpoints": [
+          { "path": "/country/all/indicator/NY.GDP.MKTP.CD", "description": "GDP (current US$)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } },
+          { "path": "/country/all/indicator/NY.GDP.PCAP.CD", "description": "GDP per capita (current US$)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } },
+          { "path": "/country/all/indicator/FP.CPI.TOTL.ZG", "description": "Inflation, consumer prices (annual %)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } },
+          { "path": "/country/all/indicator/FR.INR.RINR", "description": "Real interest rate (%)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } },
+          { "path": "/country/all/indicator/PA.NUS.FCRF", "description": "Official exchange rate (LCU per US$)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } },
+          { "path": "/country/all/indicator/BX.KLT.DINV.CD.WD", "description": "Foreign direct investment, net inflows (current US$)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } },
+          { "path": "/country/all/indicator/DT.DOD.DECT.CD", "description": "External debt stocks, total (current US$)", "params": { "format": "json", "per_page": "1000", "date": "2020:2025" } }
+        ]
+      },
+      "destination": {
+        "type": "supabase",
+        "urlEnv": "VITE_SUPABASE_URL",
+        "keyEnv": "SUPABASE_SERVICE_ROLE_KEY",
+        "targetTable": "wb_system_events",
+        "upsertKey": "indicator_country_year"
+      },
+      "validation": {
+        "provider": "qodo",
+        "checks": ["schema-structure-validation", "null-value-detection", "data-type-conformance", "primary-key-uniqueness", "foreign-key-integrity"],
+        "failOnError": true,
+        "reportFormat": "json"
+      },
+      "notifications": {
+        "onSuccess": { "enabled": true, "channels": ["log"] },
+        "onFailure": { "enabled": true, "channels": ["log"], "maxRetries": 3 }
+      }
+    }
+  ],
+  "environment": { "nodeVersion": ">=20.0.0", "runtime": "node", "memoryLimit": "512MB", "timeoutSeconds": 300 }
+}

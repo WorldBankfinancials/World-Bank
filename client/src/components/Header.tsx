@@ -15,32 +15,37 @@ interface HeaderProps {
 export default function Header({}: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const { userProfile } = useAuth();
+  const { userProfile, signOut } = useAuth();
   const { t } = useLanguage();
-  const [freshUserData, setFreshUserData] = useState<UserType | null>(null);
+  const [displayBalance, setDisplayBalance] = useState<string | number>(userProfile?.balance || '0');
 
-  // Fetch fresh user data once only
+  // Subscribe to balance changes from localStorage
   useEffect(() => {
-    const fetchFreshUserData = async () => {
+    const checkBalance = () => {
       try {
-        const { authenticatedFetch } = await import('@/lib/queryClient');
-        const response = await authenticatedFetch('/api/user', {
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
+        const cachedProfile = localStorage.getItem('userProfile');
+        if (cachedProfile) {
+          const profile = JSON.parse(cachedProfile);
+          if (profile.balance !== undefined) {
+            setDisplayBalance(profile.balance);
           }
-        });
-        if (response.ok) {
-          const userData = await response.json();
-          setFreshUserData(userData);
         }
-      } catch (error) {
-        // Silent error handling
-      }
+      } catch (e) {}
     };
-
-    fetchFreshUserData();
+    
+    checkBalance();
+    
+    // Listen for storage changes (balance updates from transfers)
+    window.addEventListener('storage', checkBalance);
+    return () => window.removeEventListener('storage', checkBalance);
   }, []);
+
+  // Also update when userProfile changes
+  useEffect(() => {
+    if (userProfile?.balance !== undefined) {
+      setDisplayBalance(userProfile.balance);
+    }
+  }, [userProfile?.balance]);
 
   const profileMenuItems = [
     { 
@@ -127,9 +132,9 @@ export default function Header({}: HeaderProps) {
                     <div className="flex items-center space-x-3">
                       <Avatar size={64} />
                       <div className="flex-1">
-                        <div className="font-semibold text-gray-900">{freshUserData?.firstName && freshUserData?.lastName ? `${freshUserData.firstName} ${freshUserData.lastName}` : userProfile?.fullName || 'Banking Customer'}</div>
-                      <div className="text-sm text-gray-600">{freshUserData?.profession || userProfile?.profession || 'Account Holder'}</div>
-                      <div className="text-sm text-gray-600">{freshUserData?.email || userProfile?.email || ''}</div>
+                        <div className="font-semibold text-gray-900">{userProfile?.fullName || 'Banking Customer'}</div>
+                      <div className="text-sm text-gray-600">{userProfile?.profession || 'Account Holder'}</div>
+                      <div className="text-sm text-gray-600">{userProfile?.email || ''}</div>
                         <div className="flex items-center space-x-2 mt-1">
                           <Badge variant="default" className="text-xs bg-green-100 text-green-800 flex items-center space-x-1">
                             <Check className="w-3 h-3" />
@@ -147,17 +152,35 @@ export default function Header({}: HeaderProps) {
                         <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                           {section.category}
                         </div>
-                        {section.items.map((item, itemIndex) => (
-                          <Link key={itemIndex} href={item.href}>
-                            <div 
-                              onClick={() => setShowProfileMenu(false)}
-                              className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors cursor-pointer"
-                            >
-                              <item.icon className="w-5 h-5 text-gray-500" />
-                              <span className="text-sm text-gray-700">{item.label}</span>
-                            </div>
-                          </Link>
-                        ))}
+                        {section.items.map((item, itemIndex) => {
+                          const isSignOut = item.label === 'Sign Out';
+                          if (isSignOut) {
+                            return (
+                              <button
+                                key={itemIndex}
+                                onClick={async () => {
+                                  setShowProfileMenu(false);
+                                  await signOut();
+                                }}
+                                className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-red-50 transition-colors cursor-pointer"
+                              >
+                                <item.icon className="w-5 h-5 text-red-500" />
+                                <span className="text-sm text-red-600 font-medium">{item.label}</span>
+                              </button>
+                            );
+                          }
+                          return (
+                            <Link key={itemIndex} href={item.href}>
+                              <div 
+                                onClick={() => setShowProfileMenu(false)}
+                                className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors cursor-pointer"
+                              >
+                                <item.icon className="w-5 h-5 text-gray-500" />
+                                <span className="text-sm text-gray-700">{item.label}</span>
+                              </div>
+                            </Link>
+                          );
+                        })}
                       </div>
                     ))}
                   </div>
@@ -165,10 +188,10 @@ export default function Header({}: HeaderProps) {
                   {/* Account Info Footer */}
                   <div className="p-4 border-t border-gray-100 bg-gray-50">
                     <div className="text-xs text-gray-500">
-                      Account ID: {freshUserData?.accountId || userProfile?.accountId || 'Loading...'}
+                      Account ID: {userProfile?.accountId || 'Loading...'}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Last Active: {freshUserData?.updatedAt ? new Date(freshUserData.updatedAt).toLocaleDateString() : 'Loading...'}
+                      Status: Active
                     </div>
                   </div>
                 </div>

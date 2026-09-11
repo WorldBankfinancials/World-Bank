@@ -73,7 +73,7 @@ export default function Alerts() {
   // Mutation for marking alert as read - MUST be before conditional return
   const markAsReadMutation = useMutation({
     mutationFn: async (alertId: number) => {
-      return apiRequest(`/api/alerts/${alertId}/read`, 'PATCH');
+      return apiRequest('PATCH', `/api/alerts/${alertId}/read`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });
@@ -83,7 +83,7 @@ export default function Alerts() {
   // Mutation for deleting alert - MUST be before conditional return
   const deleteAlertMutation = useMutation({
     mutationFn: async (alertId: number) => {
-      return apiRequest(`/api/alerts/${alertId}`, 'DELETE');
+      return apiRequest('DELETE', `/api/alerts/${alertId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/alerts'] });

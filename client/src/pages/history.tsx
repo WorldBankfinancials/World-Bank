@@ -189,7 +189,7 @@ export default function History() {
                 <option value="all">{t('all_accounts')}</option>
                 {accounts.map(account => (
                   <option key={account.id} value={account.id.toString()}>
-                    {account.accountName} (****{account.accountNumber.slice(-4)})
+                    {account.accountName} (****{(account.accountNumber || '').slice(-4)})
                   </option>
                 ))}
               </select>

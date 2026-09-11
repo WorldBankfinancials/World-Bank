@@ -1,34 +1,30 @@
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import RegistrationStep1 from './register/step1';
-import RegistrationStep2 from './register/step2';
-import RegistrationStep3 from './register/step3';
-import RegistrationStep4 from './register/step4';
+import RegistrationStep1 from '@/pages/register/step1';
+import RegistrationStep2 from '@/pages/register/step2';
+import RegistrationStep3 from '@/pages/register/step3';
+import RegistrationStep4 from '@/pages/register/step4';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { publicPost } from '@/lib/fetch-client';
+import { publicPost } from '@/lib/queryClient';
 
 type RegistrationData = {
-  // Step 1
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   dateOfBirth: string;
-  // Step 2
   address: string;
   city: string;
   state: string;
   country: string;
   postalCode: string;
   nationality: string;
-  // Step 3
   profession: string;
   employer: string;
   annualIncome: string;
   sourceOfFunds: string;
   purposeOfAccount: string;
-  // Step 4
   idType: string;
   idNumber: string;
   password: string;
@@ -62,32 +58,21 @@ export default function MultiStepRegisterPage() {
 
   const handleStep4Submit = async (data: any, idCardFile?: File) => {
     setIsSubmitting(true);
-    
     try {
       const completeData = { ...registrationData, ...data };
-      
-      // Upload ID card first if provided
       let idCardUrl = null;
       if (idCardFile) {
         try {
-          // Get upload URL from server
           const uploadResponse = await publicPost('/api/objects/upload', {});
-
           if (uploadResponse.ok) {
             const { uploadURL } = await uploadResponse.json();
-
-            // Upload file to object storage
-            // External file upload - intentionally unauthenticated
             const uploadFileResponse = await fetch(uploadURL, {
               method: 'PUT',
               body: idCardFile,
-              headers: {
-                'Content-Type': idCardFile.type,
-              },
+              headers: { 'Content-Type': idCardFile.type },
             });
-
             if (uploadFileResponse.ok) {
-              idCardUrl = uploadURL.split('?')[0]; // Remove query params to get file URL
+              idCardUrl = uploadURL.split('?')[0];
             }
           }
         } catch (error) {
@@ -99,13 +84,11 @@ export default function MultiStepRegisterPage() {
         }
       }
 
-      // Call the transactional registration endpoint
-      // This atomically creates BOTH Supabase Auth account AND local database profile
-      // If either fails, it rolls back the other to prevent desynchronization
       const response = await publicPost('/api/auth/register-complete', {
           email: completeData.email,
           password: completeData.password,
-          fullName: `${completeData.firstName} ${completeData.lastName}`,
+          firstName: completeData.firstName,
+          lastName: completeData.lastName,
           phone: completeData.phone,
           dateOfBirth: completeData.dateOfBirth,
           address: completeData.address,
@@ -137,7 +120,6 @@ export default function MultiStepRegisterPage() {
         duration: 5000,
       });
 
-      // Redirect to login with pending approval message
       setLocation('/login?status=pending');
 
     } catch (error) {
