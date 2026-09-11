@@ -22,8 +22,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   // CSRF protection hint
   res.setHeader('X-CSRF-Token', req.headers['x-csrf-token'] || '');
   
-  // Content Security Policy
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'");
+  // Content Security Policy - FIXED: Removed unsafe-eval
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:");
   
   // Cache busting - force fresh content always
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
@@ -74,12 +74,21 @@ app.use((req, res, next) => {
   const wss = new WebSocketServer({ server, path: '/ws/chat' });
   setupLiveChatWebSocket(wss);
 
+  // FIXED: Global error handler no longer re-throws after sending response
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
+    // Log the error with stack trace
+    console.error(`[ERROR] ${status} - ${message}`, err.stack);
+
+    // Only send response if headers haven't been sent
+    if (!res.headersSent) {
+      res.status(status).json({ 
+        message,
+        error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      });
+    }
   });
 
   // importantly only setup vite in development and after
@@ -91,15 +100,15 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+  // FIXED: Use environment variable for port (Vercel compatibility)
+  const port = parseInt(process.env.PORT || '5000', 10);
+  const host = process.env.HOST || '0.0.0.0';
+  
   server.listen({
     port,
-    host: "0.0.0.0",
+    host,
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    log(`serving on ${host}:${port}`);
   });
 })();

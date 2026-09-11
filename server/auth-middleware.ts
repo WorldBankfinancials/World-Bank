@@ -31,7 +31,7 @@ export async function requireAuth(
     let userId: string | number;
     
     try {
-      // Parse JWT token - ONLY accept Supabase JWT format (3 parts: header.payload.signature)
+      // FIXED: Parse JWT token with proper error handling
       const trimmedToken = token.trim();
       const parts = trimmedToken.split('.');
       
@@ -48,8 +48,21 @@ export async function requireAuth(
         payloadBase64 += '='.repeat(paddingNeeded);
       }
       
-      const decodedPayload = Buffer.from(payloadBase64, 'base64').toString('utf-8');
-      const payload = JSON.parse(decodedPayload);
+      // FIXED: Wrap Buffer.from in try-catch for safety
+      let decodedPayload: string;
+      try {
+        decodedPayload = Buffer.from(payloadBase64, 'base64').toString('utf-8');
+      } catch (bufferError) {
+        throw new Error('Invalid Base64 encoding in JWT payload');
+      }
+      
+      // FIXED: Wrap JSON.parse in try-catch for safety
+      let payload: any;
+      try {
+        payload = JSON.parse(decodedPayload);
+      } catch (parseError) {
+        throw new Error('Invalid JSON in JWT payload');
+      }
       
       email = payload.email;
       userId = payload.sub || payload.id;
@@ -99,7 +112,8 @@ export async function requireAuth(
           });
         }
       } catch (e) {
-        // Supabase sync failed
+        // FIXED: Log error instead of silencing it
+        console.error('❌ Auth: Supabase sync failed:', e);
       }
     }
     
@@ -126,8 +140,11 @@ export async function requireAuth(
 
       const { data: supabaseUser } = await supabase.auth.admin.getUserById(String(userId));
       if (supabaseUser?.user && supabaseUser.user.email === email) {
+        // Verified
       }
     } catch (supabaseError) {
+      // FIXED: Log error
+      console.warn('⚠️ Auth: Supabase verification failed:', supabaseError);
     }
 
     // Attach user to request (Postgres is primary, but both systems validated)
@@ -140,6 +157,7 @@ export async function requireAuth(
     next();
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+    console.error('❌ Auth: Unexpected error:', errorMessage);
     res.status(401).json({ error: 'Authentication failed' });
   }
 }
