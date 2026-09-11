@@ -64,12 +64,14 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            // Broadcast new message to connected client
-            ws.send(JSON.stringify({
-              type: 'chat_message',
-              data: payload.new,
-              timestamp: new Date().toISOString()
-            }));
+            // FIXED: Check WebSocket state before sending
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'chat_message',
+                data: payload.new,
+                timestamp: new Date().toISOString()
+              }));
+            }
           }
         }
       )
@@ -80,25 +82,31 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
       .channel(`presence:${userRole}`)
       .on('presence', { event: 'sync' }, () => {
         const presenceState = presenceChannel.presenceState();
-        ws.send(JSON.stringify({
-          type: 'presence_update',
-          activeUsers: Object.keys(presenceState).length,
-          timestamp: new Date().toISOString()
-        }));
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'presence_update',
+            activeUsers: Object.keys(presenceState).length,
+            timestamp: new Date().toISOString()
+          }));
+        }
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        ws.send(JSON.stringify({
-          type: 'user_joined',
-          user: newPresences[0],
-          timestamp: new Date().toISOString()
-        }));
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'user_joined',
+            user: newPresences[0],
+            timestamp: new Date().toISOString()
+          }));
+        }
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        ws.send(JSON.stringify({
-          type: 'user_left',
-          user: leftPresences[0],
-          timestamp: new Date().toISOString()
-        }));
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'user_left',
+            user: leftPresences[0],
+            timestamp: new Date().toISOString()
+          }));
+        }
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -114,15 +122,29 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
     // Handle incoming messages
     ws.on('message', async (message: Buffer) => {
       try {
-        const data = JSON.parse(message.toString());
+        // FIXED: Safe JSON parsing with error handling
+        let data: any;
+        try {
+          data = JSON.parse(message.toString());
+        } catch (e) {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Invalid message format'
+            }));
+          }
+          return;
+        }
 
         if (data.type === 'chat_message') {
           // Validate message
           if (!data.content || data.content.length === 0 || data.content.length > 5000) {
-            ws.send(JSON.stringify({
-              type: 'error',
-              message: 'Invalid message length'
-            }));
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Invalid message length'
+              }));
+            }
             return;
           }
 
@@ -161,11 +183,13 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
           }
 
           // Acknowledge to sender
-          ws.send(JSON.stringify({
-            type: 'message_sent',
-            messageId: savedMessage.id,
-            timestamp: new Date().toISOString()
-          }));
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              type: 'message_sent',
+              messageId: savedMessage.id,
+              timestamp: new Date().toISOString()
+            }));
+          }
         }
 
         if (data.type === 'typing') {
@@ -186,22 +210,37 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
 
         if (data.type === 'mark_read') {
           // Mark messages as read
-          await supabase
-            .from('chat_messages')
-            .update({ isRead: true })
-            .eq('recipientId', userId)
-            .eq('isRead', false);
+          try {
+            await supabase
+              .from('chat_messages')
+              .update({ isRead: true })
+              .eq('recipientId', userId)
+              .eq('isRead', false);
 
-          ws.send(JSON.stringify({
-            type: 'messages_marked_read',
-            timestamp: new Date().toISOString()
-          }));
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'messages_marked_read',
+                timestamp: new Date().toISOString()
+              }));
+            }
+          } catch (markReadError) {
+            console.error('Failed to mark messages as read:', markReadError);
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Failed to mark messages as read'
+              }));
+            }
+          }
         }
       } catch (error: any) {
-        ws.send(JSON.stringify({
-          type: 'error',
-          message: error.message
-        }));
+        console.error('WebSocket message error:', error);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: error.message || 'An error occurred'
+          }));
+        }
       }
     });
 
@@ -216,10 +255,13 @@ export function setupLiveChatWebSocket(wss: WebSocketServer) {
           .update({ isOnline: false, lastSeen: new Date() })
           .eq('userId', userId);
       } catch (error) {
+        console.warn('Failed to update user presence on disconnect:', error);
       }
     });
 
+    // Handle errors
     ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
     });
   });
 }
@@ -246,7 +288,8 @@ export async function getChatHistory(req: Request, res: Response) {
 
     res.json({ success: true, messages, total: messages?.length || 0 });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Failed to fetch chat history:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch chat history' });
   }
 }
 
@@ -267,7 +310,8 @@ export async function getActiveSessions(req: Request, res: Response) {
 
     res.json({ success: true, sessions });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Failed to fetch active sessions:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch active sessions' });
   }
 }
 
@@ -301,7 +345,8 @@ export async function createTicketFromChat(req: Request, res: Response) {
 
     res.json({ success: true, ticket });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Failed to create ticket from chat:', error);
+    res.status(500).json({ error: error.message || 'Failed to create support ticket' });
   }
 }
 

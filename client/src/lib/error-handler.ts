@@ -4,6 +4,8 @@
  */
 
 export class APIError extends Error {
+  public stack: string;
+  
   constructor(
     public status: number,
     public code: string,
@@ -12,6 +14,7 @@ export class APIError extends Error {
   ) {
     super(message);
     this.name = 'APIError';
+    this.stack = new Error().stack || '';
   }
 }
 
@@ -25,6 +28,7 @@ export function safeJsonParse<T>(data: string, fallback?: T): T | null {
     }
     return JSON.parse(data) as T;
   } catch (error) {
+    console.warn('Failed to parse JSON:', error);
     return fallback ?? null;
   }
 }
@@ -55,11 +59,12 @@ export async function handleApiResponse<T>(response: Response): Promise<T> {
 }
 
 /**
- * Error logging with context
+ * FIXED: Error logging with full stack trace preservation
  */
 export function logError(context: string, error: any, severity: 'low' | 'medium' | 'high' = 'medium') {
   const timestamp = new Date().toISOString();
   const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? error.stack : undefined;
   
   const severityEmoji = {
     low: '⚠️',
@@ -67,10 +72,21 @@ export function logError(context: string, error: any, severity: 'low' | 'medium'
     high: '🔴'
   };
 
+  // Log to console with full stack trace
+  console.error(`${severityEmoji[severity]} [${context}] ${message}`, stack);
 
   // In production, send to error tracking service
   if (typeof window !== 'undefined' && (window as any).__ERROR_TRACKING__) {
-    (window as any).__ERROR_TRACKING__({ context, error, severity, timestamp });
+    (window as any).__ERROR_TRACKING__({
+      context,
+      error: {
+        message,
+        stack,
+        name: error?.name || 'Error'
+      },
+      severity,
+      timestamp
+    });
   }
 }
 
